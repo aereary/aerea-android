@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/month_day_root"
+    android:layout_width="match_parent"
+    android:layout_height="46dp"
+    android:background="@drawable/widget_day_plain"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="2dp">
+
+    <TextView
+        android:id="@+id/month_day_number"
+        android:layout_width="match_parent"
+        android:layout_height="22dp"
+        android:gravity="center"
+        android:text="23"
+        android:textColor="#34495E"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/month_day_marker"
+        android:layout_width="match_parent"
+        android:layout_height="16dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="••"
+        android:textColor="#8F75B8"
+        android:textSize="8sp"
+        android:textStyle="bold" />
+</LinearLayout>

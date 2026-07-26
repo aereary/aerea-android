@@ -1,0 +1,104 @@
+name: Build aérea APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aerea-android-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Verify the web application
+        run: npm test
+
+      - name: Restore Android binary resources
+        run: node ci/restore-android-binaries.mjs
+
+      - name: Restore stable signing key
+        env:
+          AEREA_KEYSTORE_BASE64: ${{ secrets.AEREA_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$AEREA_KEYSTORE_BASE64"
+          printf '%s' "$AEREA_KEYSTORE_BASE64" | base64 --decode > ci/aerea-release.keystore
+
+      - name: Synchronize Capacitor
+        run: npx cap sync android
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        env:
+          AEREA_KEYSTORE_PATH: ${{ github.workspace }}/ci/aerea-release.keystore
+          AEREA_KEYSTORE_PASSWORD: ${{ secrets.AEREA_KEYSTORE_PASSWORD }}
+          AEREA_KEY_ALIAS: ${{ secrets.AEREA_KEY_ALIAS }}
+          AEREA_KEY_PASSWORD: ${{ secrets.AEREA_KEY_PASSWORD }}
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: |
+          mkdir -p outputs
+          cp android/app/build/outputs/apk/debug/app-debug.apk outputs/aerea.apk
+          git archive \
+            --format=tar.gz \
+            --output=outputs/aerea-source.tar.gz \
+            HEAD
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aerea-apk
+          path: outputs/aerea.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: aerea-v0.${{ github.run_number }}
+          name: aérea preview v0.${{ github.run_number }}
+          body: |
+            Versión instalable de aérea para teléfono y tableta Android.
+            Descarga `aerea.apk` y ábrelo para instalar o actualizar.
+          prerelease: true
+          make_latest: true
+          files: |
+            outputs/aerea.apk
+            outputs/aerea-source.tar.gz

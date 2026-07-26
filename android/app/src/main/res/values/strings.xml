@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">aérea</string>
+    <string name="title_activity_main">aérea</string>
+    <string name="package_name">com.aereaary.aerea</string>
+    <string name="custom_url_scheme">com.aereaary.aerea</string>
+    <string name="widget_description">Tu día de aérea: próximo evento, temperatura y recordatorios.</string>
+    <string name="widget_month_description">Tu mes de aérea con eventos, moods y días completados.</string>
+    <string name="widget_date_placeholder">HOY</string>
+    <string name="widget_temperature_placeholder">—°</string>
+    <string name="widget_event_placeholder">Sin eventos para hoy</string>
+    <string name="widget_time_placeholder">Abre aérea para planear</string>
+    <string name="widget_progress_placeholder">0/3 recordatorios</string>
+</resources>

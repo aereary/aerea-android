@@ -1,0 +1,1 @@
+CREATE INDEX `sketch_pages_user_updated_idx` ON `sketch_pages` (`user_id`,`updated_at`);
