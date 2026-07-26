@@ -10829,3 +10829,63 @@ body {
     contain: layout paint;
   }
 }
+.sync-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin: 18px 0;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--ink, #4d4868) 12%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--card, #fff) 92%, var(--accent, #aaa4f5));
+}
+
+.sync-card h3,
+.sync-card p {
+  margin: 4px 0;
+}
+
+.sync-actions,
+.sync-account {
+  display: grid;
+  gap: 9px;
+  min-width: min(250px, 100%);
+}
+
+.sync-actions label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sync-actions input {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--ink, #4d4868) 18%, transparent);
+  border-radius: 14px;
+  background: var(--card, #fff);
+  color: var(--ink, #4d4868);
+}
+
+.sync-actions button,
+.sync-account button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent, #aaa4f5);
+  color: #fff;
+  font-weight: 800;
+}
+
+.sync-actions .sync-resend {
+  background: transparent;
+  color: var(--ink, #4d4868);
+}
+
+@media (max-width: 620px) {
+  .sync-card {
+    grid-template-columns: 1fr;
+  }
+}

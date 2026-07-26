@@ -2,6 +2,19 @@
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
+  AEREA_ACCOUNT,
+  currentAereaEmail,
+  pushCloudState,
+  readBrowserSketches,
+  readBrowserState,
+  reconcileCloudState,
+  requestAereaCode,
+  supabase,
+  verifyAereaCode,
+  writeBrowserSketches,
+  writeBrowserState,
+} from "./supabase-sync";
+import {
   ChangeEvent,
   CSSProperties,
   PointerEvent as ReactPointerEvent,
@@ -830,6 +843,10 @@ export default function Home() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [syncEmail, setSyncEmail] = useState<string | null>(null);
+  const [syncCode, setSyncCode] = useState("");
+  const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
+  const [syncCodeSent, setSyncCodeSent] = useState(false);
   const [refugeOpen, setRefugeOpen] = useState(false);
   const [safePlaceMode, setSafePlaceMode] =
     useState<SafePlaceMode>("home");
@@ -1003,9 +1020,9 @@ export default function Home() {
 
     async function loadState() {
       try {
-        const payload = (isNative()
+        let payload = (isNative()
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
-          : await (await fetch("/api/state")).json()) as {
+          : readBrowserState()) as {
           state?: {
             reminderHistory?: Record<string, number[]>;
             habits?: Habit[];
@@ -1024,6 +1041,7 @@ export default function Home() {
             cleanStartVersion?: string;
           } | null;
         };
+        payload = (await reconcileCloudState(payload)) || payload;
         if (cancelled) return;
 
         if (payload.state) {
@@ -1098,9 +1116,7 @@ export default function Home() {
       try {
         const payload = isNative()
           ? await AereaStorage.listSketches()
-          : ((await (await fetch("/api/sketches")).json()) as {
-              pages?: SketchPage[];
-            });
+          : { pages: readBrowserSketches<SketchPage>() };
         if (!cancelled && payload.pages) {
           setSavedPages(payload.pages);
         }
@@ -1115,6 +1131,26 @@ export default function Home() {
       cancelled = true;
     };
   }, [todayKey]);
+
+  useEffect(() => {
+    let mounted = true;
+    void currentAereaEmail().then((email) => {
+      if (!mounted) return;
+      setSyncEmail(email);
+      setSyncMessage(
+        email ? "Private sync is on." : "Sign in to use aérea on every device.",
+      );
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      const email = session?.user.email?.toLowerCase() || null;
+      setSyncEmail(email === AEREA_ACCOUNT ? email : null);
+    });
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!stateReady) return;
@@ -1140,12 +1176,12 @@ export default function Home() {
         if (isNative()) {
           await AereaStorage.putState({ state: JSON.stringify({ state }) });
         } else {
-          const response = await fetch("/api/state", {
-            method: "PUT",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ state }),
-          });
-          if (!response.ok) throw new Error("Could not save state");
+          writeBrowserState({ state });
+        }
+        if (syncEmail) {
+          setSyncMessage("Syncing gently…");
+          await pushCloudState({ state });
+          setSyncMessage("Private sync is up to date.");
         }
       } catch {
         // Keep the interface responsive if a temporary save fails.
@@ -1169,6 +1205,7 @@ export default function Home() {
     recordings,
     secretDiaryEntries,
     stateReady,
+    syncEmail,
   ]);
 
   useEffect(() => {
@@ -2387,9 +2424,7 @@ export default function Home() {
   const refreshSketches = async () => {
     const payload = isNative()
       ? await AereaStorage.listSketches()
-      : ((await (await fetch("/api/sketches")).json()) as {
-          pages?: SketchPage[];
-        });
+      : { pages: readBrowserSketches<SketchPage>() };
     if (payload.pages) setSavedPages(payload.pages);
   };
 
@@ -2412,18 +2447,18 @@ export default function Home() {
           dataUrl: await blobAsDataUrl(blob),
         });
       } else {
-        const form = new FormData();
-        form.append("file", blob, "aerea-page.png");
-        form.append("title", sketchTitle.trim() || "Untitled page");
-        form.append("pageStyle", pageStyle);
-        const response = await fetch("/api/sketches", {
-          method: "POST",
-          body: form,
-        });
-        const payload = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          throw new Error(payload.error || "Could not save this page.");
-        }
+        const now = new Date().toISOString();
+        writeBrowserSketches<SketchPage>([
+          {
+            id: crypto.randomUUID(),
+            title: sketchTitle.trim() || "Untitled page",
+            pageStyle,
+            createdAt: now,
+            updatedAt: now,
+            dataUrl: await blobAsDataUrl(blob),
+          },
+          ...readBrowserSketches<SketchPage>(),
+        ]);
       }
 
       await refreshSketches();
@@ -2459,14 +2494,48 @@ export default function Home() {
       await refreshSketches();
       setSketchMessage("Page moved out of your sketchbook.");
     } else {
-      const response = await fetch(`/api/sketches/${pageId}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        await refreshSketches();
-        setSketchMessage("Page moved out of your sketchbook.");
-      }
+      writeBrowserSketches(
+        readBrowserSketches<SketchPage>().filter((page) => page.id !== pageId),
+      );
+      await refreshSketches();
+      setSketchMessage("Page moved out of your sketchbook.");
     }
+  };
+
+  const sendSyncCode = async () => {
+    setSyncMessage("Sending your private sign-in code…");
+    try {
+      await requestAereaCode(AEREA_ACCOUNT);
+      setSyncCodeSent(true);
+      setSyncMessage(`A sign-in code was sent to ${AEREA_ACCOUNT}.`);
+    } catch (error) {
+      setSyncMessage(
+        error instanceof Error ? error.message : "Could not send the code.",
+      );
+    }
+  };
+
+  const confirmSyncCode = async () => {
+    setSyncMessage("Checking the code…");
+    try {
+      await verifyAereaCode(syncCode);
+      setSyncEmail(AEREA_ACCOUNT);
+      setSyncCode("");
+      setSyncCodeSent(false);
+      setSyncMessage("Private sync is on. Reloading your saved day…");
+      window.location.reload();
+    } catch (error) {
+      setSyncMessage(
+        error instanceof Error ? error.message : "That code did not work.",
+      );
+    }
+  };
+
+  const signOutOfSync = async () => {
+    await supabase.auth.signOut();
+    setSyncEmail(null);
+    setSyncCodeSent(false);
+    setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
 
   return (
@@ -4695,6 +4764,51 @@ export default function Home() {
                   </button>
                 )}
               </div>
+            </section>
+
+            <section className="sync-card" aria-label="Private device sync">
+              <div>
+                <p className="tiny-label">PHONE · TABLET · PC</p>
+                <h3>{syncEmail ? "Your devices are together" : "Private sync"}</h3>
+                <p>{syncMessage}</p>
+              </div>
+              {syncEmail ? (
+                <div className="sync-account">
+                  <strong>{syncEmail}</strong>
+                  <button onClick={signOutOfSync}>Sign out</button>
+                </div>
+              ) : (
+                <div className="sync-actions">
+                  {!syncCodeSent ? (
+                    <button onClick={sendSyncCode}>Email me a sign-in code</button>
+                  ) : (
+                    <>
+                      <label>
+                        Sign-in code
+                        <input
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          value={syncCode}
+                          onChange={(event) => setSyncCode(event.target.value)}
+                          placeholder="Enter the code"
+                        />
+                      </label>
+                      <button
+                        onClick={confirmSyncCode}
+                        disabled={!syncCode.trim()}
+                      >
+                        Connect this device
+                      </button>
+                      <button
+                        className="sync-resend"
+                        onClick={sendSyncCode}
+                      >
+                        Send another code
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </section>
 
             <section className="mode-card" aria-label="Light or dark mode">

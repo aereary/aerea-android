@@ -22,6 +22,10 @@ const manifestSource = await readFile(
   new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url),
   "utf8",
 );
+const syncSource = await readFile(
+  new URL("../app/supabase-sync.ts", import.meta.url),
+  "utf8",
+);
 
 test("keeps only the approved theme collection", () => {
   for (const theme of [
@@ -153,4 +157,12 @@ test("packages the application and declares contextual Android capabilities", ()
   ]) {
     assert.match(manifestSource, new RegExp(permission));
   }
+});
+
+test("keeps cross-device sync private and local-first", () => {
+  assert.match(syncSource, /aereaary@gmail\.com/);
+  assert.match(syncSource, /persistSession: true/);
+  assert.match(syncSource, /reconcileCloudState/);
+  assert.match(syncSource, /aerea-private-state-v1/);
+  assert.doesNotMatch(syncSource, /service_role/i);
 });
