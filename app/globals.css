@@ -10889,3 +10889,323 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* July 26 finishing pass: readable keepsakes, valid event times, and a cute clock. */
+.event-time-error {
+  background: color-mix(in srgb, var(--pink) 48%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--orange) 35%, transparent);
+  border-radius: 13px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+  margin: 0 0 10px;
+  padding: 9px 11px;
+}
+
+.event-save-button:disabled,
+.mobile-event-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.secret-diary-writing textarea {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 33px,
+      rgba(117, 138, 167, 0.16) 33px 35px
+    ),
+    #fffaf4;
+  background-position: 0 0;
+  font-size: 17px;
+  line-height: 35px;
+  padding: 0 2px 1px;
+}
+
+.secret-page-open > div {
+  min-width: 0;
+}
+
+.secret-page-open time,
+.secret-page-open small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secret-page-open p {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-height: 2.7em;
+}
+
+.day-charm {
+  height: 108px;
+  padding: 3px;
+  width: 108px;
+}
+
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 72px;
+  object-fit: contain;
+  transform: translateY(-7px) scale(1.12);
+  width: 72px;
+}
+
+.day-charm span {
+  display: none;
+}
+
+.day-charm-curve text {
+  font-size: 7.2px;
+  letter-spacing: 0.065em;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 5.75px;
+  letter-spacing: 0.025em;
+}
+
+.timer-card {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(255, 211, 222, 0.44), transparent 10rem),
+    radial-gradient(circle at 88% 84%, rgba(163, 224, 218, 0.38), transparent 12rem),
+    linear-gradient(155deg, #fff8e8, color-mix(in srgb, #dff4ef 56%, var(--paper)));
+}
+
+.timer-modes {
+  background: color-mix(in srgb, #bfe3df 44%, #fff9e9);
+}
+
+.timer-modes button.active {
+  background: linear-gradient(145deg, #88d0c8, #ffe293);
+  color: #344f53;
+}
+
+.timer-bloom,
+.timer-bloom.running {
+  animation: none !important;
+  background:
+    repeating-conic-gradient(
+      from -1deg,
+      rgba(67, 133, 135, 0.32) 0 1deg,
+      transparent 1deg 30deg
+    ),
+    #fff3d8;
+  border: 0;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 7px #fffdf6,
+    0 0 0 13px #8ccac6,
+    0 22px 42px rgba(79, 125, 125, 0.18);
+  isolation: isolate;
+  overflow: visible;
+}
+
+.timer-color-well {
+  inset: 11px;
+  overflow: hidden;
+}
+
+.timer-color-well::before {
+  background:
+    conic-gradient(
+      from -90deg,
+      #f18991 0,
+      #f7c96d calc(var(--timer-progress) * 0.42),
+      #75c8bd var(--timer-progress),
+      #eee8dc var(--timer-progress) 100%
+    );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 25px),
+    #000 calc(100% - 24px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 25px),
+    #000 calc(100% - 24px)
+  );
+}
+
+.timer-color-well::after {
+  border: 2px solid rgba(91, 164, 161, 0.2);
+  inset: 34px;
+}
+
+.timer-bloom-face {
+  background: rgba(255, 250, 233, 0.94);
+  border: 3px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 0 0 5px rgba(126, 196, 190, 0.1),
+    0 12px 25px rgba(88, 126, 126, 0.1);
+  inset: 53px;
+  padding: 42px 18px 19px;
+}
+
+.timer-bloom-face .tiny-label {
+  color: #4d8e89;
+  margin-bottom: 7px;
+}
+
+.timer-bloom-face strong {
+  color: #31575d;
+  font-size: clamp(47px, 12vw, 64px);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.timer-bloom-face small {
+  color: #71888a;
+  margin-top: 10px;
+}
+
+.timer-clock-decoration {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+}
+
+.timer-clock-pal {
+  background: #f6aa62;
+  border: 3px solid #fff4db;
+  border-radius: 48% 52% 46% 54%;
+  box-shadow: 0 4px 0 rgba(202, 118, 74, 0.13);
+  height: 38px;
+  left: 50%;
+  position: absolute;
+  top: 45px;
+  transform: translateX(-50%);
+  width: 42px;
+}
+
+.timer-clock-pal::before {
+  background: #6c6464;
+  border-radius: 50%;
+  box-shadow: 17px 0 #6c6464;
+  content: "";
+  height: 4px;
+  left: 9px;
+  position: absolute;
+  top: 12px;
+  width: 4px;
+}
+
+.timer-clock-pal::after {
+  border-bottom: 2px solid #b46561;
+  border-radius: 50%;
+  content: "";
+  height: 7px;
+  left: 15px;
+  position: absolute;
+  top: 16px;
+  width: 10px;
+}
+
+.timer-clock-pal i {
+  background: #f48f94;
+  border-radius: 50%;
+  height: 6px;
+  position: absolute;
+  top: 19px;
+  width: 8px;
+}
+
+.timer-clock-pal i:first-child {
+  left: 3px;
+}
+
+.timer-clock-pal i:nth-child(2) {
+  right: 3px;
+}
+
+.timer-clock-pal b {
+  background: #78bca7;
+  border-radius: 80% 10% 80% 10%;
+  height: 9px;
+  left: 18px;
+  position: absolute;
+  top: -7px;
+  transform: rotate(-18deg);
+  width: 12px;
+}
+
+.timer-clock-sparkle {
+  color: #f4be50;
+  font-size: 24px;
+  line-height: 1;
+  position: absolute;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.8);
+}
+
+.timer-clock-sparkle.sparkle-one {
+  left: 28px;
+  top: 84px;
+  transform: rotate(-9deg);
+}
+
+.timer-clock-sparkle.sparkle-two {
+  bottom: 72px;
+  color: #ee8b96;
+  right: 27px;
+  transform: rotate(11deg) scale(0.75);
+}
+
+.timer-main {
+  background: linear-gradient(145deg, #f28f8d, #f5b56f);
+  box-shadow: 0 7px 0 rgba(184, 102, 84, 0.16);
+  color: #fffdf7;
+}
+
+.timer-main:focus-visible,
+.timer-reset:focus-visible {
+  border-radius: 999px;
+  outline: 3px solid color-mix(in srgb, #68bdb8 70%, white);
+  outline-offset: 3px;
+}
+
+.timer-reset {
+  background: #bde5df;
+  color: #3f716e;
+}
+
+@media (max-width: 680px) {
+  .day-charm {
+    height: 92px;
+    padding: 2px;
+    width: 92px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 64px;
+    transform: translateY(-6px) scale(1.13);
+    width: 64px;
+  }
+
+  .day-charm-curve text {
+    font-size: 7.45px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 5.8px;
+  }
+
+  .timer-bloom-face {
+    inset: 49px;
+    padding: 39px 14px 17px;
+  }
+
+  .timer-clock-pal {
+    height: 35px;
+    top: 42px;
+    width: 39px;
+  }
+
+  .timer-clock-pal::before {
+    box-shadow: 16px 0 #6c6464;
+  }
+}

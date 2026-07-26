@@ -191,6 +191,7 @@ type RepeatOption =
   | "Custom";
 
 type EventDraft = Omit<CalendarEvent, "id">;
+type DayPart = "morning" | "afternoon" | "evening";
 
 type SketchPage = {
   id: string;
@@ -433,7 +434,6 @@ const themeOptions: {
       "/assets/openmoji/tulip.svg",
     ],
     charm: "a note for you",
-    showCharm: false,
     decoratedScene: true,
   },
   {
@@ -448,7 +448,6 @@ const themeOptions: {
       "/assets/openmoji/basket.svg",
     ],
     charm: "stay for tea",
-    showCharm: false,
     decoratedScene: true,
   },
   {
@@ -463,7 +462,6 @@ const themeOptions: {
       "/assets/openmoji/star.svg",
     ],
     charm: "tucked in softly",
-    showCharm: false,
     decoratedScene: true,
   },
 ];
@@ -654,7 +652,15 @@ function journalFaceFor(index: number) {
 function notePreview(text: string, maxCharacters = 132) {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (normalized.length <= maxCharacters) return normalized;
-  return `${normalized.slice(0, maxCharacters).trimEnd()}...`;
+  return `${normalized.slice(0, maxCharacters).trimEnd()}…`;
+}
+
+function firstSentencePreview(text: string, maxCharacters = 96) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const sentenceEnd = normalized.search(/[.!?](?:\s|$)/);
+  const firstSentence =
+    sentenceEnd >= 0 ? normalized.slice(0, sentenceEnd + 1) : normalized;
+  return notePreview(firstSentence, maxCharacters);
 }
 
 const eventColors: { value: EventColor; label: string; hex: string }[] = [
@@ -696,6 +702,17 @@ function makeEventDraft(date: string): EventDraft {
     todoStates: [],
     files: [],
   };
+}
+
+function eventHasValidTiming(event: EventDraft) {
+  if (event.allDay) return true;
+  const endDate = event.endDate || event.date;
+  if (!event.date || !endDate || !event.time || !event.endTime) return false;
+  const start = new Date(`${event.date}T${event.time}:00`);
+  const end = new Date(`${endDate}T${event.endTime}:00`);
+  return Number.isFinite(start.getTime()) &&
+    Number.isFinite(end.getTime()) &&
+    end.getTime() > start.getTime();
 }
 
 const starterClasses: ClassItem[] = [
@@ -862,7 +879,7 @@ export default function Home() {
   >([]);
   const [selectedSecretDiaryEntry, setSelectedSecretDiaryEntry] =
     useState<SecretDiaryEntry | null>(null);
-  const [isNight, setIsNight] = useState(false);
+  const [dayPart, setDayPart] = useState<DayPart>("morning");
   const [appTheme, setAppTheme] = useState<AppTheme>("storybook");
   const [colorMode, setColorMode] = useState<ColorMode>("light");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -965,7 +982,13 @@ export default function Home() {
   useEffect(() => {
     const updateDaypart = () => {
       const hour = new Date().getHours();
-      setIsNight(hour >= 18 || hour < 5);
+      setDayPart(
+        hour >= 18 || hour < 5
+          ? "evening"
+          : hour >= 12
+            ? "afternoon"
+            : "morning",
+      );
     };
     updateDaypart();
     const interval = window.setInterval(updateDaypart, 60_000);
@@ -1702,7 +1725,7 @@ export default function Home() {
   };
 
   const saveCalendarEvent = () => {
-    if (!eventDraft.title.trim()) return;
+    if (!eventDraft.title.trim() || !eventHasValidTiming(eventDraft)) return;
     const savedEvent: CalendarEvent = {
       ...eventDraft,
       id: editingEventId ?? crypto.randomUUID(),
@@ -2538,6 +2561,8 @@ export default function Home() {
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
 
+  const eventTimingIsValid = eventHasValidTiming(eventDraft);
+
   return (
     <main
       className="app-shell"
@@ -2646,8 +2671,8 @@ export default function Home() {
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
-              showDayCharm={activeTheme.showCharm !== false}
-              isNight={isNight}
+              showDayCharm
+              dayPart={dayPart}
             />
           )}
 
@@ -2749,18 +2774,15 @@ export default function Home() {
                     }
                   >
                     <div className="timer-color-well" aria-hidden="true" />
-                    <span className="timer-keepsake keepsake-one" aria-hidden="true">
-                      ୨୧
-                    </span>
-                    <span className="timer-keepsake keepsake-two" aria-hidden="true">
-                      ♡
-                    </span>
-                    <span className="timer-keepsake keepsake-three" aria-hidden="true">
-                      ✦
-                    </span>
-                    <span className="timer-keepsake keepsake-four" aria-hidden="true">
-                      ❀
-                    </span>
+                    <div className="timer-clock-decoration" aria-hidden="true">
+                      <span className="timer-clock-sparkle sparkle-one">✦</span>
+                      <span className="timer-clock-sparkle sparkle-two">✦</span>
+                      <span className="timer-clock-pal">
+                        <i />
+                        <i />
+                        <b />
+                      </span>
+                    </div>
                     <div className="timer-bloom-face">
                       <span className="tiny-label">GENTLE FOCUS</span>
                       <strong>{formatTimer(focusSeconds)}</strong>
@@ -3526,7 +3548,7 @@ export default function Home() {
                     className="event-save-button"
                     type="button"
                     onClick={saveCalendarEvent}
-                    disabled={!eventDraft.title.trim()}
+                    disabled={!eventDraft.title.trim() || !eventTimingIsValid}
                   >
                     Save
                   </button>
@@ -3624,6 +3646,12 @@ export default function Home() {
                           <input
                             type="time"
                             value={eventDraft.endTime}
+                            min={
+                              (eventDraft.endDate || eventDraft.date) ===
+                              eventDraft.date
+                                ? eventDraft.time
+                                : undefined
+                            }
                             onChange={(event) =>
                               updateEventDraft("endTime", event.target.value)
                             }
@@ -3631,6 +3659,11 @@ export default function Home() {
                         )}
                       </label>
                     </div>
+                    {!eventTimingIsValid && !eventDraft.allDay && (
+                      <p className="event-time-error" role="alert">
+                        The event must end after it starts.
+                      </p>
+                    )}
 
                     <label className="event-row switch-row">
                       <span className="event-row-icon">⌖</span>
@@ -3891,7 +3924,7 @@ export default function Home() {
                   <button
                     className="mobile-event-save"
                     type="submit"
-                    disabled={!eventDraft.title.trim()}
+                    disabled={!eventDraft.title.trim() || !eventTimingIsValid}
                   >
                     Save event
                   </button>
@@ -4292,7 +4325,7 @@ export default function Home() {
                               <span aria-hidden="true">{entry.feeling}</span>
                               <div>
                                 <small>{entry.date}</small>
-                                <p>{notePreview(entry.text, 88)}</p>
+                                <p>{firstSentencePreview(entry.text)}</p>
                               </div>
                             </button>
                             <button
@@ -5218,7 +5251,7 @@ function TodayScreen({
   dayCharmLabel,
   dayCharmText,
   showDayCharm,
-  isNight,
+  dayPart,
 }: {
   pending: Reminder[];
   completed: Reminder[];
@@ -5236,7 +5269,7 @@ function TodayScreen({
   dayCharmLabel: string;
   dayCharmText: string;
   showDayCharm: boolean;
-  isNight: boolean;
+  dayPart: DayPart;
 }) {
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
@@ -5259,16 +5292,20 @@ function TodayScreen({
           </p>
           <h2>
             {selectedIsToday
-              ? isNight
+              ? dayPart === "evening"
                 ? "Good evening, lovely."
-                : "Good morning, lovely."
+                : dayPart === "afternoon"
+                  ? "Good afternoon, lovely."
+                  : "Good morning, lovely."
               : `A little look at ${selectedWeekday}.`}
           </h2>
           <p className="soft-copy">
             {selectedIsToday
-              ? isNight
+              ? dayPart === "evening"
                 ? "You did enough today. Let the evening soften around you."
-                : "Let’s make today feel a little lighter."
+                : dayPart === "afternoon"
+                  ? "There is still time to move gently through the day."
+                  : "Let’s make today feel a little lighter."
               : "Tap today whenever you want to come back."}
           </p>
         </div>
@@ -5276,38 +5313,35 @@ function TodayScreen({
           <div
             className={[
               "day-charm",
-              dayCharmText === "you may rest" ? "curved-copy" : "",
+              "curved-copy",
+              dayCharmText.length > 15 ? "long-copy" : "",
             ]
               .filter(Boolean)
               .join(" ")}
             aria-label={`${dayCharmLabel}: ${dayCharmText}`}
           >
             <img src={dayCharm} alt="" />
-            {dayCharmText === "you may rest" ? (
-              <svg
-                className="day-charm-curve"
-                viewBox="0 0 100 100"
-                aria-hidden="true"
-              >
-                <defs>
-                  <path
-                    id="you-may-rest-curve"
-                    d="M 15 70 Q 50 94 85 70"
-                  />
-                </defs>
-                <text>
-                  <textPath
-                    href="#you-may-rest-curve"
-                    startOffset="50%"
-                    textAnchor="middle"
-                  >
-                    YOU MAY REST
-                  </textPath>
-                </text>
-              </svg>
-            ) : (
-              <span>{dayCharmText}</span>
-            )}
+            <svg
+              className="day-charm-curve"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+            >
+              <defs>
+                <path
+                  id="day-charm-message-curve"
+                  d="M 11 68 Q 50 94 89 68"
+                />
+              </defs>
+              <text>
+                <textPath
+                  href="#day-charm-message-curve"
+                  startOffset="50%"
+                  textAnchor="middle"
+                >
+                  {dayCharmText.toUpperCase()}
+                </textPath>
+              </text>
+            </svg>
           </div>
         )}
       </section>

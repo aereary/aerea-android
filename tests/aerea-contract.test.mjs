@@ -41,8 +41,8 @@ test("keeps only the approved theme collection", () => {
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    3,
-    "only the three new decorated themes should hide the welcome charm",
+    0,
+    "every approved theme should keep its illustrated welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
@@ -69,8 +69,8 @@ test("keeps only the approved theme collection", () => {
 
 test("curves the Lavender rest message", () => {
   assert.match(pageSource, /<textPath/);
-  assert.match(pageSource, /YOU MAY REST/);
-  assert.match(pageSource, /Q 50 94 85 70/);
+  assert.match(pageSource, /dayCharmText\.toUpperCase\(\)/);
+  assert.match(pageSource, /Q 50 94 89 68/);
 });
 
 test("ships Safe Place as authored offline copy", () => {
@@ -93,10 +93,9 @@ test("ships a clean draining focus clock and varied journal faces", () => {
   assert.doesNotMatch(pageSource, /timer-status-dot/);
   assert.doesNotMatch(pageSource, /timer-leaf/);
   assert.match(pageSource, /color fades gently with the time/);
-  assert.ok(
-    [...pageSource.matchAll(/timer-keepsake/g)].length >= 4,
-    "the circular focus clock should use keepsake decorations instead of dots",
-  );
+  assert.doesNotMatch(pageSource, /timer-keepsake/);
+  assert.match(pageSource, /timer-clock-pal/);
+  assert.match(cssSource, /\.timer-bloom\.running[\s\S]*animation: none !important/);
   assert.match(pageSource, /journalFaceFor\(index\)/);
   assert.ok(
     [...pageSource.matchAll(/const journalFaces = \[([\s\S]*?)\];/g)][0][1]
@@ -104,6 +103,22 @@ test("ships a clean draining focus clock and varied journal faces", () => {
       .filter((line) => line.trim().startsWith('"')).length >= 20,
     "journal moments should cycle through at least twenty cute faces",
   );
+});
+
+test("validates event timing and recognizes the afternoon", () => {
+  assert.match(pageSource, /function eventHasValidTiming/);
+  assert.match(pageSource, /end\.getTime\(\) > start\.getTime\(\)/);
+  assert.match(pageSource, /The event must end after it starts\./);
+  assert.match(pageSource, /Good afternoon, lovely\./);
+  assert.match(pageSource, /hour >= 18 \|\| hour < 5/);
+  assert.match(pageSource, /hour >= 12[\s\S]*\? "afternoon"/);
+});
+
+test("keeps secret diary writing aligned and saved pages recognizable", () => {
+  assert.match(pageSource, /function firstSentencePreview/);
+  assert.match(pageSource, /firstSentencePreview\(entry\.text\)/);
+  assert.match(cssSource, /\.secret-diary-writing textarea[\s\S]*line-height: 35px/);
+  assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
 });
 
 test("opens saved notes fully and edits calendar rows directly", () => {
