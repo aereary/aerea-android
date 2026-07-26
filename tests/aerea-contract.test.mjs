@@ -108,6 +108,10 @@ test("ships a clean draining focus clock and varied journal faces", () => {
 test("validates event timing and recognizes the afternoon", () => {
   assert.match(pageSource, /function eventHasValidTiming/);
   assert.match(pageSource, /end\.getTime\(\) > start\.getTime\(\)/);
+  assert.match(pageSource, /function keepEventEndingAfterStart/);
+  assert.match(pageSource, /normalizeCalendarEventTiming/);
+  assert.match(pageSource, /function formatTimeWithPeriod/);
+  assert.match(pageSource, /hour >= 12 \? "PM" : "AM"/);
   assert.match(pageSource, /The event must end after it starts\./);
   assert.match(pageSource, /Good afternoon, lovely\./);
   assert.match(pageSource, /hour >= 18 \|\| hour < 5/);
@@ -118,7 +122,22 @@ test("keeps secret diary writing aligned and saved pages recognizable", () => {
   assert.match(pageSource, /function firstSentencePreview/);
   assert.match(pageSource, /firstSentencePreview\(entry\.text\)/);
   assert.match(cssSource, /\.secret-diary-writing textarea[\s\S]*line-height: 35px/);
+  assert.match(
+    cssSource,
+    /\.secret-page-list \.secret-page-open[\s\S]*height: auto;[\s\S]*width: 100%;/,
+  );
   assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
+});
+
+test("lets the focus clock inherit every active theme", () => {
+  assert.match(
+    cssSource,
+    /\.timer-color-well::before[\s\S]*var\(--pink\)[\s\S]*var\(--yellow\)[\s\S]*var\(--blue\)/,
+  );
+  assert.match(
+    cssSource,
+    /\.timer-clock-pal[\s\S]*var\(--orange\)[\s\S]*var\(--paper\)/,
+  );
 });
 
 test("opens saved notes fully and edits calendar rows directly", () => {

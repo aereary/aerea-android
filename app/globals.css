@@ -4776,6 +4776,255 @@ p {
   }
 }
 
+/* July 26 correction: one paper grid, readable keepsakes, themed clock color. */
+.secret-diary-page {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 52px,
+      rgba(213, 143, 170, 0.2) 53px 55px,
+      transparent 56px
+    ),
+    #fffaf4;
+}
+
+.secret-diary-writing textarea {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 33px,
+      rgba(117, 138, 167, 0.16) 33px 35px
+    );
+  background-color: transparent;
+  background-position: 0 0;
+  background-size: 100% 35px;
+}
+
+.secret-page-list .secret-page-open {
+  border-radius: 0;
+  font-size: inherit;
+  height: auto;
+  line-height: normal;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+  width: 100%;
+}
+
+.secret-page-open > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.secret-page-open small {
+  color: #7d6d79;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.secret-page-open p {
+  color: #4a3d49;
+  margin-top: 0;
+}
+
+.event-time-readable {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+  margin: -2px 0 10px;
+  text-align: center;
+}
+
+.day-charm {
+  height: 116px;
+  width: 116px;
+}
+
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 82px;
+  transform: translateY(-8px) scale(1.12);
+  width: 82px;
+}
+
+.day-charm-curve text {
+  font-size: 9px;
+  letter-spacing: 0.045em;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 7.15px;
+  letter-spacing: 0.012em;
+}
+
+.timer-card {
+  background:
+    radial-gradient(
+      circle at 12% 15%,
+      color-mix(in srgb, var(--pink) 40%, transparent),
+      transparent 10rem
+    ),
+    radial-gradient(
+      circle at 88% 84%,
+      color-mix(in srgb, var(--blue) 38%, transparent),
+      transparent 12rem
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--yellow) 24%, var(--paper)),
+      color-mix(in srgb, var(--blue) 23%, var(--paper))
+    );
+}
+
+.timer-modes {
+  background: color-mix(in srgb, var(--blue) 36%, var(--paper));
+}
+
+.timer-modes button.active {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--blue) 77%, var(--paper)),
+    color-mix(in srgb, var(--yellow) 76%, var(--paper))
+  );
+  color: var(--ink);
+}
+
+.timer-bloom,
+.timer-bloom.running {
+  background:
+    repeating-conic-gradient(
+      from -1deg,
+      color-mix(in srgb, var(--ink-soft) 27%, transparent) 0 1deg,
+      transparent 1deg 30deg
+    ),
+    color-mix(in srgb, var(--yellow) 36%, var(--paper));
+  box-shadow:
+    0 0 0 7px color-mix(in srgb, var(--paper) 96%, transparent),
+    0 0 0 13px color-mix(in srgb, var(--blue) 62%, var(--paper)),
+    0 22px 42px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.timer-color-well::before {
+  background:
+    conic-gradient(
+      from -90deg,
+      var(--pink) 0,
+      var(--yellow) calc(var(--timer-progress) * 0.42),
+      var(--blue) var(--timer-progress),
+      color-mix(in srgb, var(--ink-soft) 11%, var(--paper))
+        var(--timer-progress) 100%
+    );
+}
+
+.timer-color-well::after {
+  border-color: color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.timer-bloom-face {
+  background:
+    radial-gradient(
+      circle at 50% 8%,
+      color-mix(in srgb, var(--pink) 24%, transparent),
+      transparent 38%
+    ),
+    color-mix(in srgb, var(--paper) 96%, var(--yellow));
+  border-color: color-mix(in srgb, var(--paper) 88%, white);
+  box-shadow:
+    inset 0 0 0 5px color-mix(in srgb, var(--blue) 11%, transparent),
+    0 12px 25px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.timer-bloom-face .tiny-label {
+  color: color-mix(in srgb, var(--leaf) 66%, var(--ink));
+}
+
+.timer-bloom-face strong {
+  color: var(--ink);
+}
+
+.timer-bloom-face small {
+  color: var(--ink-soft);
+}
+
+.timer-clock-pal {
+  background: color-mix(in srgb, var(--orange) 82%, var(--paper));
+  border-color: color-mix(in srgb, var(--yellow) 60%, var(--paper));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--orange) 23%, transparent);
+}
+
+.timer-clock-pal::before {
+  background: var(--ink-soft);
+  box-shadow: 17px 0 var(--ink-soft);
+}
+
+.timer-clock-pal::after {
+  border-bottom-color: color-mix(in srgb, var(--pink) 72%, var(--ink));
+}
+
+.timer-clock-pal i {
+  background: var(--pink);
+}
+
+.timer-clock-pal b {
+  background: var(--leaf);
+}
+
+.timer-clock-sparkle {
+  color: var(--yellow);
+}
+
+.timer-clock-sparkle.sparkle-two {
+  color: var(--pink);
+}
+
+.timer-main {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--orange) 82%, var(--paper)),
+    color-mix(in srgb, var(--pink) 78%, var(--paper))
+  );
+  box-shadow: 0 7px 0 color-mix(in srgb, var(--orange) 24%, transparent);
+  color: color-mix(in srgb, var(--paper) 92%, white);
+}
+
+.timer-main:focus-visible,
+.timer-reset:focus-visible {
+  outline-color: color-mix(in srgb, var(--blue) 72%, white);
+}
+
+.timer-reset {
+  background: color-mix(in srgb, var(--blue) 56%, var(--paper));
+  color: var(--ink);
+}
+
+@media (max-width: 680px) {
+  .day-charm {
+    height: 104px;
+    width: 104px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 74px;
+    transform: translateY(-7px) scale(1.13);
+    width: 74px;
+  }
+
+  .day-charm-curve text {
+    font-size: 9.15px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 7.2px;
+  }
+
+  .timer-clock-pal::before {
+    box-shadow: 16px 0 var(--ink-soft);
+  }
+}
+
 @media (max-width: 390px) {
   .brand-wrap {
     gap: 8px;
@@ -11207,5 +11456,254 @@ body {
 
   .timer-clock-pal::before {
     box-shadow: 16px 0 #6c6464;
+  }
+}
+
+/* Authoritative mobile correction for the diary, charm, and themed clock. */
+.secret-diary-page {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 52px,
+      rgba(213, 143, 170, 0.2) 53px 55px,
+      transparent 56px
+    ),
+    #fffaf4;
+}
+
+.secret-diary-writing textarea {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 33px,
+      rgba(117, 138, 167, 0.16) 33px 35px
+    );
+  background-color: transparent;
+  background-position: 0 0;
+  background-size: 100% 35px;
+}
+
+.secret-page-list .secret-page-open {
+  border-radius: 0;
+  font-size: inherit;
+  height: auto;
+  line-height: normal;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+  width: 100%;
+}
+
+.secret-page-open > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.secret-page-open small {
+  color: #7d6d79;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.secret-page-open p {
+  color: #4a3d49;
+  margin-top: 0;
+}
+
+.event-time-readable {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+  margin: -2px 0 10px;
+  text-align: center;
+}
+
+.day-charm {
+  height: 116px;
+  width: 116px;
+}
+
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 82px;
+  transform: translateY(-8px) scale(1.12);
+  width: 82px;
+}
+
+.day-charm-curve text {
+  font-size: 9px;
+  letter-spacing: 0.045em;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 7.15px;
+  letter-spacing: 0.012em;
+}
+
+.timer-card {
+  background:
+    radial-gradient(
+      circle at 12% 15%,
+      color-mix(in srgb, var(--pink) 40%, transparent),
+      transparent 10rem
+    ),
+    radial-gradient(
+      circle at 88% 84%,
+      color-mix(in srgb, var(--blue) 38%, transparent),
+      transparent 12rem
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--yellow) 24%, var(--paper)),
+      color-mix(in srgb, var(--blue) 23%, var(--paper))
+    );
+}
+
+.timer-modes {
+  background: color-mix(in srgb, var(--blue) 36%, var(--paper));
+}
+
+.timer-modes button.active {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--blue) 77%, var(--paper)),
+    color-mix(in srgb, var(--yellow) 76%, var(--paper))
+  );
+  color: var(--ink);
+}
+
+.timer-bloom,
+.timer-bloom.running {
+  background:
+    repeating-conic-gradient(
+      from -1deg,
+      color-mix(in srgb, var(--ink-soft) 27%, transparent) 0 1deg,
+      transparent 1deg 30deg
+    ),
+    color-mix(in srgb, var(--yellow) 36%, var(--paper));
+  box-shadow:
+    0 0 0 7px color-mix(in srgb, var(--paper) 96%, transparent),
+    0 0 0 13px color-mix(in srgb, var(--blue) 62%, var(--paper)),
+    0 22px 42px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.timer-color-well::before {
+  background:
+    conic-gradient(
+      from -90deg,
+      var(--pink) 0,
+      var(--yellow) calc(var(--timer-progress) * 0.42),
+      var(--blue) var(--timer-progress),
+      color-mix(in srgb, var(--ink-soft) 11%, var(--paper))
+        var(--timer-progress) 100%
+    );
+}
+
+.timer-color-well::after {
+  border-color: color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.timer-bloom-face {
+  background:
+    radial-gradient(
+      circle at 50% 8%,
+      color-mix(in srgb, var(--pink) 24%, transparent),
+      transparent 38%
+    ),
+    color-mix(in srgb, var(--paper) 96%, var(--yellow));
+  border-color: color-mix(in srgb, var(--paper) 88%, white);
+  box-shadow:
+    inset 0 0 0 5px color-mix(in srgb, var(--blue) 11%, transparent),
+    0 12px 25px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.timer-bloom-face .tiny-label {
+  color: color-mix(in srgb, var(--leaf) 66%, var(--ink));
+}
+
+.timer-bloom-face strong {
+  color: var(--ink);
+}
+
+.timer-bloom-face small {
+  color: var(--ink-soft);
+}
+
+.timer-clock-pal {
+  background: color-mix(in srgb, var(--orange) 82%, var(--paper));
+  border-color: color-mix(in srgb, var(--yellow) 60%, var(--paper));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--orange) 23%, transparent);
+}
+
+.timer-clock-pal::before {
+  background: var(--ink-soft);
+  box-shadow: 17px 0 var(--ink-soft);
+}
+
+.timer-clock-pal::after {
+  border-bottom-color: color-mix(in srgb, var(--pink) 72%, var(--ink));
+}
+
+.timer-clock-pal i {
+  background: var(--pink);
+}
+
+.timer-clock-pal b {
+  background: var(--leaf);
+}
+
+.timer-clock-sparkle {
+  color: var(--yellow);
+}
+
+.timer-clock-sparkle.sparkle-two {
+  color: var(--pink);
+}
+
+.timer-main {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--orange) 82%, var(--paper)),
+    color-mix(in srgb, var(--pink) 78%, var(--paper))
+  );
+  box-shadow: 0 7px 0 color-mix(in srgb, var(--orange) 24%, transparent);
+  color: color-mix(in srgb, var(--paper) 92%, white);
+}
+
+.timer-main:focus-visible,
+.timer-reset:focus-visible {
+  outline-color: color-mix(in srgb, var(--blue) 72%, white);
+}
+
+.timer-reset {
+  background: color-mix(in srgb, var(--blue) 56%, var(--paper));
+  color: var(--ink);
+}
+
+@media (max-width: 680px) {
+  .day-charm {
+    height: 104px;
+    width: 104px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 74px;
+    transform: translateY(-7px) scale(1.13);
+    width: 74px;
+  }
+
+  .day-charm-curve text {
+    font-size: 9.15px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 7.2px;
+  }
+
+  .timer-clock-pal::before {
+    box-shadow: 16px 0 var(--ink-soft);
   }
 }

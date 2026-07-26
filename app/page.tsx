@@ -715,6 +715,61 @@ function eventHasValidTiming(event: EventDraft) {
     end.getTime() > start.getTime();
 }
 
+function formatTimeWithPeriod(time?: string) {
+  if (!time) return "";
+  const [hourText, minuteText = "00"] = time.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return time;
+  const period = hour >= 12 ? "PM" : "AM";
+  const hourTwelve = hour % 12 || 12;
+  return `${hourTwelve}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function addMinutesToEventTiming(
+  dateKey: string,
+  time: string,
+  minutes: number,
+) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const result = new Date(year, month - 1, day, hour, minute + minutes);
+  return {
+    date: localDateKey(result),
+    time: `${String(result.getHours()).padStart(2, "0")}:${String(
+      result.getMinutes(),
+    ).padStart(2, "0")}`,
+  };
+}
+
+function keepEventEndingAfterStart(event: EventDraft): EventDraft {
+  if (event.allDay || eventHasValidTiming(event)) return event;
+  const fallback = addMinutesToEventTiming(
+    event.date,
+    event.time || "09:00",
+    60,
+  );
+  return {
+    ...event,
+    endDate: fallback.date,
+    endTime: fallback.time,
+  };
+}
+
+function normalizeCalendarEventTiming(event: CalendarEvent): CalendarEvent {
+  if (event.allDay || eventHasValidTiming(event)) return event;
+  const fallback = addMinutesToEventTiming(
+    event.date,
+    event.time || "09:00",
+    60,
+  );
+  return {
+    ...event,
+    endDate: fallback.date,
+    endTime: fallback.time,
+  };
+}
+
 const starterClasses: ClassItem[] = [
   { id: "differential-equations", name: "Differential Equations", icon: "∫", color: "#ddd8ff" },
   { id: "ethical-hacking", name: "Ethical Hacking", icon: "⌘", color: "#cceeff" },
@@ -806,8 +861,12 @@ function eventOccursOn(event: CalendarEvent, dateKey: string) {
 
 function eventTimeLabel(event: CalendarEvent) {
   if (event.allDay) return "All day";
-  if (event.endTime) return `${event.time}–${event.endTime}`;
-  return event.time;
+  if (event.endTime) {
+    return `${formatTimeWithPeriod(event.time)}–${formatTimeWithPeriod(
+      event.endTime,
+    )}`;
+  }
+  return formatTimeWithPeriod(event.time);
 }
 
 function eventRepeatLabel(event: CalendarEvent) {
@@ -1078,7 +1137,11 @@ export default function Home() {
             }
             if (state.moodHistory) setMoodHistory(state.moodHistory);
             if (state.completedDays) setCompletedDays(state.completedDays);
-            if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
+            if (state.calendarEvents) {
+              setCalendarEvents(
+                state.calendarEvents.map(normalizeCalendarEventTiming),
+              );
+            }
             if (typeof state.focusSessions === "number") {
               setFocusSessions(state.focusSessions);
             }
@@ -1749,6 +1812,44 @@ export default function Home() {
     value: EventDraft[Key],
   ) => {
     setEventDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateEventStartDate = (date: string) => {
+    setEventDraft((current) =>
+      keepEventEndingAfterStart({
+        ...current,
+        date,
+        endDate:
+          !current.endDate || current.endDate < date ? date : current.endDate,
+      }),
+    );
+  };
+
+  const updateEventStartTime = (time: string) => {
+    setEventDraft((current) =>
+      keepEventEndingAfterStart({
+        ...current,
+        time,
+      }),
+    );
+  };
+
+  const updateEventEndDate = (endDate: string) => {
+    setEventDraft((current) =>
+      keepEventEndingAfterStart({
+        ...current,
+        endDate: endDate < current.date ? current.date : endDate,
+      }),
+    );
+  };
+
+  const updateEventEndTime = (endTime: string) => {
+    setEventDraft((current) =>
+      keepEventEndingAfterStart({
+        ...current,
+        endTime,
+      }),
+    );
   };
 
   const setEventTodoState = (
@@ -3610,24 +3711,16 @@ export default function Home() {
                         <input
                           type="date"
                           value={eventDraft.date}
-                          onChange={(event) => {
-                            const nextDate = event.target.value;
-                            setEventDraft((current) => ({
-                              ...current,
-                              date: nextDate,
-                              endDate:
-                                !current.endDate || current.endDate < nextDate
-                                  ? nextDate
-                                  : current.endDate,
-                            }));
-                          }}
+                          onChange={(event) =>
+                            updateEventStartDate(event.target.value)
+                          }
                         />
                         {!eventDraft.allDay && (
                           <input
                             type="time"
                             value={eventDraft.time}
                             onChange={(event) =>
-                              updateEventDraft("time", event.target.value)
+                              updateEventStartTime(event.target.value)
                             }
                           />
                         )}
@@ -3639,7 +3732,7 @@ export default function Home() {
                           min={eventDraft.date}
                           value={eventDraft.endDate}
                           onChange={(event) =>
-                            updateEventDraft("endDate", event.target.value)
+                            updateEventEndDate(event.target.value)
                           }
                         />
                         {!eventDraft.allDay && (
@@ -3653,12 +3746,22 @@ export default function Home() {
                                 : undefined
                             }
                             onChange={(event) =>
-                              updateEventDraft("endTime", event.target.value)
+                              updateEventEndTime(event.target.value)
                             }
                           />
                         )}
                       </label>
                     </div>
+                    {!eventDraft.allDay && (
+                      <p className="event-time-readable">
+                        {formatTimeWithPeriod(eventDraft.time)}
+                        <span aria-hidden="true"> → </span>
+                        {formatTimeWithPeriod(eventDraft.endTime)}
+                        {eventDraft.endDate !== eventDraft.date
+                          ? ` · ${readableDate(eventDraft.endDate)}`
+                          : ""}
+                      </p>
+                    )}
                     {!eventTimingIsValid && !eventDraft.allDay && (
                       <p className="event-time-error" role="alert">
                         The event must end after it starts.
