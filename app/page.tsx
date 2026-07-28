@@ -5487,7 +5487,11 @@ function TodayScreen({
             className={[
               "day-charm",
               "curved-copy",
-              dayCharmText.length > 15 ? "long-copy" : "",
+              dayCharmText.length >= 17
+                ? "long-copy"
+                : dayCharmText.length >= 14
+                  ? "medium-copy"
+                  : "short-copy",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -5502,7 +5506,7 @@ function TodayScreen({
               <defs>
                 <path
                   id="day-charm-message-curve"
-                  d="M 11 68 Q 50 94 89 68"
+                  d="M 12 67 Q 50 91 88 67"
                 />
               </defs>
               <text>

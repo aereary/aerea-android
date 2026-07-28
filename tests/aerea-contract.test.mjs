@@ -68,10 +68,16 @@ test("keeps the approved themes and adds only the requested star-rain theme", ()
   );
 });
 
-test("curves the Lavender rest message", () => {
+test("keeps the original charm size and fits every curved message", () => {
   assert.match(pageSource, /<textPath/);
   assert.match(pageSource, /dayCharmText\.toUpperCase\(\)/);
-  assert.match(pageSource, /Q 50 94 89 68/);
+  assert.match(pageSource, /Q 50 91 88 67/);
+  assert.match(pageSource, /dayCharmText\.length >= 17/);
+  assert.match(pageSource, /"medium-copy"/);
+  assert.match(pageSource, /"short-copy"/);
+  assert.match(cssSource, /The welcome charm keeps its original footprint/);
+  assert.match(cssSource, /\.day-charm \{\s+height: 102px;/);
+  assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?\.day-charm \{\s+height: 84px;/);
 });
 
 test("ships Safe Place as authored offline copy", () => {

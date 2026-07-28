@@ -12151,3 +12151,64 @@ body {
     box-shadow: 16px 0 var(--ink-soft);
   }
 }
+
+/* The welcome charm keeps its original footprint. Only the copy adapts. */
+.day-charm {
+  height: 102px;
+  padding: 7px 5px;
+  width: 102px;
+}
+
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 58px;
+  transform: translateY(-7px);
+  width: 58px;
+}
+
+.day-charm-curve text,
+.day-charm.short-copy .day-charm-curve text {
+  font-size: 7px;
+  letter-spacing: 0.075em;
+}
+
+.day-charm.medium-copy .day-charm-curve text {
+  font-size: 6.25px;
+  letter-spacing: 0.045em;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 5.55px;
+  letter-spacing: 0.022em;
+}
+
+@media (max-width: 680px) {
+  .day-charm {
+    height: 84px;
+    padding: 6px 4px;
+    width: 84px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 46px;
+    transform: translateY(-6px);
+    width: 46px;
+  }
+
+  .day-charm-curve text,
+  .day-charm.short-copy .day-charm-curve text {
+    font-size: 6.45px;
+    letter-spacing: 0.06em;
+  }
+
+  .day-charm.medium-copy .day-charm-curve text {
+    font-size: 5.7px;
+    letter-spacing: 0.035em;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 5.05px;
+    letter-spacing: 0.012em;
+  }
+}
