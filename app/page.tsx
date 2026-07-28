@@ -49,6 +49,7 @@ type AppTheme =
   | "moonquilt"
   | "starrainnight"
   | "f1victory"
+  | "starrykitten"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -494,6 +495,22 @@ const themeOptions: {
       "/assets/openmoji/star.svg",
     ],
     charm: "victory lap",
+    decoratedScene: true,
+  },
+  {
+    id: "starrykitten",
+    name: "Starry-eyed kitten",
+    description:
+      "Your soft painted kitten, cocoa shadows, blush light, and tiny reflected stars.",
+    colors: ["#c8aaa1", "#f7e9e5", "#8dcfc0"],
+    icon: "🐱",
+    art: "/assets/themes/starry-eyed-kitten.jpg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "soft star eyes",
+    showCharm: false,
     decoratedScene: true,
   },
 ];
@@ -2829,7 +2846,7 @@ export default function Home() {
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
-              showDayCharm
+              showDayCharm={activeTheme.showCharm !== false}
               dayPart={dayPart}
             />
           )}
@@ -5110,7 +5127,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="theme-credit">
-                Hand-drawn theme stickers by{" "}
+                Most hand-drawn theme stickers by{" "}
                 <a
                   href="https://openmoji.org/"
                   target="_blank"
@@ -5119,6 +5136,7 @@ export default function Home() {
                   OpenMoji
                 </a>
                 , created by design students, professors, and contributors.
+                The starry-eyed kitten uses the image you supplied unchanged.
               </p>
             </section>
 

@@ -12417,3 +12417,234 @@ body {
     box-shadow: 16px 0 #6c6464;
   }
 }
+
+/* July 28: a true full-screen readable month, tidy keepsakes, and one new supplied-art theme. */
+.calendar-modal.calendar-expanded-mode {
+  border-radius: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: none;
+  overflow: hidden;
+  padding: clamp(14px, 2.2vw, 28px);
+  width: 100vw;
+}
+
+.calendar-expanded-mode .modal-top {
+  flex: 0 0 auto;
+}
+
+.calendar-expanded-mode .calendar-sources {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin: 8px 0 10px;
+}
+
+.calendar-expanded-mode .calendar-sources > span {
+  display: none;
+}
+
+.calendar-expanded-mode .month-grid-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+}
+
+.calendar-expanded-mode .month-grid.expanded {
+  gap: clamp(3px, 0.65vw, 9px);
+  grid-auto-rows: minmax(0, 1fr);
+  grid-template-rows: auto;
+  height: 100%;
+}
+
+.calendar-expanded-mode .month-grid.expanded > i,
+.calendar-expanded-mode .month-grid.expanded > button {
+  height: auto;
+  min-height: 0;
+}
+
+.calendar-expanded-mode .month-grid.expanded > button {
+  border-radius: clamp(10px, 1.5vw, 20px);
+  padding: clamp(4px, 0.65vw, 8px);
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.selected {
+  padding: clamp(3px, 0.55vw, 7px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
+  bottom: auto;
+  gap: clamp(2px, 0.35vw, 4px);
+  left: clamp(2px, 0.45vw, 6px);
+  right: clamp(2px, 0.45vw, 6px);
+  top: clamp(25px, 3.2vw, 39px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
+  border-radius: clamp(4px, 0.55vw, 7px);
+  padding: clamp(2px, 0.35vw, 4px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview b {
+  font-size: clamp(6px, 0.78vw, 10px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
+  font-size: clamp(5px, 0.64vw, 8px);
+}
+
+.calendar-expanded-mode .selected-day-panel,
+.calendar-expanded-mode .calendar-add-large {
+  display: none;
+}
+
+.secret-page-list .secret-page-open {
+  align-items: center;
+}
+
+.secret-page-open > div {
+  align-content: center;
+  transform: translateY(3px);
+}
+
+.secret-page-open small {
+  line-height: 1.2;
+}
+
+.secret-page-open p {
+  line-height: 1.28;
+}
+
+.event-chip > span,
+.event-detail-time strong,
+.calendar-event-preview small {
+  font-variant-numeric: tabular-nums;
+}
+
+.event-chip > span {
+  align-self: center;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.app-shell[data-theme="starrykitten"] {
+  --ink: #3e3438;
+  --ink-soft: #67555d;
+  --muted: #8a7279;
+  --cream: #f8eeeb;
+  --cream-deep: #eddcd8;
+  --paper: #fffaf8;
+  --hero: #c7a9a1;
+  --blue: #cae9e3;
+  --lime-wash: #e7efe8;
+  --lime-soft: #cddfd5;
+  --leaf: #79b8aa;
+  --leaf-deep: #4b8c80;
+  --yellow: #f2d98e;
+  --yellow-soft: #faebbd;
+  --orange: #db9d83;
+  --orange-soft: #efc8ba;
+  --pink: #e8bac7;
+  --lilac: #d5c8e7;
+  --sage: #c9ddd4;
+  --line: rgba(92, 66, 75, 0.13);
+  --shadow: 0 16px 0 rgba(84, 55, 66, 0.09), 0 24px 46px rgba(69, 45, 56, 0.15);
+  --shadow-soft: 0 7px 0 rgba(84, 55, 66, 0.08), 0 13px 25px rgba(69, 45, 56, 0.12);
+  --app-backdrop:
+    linear-gradient(rgba(248, 232, 230, 0.42), rgba(107, 77, 88, 0.16)),
+    url("/assets/themes/starry-eyed-kitten.jpg") center 32% / cover fixed;
+}
+
+.storybook-scene[data-visual="starrykitten"] {
+  background:
+    linear-gradient(90deg, rgba(255, 247, 244, 0.1), rgba(126, 86, 99, 0.04)),
+    url("/assets/themes/starry-eyed-kitten.jpg") center 43% / cover;
+}
+
+.storybook-scene[data-visual="starrykitten"] :is(
+  .storybook-cloud,
+  .storybook-sun,
+  .storybook-hill,
+  .storybook-flower
+) {
+  display: none;
+}
+
+.app-shell[data-theme="starrykitten"] .theme-scene-sparkle {
+  color: #fff3a6;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.92));
+}
+
+.theme-option[data-theme-option="starrykitten"] .theme-option-art {
+  background: #d8bfba;
+}
+
+.theme-option[data-theme-option="starrykitten"] .theme-option-main-art {
+  bottom: 0;
+  height: 100%;
+  left: 0;
+  object-fit: cover;
+  object-position: center 43%;
+  width: 100%;
+}
+
+.theme-option[data-theme-option="starrykitten"] .theme-option-accent-art {
+  filter: drop-shadow(0 2px 3px rgba(75, 54, 64, 0.25));
+}
+
+@media (max-width: 680px) {
+  .calendar-modal.calendar-expanded-mode {
+    padding: 11px 7px 9px;
+  }
+
+  .calendar-expanded-mode .calendar-month-heading {
+    gap: 8px;
+  }
+
+  .calendar-expanded-mode .calendar-month-heading h2 {
+    font-size: 23px;
+  }
+
+  .calendar-expanded-mode .modal-top > button,
+  .calendar-expanded-mode .calendar-month-heading > button {
+    height: 38px;
+    width: 38px;
+  }
+
+  .calendar-expanded-mode .calendar-sources {
+    margin: 5px 0 7px;
+  }
+
+  .calendar-expanded-mode .calendar-view-toggle {
+    min-height: 29px;
+    padding-inline: 10px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded > strong {
+    font-size: 7px;
+    padding: 4px 1px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-day-number {
+    font-size: 10px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
+    top: 23px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
+    height: 17px;
+    width: 18px;
+  }
+
+  .event-chip {
+    grid-template-columns: minmax(114px, max-content) minmax(0, 1fr) 29px;
+  }
+
+  .event-chip > span {
+    font-size: 8.4px;
+  }
+}

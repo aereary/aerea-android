@@ -27,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps every approved theme and adds the requested racing-night theme", () => {
+test("keeps every approved theme and adds only the requested supplied-art theme", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -38,18 +38,19 @@ test("keeps every approved theme and adds the requested racing-night theme", () 
     "moonquilt",
     "starrainnight",
     "f1victory",
+    "starrykitten",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    0,
-    "every approved theme should keep its illustrated welcome charm",
+    1,
+    "only the supplied-art theme should replace the illustrated welcome charm with its full scene",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    5,
-    "the approved decorated themes plus star-rain and racing night should decorate the sky",
+    6,
+    "the approved decorated themes plus star-rain, racing night, and the supplied kitten should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -63,6 +64,8 @@ test("keeps every approved theme and adds the requested racing-night theme", () 
   }
   assert.match(pageSource, /activeTheme\.decoratedScene &&/);
   assert.match(cssSource, /aerea-f1-night-background\.png/);
+  assert.match(pageSource, /starry-eyed-kitten\.jpg/);
+  assert.match(cssSource, /starry-eyed-kitten\.jpg/);
   assert.doesNotMatch(
     pageSource,
     /className="theme-scene-character"/,
@@ -142,6 +145,14 @@ test("offers a readable expanded month without replacing the compact calendar", 
     cssSource,
     /\.month-grid\.expanded \.calendar-event-preview-list \{[\s\S]*grid-auto-rows: max-content/,
   );
+  assert.match(
+    cssSource,
+    /\.calendar-modal\.calendar-expanded-mode \{[\s\S]*height: 100dvh;[\s\S]*width: 100vw;/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-expanded-mode \.selected-day-panel,[\s\S]*display: none;/,
+  );
 });
 
 test("keeps secret diary writing aligned and saved pages recognizable", () => {
@@ -153,6 +164,10 @@ test("keeps secret diary writing aligned and saved pages recognizable", () => {
     /\.secret-page-list \.secret-page-open[\s\S]*height: auto;[\s\S]*width: 100%;/,
   );
   assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
+  assert.match(
+    cssSource,
+    /\.secret-page-open > div \{[\s\S]*transform: translateY\(3px\);/,
+  );
 });
 
 test("keeps the approved warm focus-clock palette", () => {
