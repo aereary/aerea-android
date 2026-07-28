@@ -1426,6 +1426,9 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+  const calendarWeekRows = Math.ceil(
+    (leadingDays + daysInViewMonth) / 7,
+  );
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -3689,7 +3692,14 @@ export default function Home() {
       </section>
 
       {calendarOpen && (
-        <div className="modal-backdrop" role="presentation">
+        <div
+          className={
+            calendarExpanded && !eventEditorOpen
+              ? "modal-backdrop calendar-expanded-backdrop"
+              : "modal-backdrop"
+          }
+          role="presentation"
+        >
           <section
             className={
               eventEditorOpen
@@ -4174,6 +4184,11 @@ export default function Home() {
                     ]
                       .filter(Boolean)
                       .join(" ")}
+                    style={
+                      {
+                        "--calendar-week-rows": calendarWeekRows,
+                      } as CSSProperties
+                    }
                     onAnimationEnd={() => setCalendarSlideDirection(null)}
                     onTouchStart={startCalendarSwipe}
                     onTouchEnd={finishCalendarSwipe}
@@ -4389,7 +4404,20 @@ export default function Home() {
                           className={`event-chip ${calendarEvent.color}`}
                           key={calendarEvent.id}
                         >
-                          <span>{eventTimeLabel(calendarEvent)}</span>
+                          <span className="event-chip-times">
+                            {calendarEvent.allDay ? (
+                              <strong>ALL DAY</strong>
+                            ) : (
+                              <>
+                                <strong>
+                                  {formatTimeWithPeriod(calendarEvent.time)}
+                                </strong>
+                                <strong>
+                                  {formatTimeWithPeriod(calendarEvent.endTime)}
+                                </strong>
+                              </>
+                            )}
+                          </span>
                           <button
                             className="event-chip-main"
                             onClick={() => openEventEditor(calendarEvent)}

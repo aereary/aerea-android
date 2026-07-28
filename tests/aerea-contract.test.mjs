@@ -140,6 +140,9 @@ test("offers a readable expanded month without replacing the compact calendar", 
   assert.match(pageSource, /Read events/);
   assert.match(pageSource, /calendar-event-preview-list/);
   assert.match(pageSource, /eventTimeLabel\(event\)/);
+  assert.match(pageSource, /const calendarWeekRows = Math\.ceil/);
+  assert.match(pageSource, /"--calendar-week-rows": calendarWeekRows/);
+  assert.match(pageSource, /calendar-expanded-backdrop/);
   assert.match(cssSource, /\.month-grid\.expanded/);
   assert.match(
     cssSource,
@@ -152,6 +155,14 @@ test("offers a readable expanded month without replacing the compact calendar", 
   assert.match(
     cssSource,
     /\.calendar-expanded-mode \.selected-day-panel,[\s\S]*display: none;/,
+  );
+  assert.match(
+    cssSource,
+    /grid-template-rows:[\s\S]*repeat\(var\(--calendar-week-rows\), minmax\(0, 1fr\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-expanded-mode \.month-grid\.expanded > button \{[\s\S]*border-radius: 0;/,
   );
 });
 
@@ -166,7 +177,7 @@ test("keeps secret diary writing aligned and saved pages recognizable", () => {
   assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
   assert.match(
     cssSource,
-    /\.secret-page-open > div \{[\s\S]*transform: translateY\(3px\);/,
+    /\.secret-page-open > div \{[\s\S]*transform: translateY\(8px\);/,
   );
 });
 
@@ -186,6 +197,11 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(pageSource, /setSelectedJournalEntry\(entry\)/);
   assert.match(pageSource, /<NoteDetailDialog/);
   assert.match(pageSource, /onClick=\{\(\) => openEventEditor\(calendarEvent\)\}/);
+  assert.match(pageSource, /className="event-chip-times"/);
+  assert.match(
+    pageSource,
+    /formatTimeWithPeriod\(calendarEvent\.time\)[\s\S]*formatTimeWithPeriod\(calendarEvent\.endTime\)/,
+  );
   assert.match(cssSource, /\.note-detail-text/);
 });
 

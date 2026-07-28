@@ -12648,3 +12648,251 @@ body {
     font-size: 8.4px;
   }
 }
+
+/* July 28: flat full-screen month, stacked event times, and balanced keepsakes. */
+.calendar-expanded-backdrop {
+  align-items: stretch;
+  background: var(--cream);
+  padding: 0;
+  z-index: 700;
+}
+
+.calendar-expanded-backdrop .calendar-modal.calendar-expanded-mode {
+  background: var(--cream);
+  border: 0;
+  box-shadow: none;
+  padding: clamp(12px, 1.8vw, 24px);
+}
+
+.calendar-expanded-mode .month-grid-viewport {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.calendar-expanded-mode .month-grid.expanded {
+  background: var(--paper);
+  gap: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows:
+    minmax(28px, auto)
+    repeat(var(--calendar-week-rows), minmax(0, 1fr));
+}
+
+.calendar-expanded-mode .month-grid.expanded > strong {
+  align-items: center;
+  background: color-mix(in srgb, var(--paper) 90%, var(--blue));
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: center;
+  padding: 6px 2px;
+}
+
+.calendar-expanded-mode .month-grid.expanded > i,
+.calendar-expanded-mode .month-grid.expanded > button {
+  background: var(--paper);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  height: auto;
+  min-height: 0;
+}
+
+.calendar-expanded-mode .month-grid.expanded > i {
+  background: color-mix(in srgb, var(--paper) 94%, var(--cream));
+}
+
+.calendar-expanded-mode .month-grid.expanded > button {
+  border-right: 1px solid var(--line);
+  padding: clamp(5px, 0.7vw, 9px);
+}
+
+.calendar-expanded-mode .month-grid.expanded > button:nth-child(7n) {
+  border-right: 0;
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.selected {
+  background: color-mix(in srgb, var(--blue) 26%, var(--paper));
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  box-shadow: inset 0 0 0 2px var(--leaf);
+  padding: clamp(5px, 0.7vw, 9px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-day-number {
+  font-size: clamp(11px, 1.15vw, 16px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
+  bottom: clamp(5px, 0.7vw, 9px);
+  gap: clamp(2px, 0.28vw, 4px);
+  left: clamp(4px, 0.55vw, 8px);
+  right: clamp(4px, 0.55vw, 8px);
+  top: clamp(27px, 3.1vw, 38px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
+  border-radius: 5px;
+  padding: clamp(2px, 0.28vw, 4px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview b {
+  font-size: clamp(7px, 0.82vw, 11px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
+  font-size: clamp(6px, 0.68vw, 9px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-day-status {
+  bottom: 5px;
+  height: 17px;
+  opacity: 0.72;
+  right: 5px;
+  width: 17px;
+}
+
+.calendar-expanded-mode
+  .month-grid.expanded
+  > button.has-event
+  .calendar-day-status {
+  opacity: 0.28;
+}
+
+.event-chip {
+  grid-template-columns: 78px minmax(0, 1fr) 32px;
+}
+
+.event-chip-times {
+  align-content: center;
+  display: grid;
+  gap: 3px;
+  line-height: 1.05;
+  min-width: 0;
+}
+
+.event-chip-times strong {
+  display: block;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.secret-page-open > div {
+  transform: translateY(8px);
+}
+
+/* Keep the charm itself fixed; only the art and message fill it more confidently. */
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 68px;
+  transform: translateY(-8px);
+  width: 68px;
+}
+
+.day-charm-curve text,
+.day-charm.short-copy .day-charm-curve text {
+  font-size: 8px;
+}
+
+.day-charm.medium-copy .day-charm-curve text {
+  font-size: 7.25px;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 6.45px;
+}
+
+@media (max-width: 680px) {
+  .calendar-expanded-backdrop
+    .calendar-modal.calendar-expanded-mode {
+    padding: 8px 6px;
+  }
+
+  .calendar-expanded-mode .month-grid-viewport {
+    border-radius: 18px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded {
+    grid-template-rows:
+      26px
+      repeat(var(--calendar-week-rows), minmax(0, 1fr));
+  }
+
+  .calendar-expanded-mode .month-grid.expanded > strong {
+    font-size: 7.5px;
+    padding: 3px 1px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded > button,
+  .calendar-expanded-mode .month-grid.expanded > button.selected {
+    padding: 4px 3px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-day-number {
+    font-size: 10.5px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
+    bottom: 4px;
+    left: 3px;
+    right: 3px;
+    top: 25px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
+    border-radius: 4px;
+    padding: 2px 3px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview b {
+    font-size: 7.2px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
+    font-size: 6.1px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
+    font-size: 8px;
+    height: 17px;
+    right: 3px;
+    top: 3px;
+    width: 18px;
+  }
+
+  .event-chip {
+    gap: 8px;
+    grid-template-columns: 72px minmax(0, 1fr) 29px;
+    padding-inline: 10px;
+  }
+
+  .event-chip-times strong {
+    font-size: 9px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 54px;
+    transform: translateY(-7px);
+    width: 54px;
+  }
+
+  .day-charm-curve text,
+  .day-charm.short-copy .day-charm-curve text {
+    font-size: 7.35px;
+  }
+
+  .day-charm.medium-copy .day-charm-curve text {
+    font-size: 6.65px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 5.9px;
+  }
+}
