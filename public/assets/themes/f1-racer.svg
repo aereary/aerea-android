@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="A tiny unbranded midnight race car">
+  <defs>
+    <linearGradient id="body" x1="16" y1="42" x2="101" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2385DE"/>
+      <stop offset="0.58" stop-color="#0D3F88"/>
+      <stop offset="1" stop-color="#071B3E"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 74c2-12 10-21 24-27l14-17 11 1 8 15c11 2 19 7 24 16l-2 19H23l1-7Z" fill="url(#body)" stroke="#07162D" stroke-width="5" stroke-linejoin="round"/>
+  <path d="m47 47 17-15 9 1 5 14H47Z" fill="#BDEBFF" stroke="#07162D" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M18 68h25l7 10H18V68Zm61-9h28l-1 10H82l-3-10Z" fill="#E65742" stroke="#07162D" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M43 67h30" stroke="#FFD56A" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="38" cy="82" r="13" fill="#07162D"/>
+  <circle cx="38" cy="82" r="6" fill="#CFE8F4"/>
+  <circle cx="87" cy="82" r="13" fill="#07162D"/>
+  <circle cx="87" cy="82" r="6" fill="#CFE8F4"/>
+  <path d="m94 26 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z" fill="#FFD56A"/>
+  <path d="m22 29 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z" fill="#7DE2FF"/>
+</svg>

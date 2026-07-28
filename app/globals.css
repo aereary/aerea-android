@@ -12212,3 +12212,208 @@ body {
     letter-spacing: 0.012em;
   }
 }
+
+/* Calendar polish: compact previews and one-line AM/PM labels. */
+.month-grid.expanded .calendar-event-preview-list {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+
+.month-grid.expanded .calendar-event-preview:only-child {
+  min-height: 0;
+}
+
+.event-chip {
+  grid-template-columns: minmax(122px, max-content) minmax(0, 1fr) 32px;
+}
+
+.event-chip > span,
+.event-detail-time strong {
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.event-chip > span {
+  font-size: 9.5px;
+}
+
+/* The charm frame stays exactly the same size; its art and lettering grow. */
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 64px;
+  transform: translateY(-8px);
+  width: 64px;
+}
+
+.day-charm-curve text,
+.day-charm.short-copy .day-charm-curve text {
+  font-size: 7.4px;
+}
+
+.day-charm.medium-copy .day-charm-curve text {
+  font-size: 6.6px;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 5.85px;
+}
+
+/* Restore the original warm, hand-drawn clock palette from the reference. */
+.timer-modes {
+  background: color-mix(in srgb, #bfe3df 44%, #fff9e9);
+}
+
+.timer-modes button.active {
+  background: linear-gradient(145deg, #88d0c8, #ffe293);
+  color: #344f53;
+}
+
+.timer-bloom,
+.timer-bloom.running {
+  background: #fff3d8;
+  box-shadow:
+    0 0 0 7px #fffdf6,
+    0 0 0 13px #8ccac6,
+    0 22px 42px rgba(79, 125, 125, 0.18);
+}
+
+.timer-color-well::before {
+  background:
+    conic-gradient(
+      from -90deg,
+      #f18991 0,
+      #f7c96d calc(var(--timer-progress) * 0.42),
+      #75c8bd var(--timer-progress),
+      #eee8dc var(--timer-progress) 100%
+    );
+}
+
+.timer-color-well::after {
+  border-color: rgba(91, 164, 161, 0.2);
+}
+
+.timer-bloom-face {
+  background: rgba(255, 250, 233, 0.94);
+  border-color: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 0 0 5px rgba(126, 196, 190, 0.1),
+    0 12px 25px rgba(88, 126, 126, 0.1);
+}
+
+.timer-bloom-face .tiny-label { color: #4d8e89; }
+.timer-bloom-face strong { color: #31575d; }
+.timer-bloom-face small { color: #71888a; }
+.timer-clock-pal { background: #f6aa62; border-color: #fff4db; }
+.timer-clock-pal::before { background: #6c6464; box-shadow: 17px 0 #6c6464; }
+.timer-clock-pal::after { border-bottom-color: #b46561; }
+.timer-clock-pal i { background: #f48f94; }
+.timer-clock-pal b { background: #78bca7; }
+.timer-clock-sparkle { color: #f4be50; }
+.timer-clock-sparkle.sparkle-two { color: #ee8b96; }
+.timer-main {
+  background: linear-gradient(145deg, #ee9a76, #ed8794);
+  box-shadow: 0 7px 0 rgba(214, 116, 100, 0.25);
+  color: white;
+}
+.timer-reset { background: #ffe6a2; color: #304b50; }
+
+/* Midnight victory lap — a new, standalone F1-inspired world. */
+.app-shell[data-theme="f1victory"] {
+  --ink: #f5f8ff;
+  --ink-soft: #c6d9ef;
+  --muted: #94abc5;
+  --cream: #081426;
+  --cream-deep: #050d1b;
+  --paper: #10223a;
+  --hero: #07162d;
+  --blue: #164e91;
+  --lime-wash: #122b3d;
+  --lime-soft: #1c3c50;
+  --leaf: #59c7d9;
+  --leaf-deep: #8ce5ed;
+  --yellow: #f2c86f;
+  --yellow-soft: #493b24;
+  --orange: #e35b45;
+  --orange-soft: #4b2829;
+  --pink: #43293c;
+  --lilac: #273967;
+  --sage: #153644;
+  --line: rgba(151, 211, 244, 0.18);
+  --shadow: 0 16px 0 rgba(2, 7, 17, 0.28), 0 24px 48px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 7px 0 rgba(2, 7, 17, 0.24), 0 14px 26px rgba(0, 0, 0, 0.34);
+  --app-backdrop:
+    linear-gradient(rgba(3, 12, 29, 0.2), rgba(3, 12, 29, 0.42)),
+    url("/assets/themes/aerea-f1-night-background.png") center top / cover fixed;
+}
+
+.storybook-scene[data-visual="f1victory"] {
+  background:
+    linear-gradient(180deg, rgba(5, 13, 31, 0.04), rgba(5, 13, 31, 0.58)),
+    url("/assets/themes/aerea-f1-night-background.png") center 8% / cover;
+}
+
+.storybook-scene[data-visual="f1victory"] :is(.storybook-cloud, .storybook-hill) {
+  display: none;
+}
+
+.app-shell[data-theme="f1victory"] :is(
+  .card,
+  .hero-card,
+  .week-strip,
+  .schedule-card,
+  .reminders-card,
+  .habit-card,
+  .focus-card,
+  .journal-card,
+  .spaces-card,
+  .selected-day-panel,
+  .calendar-modal,
+  .settings-modal
+) {
+  backdrop-filter: blur(14px);
+}
+
+.app-shell[data-theme="f1victory"] .theme-scene-sparkle {
+  color: #f2c86f;
+  filter: drop-shadow(0 0 7px rgba(88, 206, 255, 0.9));
+}
+
+@media (max-width: 680px) {
+  .event-chip {
+    gap: 7px;
+    grid-template-columns: minmax(106px, max-content) minmax(0, 1fr) 29px;
+    padding-inline: 10px;
+  }
+
+  .event-chip > span {
+    font-size: 8.25px;
+  }
+
+  .event-detail-time strong {
+    font-size: 15px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 51px;
+    transform: translateY(-7px);
+    width: 51px;
+  }
+
+  .day-charm-curve text,
+  .day-charm.short-copy .day-charm-curve text {
+    font-size: 6.8px;
+  }
+
+  .day-charm.medium-copy .day-charm-curve text {
+    font-size: 6.1px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 5.35px;
+  }
+
+  .timer-clock-pal::before {
+    box-shadow: 16px 0 #6c6464;
+  }
+}

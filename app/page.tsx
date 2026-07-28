@@ -48,6 +48,7 @@ type AppTheme =
   | "calicotea"
   | "moonquilt"
   | "starrainnight"
+  | "f1victory"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -478,6 +479,21 @@ const themeOptions: {
       "/assets/openmoji/star.svg",
     ],
     charm: "held by starlight",
+    decoratedScene: true,
+  },
+  {
+    id: "f1victory",
+    name: "Midnight victory lap",
+    description:
+      "A cinematic night circuit with cobalt light trails, little gold sparks, and a quiet finish line.",
+    colors: ["#07162d", "#155fbe", "#e35b45"],
+    icon: "🏁",
+    art: "/assets/themes/f1-racer.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "victory lap",
     decoratedScene: true,
   },
 ];

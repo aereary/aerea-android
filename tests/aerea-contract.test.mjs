@@ -27,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps the approved themes and adds only the requested star-rain theme", () => {
+test("keeps every approved theme and adds the requested racing-night theme", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -37,6 +37,7 @@ test("keeps the approved themes and adds only the requested star-rain theme", ()
     "calicotea",
     "moonquilt",
     "starrainnight",
+    "f1victory",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
@@ -47,8 +48,8 @@ test("keeps the approved themes and adds only the requested star-rain theme", ()
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    4,
-    "the three approved decorated themes plus star-rain should decorate the sky",
+    5,
+    "the approved decorated themes plus star-rain and racing night should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -61,6 +62,7 @@ test("keeps the approved themes and adds only the requested star-rain theme", ()
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
   assert.match(pageSource, /activeTheme\.decoratedScene &&/);
+  assert.match(cssSource, /aerea-f1-night-background\.png/);
   assert.doesNotMatch(
     pageSource,
     /className="theme-scene-character"/,
@@ -78,6 +80,10 @@ test("keeps the original charm size and fits every curved message", () => {
   assert.match(cssSource, /The welcome charm keeps its original footprint/);
   assert.match(cssSource, /\.day-charm \{\s+height: 102px;/);
   assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?\.day-charm \{\s+height: 84px;/);
+  assert.match(
+    cssSource,
+    /The charm frame stays exactly the same size; its art and lettering grow/,
+  );
 });
 
 test("ships Safe Place as authored offline copy", () => {
@@ -132,6 +138,10 @@ test("offers a readable expanded month without replacing the compact calendar", 
   assert.match(pageSource, /calendar-event-preview-list/);
   assert.match(pageSource, /eventTimeLabel\(event\)/);
   assert.match(cssSource, /\.month-grid\.expanded/);
+  assert.match(
+    cssSource,
+    /\.month-grid\.expanded \.calendar-event-preview-list \{[\s\S]*grid-auto-rows: max-content/,
+  );
 });
 
 test("keeps secret diary writing aligned and saved pages recognizable", () => {
@@ -152,7 +162,7 @@ test("keeps the approved warm focus-clock palette", () => {
   );
   assert.match(
     cssSource,
-    /\.timer-clock-pal \{ background: #f2a07f; border-color: #ffe29a; \}/,
+    /\.timer-clock-pal \{ background: #f6aa62; border-color: #fff4db; \}/,
   );
 });
 
