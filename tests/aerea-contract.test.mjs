@@ -27,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps only the approved theme collection", () => {
+test("keeps the approved themes and adds only the requested star-rain theme", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -36,6 +36,7 @@ test("keeps only the approved theme collection", () => {
     "duckmail",
     "calicotea",
     "moonquilt",
+    "starrainnight",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
@@ -46,8 +47,8 @@ test("keeps only the approved theme collection", () => {
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    3,
-    "only the three approved decorated themes should decorate the sky",
+    4,
+    "the three approved decorated themes plus star-rain should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -107,7 +108,8 @@ test("ships a clean draining focus clock and varied journal faces", () => {
 
 test("validates event timing and recognizes the afternoon", () => {
   assert.match(pageSource, /function eventHasValidTiming/);
-  assert.match(pageSource, /end\.getTime\(\) > start\.getTime\(\)/);
+  assert.match(pageSource, /function eventTimingValue/);
+  assert.match(pageSource, /end > start/);
   assert.match(pageSource, /function keepEventEndingAfterStart/);
   assert.match(pageSource, /normalizeCalendarEventTiming/);
   assert.match(pageSource, /function formatTimeWithPeriod/);
@@ -116,6 +118,14 @@ test("validates event timing and recognizes the afternoon", () => {
   assert.match(pageSource, /Good afternoon, lovely\./);
   assert.match(pageSource, /hour >= 18 \|\| hour < 5/);
   assert.match(pageSource, /hour >= 12[\s\S]*\? "afternoon"/);
+});
+
+test("offers a readable expanded month without replacing the compact calendar", () => {
+  assert.match(pageSource, /calendarExpanded/);
+  assert.match(pageSource, /Read events/);
+  assert.match(pageSource, /calendar-event-preview-list/);
+  assert.match(pageSource, /eventTimeLabel\(event\)/);
+  assert.match(cssSource, /\.month-grid\.expanded/);
 });
 
 test("keeps secret diary writing aligned and saved pages recognizable", () => {
@@ -129,14 +139,14 @@ test("keeps secret diary writing aligned and saved pages recognizable", () => {
   assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
 });
 
-test("lets the focus clock inherit every active theme", () => {
+test("keeps the approved warm focus-clock palette", () => {
   assert.match(
     cssSource,
-    /\.timer-color-well::before[\s\S]*var\(--pink\)[\s\S]*var\(--yellow\)[\s\S]*var\(--blue\)/,
+    /\.timer-color-well::before[\s\S]*#f18991[\s\S]*#f7c96d[\s\S]*#75c8bd/,
   );
   assert.match(
     cssSource,
-    /\.timer-clock-pal[\s\S]*var\(--orange\)[\s\S]*var\(--paper\)/,
+    /\.timer-clock-pal \{ background: #f2a07f; border-color: #ffe29a; \}/,
   );
 });
 

@@ -47,6 +47,7 @@ type AppTheme =
   | "duckmail"
   | "calicotea"
   | "moonquilt"
+  | "starrainnight"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -464,6 +465,21 @@ const themeOptions: {
     charm: "tucked in softly",
     decoratedScene: true,
   },
+  {
+    id: "starrainnight",
+    name: "Star-rain sanctuary",
+    description:
+      "A deep cobalt night with luminous rain, tiny ripples, and quiet starlight.",
+    colors: ["#06133f", "#1046ad", "#9aeaff"],
+    icon: "✦",
+    art: "/assets/openmoji/star.svg",
+    accents: [
+      "/assets/openmoji/moon.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "held by starlight",
+    decoratedScene: true,
+  },
 ];
 
 const safePlaceHoldMessages = [
@@ -708,11 +724,28 @@ function eventHasValidTiming(event: EventDraft) {
   if (event.allDay) return true;
   const endDate = event.endDate || event.date;
   if (!event.date || !endDate || !event.time || !event.endTime) return false;
-  const start = new Date(`${event.date}T${event.time}:00`);
-  const end = new Date(`${endDate}T${event.endTime}:00`);
-  return Number.isFinite(start.getTime()) &&
-    Number.isFinite(end.getTime()) &&
-    end.getTime() > start.getTime();
+  const start = eventTimingValue(event.date, event.time);
+  const end = eventTimingValue(endDate, event.endTime);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
+}
+
+function eventTimingValue(dateKey: string, time: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  if (
+    ![year, month, day, hour, minute].every(Number.isFinite) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return Number.NaN;
+  }
+  return new Date(year, month - 1, day, hour, minute, 0, 0).getTime();
 }
 
 function formatTimeWithPeriod(time?: string) {
@@ -900,6 +933,7 @@ export default function Home() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1778,22 +1812,24 @@ export default function Home() {
   };
 
   const openEventEditor = (calendarEvent: CalendarEvent) => {
+    const normalizedEvent = normalizeCalendarEventTiming(calendarEvent);
     setEditingEventId(calendarEvent.id);
     setEventDraft({
-      ...makeEventDraft(calendarEvent.date),
-      ...calendarEvent,
+      ...makeEventDraft(normalizedEvent.date),
+      ...normalizedEvent,
     });
     setTodoDraft("");
     setEventEditorOpen(true);
   };
 
   const saveCalendarEvent = () => {
-    if (!eventDraft.title.trim() || !eventHasValidTiming(eventDraft)) return;
+    if (!eventDraft.title.trim()) return;
+    const correctedDraft = keepEventEndingAfterStart(eventDraft);
     const savedEvent: CalendarEvent = {
-      ...eventDraft,
+      ...correctedDraft,
       id: editingEventId ?? crypto.randomUUID(),
-      title: eventDraft.title.trim(),
-      endDate: eventDraft.endDate || eventDraft.date,
+      title: correctedDraft.title.trim(),
+      endDate: correctedDraft.endDate || correctedDraft.date,
     };
     setCalendarEvents((current) =>
       editingEventId
@@ -2663,6 +2699,11 @@ export default function Home() {
   };
 
   const eventTimingIsValid = eventHasValidTiming(eventDraft);
+  const minimumEventEnd = addMinutesToEventTiming(
+    eventDraft.date,
+    eventDraft.time || "09:00",
+    1,
+  );
 
   return (
     <main
@@ -3620,7 +3661,9 @@ export default function Home() {
             className={
               eventEditorOpen
                 ? "calendar-modal calendar-event-mode"
-                : "calendar-modal"
+                : calendarExpanded
+                  ? "calendar-modal calendar-expanded-mode"
+                  : "calendar-modal"
             }
             role="dialog"
             aria-modal="true"
@@ -3741,8 +3784,9 @@ export default function Home() {
                             value={eventDraft.endTime}
                             min={
                               (eventDraft.endDate || eventDraft.date) ===
-                              eventDraft.date
-                                ? eventDraft.time
+                                eventDraft.date &&
+                              minimumEventEnd.date === eventDraft.date
+                                ? minimumEventEnd.time
                                 : undefined
                             }
                             onChange={(event) =>
@@ -4075,12 +4119,22 @@ export default function Home() {
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
+                  <button
+                    className="calendar-view-toggle"
+                    type="button"
+                    aria-pressed={calendarExpanded}
+                    onClick={() => setCalendarExpanded((current) => !current)}
+                  >
+                    <span aria-hidden="true">{calendarExpanded ? "▦" : "▤"}</span>
+                    {calendarExpanded ? "Compact month" : "Read events"}
+                  </button>
                 </div>
                 <div className="month-grid-viewport">
                   <div
                     key={`${calendarYear}-${calendarMonth}`}
                     className={[
                       "month-grid",
+                      calendarExpanded ? "expanded" : "",
                       calendarSlideDirection
                         ? `calendar-slide-${calendarSlideDirection}`
                         : "",
@@ -4153,7 +4207,23 @@ export default function Home() {
                             {dayComplete ? "✓" : "×"}
                           </i>
                         )}
-                        {dayEvents.length > 0 && (
+                        {calendarExpanded && dayEvents.length > 0 ? (
+                          <span className="calendar-event-preview-list">
+                            {dayEvents.slice(0, 3).map((event) => (
+                              <span
+                                className={`calendar-event-preview ${event.color}`}
+                                key={event.id}
+                                title={`${event.title} · ${eventTimeLabel(event)}`}
+                              >
+                                <b>{event.title}</b>
+                                <small>{eventTimeLabel(event)}</small>
+                              </span>
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <em>+{dayEvents.length - 3} more</em>
+                            )}
+                          </span>
+                        ) : dayEvents.length > 0 && (
                           <>
                             <span className="calendar-event-dots">
                               {dayEvents.slice(0, 3).map((event) => (

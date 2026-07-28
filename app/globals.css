@@ -5025,6 +5025,450 @@ p {
   }
 }
 
+/* July 28: expanded calendar, stable keepsakes, fixed charm frame, and star-rain night. */
+.calendar-view-toggle {
+  align-items: center;
+  background: color-mix(in srgb, var(--blue) 58%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 900;
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 12px;
+}
+
+.calendar-view-toggle > span {
+  font-size: 15px;
+}
+
+.calendar-expanded-mode {
+  max-width: 1180px;
+}
+
+.month-grid.expanded {
+  gap: 8px;
+}
+
+.month-grid.expanded > i,
+.month-grid.expanded > button {
+  min-height: 126px;
+}
+
+.month-grid.expanded > button {
+  padding: 8px 6px;
+}
+
+.month-grid.expanded > button.selected {
+  padding: 7px 5px;
+}
+
+.calendar-event-preview-list {
+  bottom: 7px;
+  display: grid;
+  gap: 3px;
+  left: 5px;
+  position: absolute;
+  right: 5px;
+  top: 38px;
+}
+
+.calendar-event-preview {
+  --preview-color: var(--lilac);
+  background: color-mix(in srgb, var(--preview-color) 76%, var(--paper));
+  border-radius: 7px;
+  color: var(--ink);
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  padding: 3px 4px;
+  text-align: left;
+}
+
+.calendar-event-preview b,
+.calendar-event-preview small {
+  display: block;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-preview b {
+  font-size: 8px;
+}
+
+.calendar-event-preview small {
+  color: var(--ink-soft);
+  font-size: 6.5px;
+  margin-top: 1px;
+}
+
+.calendar-event-preview.emerald { --preview-color: #9bd4bb; }
+.calendar-event-preview.cyan { --preview-color: #a9e6e9; }
+.calendar-event-preview.blue { --preview-color: #add6f5; }
+.calendar-event-preview.brown { --preview-color: #d9c2b7; }
+.calendar-event-preview.black { --preview-color: #b9b5bd; }
+.calendar-event-preview.red { --preview-color: #f4aeaa; }
+.calendar-event-preview.rose { --preview-color: #f1b4cd; }
+.calendar-event-preview.coral { --preview-color: #f6bdb8; }
+.calendar-event-preview.orange { --preview-color: #f6d098; }
+.calendar-event-preview.lilac { --preview-color: #d8cdf0; }
+.calendar-event-preview.yellow { --preview-color: #f6e29e; }
+.calendar-event-preview.pink { --preview-color: #f3c9d2; }
+
+.calendar-event-preview-list em {
+  color: var(--ink-soft);
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 850;
+  padding-left: 3px;
+}
+
+.secret-page-list article {
+  align-items: center;
+  background: rgba(255, 249, 252, 0.94);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 29px;
+  min-height: 72px;
+  padding: 10px;
+}
+
+.secret-page-list .secret-page-open {
+  align-items: center;
+  background: transparent !important;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  height: auto;
+  min-height: 50px;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.secret-page-open > span {
+  align-items: center;
+  background: rgba(234, 220, 231, 0.68);
+  border-radius: 13px;
+  display: flex;
+  font-size: 19px;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.secret-page-open > div {
+  display: grid !important;
+  gap: 3px;
+  min-width: 0;
+  visibility: visible;
+}
+
+.secret-page-open small,
+.secret-page-open p {
+  display: block !important;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* The outer frame is intentionally fixed; themes only change its contents. */
+.day-charm {
+  height: 108px;
+  padding: 3px;
+  width: 108px;
+}
+
+.day-charm img,
+.day-charm.curved-copy img {
+  height: 76px;
+  object-fit: contain;
+  transform: translateY(-7px) scale(1.08);
+  width: 76px;
+}
+
+.day-charm-curve text {
+  font-size: 8px;
+  letter-spacing: 0.045em;
+}
+
+.day-charm.long-copy .day-charm-curve text {
+  font-size: 6.15px;
+  letter-spacing: 0.018em;
+}
+
+/* Restore the warm mint, peach, and butter palette approved for the focus clock. */
+.timer-card {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(255, 211, 222, 0.44), transparent 10rem),
+    radial-gradient(circle at 88% 84%, rgba(163, 224, 218, 0.38), transparent 12rem),
+    linear-gradient(155deg, #fff8e8, color-mix(in srgb, #dff4ef 56%, var(--paper)));
+}
+
+.timer-modes {
+  background: color-mix(in srgb, #bfe3df 44%, #fff9e9);
+}
+
+.timer-modes button.active {
+  background: linear-gradient(145deg, #88d0c8, #ffe293);
+  color: #344f53;
+}
+
+.timer-bloom,
+.timer-bloom.running {
+  background: #fff3d8;
+  box-shadow:
+    0 0 0 7px #fffdf6,
+    0 0 0 13px #8ccac6,
+    0 22px 42px rgba(79, 125, 125, 0.18);
+}
+
+.timer-color-well::before {
+  background:
+    conic-gradient(
+      from -90deg,
+      #f18991 0,
+      #f7c96d calc(var(--timer-progress) * 0.42),
+      #75c8bd var(--timer-progress),
+      #eee8dc var(--timer-progress) 100%
+    );
+}
+
+.timer-color-well::after {
+  border-color: rgba(91, 164, 161, 0.2);
+}
+
+.timer-bloom-face {
+  background: rgba(255, 250, 233, 0.96);
+  border-color: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 0 0 5px rgba(126, 196, 190, 0.1),
+    0 12px 25px rgba(88, 126, 126, 0.1);
+}
+
+.timer-bloom-face .tiny-label { color: #5f927a; }
+.timer-bloom-face strong { color: #304b50; }
+.timer-bloom-face small { color: #748b8d; }
+.timer-clock-pal { background: #f2a07f; border-color: #ffe29a; }
+.timer-clock-pal::before { background: #526b70; box-shadow: 17px 0 #526b70; }
+.timer-clock-pal::after { border-bottom-color: #e67f91; }
+.timer-clock-pal i { background: #f18991; }
+.timer-clock-pal b { background: #75b995; }
+.timer-clock-sparkle { color: #f7c96d; }
+.timer-clock-sparkle.sparkle-two { color: #f18991; }
+.timer-main {
+  background: linear-gradient(145deg, #ee9a76, #ed8794);
+  box-shadow: 0 7px 0 rgba(214, 116, 100, 0.25);
+  color: white;
+}
+.timer-reset { background: #ffe6a2; color: #304b50; }
+
+/* New standalone dark theme inspired by luminous star-rain on deep cobalt water. */
+.app-shell[data-theme="starrainnight"] {
+  --ink: #f5fbff;
+  --ink-soft: #c6ddf5;
+  --muted: #91add2;
+  --cream: #07163d;
+  --cream-deep: #030b25;
+  --paper: #0b2457;
+  --hero: #061a59;
+  --blue: #1d5bb7;
+  --lime-wash: #102d68;
+  --lime-soft: #173a79;
+  --leaf: #72d7ff;
+  --leaf-deep: #a5eaff;
+  --yellow: #bcefff;
+  --yellow-soft: #173b78;
+  --orange: #62c9ff;
+  --orange-soft: #14366e;
+  --pink: #252f79;
+  --lilac: #263b8f;
+  --sage: #143a65;
+  --line: rgba(157, 226, 255, 0.2);
+  --shadow: 0 14px 0 rgba(1, 6, 28, 0.24), 0 22px 46px rgba(0, 4, 27, 0.44);
+  --shadow-soft: 0 7px 0 rgba(1, 6, 28, 0.22), 0 14px 30px rgba(0, 4, 27, 0.34);
+  --app-backdrop:
+    radial-gradient(circle at 18% 8%, rgba(65, 150, 255, 0.25), transparent 22rem),
+    linear-gradient(150deg, #010617, #061342 48%, #082a74);
+  color-scheme: dark;
+}
+
+.app-shell[data-theme="starrainnight"] .phone-canvas {
+  background: linear-gradient(180deg, #061a59 0 292px, var(--cream) 292px);
+  border-color: rgba(137, 219, 255, 0.34);
+}
+
+.storybook-scene[data-visual="starrainnight"] {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(205, 244, 255, 0.95) 0 1px, transparent 2px) 0 0 / 43px 43px,
+    radial-gradient(circle at 72% 11%, rgba(94, 188, 255, 0.9) 0 1.5px, transparent 2.5px) 0 0 / 61px 57px,
+    linear-gradient(180deg, #02071d 0%, #071d63 58%, #0b43a5 100%);
+}
+
+.storybook-scene[data-visual="starrainnight"]::before {
+  background:
+    repeating-linear-gradient(
+      98deg,
+      transparent 0 48px,
+      rgba(134, 220, 255, 0.54) 49px 51px,
+      transparent 52px 91px
+    );
+  content: "";
+  filter: blur(0.25px);
+  inset: -70px 0 34px;
+  opacity: 0.62;
+  position: absolute;
+  transform: skewX(-6deg);
+}
+
+.storybook-scene[data-visual="starrainnight"]::after {
+  background:
+    radial-gradient(ellipse at 18% 70%, transparent 0 14px, rgba(105, 209, 255, 0.7) 15px 17px, transparent 18px),
+    radial-gradient(ellipse at 51% 78%, transparent 0 23px, rgba(108, 210, 255, 0.6) 24px 27px, transparent 28px),
+    radial-gradient(ellipse at 82% 66%, transparent 0 17px, rgba(151, 231, 255, 0.65) 18px 20px, transparent 21px);
+  bottom: 4px;
+  content: "";
+  height: 100px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.storybook-scene[data-visual="starrainnight"] :is(.storybook-cloud, .storybook-hill) {
+  opacity: 0.14;
+}
+
+.app-shell[data-theme="starrainnight"] :is(
+  .brand-wrap,
+  .header-actions > .calendar-button,
+  .header-actions > .avatar-button,
+  .header-actions > .cloud-save-status
+) {
+  background: rgba(7, 28, 77, 0.86);
+  border-color: rgba(157, 226, 255, 0.22);
+}
+
+.app-shell[data-theme="starrainnight"] :is(
+  .welcome-row,
+  .week-strip,
+  .schedule-card,
+  .reminder-card,
+  .habit-row,
+  .focus-side,
+  .journal-compose,
+  .space-card,
+  .record-card,
+  .audio-item,
+  .class-list,
+  .selected-day-panel,
+  .calendar-mood-picker,
+  .day-completion-control,
+  .event-editor-card,
+  .mode-card,
+  .install-card
+) {
+  background-color: rgba(10, 34, 82, 0.96);
+  color: var(--ink);
+}
+
+.app-shell[data-theme="starrainnight"] .bottom-nav {
+  background: rgba(5, 20, 55, 0.96);
+  border-color: rgba(157, 226, 255, 0.2);
+}
+
+.app-shell[data-theme="starrainnight"] .nav-item.active {
+  background: #174a9b;
+  color: #f5fbff;
+}
+
+@media (max-width: 680px) {
+  .calendar-expanded-mode {
+    padding-inline: 8px;
+  }
+
+  .month-grid.expanded {
+    gap: 3px;
+  }
+
+  .month-grid.expanded > i,
+  .month-grid.expanded > button {
+    min-height: 91px;
+  }
+
+  .month-grid.expanded > button,
+  .month-grid.expanded > button.selected {
+    border-radius: 12px;
+    padding: 4px 3px;
+  }
+
+  .month-grid.expanded .calendar-day-number {
+    font-size: 11px;
+  }
+
+  .month-grid.expanded .calendar-mood-sticker {
+    font-size: 8px;
+    height: 18px;
+    right: 2px;
+    top: 3px;
+    width: 19px;
+  }
+
+  .month-grid.expanded .calendar-event-preview-list {
+    bottom: 3px;
+    gap: 2px;
+    left: 2px;
+    right: 2px;
+    top: 28px;
+  }
+
+  .month-grid.expanded .calendar-event-preview {
+    border-radius: 4px;
+    padding: 2px;
+  }
+
+  .month-grid.expanded .calendar-event-preview b {
+    font-size: 6.5px;
+  }
+
+  .month-grid.expanded .calendar-event-preview small {
+    font-size: 5.5px;
+  }
+
+  .day-charm {
+    height: 92px;
+    width: 92px;
+  }
+
+  .day-charm img,
+  .day-charm.curved-copy img {
+    height: 66px;
+    transform: translateY(-6px) scale(1.08);
+    width: 66px;
+  }
+
+  .day-charm-curve text {
+    font-size: 7.65px;
+  }
+
+  .day-charm.long-copy .day-charm-curve text {
+    font-size: 5.85px;
+  }
+
+  .timer-clock-pal::before {
+    box-shadow: 16px 0 #526b70;
+  }
+
+  .app-shell[data-theme="starrainnight"] .phone-canvas {
+    background: linear-gradient(180deg, #061a59 0 255px, var(--cream) 255px);
+  }
+}
+
 @media (max-width: 390px) {
   .brand-wrap {
     gap: 8px;
