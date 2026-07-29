@@ -13221,3 +13221,216 @@ body {
     font-size: 10px;
   }
 }
+
+/* July 29: a softer storybook month, with yesterday gently receding. */
+.calendar-expanded-backdrop {
+  background:
+    radial-gradient(circle at 8% 7%, color-mix(in srgb, var(--yellow) 34%, transparent) 0 34px, transparent 36px),
+    radial-gradient(circle at 94% 12%, color-mix(in srgb, var(--pink) 25%, transparent) 0 46px, transparent 48px),
+    color-mix(in srgb, var(--cream) 88%, #fff4df);
+}
+
+.calendar-expanded-backdrop .calendar-modal.calendar-expanded-mode {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--blue) 66%, white) 0 112px,
+      color-mix(in srgb, var(--cream) 82%, white) 112px 100%
+    );
+  gap: 10px;
+}
+
+.calendar-expanded-mode .modal-top {
+  align-items: center;
+  background: color-mix(in srgb, var(--blue) 78%, white);
+  border: 2px solid color-mix(in srgb, white 72%, transparent);
+  border-radius: 28px;
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--blue) 34%, transparent);
+  gap: 10px;
+  padding: 9px 11px;
+}
+
+.calendar-expanded-mode .calendar-month-heading {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+}
+
+.calendar-expanded-mode .calendar-month-heading::before {
+  align-items: center;
+  background: color-mix(in srgb, var(--yellow) 76%, white);
+  border: 3px solid color-mix(in srgb, white 78%, transparent);
+  border-radius: 20px 20px 17px 17px;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--orange) 34%, transparent);
+  content: "🍊";
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 25px;
+  height: 50px;
+  justify-content: center;
+  transform: rotate(-3deg);
+  width: 50px;
+}
+
+.calendar-expanded-mode .calendar-month-heading > div {
+  min-width: 0;
+  text-align: center;
+}
+
+.calendar-expanded-mode .calendar-month-heading .tiny-label {
+  color: color-mix(in srgb, var(--ink-soft) 80%, var(--leaf-deep));
+  font-size: 8px;
+}
+
+.calendar-expanded-mode .calendar-month-heading h2 {
+  color: var(--ink);
+  line-height: 1;
+}
+
+.calendar-expanded-mode .calendar-month-heading > button,
+.calendar-expanded-mode .modal-top > button {
+  background: color-mix(in srgb, var(--yellow-soft) 84%, white);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--yellow) 30%, transparent);
+}
+
+.calendar-expanded-mode .month-grid-viewport {
+  background: color-mix(in srgb, var(--paper) 94%, #fffaf1);
+  border: 2px solid color-mix(in srgb, white 72%, transparent);
+  border-radius: 28px;
+  box-shadow:
+    0 9px 0 color-mix(in srgb, var(--blue) 20%, transparent),
+    0 18px 34px color-mix(in srgb, var(--ink) 9%, transparent);
+}
+
+.calendar-expanded-mode .month-grid.expanded {
+  background: color-mix(in srgb, var(--paper) 94%, #fffaf1);
+}
+
+.calendar-expanded-mode .month-grid.expanded > strong {
+  background: color-mix(in srgb, var(--blue) 30%, var(--paper));
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, var(--blue));
+  color: color-mix(in srgb, var(--ink-soft) 82%, var(--leaf-deep));
+}
+
+.calendar-expanded-mode .month-grid.expanded > :is(i, button) {
+  border-bottom-color: color-mix(in srgb, var(--line) 70%, var(--blue));
+  border-right-color: color-mix(in srgb, var(--line) 70%, var(--blue));
+}
+
+.calendar-expanded-mode .month-grid.expanded > button {
+  background: color-mix(in srgb, var(--paper) 96%, #fff7e7);
+  transition:
+    background-color 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.weekend {
+  background: color-mix(in srgb, var(--paper) 88%, var(--pink));
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.alternate-week {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--paper) 97%, white),
+    color-mix(in srgb, var(--cream) 88%, var(--blue))
+  );
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.past-day {
+  background-color: color-mix(in srgb, var(--paper) 78%, var(--ink-soft));
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--paper) 88%, var(--ink-soft)),
+    color-mix(in srgb, var(--cream) 80%, var(--muted))
+  );
+}
+
+.calendar-expanded-mode
+  .month-grid.expanded
+  > button.past-day
+  > :not(.calendar-day-status) {
+  filter: grayscale(0.18) saturate(0.64);
+  opacity: 0.58;
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.past-day .calendar-day-number {
+  color: color-mix(in srgb, var(--ink) 62%, var(--muted));
+}
+
+.calendar-expanded-mode .month-grid.expanded > button.today,
+.calendar-expanded-mode .month-grid.expanded > button.selected {
+  background-color: color-mix(in srgb, var(--yellow-soft) 42%, var(--paper));
+  background-image: none;
+  filter: none;
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
+  gap: clamp(3px, 0.34vw, 5px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
+  border: 1px solid color-mix(in srgb, white 48%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--preview-color) 42%, transparent);
+  padding: clamp(3px, 0.34vw, 5px) clamp(4px, 0.48vw, 7px);
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview b,
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
+  line-height: 1.08;
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list em {
+  background: color-mix(in srgb, var(--blue) 52%, white);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-size: clamp(6px, 0.7vw, 9px);
+  font-style: normal;
+  font-weight: 850;
+  justify-content: center;
+  padding: 2px 5px;
+}
+
+@media (max-width: 680px) {
+  .calendar-expanded-backdrop .calendar-modal.calendar-expanded-mode {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--blue) 66%, white) 0 94px,
+        color-mix(in srgb, var(--cream) 82%, white) 94px 100%
+      );
+    gap: 7px;
+  }
+
+  .calendar-expanded-mode .modal-top {
+    border-radius: 21px;
+    padding: 6px 7px;
+  }
+
+  .calendar-expanded-mode .calendar-month-heading::before {
+    border-radius: 15px;
+    font-size: 18px;
+    height: 37px;
+    width: 37px;
+  }
+
+  .calendar-expanded-mode .calendar-month-heading .tiny-label {
+    font-size: 6.5px;
+  }
+
+  .calendar-expanded-mode .calendar-month-heading h2 {
+    font-size: 21px;
+  }
+
+  .calendar-expanded-mode .month-grid-viewport {
+    border-radius: 21px;
+  }
+
+  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
+    border-radius: 7px;
+    padding: 2px 3px;
+  }
+}

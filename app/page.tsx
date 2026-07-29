@@ -4266,6 +4266,7 @@ export default function Home() {
                           dayMood ? "has-mood" : "",
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
+                          dayKey < todayKey ? "past-day" : "",
                           dayKey === todayKey ? "today" : "",
                           gridIndex % 7 === 0 ? "week-start" : "",
                           gridIndex % 7 >= 5 ? "weekend" : "",
