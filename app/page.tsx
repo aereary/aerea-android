@@ -47,9 +47,6 @@ type AppTheme =
   | "duckmail"
   | "calicotea"
   | "moonquilt"
-  | "starrainnight"
-  | "f1victory"
-  | "starrykitten"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -467,52 +464,6 @@ const themeOptions: {
     charm: "tucked in softly",
     decoratedScene: true,
   },
-  {
-    id: "starrainnight",
-    name: "Star-rain sanctuary",
-    description:
-      "A deep cobalt night with luminous rain, tiny ripples, and quiet starlight.",
-    colors: ["#06133f", "#1046ad", "#9aeaff"],
-    icon: "✦",
-    art: "/assets/openmoji/star.svg",
-    accents: [
-      "/assets/openmoji/moon.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "held by starlight",
-    decoratedScene: true,
-  },
-  {
-    id: "f1victory",
-    name: "Midnight victory lap",
-    description:
-      "A cinematic night circuit with cobalt light trails, little gold sparks, and a quiet finish line.",
-    colors: ["#07162d", "#155fbe", "#e35b45"],
-    icon: "🏁",
-    art: "/assets/themes/f1-racer.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "victory lap",
-    decoratedScene: true,
-  },
-  {
-    id: "starrykitten",
-    name: "Starry-eyed kitten",
-    description:
-      "Your soft painted kitten, cocoa shadows, blush light, and tiny reflected stars.",
-    colors: ["#c8aaa1", "#f7e9e5", "#8dcfc0"],
-    icon: "🐱",
-    art: "/assets/themes/starry-eyed-kitten.jpg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "soft star eyes",
-    showCharm: false,
-    decoratedScene: true,
-  },
 ];
 
 const safePlaceHoldMessages = [
@@ -693,6 +644,18 @@ const secretDiaryFeelings = [
   { icon: "✨", label: "proud" },
   { icon: "🤍", label: "held" },
 ];
+
+const dayStickers = [
+  { id: "ate-out", icon: "🍔", label: "Ate out", tint: "sticker-peach" },
+  { id: "exercise", icon: "🏋️", label: "Exercise", tint: "sticker-mint" },
+  { id: "study", icon: "📚", label: "Study", tint: "sticker-lilac" },
+  { id: "coffee", icon: "☕", label: "Coffee date", tint: "sticker-cocoa" },
+  { id: "movie", icon: "🎬", label: "Movie", tint: "sticker-blue" },
+  { id: "shopping", icon: "🛍️", label: "Shopping", tint: "sticker-pink" },
+  { id: "trip", icon: "✈️", label: "Trip", tint: "sticker-sky" },
+  { id: "treat", icon: "🍰", label: "Little treat", tint: "sticker-yellow" },
+  { id: "outside", icon: "🌿", label: "Outside time", tint: "sticker-sage" },
+] as const;
 
 function journalFaceFor(index: number) {
   return journalFaces[index % journalFaces.length];
@@ -954,6 +917,9 @@ export default function Home() {
   >({});
   const [habits, setHabits] = useState<Habit[]>(starterHabits);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
+  const [dayStickerHistory, setDayStickerHistory] = useState<
+    Record<string, string>
+  >({});
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
     {},
   );
@@ -984,6 +950,7 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [dayPeekDate, setDayPeekDate] = useState<string | null>(null);
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -1095,6 +1062,8 @@ export default function Home() {
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dayLongPressTimerRef = useRef<number | null>(null);
+  const dayLongPressTriggeredRef = useRef(false);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1178,6 +1147,7 @@ export default function Home() {
             entries?: JournalEntry[];
             secretDiaryEntries?: SecretDiaryEntry[];
             moodHistory?: Record<string, string>;
+            dayStickerHistory?: Record<string, string>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
             focusSessions?: number;
@@ -1203,6 +1173,9 @@ export default function Home() {
               setSecretDiaryEntries(state.secretDiaryEntries);
             }
             if (state.moodHistory) setMoodHistory(state.moodHistory);
+            if (state.dayStickerHistory) {
+              setDayStickerHistory(state.dayStickerHistory);
+            }
             if (state.completedDays) setCompletedDays(state.completedDays);
             if (state.calendarEvents) {
               setCalendarEvents(
@@ -1218,6 +1191,7 @@ export default function Home() {
             setEntries([]);
             setSecretDiaryEntries([]);
             setMoodHistory({});
+            setDayStickerHistory({});
             setCompletedDays({});
             setCalendarEvents([]);
             setFocusSessions(0);
@@ -1315,6 +1289,7 @@ export default function Home() {
               entries,
               secretDiaryEntries,
               moodHistory,
+              dayStickerHistory,
               completedDays,
               calendarEvents,
               focusSessions,
@@ -1349,6 +1324,7 @@ export default function Home() {
     colorMode,
     completedDays,
     customTheme,
+    dayStickerHistory,
     entries,
     focusSessions,
     habits,
@@ -1432,6 +1408,14 @@ export default function Home() {
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const dayPeekEvents = dayPeekDate
+    ? calendarEvents
+        .filter((event) => eventOccursOn(event, dayPeekDate))
+        .sort((a, b) => a.time.localeCompare(b.time))
+    : [];
+  const dayPeekSticker = dayStickers.find(
+    (sticker) => sticker.id === dayStickerHistory[dayPeekDate ?? ""],
+  );
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
@@ -1838,6 +1822,48 @@ export default function Home() {
 
   const chooseMood = (dateKey: string, mood: string) => {
     setMoodHistory((current) => ({ ...current, [dateKey]: mood }));
+  };
+
+  const clearDayLongPress = () => {
+    if (dayLongPressTimerRef.current !== null) {
+      window.clearTimeout(dayLongPressTimerRef.current);
+      dayLongPressTimerRef.current = null;
+    }
+  };
+
+  const startDayLongPress = (dateKey: string) => {
+    clearDayLongPress();
+    dayLongPressTriggeredRef.current = false;
+    dayLongPressTimerRef.current = window.setTimeout(() => {
+      dayLongPressTriggeredRef.current = true;
+      setSelectedCalendarDate(dateKey);
+      setDayPeekDate(dateKey);
+      dayLongPressTimerRef.current = null;
+    }, 460);
+  };
+
+  const selectCalendarDay = (dateKey: string) => {
+    clearDayLongPress();
+    if (dayLongPressTriggeredRef.current) {
+      dayLongPressTriggeredRef.current = false;
+      return;
+    }
+    setSelectedCalendarDate(dateKey);
+  };
+
+  const setDaySticker = (dateKey: string, stickerId: string) => {
+    setDayStickerHistory((current) => ({
+      ...current,
+      [dateKey]: stickerId,
+    }));
+  };
+
+  const clearDaySticker = (dateKey: string) => {
+    setDayStickerHistory((current) => {
+      const next = { ...current };
+      delete next[dateKey];
+      return next;
+    });
   };
 
   const openNewEvent = (dateKey = selectedCalendarDate) => {
@@ -4198,10 +4224,22 @@ export default function Home() {
                     (day) => <strong key={day}>{day}</strong>,
                   )}
                   {Array.from({ length: leadingDays }, (_, index) => (
-                    <i key={`empty-${index}`} />
+                    <i
+                      className={[
+                        index % 7 === 0 ? "week-start" : "",
+                        index % 7 >= 5 ? "weekend" : "",
+                        Math.floor(index / 7) % 2 === 1
+                          ? "alternate-week"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      key={`empty-${index}`}
+                    />
                   ))}
                   {Array.from({ length: daysInViewMonth }, (_, index) => {
                     const day = index + 1;
+                    const gridIndex = leadingDays + index;
                     const dayKey = calendarDateKey(
                       calendarYear,
                       calendarMonth,
@@ -4212,6 +4250,10 @@ export default function Home() {
                     );
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
+                    );
+                    const daySticker = dayStickers.find(
+                      (sticker) =>
+                        sticker.id === dayStickerHistory[dayKey],
                     );
                     const dayComplete = completedDays[dayKey] === true;
                     const dayMissed = dayKey < todayKey && !dayComplete;
@@ -4225,12 +4267,31 @@ export default function Home() {
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
                           dayKey === todayKey ? "today" : "",
+                          gridIndex % 7 === 0 ? "week-start" : "",
+                          gridIndex % 7 >= 5 ? "weekend" : "",
+                          Math.floor(gridIndex / 7) % 2 === 1
+                            ? "alternate-week"
+                            : "",
+                          day === 1 ? "month-first-day" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => setSelectedCalendarDate(dayKey)}
+                        onClick={() => selectCalendarDay(dayKey)}
+                        onContextMenu={(event) => event.preventDefault()}
+                        onPointerDown={() => startDayLongPress(dayKey)}
+                        onPointerLeave={clearDayLongPress}
+                        onPointerCancel={clearDayLongPress}
+                        onPointerUp={clearDayLongPress}
                       >
                         <span className="calendar-day-number">{day}</span>
+                        {daySticker && (
+                          <i
+                            className={`calendar-life-sticker ${daySticker.tint}`}
+                            title={daySticker.label}
+                          >
+                            {daySticker.icon}
+                          </i>
+                        )}
                         {dayMood && (
                           <i
                             className={`calendar-mood-sticker ${dayMood.color}`}
@@ -4459,6 +4520,107 @@ export default function Home() {
                   <span>＋</span>
                   Add something to {readableDate(selectedCalendarDate)}
                 </button>
+                {dayPeekDate && (
+                  <div
+                    className="calendar-day-peek-backdrop"
+                    role="presentation"
+                    onClick={() => setDayPeekDate(null)}
+                  >
+                    <section
+                      className="calendar-day-peek-card"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={`Plans and stickers for ${readableDate(dayPeekDate)}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <header>
+                        <div>
+                          <p className="tiny-label">DAY AT A GLANCE</p>
+                          <h3>{readableDate(dayPeekDate)}</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDayPeekDate(null)}
+                          aria-label="Close day details"
+                        >
+                          ×
+                        </button>
+                      </header>
+
+                      <div className="calendar-day-peek-events">
+                        {dayPeekEvents.length === 0 ? (
+                          <p className="calendar-day-peek-empty">
+                            No events yet—this day is still open.
+                          </p>
+                        ) : (
+                          dayPeekEvents.map((calendarEvent) => (
+                            <button
+                              className={`calendar-day-peek-event ${calendarEvent.color}`}
+                              key={calendarEvent.id}
+                              type="button"
+                              onClick={() => {
+                                setDayPeekDate(null);
+                                openEventEditor(calendarEvent);
+                              }}
+                            >
+                              <span>
+                                {calendarEvent.allDay
+                                  ? "ALL DAY"
+                                  : formatTimeWithPeriod(calendarEvent.time)}
+                              </span>
+                              <strong>{calendarEvent.title}</strong>
+                              <small>
+                                {calendarEvent.allDay
+                                  ? calendarEvent.calendar ?? "Personal"
+                                  : `${formatTimeWithPeriod(calendarEvent.time)} – ${formatTimeWithPeriod(calendarEvent.endTime)}`}
+                              </small>
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="calendar-sticker-picker">
+                        <div>
+                          <p className="tiny-label">A LITTLE STICKER</p>
+                          <strong>What did this day hold?</strong>
+                        </div>
+                        <div className="calendar-sticker-options">
+                          {dayStickers.map((sticker) => (
+                            <button
+                              className={[
+                                sticker.tint,
+                                dayPeekSticker?.id === sticker.id
+                                  ? "selected"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              key={sticker.id}
+                              type="button"
+                              onClick={() =>
+                                setDaySticker(dayPeekDate, sticker.id)
+                              }
+                              aria-pressed={dayPeekSticker?.id === sticker.id}
+                              title={sticker.label}
+                            >
+                              <span aria-hidden="true">{sticker.icon}</span>
+                              <small>{sticker.label}</small>
+                            </button>
+                          ))}
+                        </div>
+                        {dayPeekSticker && (
+                          <button
+                            className="calendar-sticker-clear"
+                            type="button"
+                            onClick={() => clearDaySticker(dayPeekDate)}
+                          >
+                            Remove sticker
+                          </button>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -5155,7 +5317,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="theme-credit">
-                Most hand-drawn theme stickers by{" "}
+                Theme stickers use artwork by{" "}
                 <a
                   href="https://openmoji.org/"
                   target="_blank"
@@ -5164,7 +5326,6 @@ export default function Home() {
                   OpenMoji
                 </a>
                 , created by design students, professors, and contributors.
-                The starry-eyed kitten uses the image you supplied unchanged.
               </p>
             </section>
 

@@ -27,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps every approved theme and adds only the requested supplied-art theme", () => {
+test("keeps every approved theme and removes only the three rejected themes", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -36,21 +36,18 @@ test("keeps every approved theme and adds only the requested supplied-art theme"
     "duckmail",
     "calicotea",
     "moonquilt",
-    "starrainnight",
-    "f1victory",
-    "starrykitten",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    1,
-    "only the supplied-art theme should replace the illustrated welcome charm with its full scene",
+    0,
+    "approved themes keep their original welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    6,
-    "the approved decorated themes plus star-rain, racing night, and the supplied kitten should decorate the sky",
+    3,
+    "only the original approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -59,13 +56,13 @@ test("keeps every approved theme and adds only the requested supplied-art theme"
     "ducktram",
     "startide",
     "catcoast",
+    "starrainnight",
+    "f1victory",
+    "starrykitten",
   ]) {
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
   assert.match(pageSource, /activeTheme\.decoratedScene &&/);
-  assert.match(cssSource, /aerea-f1-night-background\.png/);
-  assert.match(pageSource, /starry-eyed-kitten\.jpg/);
-  assert.match(cssSource, /starry-eyed-kitten\.jpg/);
   assert.doesNotMatch(
     pageSource,
     /className="theme-scene-character"/,
@@ -164,6 +161,12 @@ test("offers a readable expanded month without replacing the compact calendar", 
     cssSource,
     /\.calendar-expanded-mode \.month-grid\.expanded > button \{[\s\S]*border-radius: 0;/,
   );
+  assert.match(pageSource, /className="calendar-day-peek-card"/);
+  assert.match(pageSource, /onPointerDown=\{\(\) => startDayLongPress\(dayKey\)\}/);
+  assert.match(pageSource, /month-first-day/);
+  assert.match(pageSource, /calendar-life-sticker/);
+  assert.match(cssSource, /\.month-first-day/);
+  assert.match(cssSource, /\.calendar-life-sticker/);
 });
 
 test("keeps secret diary writing aligned and saved pages recognizable", () => {
@@ -178,6 +181,10 @@ test("keeps secret diary writing aligned and saved pages recognizable", () => {
   assert.match(
     cssSource,
     /\.secret-page-open > div \{[\s\S]*transform: translateY\(8px\);/,
+  );
+  assert.match(
+    cssSource,
+    /\.note-detail-backdrop\.secret \.note-detail-text[\s\S]*line-height: 37px/,
   );
 });
 
