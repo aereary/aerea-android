@@ -4157,7 +4157,19 @@ export default function Home() {
                       ←
                     </button>
                     <div>
-                      <p className="tiny-label">YOUR WHOLE RHYTHM</p>
+                      {calendarExpanded ? (
+                        <p
+                          className="tiny-label expanded-planner-title"
+                          aria-label="Monthly planner"
+                        >
+                          {"MONTHLY".split("").map((letter, index) => (
+                            <span key={`${letter}-${index}`}>{letter}</span>
+                          ))}
+                          <small>planner</small>
+                        </p>
+                      ) : (
+                        <p className="tiny-label">YOUR WHOLE RHYTHM</p>
+                      )}
                       <h2>
                         {viewMonth.toLocaleDateString("en", {
                           month: "long",
@@ -4228,6 +4240,7 @@ export default function Home() {
                       className={[
                         index % 7 === 0 ? "week-start" : "",
                         index % 7 >= 5 ? "weekend" : "",
+                        `weekday-${index % 7}`,
                         Math.floor(index / 7) % 2 === 1
                           ? "alternate-week"
                           : "",
@@ -4270,6 +4283,7 @@ export default function Home() {
                           dayKey === todayKey ? "today" : "",
                           gridIndex % 7 === 0 ? "week-start" : "",
                           gridIndex % 7 >= 5 ? "weekend" : "",
+                          `weekday-${gridIndex % 7}`,
                           Math.floor(gridIndex / 7) % 2 === 1
                             ? "alternate-week"
                             : "",
