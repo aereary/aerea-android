@@ -168,6 +168,14 @@ type CalendarEvent = {
   files?: string[];
 };
 
+type PlannerNoteColor = "pink" | "blue" | "mint" | "yellow" | "lilac";
+
+type CalendarDayNote = {
+  text: string;
+  color: PlannerNoteColor;
+  style: "handwritten" | "sticky";
+};
+
 type EventColor =
   | "lilac"
   | "yellow"
@@ -933,6 +941,24 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [calendarPickerOpen, setCalendarPickerOpen] = useState<
+    "month" | "year" | null
+  >(null);
+  const [calendarPlannerPriorities, setCalendarPlannerPriorities] = useState<
+    Record<string, string>
+  >({});
+  const [calendarPlannerNotes, setCalendarPlannerNotes] = useState<
+    Record<string, string>
+  >({});
+  const [calendarDayNotes, setCalendarDayNotes] = useState<
+    Record<string, CalendarDayNote>
+  >({});
+  const [calendarDayNoteDraft, setCalendarDayNoteDraft] = useState("");
+  const [calendarDayNoteColor, setCalendarDayNoteColor] =
+    useState<PlannerNoteColor>("pink");
+  const [calendarDayNoteStyle, setCalendarDayNoteStyle] = useState<
+    "handwritten" | "sticky"
+  >("handwritten");
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1148,6 +1174,9 @@ export default function Home() {
             secretDiaryEntries?: SecretDiaryEntry[];
             moodHistory?: Record<string, string>;
             dayStickerHistory?: Record<string, string>;
+            calendarPlannerPriorities?: Record<string, string>;
+            calendarPlannerNotes?: Record<string, string>;
+            calendarDayNotes?: Record<string, CalendarDayNote>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
             focusSessions?: number;
@@ -1176,6 +1205,15 @@ export default function Home() {
             if (state.dayStickerHistory) {
               setDayStickerHistory(state.dayStickerHistory);
             }
+            if (state.calendarPlannerPriorities) {
+              setCalendarPlannerPriorities(state.calendarPlannerPriorities);
+            }
+            if (state.calendarPlannerNotes) {
+              setCalendarPlannerNotes(state.calendarPlannerNotes);
+            }
+            if (state.calendarDayNotes) {
+              setCalendarDayNotes(state.calendarDayNotes);
+            }
             if (state.completedDays) setCompletedDays(state.completedDays);
             if (state.calendarEvents) {
               setCalendarEvents(
@@ -1192,6 +1230,9 @@ export default function Home() {
             setSecretDiaryEntries([]);
             setMoodHistory({});
             setDayStickerHistory({});
+            setCalendarPlannerPriorities({});
+            setCalendarPlannerNotes({});
+            setCalendarDayNotes({});
             setCompletedDays({});
             setCalendarEvents([]);
             setFocusSessions(0);
@@ -1290,6 +1331,9 @@ export default function Home() {
               secretDiaryEntries,
               moodHistory,
               dayStickerHistory,
+              calendarPlannerPriorities,
+              calendarPlannerNotes,
+              calendarDayNotes,
               completedDays,
               calendarEvents,
               focusSessions,
@@ -1319,6 +1363,9 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [
     calendarEvents,
+    calendarDayNotes,
+    calendarPlannerNotes,
+    calendarPlannerPriorities,
     classItems,
     appTheme,
     colorMode,
@@ -1395,6 +1442,7 @@ export default function Home() {
   );
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
+  const calendarMonthKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}`;
   const daysInViewMonth = new Date(
     calendarYear,
     calendarMonth + 1,
@@ -1837,6 +1885,10 @@ export default function Home() {
     dayLongPressTimerRef.current = window.setTimeout(() => {
       dayLongPressTriggeredRef.current = true;
       setSelectedCalendarDate(dateKey);
+      const savedNote = calendarDayNotes[dateKey];
+      setCalendarDayNoteDraft(savedNote?.text ?? "");
+      setCalendarDayNoteColor(savedNote?.color ?? "pink");
+      setCalendarDayNoteStyle(savedNote?.style ?? "handwritten");
       setDayPeekDate(dateKey);
       dayLongPressTimerRef.current = null;
     }, 460);
@@ -1862,6 +1914,51 @@ export default function Home() {
     setDayStickerHistory((current) => {
       const next = { ...current };
       delete next[dateKey];
+      return next;
+    });
+  };
+
+  const chooseCalendarMonth = (month: number) => {
+    const next = new Date(calendarYear, month, 1);
+    const selectedDay = dateFromKey(selectedCalendarDate).getDate();
+    const clampedDay = Math.min(
+      selectedDay,
+      new Date(calendarYear, month + 1, 0).getDate(),
+    );
+    setViewMonth(next);
+    setSelectedCalendarDate(
+      calendarDateKey(calendarYear, month, clampedDay),
+    );
+    setCalendarPickerOpen(null);
+  };
+
+  const chooseCalendarYear = (year: number) => {
+    const next = new Date(year, calendarMonth, 1);
+    const selectedDay = dateFromKey(selectedCalendarDate).getDate();
+    const clampedDay = Math.min(
+      selectedDay,
+      new Date(year, calendarMonth + 1, 0).getDate(),
+    );
+    setViewMonth(next);
+    setSelectedCalendarDate(
+      calendarDateKey(year, calendarMonth, clampedDay),
+    );
+    setCalendarPickerOpen(null);
+  };
+
+  const saveCalendarDayNote = (dateKey: string) => {
+    const text = calendarDayNoteDraft.trim();
+    setCalendarDayNotes((current) => {
+      const next = { ...current };
+      if (!text) {
+        delete next[dateKey];
+      } else {
+        next[dateKey] = {
+          text,
+          color: calendarDayNoteColor,
+          style: calendarDayNoteStyle,
+        };
+      }
       return next;
     });
   };
@@ -4158,24 +4255,49 @@ export default function Home() {
                     </button>
                     <div>
                       {calendarExpanded ? (
-                        <p
-                          className="tiny-label expanded-planner-title"
-                          aria-label="Monthly planner"
-                        >
-                          {"MONTHLY".split("").map((letter, index) => (
-                            <span key={`${letter}-${index}`}>{letter}</span>
-                          ))}
-                          <small>planner</small>
+                        <p className="tiny-label expanded-planner-title">
+                          ✦ MY MONTHLY PLANNER ✦
                         </p>
                       ) : (
                         <p className="tiny-label">YOUR WHOLE RHYTHM</p>
                       )}
-                      <h2>
-                        {viewMonth.toLocaleDateString("en", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </h2>
+                      {calendarExpanded ? (
+                        <h2 className="calendar-date-selectors">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCalendarPickerOpen((current) =>
+                                current === "month" ? null : "month",
+                              )
+                            }
+                            aria-expanded={calendarPickerOpen === "month"}
+                          >
+                            {viewMonth.toLocaleDateString("en", {
+                              month: "long",
+                            })}
+                            <span>⌄</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCalendarPickerOpen((current) =>
+                                current === "year" ? null : "year",
+                              )
+                            }
+                            aria-expanded={calendarPickerOpen === "year"}
+                          >
+                            {calendarYear}
+                            <span>⌄</span>
+                          </button>
+                        </h2>
+                      ) : (
+                        <h2>
+                          {viewMonth.toLocaleDateString("en", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </h2>
+                      )}
                     </div>
                     <button
                       onClick={() => shiftCalendarMonth(1)}
@@ -4191,15 +4313,95 @@ export default function Home() {
                     ×
                   </button>
                 </div>
+                {calendarExpanded && calendarPickerOpen && (
+                  <div
+                    className={`calendar-date-picker ${calendarPickerOpen}`}
+                    role="dialog"
+                    aria-label={
+                      calendarPickerOpen === "month"
+                        ? "Choose a month"
+                        : "Choose a year"
+                    }
+                  >
+                    <header>
+                      <strong>
+                        {calendarPickerOpen === "month"
+                          ? `Choose a month in ${calendarYear}`
+                          : "Choose a year"}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarPickerOpen(null)}
+                        aria-label="Close picker"
+                      >
+                        ×
+                      </button>
+                    </header>
+                    {calendarPickerOpen === "month" ? (
+                      <div className="calendar-month-options">
+                        {Array.from({ length: 12 }, (_, month) => (
+                          <button
+                            type="button"
+                            className={
+                              month === calendarMonth ? "active" : ""
+                            }
+                            key={month}
+                            onClick={() => chooseCalendarMonth(month)}
+                          >
+                            {new Date(2026, month, 1).toLocaleDateString("en", {
+                              month: "short",
+                            })}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="calendar-year-options">
+                        {Array.from(
+                          { length: 15 },
+                          (_, index) => calendarYear - 7 + index,
+                        ).map((year) => (
+                          <button
+                            type="button"
+                            className={year === calendarYear ? "active" : ""}
+                            key={year}
+                            onClick={() => chooseCalendarYear(year)}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="calendar-sources">
-                  <span>
-                    <i className="source-android" /> Android calendar
-                  </span>
-                  <span>
-                    <i className="source-aerea" /> aérea
-                  </span>
-                  <span className="mood-source">◡‿◡ mood stickers</span>
-                  <span className="swipe-source">↔ swipe months</span>
+                  {calendarExpanded ? (
+                    <div className="calendar-planner-tabs" aria-label="Calendar view">
+                      <button className="active" type="button">
+                        Month
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalendarExpanded(false);
+                          setSelectedCalendarDate(selectedCalendarDate);
+                        }}
+                      >
+                        Day details
+                      </button>
+                      <span>hold a day for stickers + notes</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>
+                        <i className="source-android" /> Android calendar
+                      </span>
+                      <span>
+                        <i className="source-aerea" /> aérea
+                      </span>
+                      <span className="mood-source">◡‿◡ mood stickers</span>
+                      <span className="swipe-source">↔ swipe months</span>
+                    </>
+                  )}
                   <button
                     className="calendar-view-toggle"
                     type="button"
@@ -4210,6 +4412,44 @@ export default function Home() {
                     {calendarExpanded ? "Compact month" : "Read events"}
                   </button>
                 </div>
+                {calendarExpanded && (
+                  <section className="calendar-planner-overview">
+                    <label className="planner-priorities">
+                      <span>
+                        <b>♡</b>
+                        My priorities this month
+                      </span>
+                      <textarea
+                        value={calendarPlannerPriorities[calendarMonthKey] ?? ""}
+                        onChange={(event) =>
+                          setCalendarPlannerPriorities((current) => ({
+                            ...current,
+                            [calendarMonthKey]: event.target.value,
+                          }))
+                        }
+                        placeholder={"1. Take care of myself\n2. Finish one important thing\n3. Leave room for joy"}
+                        aria-label="Monthly priorities"
+                      />
+                    </label>
+                    <label className="planner-month-notes">
+                      <span>
+                        <b>✿</b>
+                        Notes
+                      </span>
+                      <textarea
+                        value={calendarPlannerNotes[calendarMonthKey] ?? ""}
+                        onChange={(event) =>
+                          setCalendarPlannerNotes((current) => ({
+                            ...current,
+                            [calendarMonthKey]: event.target.value,
+                          }))
+                        }
+                        placeholder="A little thought for this month…"
+                        aria-label="Monthly notes"
+                      />
+                    </label>
+                  </section>
+                )}
                 <div className="month-grid-viewport">
                   <div
                     key={`${calendarYear}-${calendarMonth}`}
@@ -4268,6 +4508,7 @@ export default function Home() {
                       (sticker) =>
                         sticker.id === dayStickerHistory[dayKey],
                     );
+                    const dayPlannerNote = calendarDayNotes[dayKey];
                     const dayComplete = completedDays[dayKey] === true;
                     const dayMissed = dayKey < todayKey && !dayComplete;
                     return (
@@ -4277,6 +4518,7 @@ export default function Home() {
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",
+                          dayPlannerNote ? "has-planner-note" : "",
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
                           dayKey < todayKey ? "past-day" : "",
@@ -4299,6 +4541,18 @@ export default function Home() {
                         onPointerUp={clearDayLongPress}
                       >
                         <span className="calendar-day-number">{day}</span>
+                        {calendarExpanded && dayPlannerNote && (
+                          <span
+                            className={[
+                              "calendar-grid-note",
+                              dayPlannerNote.color,
+                              dayPlannerNote.style,
+                            ].join(" ")}
+                            title={dayPlannerNote.text}
+                          >
+                            {dayPlannerNote.text}
+                          </span>
+                        )}
                         {daySticker && (
                           <i
                             className={`calendar-life-sticker ${daySticker.tint}`}
@@ -4632,6 +4886,93 @@ export default function Home() {
                             Remove sticker
                           </button>
                         )}
+                      </div>
+                      <div className="calendar-day-note-editor">
+                        <div>
+                          <p className="tiny-label">WRITE ON THIS SQUARE</p>
+                          <strong>A tiny note in your calendar</strong>
+                        </div>
+                        <textarea
+                          value={calendarDayNoteDraft}
+                          maxLength={90}
+                          onChange={(event) =>
+                            setCalendarDayNoteDraft(event.target.value)
+                          }
+                          placeholder="Coffee with Ana, exam reminder, a tiny thought…"
+                          aria-label="Note written inside this calendar day"
+                        />
+                        <div className="calendar-note-controls">
+                          <div
+                            className="calendar-note-colors"
+                            aria-label="Note color"
+                          >
+                            {(
+                              [
+                                "pink",
+                                "blue",
+                                "mint",
+                                "yellow",
+                                "lilac",
+                              ] as PlannerNoteColor[]
+                            ).map((color) => (
+                              <button
+                                type="button"
+                                className={
+                                  calendarDayNoteColor === color ? "active" : ""
+                                }
+                                data-color={color}
+                                key={color}
+                                onClick={() => setCalendarDayNoteColor(color)}
+                                aria-label={`${color} note`}
+                                aria-pressed={calendarDayNoteColor === color}
+                              />
+                            ))}
+                          </div>
+                          <div
+                            className="calendar-note-styles"
+                            aria-label="Note style"
+                          >
+                            <button
+                              type="button"
+                              className={
+                                calendarDayNoteStyle === "handwritten"
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                setCalendarDayNoteStyle("handwritten")
+                              }
+                            >
+                              handwritten
+                            </button>
+                            <button
+                              type="button"
+                              className={
+                                calendarDayNoteStyle === "sticky"
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() => setCalendarDayNoteStyle("sticky")}
+                            >
+                              little label
+                            </button>
+                          </div>
+                        </div>
+                        <button
+                          className="calendar-note-save"
+                          type="button"
+                          onClick={() => saveCalendarDayNote(dayPeekDate)}
+                          disabled={
+                            !calendarDayNoteDraft.trim() &&
+                            !calendarDayNotes[dayPeekDate]
+                          }
+                        >
+                          {calendarDayNoteDraft.trim()
+                            ? "Keep this note"
+                            : calendarDayNotes[dayPeekDate]
+                              ? "Remove note"
+                              : "Nothing to save yet"}
+                        </button>
                       </div>
                     </section>
                   </div>
