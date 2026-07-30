@@ -13737,8 +13737,11 @@ body {
 }
 
 .calendar-sticker-picker {
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
+  background: color-mix(in srgb, var(--paper) 94%, #f2f5e5);
+  border: 1px solid color-mix(in srgb, var(--line) 75%, #d8e6bd);
+  border-radius: 28px;
+  box-shadow: 0 9px 22px rgb(91 111 72 / 8%);
+  padding: 20px;
 }
 
 .calendar-sticker-picker > div:first-child > strong {
@@ -13749,37 +13752,45 @@ body {
 
 .calendar-sticker-options {
   display: grid;
-  gap: 9px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 14px;
+  gap: 11px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 16px;
 }
 
 .calendar-sticker-options > button {
   align-items: center;
-  background: var(--sticker-bg, #fff4df);
-  border: 2px solid transparent;
-  border-radius: 18px;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at 36% 28%, rgb(255 255 255 / 92%) 0 13%, transparent 14%),
+    color-mix(in srgb, var(--sticker-bg, #eef4df) 46%, #f7f9ee);
+  border: 2px solid rgb(255 255 255 / 88%);
+  border-radius: 50%;
+  box-shadow:
+    0 4px 9px color-mix(in srgb, var(--sticker-bg, #dfe9cc) 38%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--sticker-bg, #dfe9cc) 48%, #ccd9b4);
   color: var(--ink-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 78px;
-  padding: 9px 5px;
+  display: grid;
+  min-height: 0;
+  padding: 7px;
+  place-items: center;
 }
 
 .calendar-sticker-options > button.selected {
-  border-color: var(--leaf);
-  box-shadow: 0 4px 0 color-mix(in srgb, var(--leaf) 24%, transparent);
+  border-color: color-mix(in srgb, var(--leaf) 82%, white);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--leaf) 18%, transparent),
+    0 5px 11px color-mix(in srgb, var(--leaf) 20%, transparent);
+  transform: translateY(-2px);
 }
 
 .calendar-sticker-options span {
-  font-size: 25px;
+  filter: saturate(0.82) brightness(1.05);
+  font-size: clamp(22px, 4.5vw, 30px);
   line-height: 1;
 }
 
 .calendar-sticker-options small {
-  font-size: 9px;
-  font-weight: 850;
+  display: none;
 }
 
 .calendar-sticker-clear {
@@ -13857,7 +13868,8 @@ body {
   }
 
   .calendar-sticker-options {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .calendar-life-sticker {

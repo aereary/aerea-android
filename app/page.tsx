@@ -656,13 +656,34 @@ const secretDiaryFeelings = [
 const dayStickers = [
   { id: "ate-out", icon: "🍔", label: "Ate out", tint: "sticker-peach" },
   { id: "exercise", icon: "🏋️", label: "Exercise", tint: "sticker-mint" },
-  { id: "study", icon: "📚", label: "Study", tint: "sticker-lilac" },
+  { id: "study", icon: "📖", label: "Study", tint: "sticker-lilac" },
   { id: "coffee", icon: "☕", label: "Coffee date", tint: "sticker-cocoa" },
   { id: "movie", icon: "🎬", label: "Movie", tint: "sticker-blue" },
   { id: "shopping", icon: "🛍️", label: "Shopping", tint: "sticker-pink" },
   { id: "trip", icon: "✈️", label: "Trip", tint: "sticker-sky" },
   { id: "treat", icon: "🍰", label: "Little treat", tint: "sticker-yellow" },
   { id: "outside", icon: "🌿", label: "Outside time", tint: "sticker-sage" },
+  { id: "celebrate", icon: "🎉", label: "Celebrate", tint: "sticker-yellow" },
+  { id: "rest", icon: "🛋️", label: "Rest", tint: "sticker-sage" },
+  { id: "flowers", icon: "🌷", label: "Flowers", tint: "sticker-pink" },
+  { id: "candle", icon: "🕯️", label: "Candle", tint: "sticker-peach" },
+  { id: "together", icon: "🫂", label: "Together", tint: "sticker-mint" },
+  { id: "sunny", icon: "☀️", label: "Sunny day", tint: "sticker-yellow" },
+  { id: "weather", icon: "🌤️", label: "Soft weather", tint: "sticker-sky" },
+  { id: "music", icon: "🎧", label: "Music", tint: "sticker-blue" },
+  { id: "breakfast", icon: "🍳", label: "Breakfast", tint: "sticker-yellow" },
+  { id: "pizza", icon: "🍕", label: "Pizza", tint: "sticker-peach" },
+  { id: "meal", icon: "🍱", label: "Nice meal", tint: "sticker-pink" },
+  { id: "bread", icon: "🥐", label: "Bakery", tint: "sticker-cocoa" },
+  { id: "shower", icon: "🚿", label: "Everything shower", tint: "sticker-sky" },
+  { id: "brush", icon: "🪥", label: "Self care", tint: "sticker-mint" },
+  { id: "rainbow", icon: "🌈", label: "Rainbow day", tint: "sticker-lilac" },
+  { id: "water", icon: "🥛", label: "Water", tint: "sticker-blue" },
+  { id: "haircut", icon: "✂️", label: "Haircut", tint: "sticker-sage" },
+  { id: "focus", icon: "🤓", label: "Focused", tint: "sticker-mint" },
+  { id: "makeup", icon: "💄", label: "Getting ready", tint: "sticker-pink" },
+  { id: "snack", icon: "🍪", label: "Snack", tint: "sticker-yellow" },
+  { id: "bubble-tea", icon: "🧋", label: "Little drink", tint: "sticker-cocoa" },
 ] as const;
 
 function journalFaceFor(index: number) {
@@ -4548,22 +4569,6 @@ export default function Home() {
                             title={dayMood.label}
                           >
                             {dayMood.face}
-                          </i>
-                        )}
-                        {(dayComplete || dayMissed) && (
-                          <i
-                            className={
-                              dayComplete
-                                ? "calendar-day-status complete"
-                                : "calendar-day-status missed"
-                            }
-                            title={
-                              dayComplete
-                                ? "Everything completed"
-                                : "Day not marked complete"
-                            }
-                          >
-                            {dayComplete ? "✓" : "×"}
                           </i>
                         )}
                         {calendarExpanded && dayEvents.length > 0 ? (

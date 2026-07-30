@@ -115,9 +115,7 @@
 }
 
 .calendar-expanded-mode .calendar-date-selectors > button span {
-  color: #8580ae !important;
-  font-size: 0.42em !important;
-  margin-left: 3px !important;
+  display: none !important;
 }
 
 .calendar-expanded-mode .calendar-month-heading > button,
@@ -285,6 +283,21 @@
   position: relative !important;
 }
 
+/*
+ * Empty dates stay truly empty. Older theme experiments added a repeated
+ * pink face or an automatic × through the date button pseudo-element.
+ * Mood stickers and manually selected life stickers remain real elements.
+ */
+.calendar-modal .month-grid > button::after,
+.calendar-expanded-mode .month-grid.expanded > button::after {
+  content: none !important;
+  display: none !important;
+}
+
+.calendar-expanded-mode .calendar-day-status {
+  display: none !important;
+}
+
 .calendar-expanded-mode .month-grid.expanded > button.past-day {
   background:
     linear-gradient(rgb(91 84 125 / 6%), rgb(91 84 125 / 6%)),
@@ -319,38 +332,19 @@
   width: auto !important;
 }
 
-.calendar-expanded-mode
-  .month-grid.expanded
-  > button:not(.past-day):not(.has-event):not(.has-mood):not(.has-life-sticker):not(.has-planner-note):not(.day-complete):not(.day-missed)::after {
+.calendar-expanded-mode .month-grid.expanded .calendar-life-sticker {
   align-items: center !important;
-  background: linear-gradient(145deg, #ffe2ea, #ffbfd1) !important;
-  border: 1px solid rgb(239 153 179 / 32%) !important;
+  background: linear-gradient(145deg, #fbfdf0, #eef5df) !important;
+  border: 2px solid rgb(255 255 255 / 92%) !important;
   border-radius: 50% !important;
-  bottom: clamp(11px, 1.25vw, 17px) !important;
-  box-shadow: 0 3px 8px rgb(221 134 163 / 18%) !important;
-  color: #453743 !important;
-  content: "•ᴗ•" !important;
-  display: flex !important;
-  font-size: clamp(7px, 0.8vw, 10px) !important;
-  height: clamp(27px, 2.8vw, 36px) !important;
-  justify-content: center !important;
-  left: 50% !important;
-  letter-spacing: -0.12em !important;
-  position: absolute !important;
-  transform: translateX(-50%) !important;
-  width: clamp(27px, 2.8vw, 36px) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded .calendar-life-sticker,
-.calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
-  align-items: center !important;
-  background: transparent !important;
-  border: 0 !important;
   bottom: clamp(12px, 1.3vw, 18px) !important;
-  box-shadow: none !important;
+  box-shadow:
+    0 4px 10px rgb(119 139 91 / 14%),
+    inset 0 0 0 1px rgb(193 211 167 / 42%) !important;
   display: flex !important;
-  font-size: clamp(26px, 3.25vw, 44px) !important;
-  height: auto !important;
+  filter: saturate(0.86) brightness(1.04) !important;
+  font-size: clamp(18px, 2.25vw, 29px) !important;
+  height: clamp(38px, 4.15vw, 52px) !important;
   justify-content: center !important;
   left: 50% !important;
   line-height: 1 !important;
@@ -359,7 +353,24 @@
   right: auto !important;
   top: auto !important;
   transform: translateX(-50%) !important;
-  width: auto !important;
+  width: clamp(38px, 4.15vw, 52px) !important;
+}
+
+.calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
+  align-items: center !important;
+  background: transparent !important;
+  border: 0 !important;
+  bottom: clamp(12px, 1.3vw, 18px) !important;
+  box-shadow: none !important;
+  display: flex !important;
+  justify-content: center !important;
+  left: 50% !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  right: auto !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
 }
 
 .calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
@@ -618,18 +629,11 @@
     top: 6px !important;
   }
 
-  .calendar-expanded-mode
-    .month-grid.expanded
-    > button:not(.past-day):not(.has-event):not(.has-mood):not(.has-life-sticker):not(.has-planner-note):not(.day-complete):not(.day-missed)::after {
-    bottom: 7px !important;
-    font-size: 5px !important;
-    height: 20px !important;
-    width: 20px !important;
-  }
-
   .calendar-expanded-mode .month-grid.expanded .calendar-life-sticker {
     bottom: 7px !important;
-    font-size: 22px !important;
+    font-size: 14px !important;
+    height: 28px !important;
+    width: 28px !important;
   }
 
   .calendar-expanded-mode .month-grid.expanded .calendar-mood-sticker {
