@@ -4498,6 +4498,7 @@ export default function Home() {
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",
+                          daySticker ? "has-life-sticker" : "",
                           dayPlannerNote ? "has-planner-note" : "",
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
@@ -4601,6 +4602,23 @@ export default function Home() {
                       </button>
                     );
                   })}
+                  {Array.from(
+                    {
+                      length:
+                        calendarWeekRows * 7 -
+                        leadingDays -
+                        daysInViewMonth,
+                    },
+                    (_, index) => (
+                      <i
+                        className="calendar-adjacent-day"
+                        key={`next-${index + 1}`}
+                        aria-hidden="true"
+                      >
+                        <span>{index + 1}</span>
+                      </i>
+                    ),
+                  )}
                   </div>
                 </div>
                 {calendarExpanded && (
