@@ -695,3 +695,137 @@
     font-size: 19px !important;
   }
 }
+
+/*
+ * Final shared calendar header.
+ * The expanded calendar intentionally uses the same compact hierarchy as the
+ * regular calendar. Month and year remain separate buttons for the pickers,
+ * but read visually as one heading.
+ */
+.calendar-expanded-mode .modal-top {
+  align-items: flex-start !important;
+  display: flex !important;
+  gap: 12px !important;
+  justify-content: space-between !important;
+}
+
+.calendar-expanded-mode .calendar-month-heading {
+  align-items: center !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  gap: 14px !important;
+  grid-template-columns: none !important;
+  justify-content: flex-start !important;
+}
+
+.calendar-expanded-mode .calendar-month-heading > div {
+  text-align: left !important;
+}
+
+.calendar-expanded-mode .expanded-planner-title {
+  color: var(--leaf-deep) !important;
+  font-family: inherit !important;
+  font-size: 10px !important;
+  letter-spacing: 0.14em !important;
+  line-height: 1.2 !important;
+  margin: 0 0 4px !important;
+}
+
+.calendar-expanded-mode .calendar-date-selectors {
+  color: var(--ink) !important;
+  font-family: inherit !important;
+  font-size: 30px !important;
+  font-weight: 500 !important;
+  gap: 5px !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1 !important;
+}
+
+.calendar-expanded-mode .calendar-month-heading > button,
+.calendar-expanded-mode .modal-top > button {
+  background: var(--yellow-soft) !important;
+  border: 0 !important;
+  box-shadow: var(--shadow-soft) !important;
+  color: var(--ink) !important;
+  font-size: 22px !important;
+  height: 43px !important;
+  min-height: 43px !important;
+  min-width: 43px !important;
+  width: 43px !important;
+}
+
+.calendar-expanded-mode .calendar-sources {
+  align-items: center !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px 18px !important;
+  justify-content: flex-start !important;
+  margin: 0 !important;
+}
+
+.calendar-expanded-mode .calendar-sources > span {
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  gap: 6px !important;
+}
+
+.calendar-expanded-mode .calendar-sources .mood-source,
+.calendar-expanded-mode .calendar-sources .swipe-source,
+.calendar-expanded-mode .calendar-view-toggle {
+  box-shadow: none !important;
+  font-size: 10px !important;
+  min-height: 31px !important;
+  padding: 5px 9px !important;
+}
+
+.calendar-expanded-mode .calendar-sources .mood-source {
+  background: var(--pink) !important;
+  color: #7d554e !important;
+}
+
+.calendar-expanded-mode .calendar-sources .swipe-source {
+  background: var(--lime-wash) !important;
+  color: var(--leaf-deep) !important;
+}
+
+.calendar-expanded-mode .calendar-view-toggle {
+  background: color-mix(in srgb, var(--lavender) 64%, var(--paper)) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+  margin-left: 0 !important;
+  padding-inline: 12px !important;
+}
+
+/*
+ * Remove only the automatic pink empty-day faces. Real mood stickers and
+ * manually chosen life stickers are rendered as child elements and remain.
+ * These selectors match the legacy rules' specificity so they cannot return.
+ */
+.calendar-expanded-mode
+  .month-grid.expanded
+  > button:not(.past-day):not(.has-event):not(.has-mood):not(.has-planner-note):not(.day-complete):not(.day-missed)::after,
+.calendar-expanded-mode
+  .month-grid.expanded
+  > button:not(.has-event):not(.has-mood):not(.has-planner-note):not(.day-complete):not(.has-life-sticker)::after,
+.calendar-modal.calendar-expanded-mode
+  .month-grid.expanded
+  > button::after {
+  content: none !important;
+  display: none !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  width: 0 !important;
+}
+
+/*
+ * One handwriting face in both calendar editors. The bundled Gaegu Latin
+ * font includes Spanish diacritics (áéíóúü) and ñ.
+ */
+.calendar-day-note-editor textarea,
+.calendar-expanded-mode .calendar-day-note-editor textarea {
+  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
+  font-style: normal !important;
+  font-variant-ligatures: none !important;
+  font-weight: 400 !important;
+}
