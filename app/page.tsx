@@ -4256,7 +4256,7 @@ export default function Home() {
                     <div>
                       {calendarExpanded ? (
                         <p className="tiny-label expanded-planner-title">
-                          ✦ MY MONTHLY PLANNER ✦
+                          YOUR WHOLE RHYTHM
                         </p>
                       ) : (
                         <p className="tiny-label">YOUR WHOLE RHYTHM</p>
@@ -4374,34 +4374,14 @@ export default function Home() {
                   </div>
                 )}
                 <div className="calendar-sources">
-                  {calendarExpanded ? (
-                    <div className="calendar-planner-tabs" aria-label="Calendar view">
-                      <button className="active" type="button">
-                        Month
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarExpanded(false);
-                          setSelectedCalendarDate(selectedCalendarDate);
-                        }}
-                      >
-                        Day details
-                      </button>
-                      <span>hold a day for stickers + notes</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>
-                        <i className="source-android" /> Android calendar
-                      </span>
-                      <span>
-                        <i className="source-aerea" /> aérea
-                      </span>
-                      <span className="mood-source">◡‿◡ mood stickers</span>
-                      <span className="swipe-source">↔ swipe months</span>
-                    </>
-                  )}
+                  <span>
+                    <i className="source-android" /> Android calendar
+                  </span>
+                  <span>
+                    <i className="source-aerea" /> aérea
+                  </span>
+                  <span className="mood-source">⌁‿⌁ mood stickers</span>
+                  <span className="swipe-source">↔ swipe months</span>
                   <button
                     className="calendar-view-toggle"
                     type="button"
@@ -4623,6 +4603,41 @@ export default function Home() {
                   })}
                   </div>
                 </div>
+                {calendarExpanded && (
+                  <section className="calendar-expanded-selected-summary">
+                    <div>
+                      <p className="tiny-label">SELECTED DAY</p>
+                      <h3>{readableDate(selectedCalendarDate)}</h3>
+                    </div>
+                    <button
+                      className="calendar-expanded-add-event"
+                      type="button"
+                      onClick={() => openNewEvent()}
+                    >
+                      <span aria-hidden="true">＋</span>
+                      Add event
+                    </button>
+                    <button
+                      className="calendar-expanded-event-count"
+                      type="button"
+                      onClick={() => setDayPeekDate(selectedCalendarDate)}
+                    >
+                      <span aria-hidden="true">
+                        {selectedDateMood?.face ?? "☁"}
+                      </span>
+                      <strong>
+                        {selectedDateEvents.length === 0
+                          ? "No events yet"
+                          : `You have ${selectedDateEvents.length} ${
+                              selectedDateEvents.length === 1
+                                ? "event"
+                                : "events"
+                            }`}
+                      </strong>
+                      <i aria-hidden="true">⌄</i>
+                    </button>
+                  </section>
+                )}
                 <div className="selected-day-panel">
                   <div className="selected-day-heading">
                     <div>
