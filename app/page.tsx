@@ -824,6 +824,7 @@ export default function Home() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1273,6 +1274,22 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+  const calendarDays = useMemo(() => {
+    if (!calendarExpanded) {
+      return Array.from({ length: daysInViewMonth }, (_, index) => ({
+        date: new Date(calendarYear, calendarMonth, index + 1),
+        currentMonth: true,
+      }));
+    }
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(calendarYear, calendarMonth, index - leadingDays + 1);
+      return {
+        date,
+        currentMonth: date.getMonth() === calendarMonth,
+      };
+    });
+  }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -3494,11 +3511,13 @@ export default function Home() {
       {calendarOpen && (
         <div className="modal-backdrop" role="presentation">
           <section
-            className={
-              eventEditorOpen
-                ? "calendar-modal calendar-event-mode"
-                : "calendar-modal"
-            }
+            className={[
+              "calendar-modal",
+              eventEditorOpen ? "calendar-event-mode" : "",
+              calendarExpanded && !eventEditorOpen ? "calendar-expanded" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -3939,6 +3958,15 @@ export default function Home() {
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
+                  <button
+                    className="calendar-view-toggle"
+                    type="button"
+                    aria-pressed={calendarExpanded}
+                    onClick={() => setCalendarExpanded((expanded) => !expanded)}
+                  >
+                    <span aria-hidden="true">▦</span>
+                    {calendarExpanded ? "Compact month" : "Extended month"}
+                  </button>
                 </div>
                 <div className="month-grid-viewport">
                   <div
@@ -3959,16 +3987,13 @@ export default function Home() {
                   {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
-                  {Array.from({ length: leadingDays }, (_, index) => (
-                    <i key={`empty-${index}`} />
-                  ))}
-                  {Array.from({ length: daysInViewMonth }, (_, index) => {
-                    const day = index + 1;
-                    const dayKey = calendarDateKey(
-                      calendarYear,
-                      calendarMonth,
-                      day,
-                    );
+                  {!calendarExpanded &&
+                    Array.from({ length: leadingDays }, (_, index) => (
+                      <i key={`empty-${index}`} />
+                    ))}
+                  {calendarDays.map(({ date, currentMonth }) => {
+                    const day = date.getDate();
+                    const dayKey = localDateKey(date);
                     const dayEvents = calendarEvents.filter((event) =>
                       eventOccursOn(event, dayKey),
                     );
@@ -3979,8 +4004,9 @@ export default function Home() {
                     const dayMissed = dayKey < todayKey && !dayComplete;
                     return (
                       <button
-                        key={day}
+                        key={dayKey}
                         className={[
+                          currentMonth ? "" : "outside-month",
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",

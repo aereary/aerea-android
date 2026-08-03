@@ -114,6 +114,14 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(cssSource, /\.note-detail-text/);
 });
 
+test("keeps compact calendar and offers a distinct extended month view", () => {
+  assert.match(pageSource, /calendarExpanded/);
+  assert.match(pageSource, /Compact month/);
+  assert.match(pageSource, /Extended month/);
+  assert.match(pageSource, /outside-month/);
+  assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
+});
+
 test("keeps Safe Place light enough for mobile typing", () => {
   assert.match(pageSource, /secretDiaryTextareaRef/);
   assert.doesNotMatch(pageSource, /value=\{secretDiaryText\}/);
