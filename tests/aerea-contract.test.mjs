@@ -124,6 +124,14 @@ test("keeps compact calendar and offers a distinct extended month view", () => {
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
 });
 
+test("toggles selected moods and keeps reminders editable", () => {
+  assert.match(pageSource, /next\[dateKey\] === mood/);
+  assert.match(pageSource, /delete next\[dateKey\]/);
+  assert.match(pageSource, /reminderDraft/);
+  assert.match(pageSource, /aria-label="Add reminder"/);
+  assert.doesNotMatch(pageSource, /Day not marked complete/);
+});
+
 test("keeps Safe Place light enough for mobile typing", () => {
   assert.match(pageSource, /secretDiaryTextareaRef/);
   assert.doesNotMatch(pageSource, /value=\{secretDiaryText\}/);

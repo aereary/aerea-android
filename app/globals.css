@@ -1199,6 +1199,9 @@ p {
   font-size: 21px;
   height: 48px;
   justify-content: center;
+  border: 0;
+  padding: 0;
+  width: 48px;
 }
 
 .reminder-row.mint { --row-color: #dbeecb; }
@@ -1227,6 +1230,7 @@ p {
 }
 
 .check-circle {
+  background: transparent;
   align-items: center;
   border: 2px solid #b3bba5;
   border-radius: 50%;
@@ -1236,6 +1240,104 @@ p {
   height: 25px;
   justify-content: center;
   width: 25px;
+}
+
+.reminder-heading-actions {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.reminder-add-button {
+  align-items: center;
+  background: var(--yellow-soft);
+  border: 0;
+  border-radius: 999px;
+  color: #6d5522;
+  display: flex;
+  font-size: 19px;
+  font-weight: 900;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.reminder-editor-backdrop {
+  align-items: center;
+  background: rgba(38, 46, 34, 0.38);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 260;
+}
+
+.reminder-editor-note {
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(35, 48, 26, 0.28);
+  display: grid;
+  gap: 14px;
+  max-width: 390px;
+  padding: 25px;
+  width: 100%;
+}
+
+.reminder-editor-note h3,
+.reminder-editor-note p {
+  margin: 0;
+}
+
+.reminder-editor-note label {
+  display: grid;
+  gap: 6px;
+}
+
+.reminder-editor-note label > small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reminder-editor-note input {
+  background: var(--cream);
+  border: 2px solid var(--line);
+  border-radius: 15px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 48px;
+  padding: 10px 13px;
+}
+
+.reminder-editor-note .reminder-emoji-input {
+  font-size: 25px;
+  max-width: 88px;
+  text-align: center;
+}
+
+.reminder-editor-note footer {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end;
+  margin-top: 5px;
+}
+
+.reminder-editor-note footer button {
+  background: var(--lime-wash);
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink);
+  font-weight: 900;
+  min-height: 40px;
+  padding: 9px 16px;
+}
+
+.reminder-editor-note footer button:last-child {
+  background: var(--yellow);
 }
 
 .reminder-row:hover .check-circle {

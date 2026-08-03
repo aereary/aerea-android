@@ -526,7 +526,7 @@ const safePlaceLittleThings = [
 
 const CLEAN_START_VERSION = "android-release-1";
 
-const reminders: Reminder[] = [
+const starterReminders: Reminder[] = [
   {
     id: 1,
     title: "Drink water",
@@ -810,6 +810,7 @@ export default function Home() {
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
+  const [reminders, setReminders] = useState<Reminder[]>(starterReminders);
   const [habits, setHabits] = useState<Habit[]>(starterHabits);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
@@ -1026,6 +1027,7 @@ export default function Home() {
           : readBrowserState()) as {
           state?: {
             reminderHistory?: Record<string, number[]>;
+            reminders?: Reminder[];
             habits?: Habit[];
             entries?: JournalEntry[];
             secretDiaryEntries?: SecretDiaryEntry[];
@@ -1049,6 +1051,7 @@ export default function Home() {
           const state = payload.state;
           if (state.cleanStartVersion === CLEAN_START_VERSION) {
             if (state.reminderHistory) setReminderHistory(state.reminderHistory);
+            if (state.reminders) setReminders(state.reminders);
             if (state.habits) setHabits(state.habits);
             if (state.entries) setEntries(state.entries);
             if (state.secretDiaryEntries) {
@@ -1062,6 +1065,7 @@ export default function Home() {
             }
           } else {
             setReminderHistory({});
+            setReminders(starterReminders);
             setHabits(starterHabits);
             setEntries([]);
             setSecretDiaryEntries([]);
@@ -1159,6 +1163,7 @@ export default function Home() {
       try {
         const state = {
               reminderHistory,
+              reminders,
               habits,
               entries,
               secretDiaryEntries,
@@ -1203,6 +1208,7 @@ export default function Home() {
     moodHistory,
     profilePhoto,
     reminderHistory,
+    reminders,
     recordings,
     secretDiaryEntries,
     stateReady,
@@ -1301,8 +1307,6 @@ export default function Home() {
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
   const selectedDayComplete = completedDays[selectedCalendarDate] === true;
-  const selectedDayMissed =
-    selectedCalendarDate < todayKey && !selectedDayComplete;
   const homeWeek = useMemo(() => weekForDate(todayKey), [todayKey]);
   const selectedHomeEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedHomeDate))
@@ -1702,7 +1706,15 @@ export default function Home() {
   };
 
   const chooseMood = (dateKey: string, mood: string) => {
-    setMoodHistory((current) => ({ ...current, [dateKey]: mood }));
+    setMoodHistory((current) => {
+      const next = { ...current };
+      if (next[dateKey] === mood) {
+        delete next[dateKey];
+      } else {
+        next[dateKey] = mood;
+      }
+      return next;
+    });
   };
 
   const openNewEvent = (dateKey = selectedCalendarDate) => {
@@ -2648,6 +2660,16 @@ export default function Home() {
             <TodayScreen
               pending={pending}
               completed={completed}
+              reminders={reminders}
+              saveReminder={(reminder) =>
+                setReminders((current) =>
+                  current.some((item) => item.id === reminder.id)
+                    ? current.map((item) =>
+                        item.id === reminder.id ? reminder : item,
+                      )
+                    : [...current, reminder],
+                )
+              }
               completeReminder={(id) =>
                 updateDoneIds((current) => [...current, id])
               }
@@ -4004,7 +4026,6 @@ export default function Home() {
                       (mood) => mood.label === moodHistory[dayKey],
                     );
                     const dayComplete = completedDays[dayKey] === true;
-                    const dayMissed = dayKey < todayKey && !dayComplete;
                     return (
                       <button
                         key={dayKey}
@@ -4014,7 +4035,6 @@ export default function Home() {
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",
                           dayComplete ? "day-complete" : "",
-                          dayMissed ? "day-missed" : "",
                           dayKey === todayKey ? "today" : "",
                         ]
                           .filter(Boolean)
@@ -4030,20 +4050,12 @@ export default function Home() {
                             {dayMood.face}
                           </i>
                         )}
-                        {(dayComplete || dayMissed) && (
+                        {dayComplete && (
                           <i
-                            className={
-                              dayComplete
-                                ? "calendar-day-status complete"
-                                : "calendar-day-status missed"
-                            }
-                            title={
-                              dayComplete
-                                ? "Everything completed"
-                                : "Day not marked complete"
-                            }
+                            className="calendar-day-status complete"
+                            title="Everything completed"
                           >
-                            {dayComplete ? "✓" : "×"}
+                            ✓
                           </i>
                         )}
                         {dayEvents.length > 0 && !calendarExpanded && (
@@ -4140,7 +4152,6 @@ export default function Home() {
                     className={[
                       "day-completion-control",
                       selectedDayComplete ? "complete" : "",
-                      selectedDayMissed ? "missed" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
@@ -4148,22 +4159,18 @@ export default function Home() {
                     <span>
                       {selectedDayComplete
                         ? "✓"
-                        : selectedDayMissed
-                          ? "×"
-                          : "○"}
+                        : "○"}
                     </span>
                     <div>
                       <strong>
                         {selectedDayComplete
                           ? "Everything completed"
-                          : selectedDayMissed
-                            ? "This day wasn’t completed"
-                            : selectedCalendarDate > todayKey
+                          : selectedCalendarDate > todayKey
                               ? "This day hasn’t arrived yet"
                               : "Finished everything today?"}
                       </strong>
                       <small>
-                        Past days that are not checked automatically show ×.
+                        Add a check whenever you want to mark the day complete.
                       </small>
                     </div>
                     <button
@@ -5250,6 +5257,8 @@ export default function Home() {
 function TodayScreen({
   pending,
   completed,
+  reminders,
+  saveReminder,
   completeReminder,
   restoreReminder,
   openCalendar,
@@ -5268,6 +5277,8 @@ function TodayScreen({
 }: {
   pending: Reminder[];
   completed: Reminder[];
+  reminders: Reminder[];
+  saveReminder: (reminder: Reminder) => void;
   completeReminder: (id: number) => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
@@ -5284,6 +5295,7 @@ function TodayScreen({
   showDayCharm: boolean;
   isNight: boolean;
 }) {
+  const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
@@ -5437,9 +5449,27 @@ function TodayScreen({
               <p className="tiny-label">LITTLE REMINDERS</p>
               <h3>Take care of you</h3>
             </div>
-            <span className="progress-pill">
-              {completed.length}/{reminders.length}
-            </span>
+            <div className="reminder-heading-actions">
+              <span className="progress-pill">
+                {completed.length}/{reminders.length}
+              </span>
+              <button
+                className="reminder-add-button"
+                type="button"
+                aria-label="Add reminder"
+                onClick={() =>
+                  setReminderDraft({
+                    id: Math.max(0, ...reminders.map((item) => item.id)) + 1,
+                    title: "New reminder",
+                    detail: "A gentle reminder",
+                    icon: "♡",
+                    tint: "pink",
+                  })
+                }
+              >
+                +
+              </button>
+            </div>
           </div>
           <div className="reminder-card">
             {pending.length === 0 ? (
@@ -5450,18 +5480,31 @@ function TodayScreen({
               </div>
             ) : (
               pending.map((item) => (
-                <button
+                <div
                   className={`reminder-row ${item.tint}`}
                   key={item.id}
-                  onClick={() => completeReminder(item.id)}
                 >
-                  <span className="reminder-icon">{item.icon}</span>
+                  <button
+                    className="reminder-icon"
+                    type="button"
+                    aria-label={`Edit ${item.title}`}
+                    onClick={() => setReminderDraft({ ...item })}
+                  >
+                    {item.icon}
+                  </button>
                   <span className="reminder-copy">
                     <strong>{item.title}</strong>
                     <small>{item.detail}</small>
                   </span>
-                  <span className="check-circle">✓</span>
-                </button>
+                  <button
+                    className="check-circle"
+                    type="button"
+                    aria-label={`Complete ${item.title}`}
+                    onClick={() => completeReminder(item.id)}
+                  >
+                    ✓
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -5488,6 +5531,69 @@ function TodayScreen({
           </div>
         </div>
       </section>
+
+      {reminderDraft && (
+        <div
+          className="reminder-editor-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setReminderDraft(null);
+          }}
+        >
+          <section
+            className="reminder-editor-note"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit reminder"
+          >
+            <p className="tiny-label">LITTLE REMINDER</p>
+            <h3>Make it yours</h3>
+            <label>
+              <small>Emoji</small>
+              <input
+                className="reminder-emoji-input"
+                value={reminderDraft.icon}
+                maxLength={8}
+                onChange={(event) =>
+                  setReminderDraft((current) =>
+                    current ? { ...current, icon: event.target.value } : current,
+                  )
+                }
+              />
+            </label>
+            <label>
+              <small>Name</small>
+              <input
+                value={reminderDraft.title}
+                onChange={(event) =>
+                  setReminderDraft((current) =>
+                    current ? { ...current, title: event.target.value } : current,
+                  )
+                }
+              />
+            </label>
+            <footer>
+              <button type="button" onClick={() => setReminderDraft(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!reminderDraft.icon.trim() || !reminderDraft.title.trim()}
+                onClick={() => {
+                  saveReminder({
+                    ...reminderDraft,
+                    icon: reminderDraft.icon.trim(),
+                    title: reminderDraft.title.trim(),
+                  });
+                  setReminderDraft(null);
+                }}
+              >
+                Save
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       <button className="calendar-mood-note" onClick={openCalendar}>
         <span>◡‿◡</span>
