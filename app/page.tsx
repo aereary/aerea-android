@@ -2678,6 +2678,19 @@ export default function Home() {
                     : [...current, reminder],
                 )
               }
+              deleteReminder={(reminderId) => {
+                setReminders((current) =>
+                  current.filter((item) => item.id !== reminderId),
+                );
+                setReminderHistory((current) =>
+                  Object.fromEntries(
+                    Object.entries(current).map(([dateKey, ids]) => [
+                      dateKey,
+                      ids.filter((id) => id !== reminderId),
+                    ]),
+                  ),
+                );
+              }}
               completeReminder={(id) =>
                 updateDoneIds((current) => [...current, id])
               }
@@ -5267,6 +5280,7 @@ function TodayScreen({
   completed,
   reminders,
   saveReminder,
+  deleteReminder,
   completeReminder,
   restoreReminder,
   openCalendar,
@@ -5287,6 +5301,7 @@ function TodayScreen({
   completed: Reminder[];
   reminders: Reminder[];
   saveReminder: (reminder: Reminder) => void;
+  deleteReminder: (reminderId: number) => void;
   completeReminder: (id: number) => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
@@ -5554,8 +5569,17 @@ function TodayScreen({
             aria-modal="true"
             aria-label="Edit reminder"
           >
+            <div className="reminder-editor-sparkles" aria-hidden="true">
+              ✦　♡　✦
+            </div>
+            <span className="reminder-editor-preview" aria-hidden="true">
+              {reminderDraft.icon || "♡"}
+            </span>
             <p className="tiny-label">LITTLE REMINDER</p>
             <h3>Make it yours</h3>
+            <p className="reminder-editor-subtitle">
+              A tiny note to take gentle care of you.
+            </p>
             <label>
               <small>Emoji</small>
               <input
@@ -5581,6 +5605,19 @@ function TodayScreen({
               />
             </label>
             <footer>
+              {reminders.some((item) => item.id === reminderDraft.id) && (
+                <button
+                  className="delete-reminder-button"
+                  type="button"
+                  onClick={() => {
+                    deleteReminder(reminderDraft.id);
+                    setReminderDraft(null);
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <span />
               <button type="button" onClick={() => setReminderDraft(null)}>
                 Cancel
               </button>

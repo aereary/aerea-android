@@ -123,7 +123,7 @@ test("keeps compact calendar and offers a distinct extended month view", () => {
   assert.match(pageSource, /calendar-cell-events/);
   assert.match(pageSource, /eventStartTimeLabel\(calendarEvent\)/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
-  assert.match(cssSource, /min-width: 920px/);
+  assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {
@@ -131,6 +131,8 @@ test("toggles selected moods and keeps reminders editable", () => {
   assert.match(pageSource, /delete next\[dateKey\]/);
   assert.match(pageSource, /reminderDraft/);
   assert.match(pageSource, /aria-label="Add reminder"/);
+  assert.match(pageSource, /deleteReminder/);
+  assert.match(pageSource, /delete-reminder-button/);
   assert.doesNotMatch(pageSource, /Day not marked complete/);
 });
 
