@@ -10,6 +10,10 @@ const cssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
 );
+const calendarCssSource = await readFile(
+  new URL("../app/calendar-reference.css", import.meta.url),
+  "utf8",
+);
 const workflowSource = await readFile(
   new URL("../.github/workflows/build-apk.yml", import.meta.url),
   "utf8",
@@ -139,27 +143,32 @@ test("offers a readable expanded month without replacing the compact calendar", 
   assert.match(pageSource, /eventTimeLabel\(event\)/);
   assert.match(pageSource, /const calendarWeekRows = Math\.ceil/);
   assert.match(pageSource, /"--calendar-week-rows": calendarWeekRows/);
+  assert.match(
+    pageSource,
+    /calendarWeekRows \* 7\s*-\s*leadingDays\s*-\s*daysInViewMonth/,
+  );
+  assert.doesNotMatch(pageSource, /calendarGridDays\s*=\s*42/);
   assert.match(pageSource, /calendar-expanded-backdrop/);
-  assert.match(cssSource, /\.month-grid\.expanded/);
+  assert.match(calendarCssSource, /\.month-grid\.expanded/);
   assert.match(
-    cssSource,
-    /\.month-grid\.expanded \.calendar-event-preview-list \{[\s\S]*grid-auto-rows: max-content/,
+    calendarCssSource,
+    /\.calendar-expanded-mode \.month-grid\.expanded \.calendar-event-preview-list \{[\s\S]*display: flex[\s\S]*flex-direction: column/,
   );
   assert.match(
-    cssSource,
-    /\.calendar-modal\.calendar-expanded-mode \{[\s\S]*height: 100dvh;[\s\S]*width: 100vw;/,
+    calendarCssSource,
+    /\.calendar-expanded-backdrop \.calendar-modal\.calendar-expanded-mode \{[\s\S]*height: 100dvh[\s\S]*width: 100vw/,
   );
   assert.match(
-    cssSource,
-    /\.calendar-expanded-mode \.selected-day-panel,[\s\S]*display: none;/,
+    calendarCssSource,
+    /\.calendar-expanded-mode > \.selected-day-panel,[\s\S]*display: none !important;/,
   );
   assert.match(
-    cssSource,
-    /grid-template-rows:[\s\S]*repeat\(var\(--calendar-week-rows\), minmax\(0, 1fr\)\)/,
+    calendarCssSource,
+    /grid-template-rows:[\s\S]*repeat\(var\(--calendar-week-rows\), minmax\(118px, auto\)\)/,
   );
   assert.match(
-    cssSource,
-    /\.calendar-expanded-mode \.month-grid\.expanded > button \{[\s\S]*border-radius: 0;/,
+    calendarCssSource,
+    /\.calendar-expanded-mode \.month-grid\.expanded > :is\(i, button\) \{[\s\S]*border-radius: clamp\(15px, 1\.8vw, 23px\)/,
   );
   assert.match(pageSource, /className="calendar-day-peek-card"/);
   assert.match(pageSource, /onPointerDown=\{\(\) => startDayLongPress\(dayKey\)\}/);
@@ -167,6 +176,46 @@ test("offers a readable expanded month without replacing the compact calendar", 
   assert.match(pageSource, /calendar-life-sticker/);
   assert.match(cssSource, /\.month-first-day/);
   assert.match(cssSource, /\.calendar-life-sticker/);
+});
+
+test("keeps monthly priorities in one automatically numbered writing area", () => {
+  assert.match(pageSource, /className="planner-priorities"/);
+  assert.match(pageSource, /aria-label="Monthly priorities"/);
+  assert.match(pageSource, /if \(event\.key !== "Enter"\) return/);
+  assert.match(pageSource, /const addition = `\\n\$\{nextNumber\}\. `/);
+  assert.doesNotMatch(pageSource, /planner-priority-rows/);
+});
+
+test("bundles Spanish handwriting glyphs for every calendar note", () => {
+  assert.match(cssSource, /font-family: "Aerea Hand"/);
+  assert.match(cssSource, /U\+0000-00FF/);
+  assert.doesNotMatch(cssSource, /font-family: "Gaegu"/);
+  assert.match(
+    calendarCssSource,
+    /\.calendar-day-note-editor textarea,[\s\S]*font-family: "Aerea Hand"/,
+  );
+});
+
+test("adds notebook-grade drawing controls without changing the page model", () => {
+  for (const tool of ["highlighter", "eraser", "line", "rectangle", "ellipse"]) {
+    assert.match(pageSource, new RegExp(`penTool === "${tool}"`));
+  }
+  assert.match(pageSource, /Stylus only/);
+  assert.match(pageSource, /Pressure and automatic palm rejection are on\./);
+  assert.match(pageSource, /duplicateSketchPage/);
+  assert.match(pageSource, /STROKE STABILIZER/);
+  assert.match(pageSource, /Download a copy/);
+});
+
+test("keeps the original reminder emoji tile as the edit affordance", () => {
+  assert.match(
+    calendarCssSource,
+    /\.reminder-edit-trigger \{[\s\S]*grid-template-columns: 48px minmax\(0, 1fr\)/,
+  );
+  assert.match(
+    calendarCssSource,
+    /\.reminder-edit-trigger \.reminder-icon \{[\s\S]*height: 48px;[\s\S]*width: 48px;/,
+  );
 });
 
 test("keeps secret diary writing aligned and saved pages recognizable", () => {

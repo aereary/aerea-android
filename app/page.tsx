@@ -218,8 +218,16 @@ type SketchPoint = {
   pressure: number;
 };
 
+type SketchTool =
+  | "pen"
+  | "highlighter"
+  | "eraser"
+  | "line"
+  | "rectangle"
+  | "ellipse";
+
 type SketchStroke = {
-  tool: "pen" | "highlighter" | "eraser";
+  tool: SketchTool;
   color: string;
   size: number;
   points: SketchPoint[];
@@ -1097,9 +1105,7 @@ export default function Home() {
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
-  const [penTool, setPenTool] = useState<
-    "pen" | "highlighter" | "eraser"
-  >("pen");
+  const [penTool, setPenTool] = useState<SketchTool>("pen");
   const [sketchFullscreen, setSketchFullscreen] = useState(false);
   const [sketchToolbarOpen, setSketchToolbarOpen] = useState(true);
   const [sketchTitle, setSketchTitle] = useState(
@@ -1111,6 +1117,7 @@ export default function Home() {
   const [sketchZoom, setSketchZoom] = useState(1);
   const [strokeStabilization, setStrokeStabilization] = useState(0.62);
   const [stylusDetected, setStylusDetected] = useState(false);
+  const [stylusOnly, setStylusOnly] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sketchViewportRef = useRef<HTMLDivElement | null>(null);
   const sketchStageRef = useRef<HTMLDivElement | null>(null);
@@ -1506,15 +1513,9 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
-  const calendarGridDays = Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(calendarYear, calendarMonth, 1 - leadingDays + index);
-    return {
-      dateKey: localDateKey(date),
-      day: date.getDate(),
-      currentMonth: date.getMonth() === calendarMonth,
-    };
-  });
-  const calendarWeekRows = Math.ceil(calendarGridDays.length / 7);
+  const calendarWeekRows = Math.ceil(
+    (leadingDays + daysInViewMonth) / 7,
+  );
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -2546,6 +2547,42 @@ export default function Home() {
     context.lineCap = "round";
     context.lineJoin = "round";
 
+    if (
+      stroke.tool === "line" ||
+      stroke.tool === "rectangle" ||
+      stroke.tool === "ellipse"
+    ) {
+      const first = stroke.points[0];
+      const last = stroke.points[stroke.points.length - 1];
+      const startX = first.x * canvas.width;
+      const startY = first.y * canvas.height;
+      const endX = last.x * canvas.width;
+      const endY = last.y * canvas.height;
+      context.globalCompositeOperation = "source-over";
+      context.globalAlpha = 1;
+      context.lineWidth = stroke.size * cssToCanvas;
+      context.beginPath();
+      if (stroke.tool === "line") {
+        context.moveTo(startX, startY);
+        context.lineTo(endX, endY);
+      } else if (stroke.tool === "rectangle") {
+        context.rect(startX, startY, endX - startX, endY - startY);
+      } else {
+        context.ellipse(
+          (startX + endX) / 2,
+          (startY + endY) / 2,
+          Math.abs(endX - startX) / 2,
+          Math.abs(endY - startY) / 2,
+          0,
+          0,
+          Math.PI * 2,
+        );
+      }
+      context.stroke();
+      context.restore();
+      return;
+    }
+
     if (stroke.points.length === 1) {
       const point = stroke.points[0];
       const width =
@@ -2744,6 +2781,10 @@ export default function Home() {
       return;
     }
 
+    if (stylusOnly && event.pointerType !== "pen") {
+      return;
+    }
+
     const point = canvasPointFromClient(
       event.clientX,
       event.clientY,
@@ -2807,6 +2848,23 @@ export default function Home() {
     const nativeEvents =
       event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
     const stroke = activeStrokeRef.current;
+
+    if (
+      stroke.tool === "line" ||
+      stroke.tool === "rectangle" ||
+      stroke.tool === "ellipse"
+    ) {
+      const rawPoint = canvasPointFromClient(
+        event.clientX,
+        event.clientY,
+        event.pressure,
+        event.pointerType,
+      );
+      stroke.points = [stroke.points[0], rawPoint];
+      redrawSketch();
+      return;
+    }
+
     const firstNewIndex = stroke.points.length;
     const smoothing = Math.max(0.18, 1 - strokeStabilization * 0.82);
 
@@ -3002,6 +3060,44 @@ export default function Home() {
       );
       await refreshSketches();
       setSketchMessage("Page moved out of your sketchbook.");
+    }
+  };
+
+  const duplicateSketchPage = async (page: SketchPage) => {
+    try {
+      let dataUrl = page.dataUrl;
+      if (!dataUrl) {
+        const response = await fetch(`/api/sketches/${page.id}`);
+        if (!response.ok) throw new Error("Could not open this page copy.");
+        dataUrl = await blobAsDataUrl(await response.blob());
+      }
+      const title = `${page.title} — copy`;
+      if (isNative()) {
+        await AereaStorage.saveSketch({
+          title,
+          pageStyle: page.pageStyle,
+          dataUrl,
+        });
+      } else {
+        const now = new Date().toISOString();
+        writeBrowserSketches<SketchPage>([
+          {
+            ...page,
+            id: crypto.randomUUID(),
+            title,
+            createdAt: now,
+            updatedAt: now,
+            dataUrl,
+          },
+          ...readBrowserSketches<SketchPage>(),
+        ]);
+      }
+      await refreshSketches();
+      setSketchMessage(`Made a copy of “${page.title}”.`);
+    } catch (error) {
+      setSketchMessage(
+        error instanceof Error ? error.message : "Could not copy this page.",
+      );
     }
   };
 
@@ -3674,6 +3770,24 @@ export default function Home() {
                           >
                             <span>▱</span> Eraser
                           </button>
+                          <button
+                            className={penTool === "line" ? "active" : ""}
+                            onClick={() => setPenTool("line")}
+                          >
+                            <span>╱</span> Line
+                          </button>
+                          <button
+                            className={penTool === "rectangle" ? "active" : ""}
+                            onClick={() => setPenTool("rectangle")}
+                          >
+                            <span>▭</span> Box
+                          </button>
+                          <button
+                            className={penTool === "ellipse" ? "active" : ""}
+                            onClick={() => setPenTool("ellipse")}
+                          >
+                            <span>○</span> Oval
+                          </button>
                         </div>
                       </div>
                       <div>
@@ -3778,6 +3892,15 @@ export default function Home() {
                           </small>
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        className={stylusOnly ? "stylus-only active" : "stylus-only"}
+                        onClick={() => setStylusOnly((current) => !current)}
+                        aria-pressed={stylusOnly}
+                      >
+                        <span>{stylusOnly ? "✓" : "○"}</span>
+                        Stylus only
+                      </button>
                       <button
                         className="clear-page"
                         onClick={() => clearCanvas()}
@@ -3978,6 +4101,13 @@ export default function Home() {
                               <button onClick={() => loadSketchPage(page)}>
                                 <strong>{page.title}</strong>
                                 <small>{page.pageStyle} page</small>
+                              </button>
+                              <button
+                                className="duplicate-sketch"
+                                onClick={() => duplicateSketchPage(page)}
+                                aria-label={`Duplicate ${page.title}`}
+                              >
+                                ⧉
                               </button>
                               <button
                                 className="delete-sketch"
@@ -4597,33 +4727,51 @@ export default function Home() {
                         <b>♡</b>
                         My priorities this month
                       </span>
-                      <div className="planner-priority-rows">
-                        {[0, 1, 2].map((index) => {
-                          const values = (calendarPlannerPriorities[calendarMonthKey] ?? "").split("\n");
-                          return (
-                            <label key={index}>
-                              <b>{index + 1}</b>
-                              <input
-                                value={values[index] ?? ""}
-                                onChange={(event) => {
-                                  const next = [...values];
-                                  next[index] = event.target.value.replace(/\n/g, " ");
-                                  setCalendarPlannerPriorities((current) => ({
-                                    ...current,
-                                    [calendarMonthKey]: next.slice(0, 3).join("\n"),
-                                  }));
-                                }}
-                                placeholder={[
-                                  "Take care of myself",
-                                  "Finish one important thing",
-                                  "Leave room for joy",
-                                ][index]}
-                                aria-label={`Priority ${index + 1}`}
-                              />
-                            </label>
-                          );
-                        })}
-                      </div>
+                      <textarea
+                        value={calendarPlannerPriorities[calendarMonthKey] ?? ""}
+                        onFocus={(event) => {
+                          if (!event.currentTarget.value.trim()) {
+                            const input = event.currentTarget;
+                            setCalendarPlannerPriorities((current) => ({
+                              ...current,
+                              [calendarMonthKey]: "1. ",
+                            }));
+                            window.requestAnimationFrame(() => {
+                              input.setSelectionRange(3, 3);
+                            });
+                          }
+                        }}
+                        onChange={(event) =>
+                          setCalendarPlannerPriorities((current) => ({
+                            ...current,
+                            [calendarMonthKey]: event.target.value,
+                          }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter") return;
+                          event.preventDefault();
+                          const input = event.currentTarget;
+                          const before = input.value.slice(0, input.selectionStart);
+                          const after = input.value.slice(input.selectionEnd);
+                          const currentLine = before.split("\n").at(-1) ?? "";
+                          const currentNumber = currentLine.match(/^\s*(\d+)\.\s*/);
+                          const nextNumber = currentNumber
+                            ? Number(currentNumber[1]) + 1
+                            : before.split("\n").length + 1;
+                          const addition = `\n${nextNumber}. `;
+                          const nextValue = `${before}${addition}${after}`;
+                          const nextCursor = before.length + addition.length;
+                          setCalendarPlannerPriorities((current) => ({
+                            ...current,
+                            [calendarMonthKey]: nextValue,
+                          }));
+                          window.requestAnimationFrame(() => {
+                            input.setSelectionRange(nextCursor, nextCursor);
+                          });
+                        }}
+                        placeholder={"1. Take care of myself\n2. Finish one important thing\n3. Leave room for joy"}
+                        aria-label="Monthly priorities"
+                      />
                     </div>
                     <label className="planner-month-notes">
                       <span>
@@ -4669,11 +4817,9 @@ export default function Home() {
                   {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
-                  {calendarGridDays.slice(0, leadingDays).map((gridDay, index) => (
-                    <button
-                      type="button"
+                  {Array.from({ length: leadingDays }, (_, index) => (
+                    <i
                       className={[
-                        "calendar-adjacent-day",
                         index % 7 === 0 ? "week-start" : "",
                         index % 7 >= 5 ? "weekend" : "",
                         `weekday-${index % 7}`,
@@ -4683,15 +4829,8 @@ export default function Home() {
                       ]
                         .filter(Boolean)
                         .join(" ")}
-                      key={gridDay.dateKey}
-                      onClick={() => {
-                        setViewMonth(dateFromKey(gridDay.dateKey));
-                        selectCalendarDay(gridDay.dateKey);
-                      }}
-                      aria-label={`Open ${readableDate(gridDay.dateKey)}`}
-                    >
-                      <span>{gridDay.day}</span>
-                    </button>
+                      key={`empty-${index}`}
+                    />
                   ))}
                   {Array.from({ length: daysInViewMonth }, (_, index) => {
                     const day = index + 1;
@@ -4809,22 +4948,23 @@ export default function Home() {
                       </button>
                     );
                   })}
-                  {calendarGridDays
-                    .slice(leadingDays + daysInViewMonth)
-                    .map((gridDay) => (
-                      <button
-                        type="button"
+                  {Array.from(
+                    {
+                      length:
+                        calendarWeekRows * 7 -
+                        leadingDays -
+                        daysInViewMonth,
+                    },
+                    (_, index) => (
+                      <i
                         className="calendar-adjacent-day"
-                        key={gridDay.dateKey}
-                        onClick={() => {
-                          setViewMonth(dateFromKey(gridDay.dateKey));
-                          selectCalendarDay(gridDay.dateKey);
-                        }}
-                        aria-label={`Open ${readableDate(gridDay.dateKey)}`}
+                        key={`next-${index + 1}`}
+                        aria-hidden="true"
                       >
-                        <span>{gridDay.day}</span>
-                      </button>
-                    ))}
+                        <span>{index + 1}</span>
+                      </i>
+                    ),
+                  )}
                   </div>
                 </div>
                 {calendarExpanded && (

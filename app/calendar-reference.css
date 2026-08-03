@@ -494,7 +494,9 @@
   order: 5 !important;
 }
 
-.calendar-expanded-mode .calendar-planner-overview > label {
+.calendar-expanded-mode
+  .calendar-planner-overview
+  > :is(label, .planner-priorities) {
   background: rgb(255 255 255 / 88%) !important;
   border: 1px solid rgb(216 213 235 / 76%) !important;
   border-radius: 24px !important;
@@ -502,9 +504,12 @@
   padding: clamp(16px, 2vw, 25px) !important;
 }
 
-.calendar-expanded-mode .calendar-planner-overview > label > span {
+.calendar-expanded-mode
+  .calendar-planner-overview
+  > :is(label, .planner-priorities)
+  > span {
   color: #4d496f !important;
-  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
+  font-family: "Aerea Hand", "Segoe Print", "Comic Sans MS", cursive !important;
   font-size: clamp(21px, 2.3vw, 30px) !important;
   font-weight: 700 !important;
   letter-spacing: 0.015em !important;
@@ -519,7 +524,7 @@
   border: 0 !important;
   border-radius: 0 !important;
   color: #60443b !important;
-  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
+  font-family: "Aerea Hand", "Segoe Print", "Comic Sans MS", cursive !important;
   font-size: clamp(21px, 2.15vw, 29px) !important;
   font-weight: 400 !important;
   line-height: 35px !important;
@@ -690,7 +695,10 @@
     grid-template-columns: 1fr !important;
   }
 
-  .calendar-expanded-mode .calendar-planner-overview > label > span,
+  .calendar-expanded-mode
+    .calendar-planner-overview
+    > :is(label, .planner-priorities)
+    > span,
   .calendar-expanded-mode .calendar-planner-overview textarea {
     font-size: 19px !important;
   }
@@ -819,210 +827,15 @@
 }
 
 /*
- * One handwriting face in both calendar editors. The bundled Gaegu Latin
- * font includes Spanish diacritics (áéíóúü) and ñ.
+ * One handwriting face in both calendar editors. The bundled Latin font
+ * includes Spanish diacritics (áéíóúü), ñ and their uppercase variants.
  */
 .calendar-day-note-editor textarea,
 .calendar-expanded-mode .calendar-day-note-editor textarea {
-  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
+  font-family: "Aerea Hand", "Segoe Print", "Comic Sans MS", cursive !important;
   font-style: normal !important;
   font-variant-ligatures: none !important;
   font-weight: 400 !important;
-}
-
-/*
- * PDF instruction pass — one compact, dependable expanded month on every
- * screen.  The grid always owns six week rows, including the muted days from
- * the previous and next month, so weekday alignment never shifts.
- */
-.calendar-expanded-backdrop .calendar-modal.calendar-expanded-mode {
-  gap: clamp(9px, 1.1vw, 15px) !important;
-  padding:
-    max(12px, env(safe-area-inset-top))
-    clamp(10px, 2vw, 28px)
-    max(18px, env(safe-area-inset-bottom)) !important;
-}
-
-.calendar-expanded-mode .modal-top {
-  align-items: center !important;
-  background: color-mix(in srgb, var(--paper) 72%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, white) !important;
-  border-radius: 22px !important;
-  box-shadow: 0 7px 18px rgb(72 75 115 / 7%) !important;
-  gap: 8px !important;
-  padding: 7px 9px !important;
-}
-
-.calendar-expanded-mode .calendar-month-heading {
-  gap: 8px !important;
-  justify-content: flex-start !important;
-}
-
-.calendar-expanded-mode .calendar-month-heading > div {
-  flex: 0 1 auto !important;
-  min-width: 0 !important;
-}
-
-.calendar-expanded-mode .expanded-planner-title {
-  font-size: 8px !important;
-  margin-bottom: 2px !important;
-}
-
-.calendar-expanded-mode .calendar-date-selectors {
-  font-size: clamp(22px, 2.5vw, 30px) !important;
-  gap: 3px !important;
-}
-
-.calendar-expanded-mode .calendar-month-heading > button,
-.calendar-expanded-mode .modal-top > button {
-  font-size: 19px !important;
-  height: 38px !important;
-  min-height: 38px !important;
-  min-width: 38px !important;
-  width: 38px !important;
-}
-
-.calendar-expanded-mode .modal-top > button:last-child {
-  margin-left: auto !important;
-}
-
-.calendar-expanded-mode .calendar-sources {
-  gap: 6px 11px !important;
-}
-
-.calendar-expanded-mode .calendar-sources > span {
-  font-size: 9px !important;
-}
-
-.calendar-expanded-mode .calendar-sources .mood-source,
-.calendar-expanded-mode .calendar-sources .swipe-source,
-.calendar-expanded-mode .calendar-view-toggle {
-  font-size: 9px !important;
-  min-height: 29px !important;
-  padding: 5px 9px !important;
-}
-
-.calendar-expanded-mode .month-grid-viewport {
-  background: color-mix(in srgb, var(--paper) 94%, var(--cream)) !important;
-  border: 1px solid color-mix(in srgb, var(--line) 74%, white) !important;
-  border-radius: 24px !important;
-  box-shadow: 0 9px 24px rgb(72 75 115 / 8%) !important;
-  overflow: hidden !important;
-  padding: clamp(5px, 0.65vw, 9px) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded {
-  background: transparent !important;
-  gap: clamp(3px, 0.45vw, 7px) !important;
-  grid-template-rows:
-    clamp(22px, 2.2vw, 30px)
-    repeat(6, minmax(88px, 1fr)) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded > strong {
-  background: color-mix(in srgb, var(--blue) 20%, var(--paper)) !important;
-  border-radius: 9px !important;
-  color: var(--muted) !important;
-  font-size: clamp(8px, 0.8vw, 11px) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded > :is(i, button),
-.calendar-expanded-mode .month-grid.expanded > button,
-.calendar-expanded-mode .month-grid.expanded > i.calendar-adjacent-day {
-  border-radius: clamp(10px, 1vw, 15px) !important;
-  min-height: 88px !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded > i.calendar-adjacent-day,
-.calendar-expanded-mode .month-grid.expanded > button.calendar-adjacent-day {
-  background: color-mix(in srgb, var(--paper) 64%, var(--blue)) !important;
-  border: 1px solid color-mix(in srgb, var(--line) 48%, transparent) !important;
-  box-shadow: none !important;
-  color: color-mix(in srgb, var(--muted) 60%, transparent) !important;
-  opacity: 0.58 !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded > button.past-day {
-  background: color-mix(in srgb, var(--paper) 82%, var(--muted)) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
-  bottom: 6px !important;
-  gap: 3px !important;
-  left: 5px !important;
-  right: 5px !important;
-  top: 29px !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
-  border: 0 !important;
-  border-radius: 7px !important;
-  box-shadow: none !important;
-  padding: 3px 5px !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded .calendar-event-preview b {
-  font-size: clamp(7px, 0.72vw, 10px) !important;
-}
-
-.calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
-  font-size: clamp(6px, 0.62vw, 8px) !important;
-}
-
-.calendar-expanded-mode .calendar-planner-overview {
-  gap: 10px !important;
-}
-
-.calendar-expanded-mode .planner-priorities,
-.calendar-expanded-mode .planner-month-notes {
-  background: color-mix(in srgb, var(--paper) 94%, var(--cream)) !important;
-  border: 1px solid color-mix(in srgb, var(--line) 72%, white) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 7px 18px rgb(72 75 115 / 7%) !important;
-  display: grid !important;
-  gap: 9px !important;
-  padding: 14px !important;
-}
-
-.calendar-expanded-mode .planner-priorities > span,
-.calendar-expanded-mode .planner-month-notes > span {
-  color: var(--ink-soft) !important;
-  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
-  font-size: 21px !important;
-  font-weight: 700 !important;
-}
-
-.planner-priority-rows {
-  display: grid !important;
-  gap: 6px !important;
-}
-
-.planner-priority-rows label {
-  align-items: center !important;
-  display: grid !important;
-  gap: 8px !important;
-  grid-template-columns: 27px minmax(0, 1fr) !important;
-}
-
-.planner-priority-rows label > b {
-  align-items: center !important;
-  background: color-mix(in srgb, var(--pink) 64%, var(--paper)) !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  height: 27px !important;
-  justify-content: center !important;
-  width: 27px !important;
-}
-
-.planner-priority-rows input {
-  background: transparent !important;
-  border: 0 !important;
-  border-bottom: 1px dashed color-mix(in srgb, var(--line) 84%, var(--muted)) !important;
-  color: var(--ink) !important;
-  font-family: "Gaegu", "Segoe Print", "Comic Sans MS", cursive !important;
-  font-size: 20px !important;
-  min-width: 0 !important;
-  padding: 3px 2px !important;
 }
 
 /* Sticker art sits on the page without a second, visible bubble. */
@@ -1094,10 +907,89 @@
   color: inherit;
   display: grid;
   gap: 12px;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   min-width: 0;
   padding: 0;
   text-align: left;
+  width: 100%;
+}
+
+.reminder-edit-trigger .reminder-icon {
+  height: 48px;
+  width: 48px;
+}
+
+/* Extra notebook tools stay tidy without changing the page itself. */
+.stylus-only {
+  align-items: center;
+  background: color-mix(in srgb, var(--paper) 88%, var(--blue));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 850;
+  gap: 7px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
+.stylus-only.active {
+  background: color-mix(in srgb, var(--blue) 72%, var(--paper));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  color: var(--ink);
+}
+
+.sketch-gallery article {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  position: relative;
+}
+
+.sketch-gallery article > div {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 34px 34px;
+}
+
+.sketch-gallery article > div > button:first-child {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  display: grid;
+  min-width: 0;
+  padding: 2px;
+  text-align: left;
+}
+
+.sketch-gallery article > div > button:first-child strong,
+.sketch-gallery article > div > button:first-child small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duplicate-sketch,
+.sketch-gallery .delete-sketch {
+  align-items: center;
+  background: color-mix(in srgb, var(--paper) 88%, var(--lavender));
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink-soft);
+  display: flex;
+  font-size: 15px;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  position: static;
+  width: 34px;
+}
+
+.sketch-gallery .delete-sketch {
+  color: #a85454;
 }
 
 /* Copy/delete controls belong to the event card and remain readable in dark themes. */
@@ -1187,112 +1079,6 @@
 }
 
 @media (max-width: 680px) {
-  .calendar-expanded-backdrop .calendar-modal.calendar-expanded-mode {
-    gap: 7px !important;
-    padding:
-      max(7px, env(safe-area-inset-top))
-      6px
-      max(12px, env(safe-area-inset-bottom)) !important;
-  }
-
-  .calendar-expanded-mode .modal-top {
-    border-radius: 17px !important;
-    gap: 5px !important;
-    padding: 5px 6px !important;
-  }
-
-  .calendar-expanded-mode .calendar-month-heading {
-    gap: 5px !important;
-  }
-
-  .calendar-expanded-mode .calendar-month-heading > button,
-  .calendar-expanded-mode .modal-top > button {
-    font-size: 17px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    min-width: 34px !important;
-    width: 34px !important;
-  }
-
-  .calendar-expanded-mode .expanded-planner-title {
-    font-size: 6px !important;
-  }
-
-  .calendar-expanded-mode .calendar-date-selectors {
-    font-size: 19px !important;
-  }
-
-  .calendar-expanded-mode .calendar-sources {
-    gap: 4px 6px !important;
-  }
-
-  .calendar-expanded-mode .calendar-sources > span {
-    font-size: 6.6px !important;
-  }
-
-  .calendar-expanded-mode .calendar-sources .mood-source,
-  .calendar-expanded-mode .calendar-sources .swipe-source,
-  .calendar-expanded-mode .calendar-view-toggle {
-    font-size: 7px !important;
-    min-height: 25px !important;
-    padding: 4px 7px !important;
-  }
-
-  .calendar-expanded-mode .month-grid-viewport {
-    border-radius: 17px !important;
-    padding: 3px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded {
-    gap: 2px !important;
-    grid-template-rows: 18px repeat(6, minmax(65px, 1fr)) !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded > :is(i, button),
-  .calendar-expanded-mode .month-grid.expanded > button,
-  .calendar-expanded-mode .month-grid.expanded > i.calendar-adjacent-day {
-    border-radius: 7px !important;
-    min-height: 65px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded .calendar-day-number,
-  .calendar-expanded-mode .calendar-adjacent-day > span {
-    font-size: 9px !important;
-    left: 5px !important;
-    top: 5px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview-list {
-    bottom: 3px !important;
-    gap: 1px !important;
-    left: 3px !important;
-    right: 3px !important;
-    top: 18px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview {
-    border-radius: 4px !important;
-    padding: 2px 3px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview b {
-    font-size: 5.8px !important;
-  }
-
-  .calendar-expanded-mode .month-grid.expanded .calendar-event-preview small {
-    font-size: 4.8px !important;
-  }
-
-  .calendar-expanded-mode .calendar-planner-overview {
-    grid-template-columns: 1fr !important;
-  }
-
-  .calendar-expanded-mode .planner-priorities > span,
-  .calendar-expanded-mode .planner-month-notes > span,
-  .planner-priority-rows input {
-    font-size: 17px !important;
-  }
-
   .event-detail-copy {
     align-items: stretch;
     grid-template-columns: 1fr;
