@@ -166,6 +166,8 @@ type CalendarEvent = {
   todos?: string[];
   todoStates?: ("pending" | "done" | "missed")[];
   files?: string[];
+  excludedDates?: string[];
+  repeatUntil?: string;
 };
 
 type PlannerNoteColor = "pink" | "blue" | "mint" | "yellow" | "lilac";
@@ -217,7 +219,7 @@ type SketchPoint = {
 };
 
 type SketchStroke = {
-  tool: "pen" | "eraser";
+  tool: "pen" | "highlighter" | "eraser";
   color: string;
   size: number;
   points: SketchPoint[];
@@ -532,7 +534,7 @@ const safePlaceLittleThings = [
 
 const CLEAN_START_VERSION = "android-release-1";
 
-const reminders: Reminder[] = [
+const starterReminders: Reminder[] = [
   {
     id: 1,
     title: "Drink water",
@@ -865,6 +867,12 @@ function dateFromKey(dateKey: string) {
   return new Date(year, month - 1, day);
 }
 
+function offsetDateKey(dateKey: string, days: number) {
+  const date = dateFromKey(dateKey);
+  date.setDate(date.getDate() + days);
+  return localDateKey(date);
+}
+
 function weekForDate(dateKey: string) {
   const anchor = dateFromKey(dateKey);
   const mondayOffset = (anchor.getDay() + 6) % 7;
@@ -886,6 +894,8 @@ function weekForDate(dateKey: string) {
 
 function eventOccursOn(event: CalendarEvent, dateKey: string) {
   if (dateKey < event.date) return false;
+  if (event.repeatUntil && dateKey > event.repeatUntil) return false;
+  if (event.excludedDates?.includes(dateKey)) return false;
   const repeat = event.repeat ?? "Never";
   if (repeat === "Never") return event.date === dateKey;
 
@@ -941,9 +951,20 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [space, setSpace] = useState<Space>("menu");
+  const [reminders, setReminders] = useState<Reminder[]>(starterReminders);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
+  const [reminderEditorOpen, setReminderEditorOpen] = useState(false);
+  const [editingReminderId, setEditingReminderId] = useState<number | null>(
+    null,
+  );
+  const [reminderDraft, setReminderDraft] = useState({
+    title: "",
+    detail: "",
+    icon: "✨",
+    tint: "lilac",
+  });
   const [habits, setHabits] = useState<Habit[]>(starterHabits);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
   const [dayStickerHistory, setDayStickerHistory] = useState<
@@ -992,6 +1013,13 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [selectedEventOccurrenceDate, setSelectedEventOccurrenceDate] =
+    useState<string | null>(null);
+  const [eventDeleteRequest, setEventDeleteRequest] = useState<{
+    event: CalendarEvent;
+    occurrenceDate: string;
+  } | null>(null);
+  const [eventCopyDate, setEventCopyDate] = useState(todayKey);
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     makeEventDraft(todayKey),
   );
@@ -1069,7 +1097,9 @@ export default function Home() {
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
-  const [penTool, setPenTool] = useState<"pen" | "eraser">("pen");
+  const [penTool, setPenTool] = useState<
+    "pen" | "highlighter" | "eraser"
+  >("pen");
   const [sketchFullscreen, setSketchFullscreen] = useState(false);
   const [sketchToolbarOpen, setSketchToolbarOpen] = useState(true);
   const [sketchTitle, setSketchTitle] = useState(
@@ -1189,6 +1219,7 @@ export default function Home() {
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
           : readBrowserState()) as {
           state?: {
+            reminders?: Reminder[];
             reminderHistory?: Record<string, number[]>;
             habits?: Habit[];
             entries?: JournalEntry[];
@@ -1216,6 +1247,7 @@ export default function Home() {
         if (payload.state) {
           const state = payload.state;
           if (state.cleanStartVersion === CLEAN_START_VERSION) {
+            if (Array.isArray(state.reminders)) setReminders(state.reminders);
             if (state.reminderHistory) setReminderHistory(state.reminderHistory);
             if (state.habits) setHabits(state.habits);
             if (state.entries) setEntries(state.entries);
@@ -1245,6 +1277,7 @@ export default function Home() {
               setFocusSessions(state.focusSessions);
             }
           } else {
+            setReminders(starterReminders);
             setReminderHistory({});
             setHabits(starterHabits);
             setEntries([]);
@@ -1346,6 +1379,7 @@ export default function Home() {
     const timeout = window.setTimeout(async () => {
       try {
         const state = {
+              reminders,
               reminderHistory,
               habits,
               entries,
@@ -1399,6 +1433,7 @@ export default function Home() {
     moodHistory,
     profilePhoto,
     reminderHistory,
+    reminders,
     recordings,
     secretDiaryEntries,
     stateReady,
@@ -1451,11 +1486,11 @@ export default function Home() {
 
   const pending = useMemo(
     () => reminders.filter((item) => !doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
   );
   const completed = useMemo(
     () => reminders.filter((item) => doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
   const classRecordings = recordings.filter(
@@ -1471,9 +1506,15 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
-  const calendarWeekRows = Math.ceil(
-    (leadingDays + daysInViewMonth) / 7,
-  );
+  const calendarGridDays = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(calendarYear, calendarMonth, 1 - leadingDays + index);
+    return {
+      dateKey: localDateKey(date),
+      day: date.getDate(),
+      currentMonth: date.getMonth() === calendarMonth,
+    };
+  });
+  const calendarWeekRows = Math.ceil(calendarGridDays.length / 7);
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -1632,7 +1673,7 @@ export default function Home() {
         ? "Todo el día"
         : nextEvent?.time || "Abre aérea para planear",
       temperature: activeTheme.icon,
-      progress: `${doneIds.length}/${reminders.length} recordatorios`,
+      progress: `${doneIds.length}/${pending.length + completed.length} recordatorios`,
       theme: widgetTheme,
       daysJson: widgetDaysJson,
     }).catch(() => {
@@ -1641,7 +1682,9 @@ export default function Home() {
   }, [
     appTheme,
     activeTheme.icon,
+    completed.length,
     doneIds.length,
+    pending.length,
     stateReady,
     todayKey,
     todayWidgetEvents,
@@ -1889,6 +1932,62 @@ export default function Home() {
     });
   };
 
+  const openReminderEditor = (reminder?: Reminder) => {
+    setEditingReminderId(reminder?.id ?? null);
+    setReminderDraft(
+      reminder
+        ? {
+            title: reminder.title,
+            detail: reminder.detail,
+            icon: reminder.icon,
+            tint: reminder.tint,
+          }
+        : {
+            title: "",
+            detail: "",
+            icon: "✨",
+            tint: "lilac",
+          },
+    );
+    setReminderEditorOpen(true);
+  };
+
+  const saveReminder = () => {
+    const title = reminderDraft.title.trim();
+    if (!title) return;
+    const nextReminder: Reminder = {
+      id: editingReminderId ?? Date.now(),
+      title,
+      detail: reminderDraft.detail.trim() || "A gentle reminder for today",
+      icon: reminderDraft.icon.trim() || "✨",
+      tint: reminderDraft.tint,
+    };
+    setReminders((current) =>
+      editingReminderId === null
+        ? [...current, nextReminder]
+        : current.map((item) =>
+            item.id === editingReminderId ? nextReminder : item,
+          ),
+    );
+    setReminderEditorOpen(false);
+  };
+
+  const deleteReminder = () => {
+    if (editingReminderId === null) return;
+    setReminders((current) =>
+      current.filter((item) => item.id !== editingReminderId),
+    );
+    setReminderHistory((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([date, ids]) => [
+          date,
+          ids.filter((id) => id !== editingReminderId),
+        ]),
+      ),
+    );
+    setReminderEditorOpen(false);
+  };
+
   const chooseMood = (dateKey: string, mood: string) => {
     setMoodHistory((current) => ({ ...current, [dateKey]: mood }));
   };
@@ -2085,6 +2184,65 @@ export default function Home() {
     setSelectedEventDetail((current) =>
       current ? updateEvent(current) : current,
     );
+  };
+
+  const copyCalendarEvent = (event: CalendarEvent, dateKey: string) => {
+    const daySpan = Math.max(
+      0,
+      Math.round(
+        (dateFromKey(event.endDate ?? event.date).getTime() -
+          dateFromKey(event.date).getTime()) /
+          86_400_000,
+      ),
+    );
+    const copy: CalendarEvent = {
+      ...event,
+      id: crypto.randomUUID(),
+      date: dateKey,
+      endDate: offsetDateKey(dateKey, daySpan),
+      repeat: "Never",
+      customRepeatEvery: undefined,
+      customRepeatUnit: undefined,
+      excludedDates: undefined,
+      repeatUntil: undefined,
+    };
+    setCalendarEvents((current) => [...current, copy]);
+    setSelectedEventDetail(null);
+    setSelectedEventOccurrenceDate(null);
+  };
+
+  const deleteCalendarOccurrence = (
+    event: CalendarEvent,
+    occurrenceDate: string,
+    scope: "only" | "future" | "all",
+  ) => {
+    const recurring = (event.repeat ?? "Never") !== "Never";
+    setCalendarEvents((current) => {
+      if (!recurring || scope === "all") {
+        return current.filter((item) => item.id !== event.id);
+      }
+      return current.map((item) => {
+        if (item.id !== event.id) return item;
+        if (scope === "only") {
+          return {
+            ...item,
+            excludedDates: Array.from(
+              new Set([...(item.excludedDates ?? []), occurrenceDate]),
+            ),
+          };
+        }
+        if (occurrenceDate <= item.date) return item;
+        return { ...item, repeatUntil: offsetDateKey(occurrenceDate, -1) };
+      });
+    });
+    if (recurring && scope === "future" && occurrenceDate <= event.date) {
+      setCalendarEvents((current) =>
+        current.filter((item) => item.id !== event.id),
+      );
+    }
+    setEventDeleteRequest(null);
+    setSelectedEventDetail(null);
+    setSelectedEventOccurrenceDate(null);
   };
 
   const toggleHabit = (habitId: number, dayIndex = 3) => {
@@ -2382,6 +2540,7 @@ export default function Home() {
     context.save();
     context.globalCompositeOperation =
       stroke.tool === "eraser" ? "destination-out" : "source-over";
+    context.globalAlpha = stroke.tool === "highlighter" ? 0.3 : 1;
     context.strokeStyle = stroke.color;
     context.fillStyle = stroke.color;
     context.lineCap = "round";
@@ -2392,6 +2551,8 @@ export default function Home() {
       const width =
         (stroke.tool === "eraser"
           ? stroke.size * 4
+          : stroke.tool === "highlighter"
+            ? stroke.size * 3.4
           : stroke.size * (0.45 + point.pressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.arc(
@@ -2417,6 +2578,8 @@ export default function Home() {
       context.lineWidth =
         (stroke.tool === "eraser"
           ? stroke.size * 4
+          : stroke.tool === "highlighter"
+            ? stroke.size * 3.4
           : stroke.size * (0.45 + averagePressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.moveTo(
@@ -2977,6 +3140,8 @@ export default function Home() {
               completeReminder={(id) =>
                 updateDoneIds((current) => [...current, id])
               }
+              editReminder={openReminderEditor}
+              addReminder={() => openReminderEditor()}
               restoreReminder={(id) =>
                 updateDoneIds((current) =>
                   current.filter((item) => item !== id),
@@ -2989,7 +3154,11 @@ export default function Home() {
               todayKey={todayKey}
               weekDays={homeWeek}
               selectedDateEvents={selectedHomeEvents}
-              openEventDetail={setSelectedEventDetail}
+              openEventDetail={(event) => {
+                setSelectedEventDetail(event);
+                setSelectedEventOccurrenceDate(selectedHomeDate);
+                setEventCopyDate(selectedHomeDate);
+              }}
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
@@ -3490,6 +3659,14 @@ export default function Home() {
                             onClick={() => setPenTool("pen")}
                           >
                             <span>✎</span> Pen
+                          </button>
+                          <button
+                            className={
+                              penTool === "highlighter" ? "active" : ""
+                            }
+                            onClick={() => setPenTool("highlighter")}
+                          >
+                            <span>▰</span> Highlight
                           </button>
                           <button
                             className={penTool === "eraser" ? "active" : ""}
@@ -4401,7 +4578,7 @@ export default function Home() {
                   <span>
                     <i className="source-aerea" /> aérea
                   </span>
-                  <span className="mood-source">⌁‿⌁ mood stickers</span>
+                  <span className="mood-source">˶ᵔ ᵕ ᵔ˶ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
                   <button
                     className="calendar-view-toggle"
@@ -4415,23 +4592,39 @@ export default function Home() {
                 </div>
                 {calendarExpanded && (
                   <section className="calendar-planner-overview">
-                    <label className="planner-priorities">
+                    <div className="planner-priorities">
                       <span>
                         <b>♡</b>
                         My priorities this month
                       </span>
-                      <textarea
-                        value={calendarPlannerPriorities[calendarMonthKey] ?? ""}
-                        onChange={(event) =>
-                          setCalendarPlannerPriorities((current) => ({
-                            ...current,
-                            [calendarMonthKey]: event.target.value,
-                          }))
-                        }
-                        placeholder={"1. Take care of myself\n2. Finish one important thing\n3. Leave room for joy"}
-                        aria-label="Monthly priorities"
-                      />
-                    </label>
+                      <div className="planner-priority-rows">
+                        {[0, 1, 2].map((index) => {
+                          const values = (calendarPlannerPriorities[calendarMonthKey] ?? "").split("\n");
+                          return (
+                            <label key={index}>
+                              <b>{index + 1}</b>
+                              <input
+                                value={values[index] ?? ""}
+                                onChange={(event) => {
+                                  const next = [...values];
+                                  next[index] = event.target.value.replace(/\n/g, " ");
+                                  setCalendarPlannerPriorities((current) => ({
+                                    ...current,
+                                    [calendarMonthKey]: next.slice(0, 3).join("\n"),
+                                  }));
+                                }}
+                                placeholder={[
+                                  "Take care of myself",
+                                  "Finish one important thing",
+                                  "Leave room for joy",
+                                ][index]}
+                                aria-label={`Priority ${index + 1}`}
+                              />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <label className="planner-month-notes">
                       <span>
                         <b>✿</b>
@@ -4476,9 +4669,11 @@ export default function Home() {
                   {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
-                  {Array.from({ length: leadingDays }, (_, index) => (
-                    <i
+                  {calendarGridDays.slice(0, leadingDays).map((gridDay, index) => (
+                    <button
+                      type="button"
                       className={[
+                        "calendar-adjacent-day",
                         index % 7 === 0 ? "week-start" : "",
                         index % 7 >= 5 ? "weekend" : "",
                         `weekday-${index % 7}`,
@@ -4488,8 +4683,15 @@ export default function Home() {
                       ]
                         .filter(Boolean)
                         .join(" ")}
-                      key={`empty-${index}`}
-                    />
+                      key={gridDay.dateKey}
+                      onClick={() => {
+                        setViewMonth(dateFromKey(gridDay.dateKey));
+                        selectCalendarDay(gridDay.dateKey);
+                      }}
+                      aria-label={`Open ${readableDate(gridDay.dateKey)}`}
+                    >
+                      <span>{gridDay.day}</span>
+                    </button>
                   ))}
                   {Array.from({ length: daysInViewMonth }, (_, index) => {
                     const day = index + 1;
@@ -4607,23 +4809,22 @@ export default function Home() {
                       </button>
                     );
                   })}
-                  {Array.from(
-                    {
-                      length:
-                        calendarWeekRows * 7 -
-                        leadingDays -
-                        daysInViewMonth,
-                    },
-                    (_, index) => (
-                      <i
+                  {calendarGridDays
+                    .slice(leadingDays + daysInViewMonth)
+                    .map((gridDay) => (
+                      <button
+                        type="button"
                         className="calendar-adjacent-day"
-                        key={`next-${index + 1}`}
-                        aria-hidden="true"
+                        key={gridDay.dateKey}
+                        onClick={() => {
+                          setViewMonth(dateFromKey(gridDay.dateKey));
+                          selectCalendarDay(gridDay.dateKey);
+                        }}
+                        aria-label={`Open ${readableDate(gridDay.dateKey)}`}
                       >
-                        <span>{index + 1}</span>
-                      </i>
-                    ),
-                  )}
+                        <span>{gridDay.day}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
                 {calendarExpanded && (
@@ -4789,7 +4990,7 @@ export default function Home() {
                           <button
                             className="event-chip-main"
                             onClick={() => openEventEditor(calendarEvent)}
-                            aria-label={`Edit ${calendarEvent.title}`}
+                            aria-label={`Open ${calendarEvent.title}`}
                           >
                             <strong>{calendarEvent.title}</strong>
                             <small>
@@ -4804,13 +5005,10 @@ export default function Home() {
                           </button>
                           <button
                             className="event-chip-delete"
-                            onClick={() =>
-                              setCalendarEvents((current) =>
-                                current.filter(
-                                  (item) => item.id !== calendarEvent.id,
-                                ),
-                              )
-                            }
+                            onClick={() => setEventDeleteRequest({
+                              event: calendarEvent,
+                              occurrenceDate: selectedCalendarDate,
+                            })}
                             aria-label={`Delete ${calendarEvent.title}`}
                           >
                             ×
@@ -4867,7 +5065,9 @@ export default function Home() {
                               type="button"
                               onClick={() => {
                                 setDayPeekDate(null);
-                                openEventEditor(calendarEvent);
+                                setSelectedEventDetail(calendarEvent);
+                                setSelectedEventOccurrenceDate(dayPeekDate);
+                                setEventCopyDate(dayPeekDate);
                               }}
                             >
                               <span>
@@ -5357,7 +5557,10 @@ export default function Home() {
                 <h2>{selectedEventDetail.title}</h2>
               </div>
               <button
-                onClick={() => setSelectedEventDetail(null)}
+                onClick={() => {
+                  setSelectedEventDetail(null);
+                  setSelectedEventOccurrenceDate(null);
+                }}
                 aria-label="Close event details"
               >
                 ×
@@ -5369,7 +5572,7 @@ export default function Home() {
               <div>
                 <strong>{eventTimeLabel(selectedEventDetail)}</strong>
                 <small>
-                  {readableDate(selectedEventDetail.date)}
+                  {readableDate(selectedEventOccurrenceDate ?? selectedEventDetail.date)}
                   {selectedEventDetail.endDate &&
                   selectedEventDetail.endDate !== selectedEventDetail.date
                     ? ` → ${readableDate(selectedEventDetail.endDate)}`
@@ -5517,6 +5720,24 @@ export default function Home() {
               </a>
             )}
 
+            <section className="event-detail-copy">
+              <label>
+                <span>♡ Copy this event to another day</span>
+                <input
+                  type="date"
+                  value={eventCopyDate}
+                  onChange={(event) => setEventCopyDate(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => copyCalendarEvent(selectedEventDetail, eventCopyDate)}
+                disabled={!eventCopyDate}
+              >
+                Copy event
+              </button>
+            </section>
+
             <button
               className="event-detail-edit"
               onClick={() => {
@@ -5533,6 +5754,69 @@ export default function Home() {
             >
               ✎ Edit this event
             </button>
+            <button
+              type="button"
+              className="event-detail-delete"
+              onClick={() => setEventDeleteRequest({
+                event: selectedEventDetail,
+                occurrenceDate: selectedEventOccurrenceDate ?? selectedEventDetail.date,
+              })}
+            >
+              Delete event…
+            </button>
+          </section>
+        </div>
+      )}
+
+      {eventDeleteRequest && (
+        <div className="modal-backdrop event-delete-backdrop" role="presentation">
+          <section
+            className="event-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={`Delete ${eventDeleteRequest.event.title}`}
+          >
+            <span className="event-delete-face" aria-hidden="true">(｡•́︿•̀｡)</span>
+            <p className="tiny-label">REMOVE FROM YOUR CALENDAR</p>
+            <h2>{eventDeleteRequest.event.title}</h2>
+            <p>
+              {(eventDeleteRequest.event.repeat ?? "Never") === "Never"
+                ? "Delete this event? This cannot be undone."
+                : "This event repeats. Choose how much of the series to remove."}
+            </p>
+            <div className="event-delete-actions">
+              {(eventDeleteRequest.event.repeat ?? "Never") === "Never" ? (
+                <button
+                  className="danger"
+                  onClick={() => deleteCalendarOccurrence(
+                    eventDeleteRequest.event,
+                    eventDeleteRequest.occurrenceDate,
+                    "all",
+                  )}
+                >
+                  Delete event
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => deleteCalendarOccurrence(
+                    eventDeleteRequest.event,
+                    eventDeleteRequest.occurrenceDate,
+                    "only",
+                  )}>Only this event</button>
+                  <button onClick={() => deleteCalendarOccurrence(
+                    eventDeleteRequest.event,
+                    eventDeleteRequest.occurrenceDate,
+                    "future",
+                  )}>This and future events</button>
+                  <button className="danger" onClick={() => deleteCalendarOccurrence(
+                    eventDeleteRequest.event,
+                    eventDeleteRequest.occurrenceDate,
+                    "all",
+                  )}>All matching events</button>
+                </>
+              )}
+              <button className="cancel" onClick={() => setEventDeleteRequest(null)}>Keep it</button>
+            </div>
           </section>
         </div>
       )}
@@ -5832,6 +6116,74 @@ export default function Home() {
         </div>
       )}
 
+      {reminderEditorOpen && (
+        <div className="modal-backdrop reminder-editor-backdrop" role="presentation">
+          <section
+            className="class-editor-modal reminder-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingReminderId === null ? "Add reminder" : "Edit reminder"}
+          >
+            <header>
+              <div>
+                <p className="tiny-label">DAILY LITTLE THING</p>
+                <h2>{editingReminderId === null ? "Add a reminder" : "Edit this reminder"}</h2>
+              </div>
+              <button onClick={() => setReminderEditorOpen(false)} aria-label="Close reminder editor">×</button>
+            </header>
+            <label>
+              Reminder
+              <input
+                value={reminderDraft.title}
+                onChange={(event) => setReminderDraft((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Drink a little water"
+                autoFocus
+              />
+            </label>
+            <label>
+              Gentle note
+              <input
+                value={reminderDraft.detail}
+                onChange={(event) => setReminderDraft((current) => ({ ...current, detail: event.target.value }))}
+                placeholder="Your first glass of the day"
+              />
+            </label>
+            <div className="class-editor-row">
+              <label>
+                Emoji
+                <input
+                  value={reminderDraft.icon}
+                  onChange={(event) => setReminderDraft((current) => ({ ...current, icon: event.target.value }))}
+                  maxLength={8}
+                  aria-label="Reminder emoji"
+                />
+              </label>
+              <fieldset>
+                <legend>Color</legend>
+                {["blue", "yellow", "lilac", "pink", "mint"].map((tint) => (
+                  <button
+                    type="button"
+                    key={tint}
+                    className={`reminder-tint ${tint} ${reminderDraft.tint === tint ? "active" : ""}`}
+                    onClick={() => setReminderDraft((current) => ({ ...current, tint }))}
+                    aria-label={`Use ${tint}`}
+                    aria-pressed={reminderDraft.tint === tint}
+                  />
+                ))}
+              </fieldset>
+            </div>
+            <footer>
+              {editingReminderId !== null ? (
+                <button className="delete-class" onClick={deleteReminder}>Delete reminder</button>
+              ) : <span />}
+              <span />
+              <button className="cancel-class" onClick={() => setReminderEditorOpen(false)}>Cancel</button>
+              <button className="save-class" onClick={saveReminder} disabled={!reminderDraft.title.trim()}>Save reminder</button>
+            </footer>
+          </section>
+        </div>
+      )}
+
       {habitEditorOpen && (
         <div className="modal-backdrop habit-editor-backdrop" role="presentation">
           <section
@@ -6028,6 +6380,8 @@ function TodayScreen({
   pending,
   completed,
   completeReminder,
+  editReminder,
+  addReminder,
   restoreReminder,
   openCalendar,
   selectedDate,
@@ -6046,6 +6400,8 @@ function TodayScreen({
   pending: Reminder[];
   completed: Reminder[];
   completeReminder: (id: number) => void;
+  editReminder: (reminder: Reminder) => void;
+  addReminder: () => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
   selectedDate: string;
@@ -6219,9 +6575,19 @@ function TodayScreen({
               <p className="tiny-label">LITTLE REMINDERS</p>
               <h3>Take care of you</h3>
             </div>
-            <span className="progress-pill">
-              {completed.length}/{reminders.length}
-            </span>
+            <div className="reminder-heading-actions">
+              <button
+                type="button"
+                className="reminder-add-button"
+                onClick={addReminder}
+                aria-label="Add a daily reminder"
+              >
+                ＋
+              </button>
+              <span className="progress-pill">
+                {completed.length}/{pending.length + completed.length}
+              </span>
+            </div>
           </div>
           <div className="reminder-card">
             {pending.length === 0 ? (
@@ -6232,25 +6598,40 @@ function TodayScreen({
               </div>
             ) : (
               pending.map((item) => (
-                <button
+                <div
                   className={`reminder-row ${item.tint}`}
                   key={item.id}
-                  onClick={() => completeReminder(item.id)}
                 >
-                  <span className="reminder-icon">{item.icon}</span>
-                  <span className="reminder-copy">
-                    <strong>{item.title}</strong>
-                    <small>{item.detail}</small>
-                  </span>
-                  <span className="check-circle">✓</span>
-                </button>
+                  <button
+                    type="button"
+                    className="reminder-edit-trigger"
+                    onClick={() => editReminder(item)}
+                    aria-label={`Edit ${item.title}`}
+                  >
+                    <span className="reminder-icon">{item.icon}</span>
+                    <span className="reminder-copy">
+                      <strong>{item.title}</strong>
+                      <small>{item.detail}</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="check-circle"
+                    onClick={() => completeReminder(item.id)}
+                    aria-label={`Complete ${item.title}`}
+                  >
+                    ✓
+                  </button>
+                </div>
               ))
             )}
           </div>
           <div className="completed-wrap">
             <div className="completed-history-line">
               <p className="completed-title">COMPLETED TODAY</p>
-              <span>Yesterday {yesterdayDoneCount}/{reminders.length}</span>
+              <span>
+                Yesterday {yesterdayDoneCount}/{pending.length + completed.length}
+              </span>
             </div>
             {completed.length === 0 ? (
               <p className="empty-completed">
