@@ -1275,20 +1275,24 @@ export default function Home() {
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
   const calendarDays = useMemo(() => {
-    if (!calendarExpanded) {
-      return Array.from({ length: daysInViewMonth }, (_, index) => ({
+    const currentMonthDays = Array.from(
+      { length: daysInViewMonth },
+      (_, index) => ({
         date: new Date(calendarYear, calendarMonth, index + 1),
         currentMonth: true,
-      }));
-    }
+      }),
+    );
 
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(calendarYear, calendarMonth, index - leadingDays + 1);
-      return {
-        date,
-        currentMonth: date.getMonth() === calendarMonth,
-      };
-    });
+    if (!calendarExpanded) return currentMonthDays;
+
+    const trailingDays = 42 - leadingDays - daysInViewMonth;
+    return [
+      ...currentMonthDays,
+      ...Array.from({ length: trailingDays }, (_, index) => ({
+        date: new Date(calendarYear, calendarMonth + 1, index + 1),
+        currentMonth: false,
+      })),
+    ];
   }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
@@ -3987,10 +3991,9 @@ export default function Home() {
                   {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
-                  {!calendarExpanded &&
-                    Array.from({ length: leadingDays }, (_, index) => (
-                      <i key={`empty-${index}`} />
-                    ))}
+                  {Array.from({ length: leadingDays }, (_, index) => (
+                    <i key={`empty-${index}`} />
+                  ))}
                   {calendarDays.map(({ date, currentMonth }) => {
                     const day = date.getDate();
                     const dayKey = localDateKey(date);
@@ -4043,7 +4046,7 @@ export default function Home() {
                             {dayComplete ? "✓" : "×"}
                           </i>
                         )}
-                        {dayEvents.length > 0 && (
+                        {dayEvents.length > 0 && !calendarExpanded && (
                           <>
                             <span className="calendar-event-dots">
                               {dayEvents.slice(0, 3).map((event) => (
@@ -4059,6 +4062,23 @@ export default function Home() {
                                 : `${dayEvents.length} plans`}
                             </small>
                           </>
+                        )}
+                        {dayEvents.length > 0 && calendarExpanded && (
+                          <span className="calendar-cell-events">
+                            {dayEvents.slice(0, 3).map((calendarEvent) => (
+                              <span
+                                className="calendar-cell-event"
+                                key={calendarEvent.id}
+                                title={calendarEvent.title}
+                              >
+                                <b className={`event-dot ${calendarEvent.color}`} />
+                                <span>{calendarEvent.title}</span>
+                              </span>
+                            ))}
+                            {dayEvents.length > 3 && (
+                              <small>+{dayEvents.length - 3} more</small>
+                            )}
+                          </span>
                         )}
                       </button>
                     );

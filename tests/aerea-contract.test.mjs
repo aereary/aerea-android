@@ -119,6 +119,8 @@ test("keeps compact calendar and offers a distinct extended month view", () => {
   assert.match(pageSource, /Compact month/);
   assert.match(pageSource, /Extended month/);
   assert.match(pageSource, /outside-month/);
+  assert.match(pageSource, /dayEvents\.slice\(0, 3\)/);
+  assert.match(pageSource, /calendar-cell-events/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
 });
 

@@ -3197,6 +3197,44 @@ p {
   opacity: 0.48;
 }
 
+.calendar-cell-events {
+  display: grid;
+  gap: 5px;
+  left: 10px;
+  position: absolute;
+  right: 10px;
+  top: 42px;
+}
+
+.calendar-cell-event {
+  align-items: center;
+  background: color-mix(in srgb, var(--cream) 74%, transparent);
+  border-radius: 7px;
+  display: flex;
+  font-size: 9px;
+  font-weight: 800;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 6px;
+}
+
+.calendar-cell-event > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-cell-event .event-dot {
+  flex: 0 0 auto;
+}
+
+.calendar-cell-events > small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  padding-left: 5px;
+}
+
 .calendar-sources span {
   align-items: center;
   display: inline-flex;
@@ -4681,6 +4719,25 @@ p {
   .calendar-expanded .month-grid > i {
     aspect-ratio: 0.82;
     min-height: 0;
+  }
+
+  .calendar-cell-events {
+    gap: 2px;
+    left: 4px;
+    right: 4px;
+    top: 29px;
+  }
+
+  .calendar-cell-event {
+    border-radius: 5px;
+    font-size: 6px;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .calendar-cell-event .event-dot {
+    height: 4px;
+    width: 4px;
   }
 
   .calendar-month-heading h2 {
