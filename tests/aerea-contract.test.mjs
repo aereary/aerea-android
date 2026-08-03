@@ -10,10 +10,6 @@ const cssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
 );
-const calendarCssSource = await readFile(
-  new URL("../app/calendar-reference.css", import.meta.url),
-  "utf8",
-);
 const workflowSource = await readFile(
   new URL("../.github/workflows/build-apk.yml", import.meta.url),
   "utf8",
@@ -31,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps every approved theme and removes only the three rejected themes", () => {
+test("keeps only the approved theme collection", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -45,13 +41,13 @@ test("keeps every approved theme and removes only the three rejected themes", ()
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    0,
-    "approved themes keep their original welcome charm",
+    3,
+    "only the three new decorated themes should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
     3,
-    "only the original approved decorated themes should decorate the sky",
+    "only the three approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -60,9 +56,6 @@ test("keeps every approved theme and removes only the three rejected themes", ()
     "ducktram",
     "startide",
     "catcoast",
-    "starrainnight",
-    "f1victory",
-    "starrykitten",
   ]) {
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
@@ -74,20 +67,10 @@ test("keeps every approved theme and removes only the three rejected themes", ()
   );
 });
 
-test("keeps the original charm size and fits every curved message", () => {
+test("curves the Lavender rest message", () => {
   assert.match(pageSource, /<textPath/);
-  assert.match(pageSource, /dayCharmText\.toUpperCase\(\)/);
-  assert.match(pageSource, /Q 50 91 88 67/);
-  assert.match(pageSource, /dayCharmText\.length >= 17/);
-  assert.match(pageSource, /"medium-copy"/);
-  assert.match(pageSource, /"short-copy"/);
-  assert.match(cssSource, /The welcome charm keeps its original footprint/);
-  assert.match(cssSource, /\.day-charm \{\s+height: 102px;/);
-  assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?\.day-charm \{\s+height: 84px;/);
-  assert.match(
-    cssSource,
-    /The charm frame stays exactly the same size; its art and lettering grow/,
-  );
+  assert.match(pageSource, /YOU MAY REST/);
+  assert.match(pageSource, /Q 50 94 85 70/);
 });
 
 test("ships Safe Place as authored offline copy", () => {
@@ -110,9 +93,10 @@ test("ships a clean draining focus clock and varied journal faces", () => {
   assert.doesNotMatch(pageSource, /timer-status-dot/);
   assert.doesNotMatch(pageSource, /timer-leaf/);
   assert.match(pageSource, /color fades gently with the time/);
-  assert.doesNotMatch(pageSource, /timer-keepsake/);
-  assert.match(pageSource, /timer-clock-pal/);
-  assert.match(cssSource, /\.timer-bloom\.running[\s\S]*animation: none !important/);
+  assert.ok(
+    [...pageSource.matchAll(/timer-keepsake/g)].length >= 4,
+    "the circular focus clock should use keepsake decorations instead of dots",
+  );
   assert.match(pageSource, /journalFaceFor\(index\)/);
   assert.ok(
     [...pageSource.matchAll(/const journalFaces = \[([\s\S]*?)\];/g)][0][1]
@@ -122,142 +106,11 @@ test("ships a clean draining focus clock and varied journal faces", () => {
   );
 });
 
-test("validates event timing and recognizes the afternoon", () => {
-  assert.match(pageSource, /function eventHasValidTiming/);
-  assert.match(pageSource, /function eventTimingValue/);
-  assert.match(pageSource, /end > start/);
-  assert.match(pageSource, /function keepEventEndingAfterStart/);
-  assert.match(pageSource, /normalizeCalendarEventTiming/);
-  assert.match(pageSource, /function formatTimeWithPeriod/);
-  assert.match(pageSource, /hour >= 12 \? "PM" : "AM"/);
-  assert.match(pageSource, /The event must end after it starts\./);
-  assert.match(pageSource, /Good afternoon, lovely\./);
-  assert.match(pageSource, /hour >= 18 \|\| hour < 5/);
-  assert.match(pageSource, /hour >= 12[\s\S]*\? "afternoon"/);
-});
-
-test("offers a readable expanded month without replacing the compact calendar", () => {
-  assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /Read events/);
-  assert.match(pageSource, /calendar-event-preview-list/);
-  assert.match(pageSource, /eventTimeLabel\(event\)/);
-  assert.match(pageSource, /const calendarWeekRows = Math\.ceil/);
-  assert.match(pageSource, /"--calendar-week-rows": calendarWeekRows/);
-  assert.match(
-    pageSource,
-    /calendarWeekRows \* 7\s*-\s*leadingDays\s*-\s*daysInViewMonth/,
-  );
-  assert.doesNotMatch(pageSource, /calendarGridDays\s*=\s*42/);
-  assert.match(pageSource, /calendar-expanded-backdrop/);
-  assert.match(calendarCssSource, /\.month-grid\.expanded/);
-  assert.match(
-    calendarCssSource,
-    /\.calendar-expanded-mode \.month-grid\.expanded \.calendar-event-preview-list \{[\s\S]*display: flex[\s\S]*flex-direction: column/,
-  );
-  assert.match(
-    calendarCssSource,
-    /\.calendar-expanded-backdrop \.calendar-modal\.calendar-expanded-mode \{[\s\S]*height: 100dvh[\s\S]*width: 100vw/,
-  );
-  assert.match(
-    calendarCssSource,
-    /\.calendar-expanded-mode > \.selected-day-panel,[\s\S]*display: none !important;/,
-  );
-  assert.match(
-    calendarCssSource,
-    /grid-template-rows:[\s\S]*repeat\(var\(--calendar-week-rows\), minmax\(118px, auto\)\)/,
-  );
-  assert.match(
-    calendarCssSource,
-    /\.calendar-expanded-mode \.month-grid\.expanded > :is\(i, button\) \{[\s\S]*border-radius: clamp\(15px, 1\.8vw, 23px\)/,
-  );
-  assert.match(pageSource, /className="calendar-day-peek-card"/);
-  assert.match(pageSource, /onPointerDown=\{\(\) => startDayLongPress\(dayKey\)\}/);
-  assert.match(pageSource, /month-first-day/);
-  assert.match(pageSource, /calendar-life-sticker/);
-  assert.match(cssSource, /\.month-first-day/);
-  assert.match(cssSource, /\.calendar-life-sticker/);
-});
-
-test("keeps monthly priorities in one automatically numbered writing area", () => {
-  assert.match(pageSource, /className="planner-priorities"/);
-  assert.match(pageSource, /aria-label="Monthly priorities"/);
-  assert.match(pageSource, /if \(event\.key !== "Enter"\) return/);
-  assert.match(pageSource, /const addition = `\\n\$\{nextNumber\}\. `/);
-  assert.doesNotMatch(pageSource, /planner-priority-rows/);
-});
-
-test("bundles Spanish handwriting glyphs for every calendar note", () => {
-  assert.match(cssSource, /font-family: "Aerea Hand"/);
-  assert.match(cssSource, /U\+0000-00FF/);
-  assert.doesNotMatch(cssSource, /font-family: "Gaegu"/);
-  assert.match(
-    calendarCssSource,
-    /\.calendar-day-note-editor textarea,[\s\S]*font-family: "Aerea Hand"/,
-  );
-});
-
-test("adds notebook-grade drawing controls without changing the page model", () => {
-  for (const tool of ["highlighter", "eraser", "line", "rectangle", "ellipse"]) {
-    assert.match(pageSource, new RegExp(`penTool === "${tool}"`));
-  }
-  assert.match(pageSource, /Stylus only/);
-  assert.match(pageSource, /Pressure and automatic palm rejection are on\./);
-  assert.match(pageSource, /duplicateSketchPage/);
-  assert.match(pageSource, /STROKE STABILIZER/);
-  assert.match(pageSource, /Download a copy/);
-});
-
-test("keeps the original reminder emoji tile as the edit affordance", () => {
-  assert.match(
-    calendarCssSource,
-    /\.reminder-edit-trigger \{[\s\S]*grid-template-columns: 48px minmax\(0, 1fr\)/,
-  );
-  assert.match(
-    calendarCssSource,
-    /\.reminder-edit-trigger \.reminder-icon \{[\s\S]*height: 48px;[\s\S]*width: 48px;/,
-  );
-});
-
-test("keeps secret diary writing aligned and saved pages recognizable", () => {
-  assert.match(pageSource, /function firstSentencePreview/);
-  assert.match(pageSource, /firstSentencePreview\(entry\.text\)/);
-  assert.match(cssSource, /\.secret-diary-writing textarea[\s\S]*line-height: 35px/);
-  assert.match(
-    cssSource,
-    /\.secret-page-list \.secret-page-open[\s\S]*height: auto;[\s\S]*width: 100%;/,
-  );
-  assert.match(cssSource, /\.secret-page-open time,[\s\S]*white-space: nowrap/);
-  assert.match(
-    cssSource,
-    /\.secret-page-open > div \{[\s\S]*transform: translateY\(8px\);/,
-  );
-  assert.match(
-    cssSource,
-    /\.note-detail-backdrop\.secret \.note-detail-text[\s\S]*line-height: 37px/,
-  );
-});
-
-test("keeps the approved warm focus-clock palette", () => {
-  assert.match(
-    cssSource,
-    /\.timer-color-well::before[\s\S]*#f18991[\s\S]*#f7c96d[\s\S]*#75c8bd/,
-  );
-  assert.match(
-    cssSource,
-    /\.timer-clock-pal \{ background: #f6aa62; border-color: #fff4db; \}/,
-  );
-});
-
 test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(pageSource, /function notePreview\(text: string/);
   assert.match(pageSource, /setSelectedJournalEntry\(entry\)/);
   assert.match(pageSource, /<NoteDetailDialog/);
   assert.match(pageSource, /onClick=\{\(\) => openEventEditor\(calendarEvent\)\}/);
-  assert.match(pageSource, /className="event-chip-times"/);
-  assert.match(
-    pageSource,
-    /formatTimeWithPeriod\(calendarEvent\.time\)[\s\S]*formatTimeWithPeriod\(calendarEvent\.endTime\)/,
-  );
   assert.match(cssSource, /\.note-detail-text/);
 });
 

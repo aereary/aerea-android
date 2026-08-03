@@ -166,16 +166,6 @@ type CalendarEvent = {
   todos?: string[];
   todoStates?: ("pending" | "done" | "missed")[];
   files?: string[];
-  excludedDates?: string[];
-  repeatUntil?: string;
-};
-
-type PlannerNoteColor = "pink" | "blue" | "mint" | "yellow" | "lilac";
-
-type CalendarDayNote = {
-  text: string;
-  color: PlannerNoteColor;
-  style: "handwritten" | "sticky";
 };
 
 type EventColor =
@@ -201,7 +191,6 @@ type RepeatOption =
   | "Custom";
 
 type EventDraft = Omit<CalendarEvent, "id">;
-type DayPart = "morning" | "afternoon" | "evening";
 
 type SketchPage = {
   id: string;
@@ -218,16 +207,8 @@ type SketchPoint = {
   pressure: number;
 };
 
-type SketchTool =
-  | "pen"
-  | "highlighter"
-  | "eraser"
-  | "line"
-  | "rectangle"
-  | "ellipse";
-
 type SketchStroke = {
-  tool: SketchTool;
+  tool: "pen" | "eraser";
   color: string;
   size: number;
   points: SketchPoint[];
@@ -452,6 +433,7 @@ const themeOptions: {
       "/assets/openmoji/tulip.svg",
     ],
     charm: "a note for you",
+    showCharm: false,
     decoratedScene: true,
   },
   {
@@ -466,6 +448,7 @@ const themeOptions: {
       "/assets/openmoji/basket.svg",
     ],
     charm: "stay for tea",
+    showCharm: false,
     decoratedScene: true,
   },
   {
@@ -480,6 +463,7 @@ const themeOptions: {
       "/assets/openmoji/star.svg",
     ],
     charm: "tucked in softly",
+    showCharm: false,
     decoratedScene: true,
   },
 ];
@@ -542,7 +526,7 @@ const safePlaceLittleThings = [
 
 const CLEAN_START_VERSION = "android-release-1";
 
-const starterReminders: Reminder[] = [
+const reminders: Reminder[] = [
   {
     id: 1,
     title: "Drink water",
@@ -663,39 +647,6 @@ const secretDiaryFeelings = [
   { icon: "🤍", label: "held" },
 ];
 
-const dayStickers = [
-  { id: "ate-out", icon: "🍔", label: "Ate out", tint: "sticker-peach" },
-  { id: "exercise", icon: "🏋️", label: "Exercise", tint: "sticker-mint" },
-  { id: "study", icon: "📖", label: "Study", tint: "sticker-lilac" },
-  { id: "coffee", icon: "☕", label: "Coffee date", tint: "sticker-cocoa" },
-  { id: "movie", icon: "🎬", label: "Movie", tint: "sticker-blue" },
-  { id: "shopping", icon: "🛍️", label: "Shopping", tint: "sticker-pink" },
-  { id: "trip", icon: "✈️", label: "Trip", tint: "sticker-sky" },
-  { id: "treat", icon: "🍰", label: "Little treat", tint: "sticker-yellow" },
-  { id: "outside", icon: "🌿", label: "Outside time", tint: "sticker-sage" },
-  { id: "celebrate", icon: "🎉", label: "Celebrate", tint: "sticker-yellow" },
-  { id: "rest", icon: "🛋️", label: "Rest", tint: "sticker-sage" },
-  { id: "flowers", icon: "🌷", label: "Flowers", tint: "sticker-pink" },
-  { id: "candle", icon: "🕯️", label: "Candle", tint: "sticker-peach" },
-  { id: "together", icon: "🫂", label: "Together", tint: "sticker-mint" },
-  { id: "sunny", icon: "☀️", label: "Sunny day", tint: "sticker-yellow" },
-  { id: "weather", icon: "🌤️", label: "Soft weather", tint: "sticker-sky" },
-  { id: "music", icon: "🎧", label: "Music", tint: "sticker-blue" },
-  { id: "breakfast", icon: "🍳", label: "Breakfast", tint: "sticker-yellow" },
-  { id: "pizza", icon: "🍕", label: "Pizza", tint: "sticker-peach" },
-  { id: "meal", icon: "🍱", label: "Nice meal", tint: "sticker-pink" },
-  { id: "bread", icon: "🥐", label: "Bakery", tint: "sticker-cocoa" },
-  { id: "shower", icon: "🚿", label: "Everything shower", tint: "sticker-sky" },
-  { id: "brush", icon: "🪥", label: "Self care", tint: "sticker-mint" },
-  { id: "rainbow", icon: "🌈", label: "Rainbow day", tint: "sticker-lilac" },
-  { id: "water", icon: "🥛", label: "Water", tint: "sticker-blue" },
-  { id: "haircut", icon: "✂️", label: "Haircut", tint: "sticker-sage" },
-  { id: "focus", icon: "🤓", label: "Focused", tint: "sticker-mint" },
-  { id: "makeup", icon: "💄", label: "Getting ready", tint: "sticker-pink" },
-  { id: "snack", icon: "🍪", label: "Snack", tint: "sticker-yellow" },
-  { id: "bubble-tea", icon: "🧋", label: "Little drink", tint: "sticker-cocoa" },
-] as const;
-
 function journalFaceFor(index: number) {
   return journalFaces[index % journalFaces.length];
 }
@@ -703,15 +654,7 @@ function journalFaceFor(index: number) {
 function notePreview(text: string, maxCharacters = 132) {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (normalized.length <= maxCharacters) return normalized;
-  return `${normalized.slice(0, maxCharacters).trimEnd()}…`;
-}
-
-function firstSentencePreview(text: string, maxCharacters = 96) {
-  const normalized = text.replace(/\s+/g, " ").trim();
-  const sentenceEnd = normalized.search(/[.!?](?:\s|$)/);
-  const firstSentence =
-    sentenceEnd >= 0 ? normalized.slice(0, sentenceEnd + 1) : normalized;
-  return notePreview(firstSentence, maxCharacters);
+  return `${normalized.slice(0, maxCharacters).trimEnd()}...`;
 }
 
 const eventColors: { value: EventColor; label: string; hex: string }[] = [
@@ -755,89 +698,6 @@ function makeEventDraft(date: string): EventDraft {
   };
 }
 
-function eventHasValidTiming(event: EventDraft) {
-  if (event.allDay) return true;
-  const endDate = event.endDate || event.date;
-  if (!event.date || !endDate || !event.time || !event.endTime) return false;
-  const start = eventTimingValue(event.date, event.time);
-  const end = eventTimingValue(endDate, event.endTime);
-  return Number.isFinite(start) && Number.isFinite(end) && end > start;
-}
-
-function eventTimingValue(dateKey: string, time: string) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  if (
-    ![year, month, day, hour, minute].every(Number.isFinite) ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > 31 ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return Number.NaN;
-  }
-  return new Date(year, month - 1, day, hour, minute, 0, 0).getTime();
-}
-
-function formatTimeWithPeriod(time?: string) {
-  if (!time) return "";
-  const [hourText, minuteText = "00"] = time.split(":");
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return time;
-  const period = hour >= 12 ? "PM" : "AM";
-  const hourTwelve = hour % 12 || 12;
-  return `${hourTwelve}:${String(minute).padStart(2, "0")} ${period}`;
-}
-
-function addMinutesToEventTiming(
-  dateKey: string,
-  time: string,
-  minutes: number,
-) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  const result = new Date(year, month - 1, day, hour, minute + minutes);
-  return {
-    date: localDateKey(result),
-    time: `${String(result.getHours()).padStart(2, "0")}:${String(
-      result.getMinutes(),
-    ).padStart(2, "0")}`,
-  };
-}
-
-function keepEventEndingAfterStart(event: EventDraft): EventDraft {
-  if (event.allDay || eventHasValidTiming(event)) return event;
-  const fallback = addMinutesToEventTiming(
-    event.date,
-    event.time || "09:00",
-    60,
-  );
-  return {
-    ...event,
-    endDate: fallback.date,
-    endTime: fallback.time,
-  };
-}
-
-function normalizeCalendarEventTiming(event: CalendarEvent): CalendarEvent {
-  if (event.allDay || eventHasValidTiming(event)) return event;
-  const fallback = addMinutesToEventTiming(
-    event.date,
-    event.time || "09:00",
-    60,
-  );
-  return {
-    ...event,
-    endDate: fallback.date,
-    endTime: fallback.time,
-  };
-}
-
 const starterClasses: ClassItem[] = [
   { id: "differential-equations", name: "Differential Equations", icon: "∫", color: "#ddd8ff" },
   { id: "ethical-hacking", name: "Ethical Hacking", icon: "⌘", color: "#cceeff" },
@@ -875,12 +735,6 @@ function dateFromKey(dateKey: string) {
   return new Date(year, month - 1, day);
 }
 
-function offsetDateKey(dateKey: string, days: number) {
-  const date = dateFromKey(dateKey);
-  date.setDate(date.getDate() + days);
-  return localDateKey(date);
-}
-
 function weekForDate(dateKey: string) {
   const anchor = dateFromKey(dateKey);
   const mondayOffset = (anchor.getDay() + 6) % 7;
@@ -902,8 +756,6 @@ function weekForDate(dateKey: string) {
 
 function eventOccursOn(event: CalendarEvent, dateKey: string) {
   if (dateKey < event.date) return false;
-  if (event.repeatUntil && dateKey > event.repeatUntil) return false;
-  if (event.excludedDates?.includes(dateKey)) return false;
   const repeat = event.repeat ?? "Never";
   if (repeat === "Never") return event.date === dateKey;
 
@@ -937,12 +789,8 @@ function eventOccursOn(event: CalendarEvent, dateKey: string) {
 
 function eventTimeLabel(event: CalendarEvent) {
   if (event.allDay) return "All day";
-  if (event.endTime) {
-    return `${formatTimeWithPeriod(event.time)}–${formatTimeWithPeriod(
-      event.endTime,
-    )}`;
-  }
-  return formatTimeWithPeriod(event.time);
+  if (event.endTime) return `${event.time}–${event.endTime}`;
+  return event.time;
 }
 
 function eventRepeatLabel(event: CalendarEvent) {
@@ -959,25 +807,11 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [space, setSpace] = useState<Space>("menu");
-  const [reminders, setReminders] = useState<Reminder[]>(starterReminders);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
-  const [reminderEditorOpen, setReminderEditorOpen] = useState(false);
-  const [editingReminderId, setEditingReminderId] = useState<number | null>(
-    null,
-  );
-  const [reminderDraft, setReminderDraft] = useState({
-    title: "",
-    detail: "",
-    icon: "✨",
-    tint: "lilac",
-  });
   const [habits, setHabits] = useState<Habit[]>(starterHabits);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
-  const [dayStickerHistory, setDayStickerHistory] = useState<
-    Record<string, string>
-  >({});
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
     {},
   );
@@ -990,25 +824,6 @@ export default function Home() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarExpanded, setCalendarExpanded] = useState(false);
-  const [calendarPickerOpen, setCalendarPickerOpen] = useState<
-    "month" | "year" | null
-  >(null);
-  const [calendarPlannerPriorities, setCalendarPlannerPriorities] = useState<
-    Record<string, string>
-  >({});
-  const [calendarPlannerNotes, setCalendarPlannerNotes] = useState<
-    Record<string, string>
-  >({});
-  const [calendarDayNotes, setCalendarDayNotes] = useState<
-    Record<string, CalendarDayNote>
-  >({});
-  const [calendarDayNoteDraft, setCalendarDayNoteDraft] = useState("");
-  const [calendarDayNoteColor, setCalendarDayNoteColor] =
-    useState<PlannerNoteColor>("pink");
-  const [calendarDayNoteStyle, setCalendarDayNoteStyle] = useState<
-    "handwritten" | "sticky"
-  >("handwritten");
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1021,19 +836,11 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
-  const [selectedEventOccurrenceDate, setSelectedEventOccurrenceDate] =
-    useState<string | null>(null);
-  const [eventDeleteRequest, setEventDeleteRequest] = useState<{
-    event: CalendarEvent;
-    occurrenceDate: string;
-  } | null>(null);
-  const [eventCopyDate, setEventCopyDate] = useState(todayKey);
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     makeEventDraft(todayKey),
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const [dayPeekDate, setDayPeekDate] = useState<string | null>(null);
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -1055,7 +862,7 @@ export default function Home() {
   >([]);
   const [selectedSecretDiaryEntry, setSelectedSecretDiaryEntry] =
     useState<SecretDiaryEntry | null>(null);
-  const [dayPart, setDayPart] = useState<DayPart>("morning");
+  const [isNight, setIsNight] = useState(false);
   const [appTheme, setAppTheme] = useState<AppTheme>("storybook");
   const [colorMode, setColorMode] = useState<ColorMode>("light");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -1105,7 +912,7 @@ export default function Home() {
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
-  const [penTool, setPenTool] = useState<SketchTool>("pen");
+  const [penTool, setPenTool] = useState<"pen" | "eraser">("pen");
   const [sketchFullscreen, setSketchFullscreen] = useState(false);
   const [sketchToolbarOpen, setSketchToolbarOpen] = useState(true);
   const [sketchTitle, setSketchTitle] = useState(
@@ -1117,7 +924,6 @@ export default function Home() {
   const [sketchZoom, setSketchZoom] = useState(1);
   const [strokeStabilization, setStrokeStabilization] = useState(0.62);
   const [stylusDetected, setStylusDetected] = useState(false);
-  const [stylusOnly, setStylusOnly] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sketchViewportRef = useRef<HTMLDivElement | null>(null);
   const sketchStageRef = useRef<HTMLDivElement | null>(null);
@@ -1146,8 +952,6 @@ export default function Home() {
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const dayLongPressTimerRef = useRef<number | null>(null);
-  const dayLongPressTriggeredRef = useRef(false);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1161,13 +965,7 @@ export default function Home() {
   useEffect(() => {
     const updateDaypart = () => {
       const hour = new Date().getHours();
-      setDayPart(
-        hour >= 18 || hour < 5
-          ? "evening"
-          : hour >= 12
-            ? "afternoon"
-            : "morning",
-      );
+      setIsNight(hour >= 18 || hour < 5);
     };
     updateDaypart();
     const interval = window.setInterval(updateDaypart, 60_000);
@@ -1226,16 +1024,11 @@ export default function Home() {
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
           : readBrowserState()) as {
           state?: {
-            reminders?: Reminder[];
             reminderHistory?: Record<string, number[]>;
             habits?: Habit[];
             entries?: JournalEntry[];
             secretDiaryEntries?: SecretDiaryEntry[];
             moodHistory?: Record<string, string>;
-            dayStickerHistory?: Record<string, string>;
-            calendarPlannerPriorities?: Record<string, string>;
-            calendarPlannerNotes?: Record<string, string>;
-            calendarDayNotes?: Record<string, CalendarDayNote>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
             focusSessions?: number;
@@ -1254,7 +1047,6 @@ export default function Home() {
         if (payload.state) {
           const state = payload.state;
           if (state.cleanStartVersion === CLEAN_START_VERSION) {
-            if (Array.isArray(state.reminders)) setReminders(state.reminders);
             if (state.reminderHistory) setReminderHistory(state.reminderHistory);
             if (state.habits) setHabits(state.habits);
             if (state.entries) setEntries(state.entries);
@@ -1262,38 +1054,17 @@ export default function Home() {
               setSecretDiaryEntries(state.secretDiaryEntries);
             }
             if (state.moodHistory) setMoodHistory(state.moodHistory);
-            if (state.dayStickerHistory) {
-              setDayStickerHistory(state.dayStickerHistory);
-            }
-            if (state.calendarPlannerPriorities) {
-              setCalendarPlannerPriorities(state.calendarPlannerPriorities);
-            }
-            if (state.calendarPlannerNotes) {
-              setCalendarPlannerNotes(state.calendarPlannerNotes);
-            }
-            if (state.calendarDayNotes) {
-              setCalendarDayNotes(state.calendarDayNotes);
-            }
             if (state.completedDays) setCompletedDays(state.completedDays);
-            if (state.calendarEvents) {
-              setCalendarEvents(
-                state.calendarEvents.map(normalizeCalendarEventTiming),
-              );
-            }
+            if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
             if (typeof state.focusSessions === "number") {
               setFocusSessions(state.focusSessions);
             }
           } else {
-            setReminders(starterReminders);
             setReminderHistory({});
             setHabits(starterHabits);
             setEntries([]);
             setSecretDiaryEntries([]);
             setMoodHistory({});
-            setDayStickerHistory({});
-            setCalendarPlannerPriorities({});
-            setCalendarPlannerNotes({});
-            setCalendarDayNotes({});
             setCompletedDays({});
             setCalendarEvents([]);
             setFocusSessions(0);
@@ -1386,16 +1157,11 @@ export default function Home() {
     const timeout = window.setTimeout(async () => {
       try {
         const state = {
-              reminders,
               reminderHistory,
               habits,
               entries,
               secretDiaryEntries,
               moodHistory,
-              dayStickerHistory,
-              calendarPlannerPriorities,
-              calendarPlannerNotes,
-              calendarDayNotes,
               completedDays,
               calendarEvents,
               focusSessions,
@@ -1425,22 +1191,17 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [
     calendarEvents,
-    calendarDayNotes,
-    calendarPlannerNotes,
-    calendarPlannerPriorities,
     classItems,
     appTheme,
     colorMode,
     completedDays,
     customTheme,
-    dayStickerHistory,
     entries,
     focusSessions,
     habits,
     moodHistory,
     profilePhoto,
     reminderHistory,
-    reminders,
     recordings,
     secretDiaryEntries,
     stateReady,
@@ -1493,11 +1254,11 @@ export default function Home() {
 
   const pending = useMemo(
     () => reminders.filter((item) => !doneIds.includes(item.id)),
-    [doneIds, reminders],
+    [doneIds],
   );
   const completed = useMemo(
     () => reminders.filter((item) => doneIds.includes(item.id)),
-    [doneIds, reminders],
+    [doneIds],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
   const classRecordings = recordings.filter(
@@ -1505,7 +1266,6 @@ export default function Home() {
   );
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
-  const calendarMonthKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}`;
   const daysInViewMonth = new Date(
     calendarYear,
     calendarMonth + 1,
@@ -1513,20 +1273,9 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
-  const calendarWeekRows = Math.ceil(
-    (leadingDays + daysInViewMonth) / 7,
-  );
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
-  const dayPeekEvents = dayPeekDate
-    ? calendarEvents
-        .filter((event) => eventOccursOn(event, dayPeekDate))
-        .sort((a, b) => a.time.localeCompare(b.time))
-    : [];
-  const dayPeekSticker = dayStickers.find(
-    (sticker) => sticker.id === dayStickerHistory[dayPeekDate ?? ""],
-  );
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
@@ -1674,7 +1423,7 @@ export default function Home() {
         ? "Todo el día"
         : nextEvent?.time || "Abre aérea para planear",
       temperature: activeTheme.icon,
-      progress: `${doneIds.length}/${pending.length + completed.length} recordatorios`,
+      progress: `${doneIds.length}/${reminders.length} recordatorios`,
       theme: widgetTheme,
       daysJson: widgetDaysJson,
     }).catch(() => {
@@ -1683,9 +1432,7 @@ export default function Home() {
   }, [
     appTheme,
     activeTheme.icon,
-    completed.length,
     doneIds.length,
-    pending.length,
     stateReady,
     todayKey,
     todayWidgetEvents,
@@ -1933,155 +1680,8 @@ export default function Home() {
     });
   };
 
-  const openReminderEditor = (reminder?: Reminder) => {
-    setEditingReminderId(reminder?.id ?? null);
-    setReminderDraft(
-      reminder
-        ? {
-            title: reminder.title,
-            detail: reminder.detail,
-            icon: reminder.icon,
-            tint: reminder.tint,
-          }
-        : {
-            title: "",
-            detail: "",
-            icon: "✨",
-            tint: "lilac",
-          },
-    );
-    setReminderEditorOpen(true);
-  };
-
-  const saveReminder = () => {
-    const title = reminderDraft.title.trim();
-    if (!title) return;
-    const nextReminder: Reminder = {
-      id: editingReminderId ?? Date.now(),
-      title,
-      detail: reminderDraft.detail.trim() || "A gentle reminder for today",
-      icon: reminderDraft.icon.trim() || "✨",
-      tint: reminderDraft.tint,
-    };
-    setReminders((current) =>
-      editingReminderId === null
-        ? [...current, nextReminder]
-        : current.map((item) =>
-            item.id === editingReminderId ? nextReminder : item,
-          ),
-    );
-    setReminderEditorOpen(false);
-  };
-
-  const deleteReminder = () => {
-    if (editingReminderId === null) return;
-    setReminders((current) =>
-      current.filter((item) => item.id !== editingReminderId),
-    );
-    setReminderHistory((current) =>
-      Object.fromEntries(
-        Object.entries(current).map(([date, ids]) => [
-          date,
-          ids.filter((id) => id !== editingReminderId),
-        ]),
-      ),
-    );
-    setReminderEditorOpen(false);
-  };
-
   const chooseMood = (dateKey: string, mood: string) => {
     setMoodHistory((current) => ({ ...current, [dateKey]: mood }));
-  };
-
-  const clearDayLongPress = () => {
-    if (dayLongPressTimerRef.current !== null) {
-      window.clearTimeout(dayLongPressTimerRef.current);
-      dayLongPressTimerRef.current = null;
-    }
-  };
-
-  const startDayLongPress = (dateKey: string) => {
-    clearDayLongPress();
-    dayLongPressTriggeredRef.current = false;
-    dayLongPressTimerRef.current = window.setTimeout(() => {
-      dayLongPressTriggeredRef.current = true;
-      setSelectedCalendarDate(dateKey);
-      const savedNote = calendarDayNotes[dateKey];
-      setCalendarDayNoteDraft(savedNote?.text ?? "");
-      setCalendarDayNoteColor(savedNote?.color ?? "pink");
-      setCalendarDayNoteStyle(savedNote?.style ?? "handwritten");
-      setDayPeekDate(dateKey);
-      dayLongPressTimerRef.current = null;
-    }, 460);
-  };
-
-  const selectCalendarDay = (dateKey: string) => {
-    clearDayLongPress();
-    if (dayLongPressTriggeredRef.current) {
-      dayLongPressTriggeredRef.current = false;
-      return;
-    }
-    setSelectedCalendarDate(dateKey);
-  };
-
-  const setDaySticker = (dateKey: string, stickerId: string) => {
-    setDayStickerHistory((current) => ({
-      ...current,
-      [dateKey]: stickerId,
-    }));
-  };
-
-  const clearDaySticker = (dateKey: string) => {
-    setDayStickerHistory((current) => {
-      const next = { ...current };
-      delete next[dateKey];
-      return next;
-    });
-  };
-
-  const chooseCalendarMonth = (month: number) => {
-    const next = new Date(calendarYear, month, 1);
-    const selectedDay = dateFromKey(selectedCalendarDate).getDate();
-    const clampedDay = Math.min(
-      selectedDay,
-      new Date(calendarYear, month + 1, 0).getDate(),
-    );
-    setViewMonth(next);
-    setSelectedCalendarDate(
-      calendarDateKey(calendarYear, month, clampedDay),
-    );
-    setCalendarPickerOpen(null);
-  };
-
-  const chooseCalendarYear = (year: number) => {
-    const next = new Date(year, calendarMonth, 1);
-    const selectedDay = dateFromKey(selectedCalendarDate).getDate();
-    const clampedDay = Math.min(
-      selectedDay,
-      new Date(year, calendarMonth + 1, 0).getDate(),
-    );
-    setViewMonth(next);
-    setSelectedCalendarDate(
-      calendarDateKey(year, calendarMonth, clampedDay),
-    );
-    setCalendarPickerOpen(null);
-  };
-
-  const saveCalendarDayNote = (dateKey: string) => {
-    const text = calendarDayNoteDraft.trim();
-    setCalendarDayNotes((current) => {
-      const next = { ...current };
-      if (!text) {
-        delete next[dateKey];
-      } else {
-        next[dateKey] = {
-          text,
-          color: calendarDayNoteColor,
-          style: calendarDayNoteStyle,
-        };
-      }
-      return next;
-    });
   };
 
   const openNewEvent = (dateKey = selectedCalendarDate) => {
@@ -2092,11 +1692,10 @@ export default function Home() {
   };
 
   const openEventEditor = (calendarEvent: CalendarEvent) => {
-    const normalizedEvent = normalizeCalendarEventTiming(calendarEvent);
     setEditingEventId(calendarEvent.id);
     setEventDraft({
-      ...makeEventDraft(normalizedEvent.date),
-      ...normalizedEvent,
+      ...makeEventDraft(calendarEvent.date),
+      ...calendarEvent,
     });
     setTodoDraft("");
     setEventEditorOpen(true);
@@ -2104,12 +1703,11 @@ export default function Home() {
 
   const saveCalendarEvent = () => {
     if (!eventDraft.title.trim()) return;
-    const correctedDraft = keepEventEndingAfterStart(eventDraft);
     const savedEvent: CalendarEvent = {
-      ...correctedDraft,
+      ...eventDraft,
       id: editingEventId ?? crypto.randomUUID(),
-      title: correctedDraft.title.trim(),
-      endDate: correctedDraft.endDate || correctedDraft.date,
+      title: eventDraft.title.trim(),
+      endDate: eventDraft.endDate || eventDraft.date,
     };
     setCalendarEvents((current) =>
       editingEventId
@@ -2130,44 +1728,6 @@ export default function Home() {
     setEventDraft((current) => ({ ...current, [key]: value }));
   };
 
-  const updateEventStartDate = (date: string) => {
-    setEventDraft((current) =>
-      keepEventEndingAfterStart({
-        ...current,
-        date,
-        endDate:
-          !current.endDate || current.endDate < date ? date : current.endDate,
-      }),
-    );
-  };
-
-  const updateEventStartTime = (time: string) => {
-    setEventDraft((current) =>
-      keepEventEndingAfterStart({
-        ...current,
-        time,
-      }),
-    );
-  };
-
-  const updateEventEndDate = (endDate: string) => {
-    setEventDraft((current) =>
-      keepEventEndingAfterStart({
-        ...current,
-        endDate: endDate < current.date ? current.date : endDate,
-      }),
-    );
-  };
-
-  const updateEventEndTime = (endTime: string) => {
-    setEventDraft((current) =>
-      keepEventEndingAfterStart({
-        ...current,
-        endTime,
-      }),
-    );
-  };
-
   const setEventTodoState = (
     eventId: string,
     todoIndex: number,
@@ -2185,65 +1745,6 @@ export default function Home() {
     setSelectedEventDetail((current) =>
       current ? updateEvent(current) : current,
     );
-  };
-
-  const copyCalendarEvent = (event: CalendarEvent, dateKey: string) => {
-    const daySpan = Math.max(
-      0,
-      Math.round(
-        (dateFromKey(event.endDate ?? event.date).getTime() -
-          dateFromKey(event.date).getTime()) /
-          86_400_000,
-      ),
-    );
-    const copy: CalendarEvent = {
-      ...event,
-      id: crypto.randomUUID(),
-      date: dateKey,
-      endDate: offsetDateKey(dateKey, daySpan),
-      repeat: "Never",
-      customRepeatEvery: undefined,
-      customRepeatUnit: undefined,
-      excludedDates: undefined,
-      repeatUntil: undefined,
-    };
-    setCalendarEvents((current) => [...current, copy]);
-    setSelectedEventDetail(null);
-    setSelectedEventOccurrenceDate(null);
-  };
-
-  const deleteCalendarOccurrence = (
-    event: CalendarEvent,
-    occurrenceDate: string,
-    scope: "only" | "future" | "all",
-  ) => {
-    const recurring = (event.repeat ?? "Never") !== "Never";
-    setCalendarEvents((current) => {
-      if (!recurring || scope === "all") {
-        return current.filter((item) => item.id !== event.id);
-      }
-      return current.map((item) => {
-        if (item.id !== event.id) return item;
-        if (scope === "only") {
-          return {
-            ...item,
-            excludedDates: Array.from(
-              new Set([...(item.excludedDates ?? []), occurrenceDate]),
-            ),
-          };
-        }
-        if (occurrenceDate <= item.date) return item;
-        return { ...item, repeatUntil: offsetDateKey(occurrenceDate, -1) };
-      });
-    });
-    if (recurring && scope === "future" && occurrenceDate <= event.date) {
-      setCalendarEvents((current) =>
-        current.filter((item) => item.id !== event.id),
-      );
-    }
-    setEventDeleteRequest(null);
-    setSelectedEventDetail(null);
-    setSelectedEventOccurrenceDate(null);
   };
 
   const toggleHabit = (habitId: number, dayIndex = 3) => {
@@ -2541,55 +2042,16 @@ export default function Home() {
     context.save();
     context.globalCompositeOperation =
       stroke.tool === "eraser" ? "destination-out" : "source-over";
-    context.globalAlpha = stroke.tool === "highlighter" ? 0.3 : 1;
     context.strokeStyle = stroke.color;
     context.fillStyle = stroke.color;
     context.lineCap = "round";
     context.lineJoin = "round";
-
-    if (
-      stroke.tool === "line" ||
-      stroke.tool === "rectangle" ||
-      stroke.tool === "ellipse"
-    ) {
-      const first = stroke.points[0];
-      const last = stroke.points[stroke.points.length - 1];
-      const startX = first.x * canvas.width;
-      const startY = first.y * canvas.height;
-      const endX = last.x * canvas.width;
-      const endY = last.y * canvas.height;
-      context.globalCompositeOperation = "source-over";
-      context.globalAlpha = 1;
-      context.lineWidth = stroke.size * cssToCanvas;
-      context.beginPath();
-      if (stroke.tool === "line") {
-        context.moveTo(startX, startY);
-        context.lineTo(endX, endY);
-      } else if (stroke.tool === "rectangle") {
-        context.rect(startX, startY, endX - startX, endY - startY);
-      } else {
-        context.ellipse(
-          (startX + endX) / 2,
-          (startY + endY) / 2,
-          Math.abs(endX - startX) / 2,
-          Math.abs(endY - startY) / 2,
-          0,
-          0,
-          Math.PI * 2,
-        );
-      }
-      context.stroke();
-      context.restore();
-      return;
-    }
 
     if (stroke.points.length === 1) {
       const point = stroke.points[0];
       const width =
         (stroke.tool === "eraser"
           ? stroke.size * 4
-          : stroke.tool === "highlighter"
-            ? stroke.size * 3.4
           : stroke.size * (0.45 + point.pressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.arc(
@@ -2615,8 +2077,6 @@ export default function Home() {
       context.lineWidth =
         (stroke.tool === "eraser"
           ? stroke.size * 4
-          : stroke.tool === "highlighter"
-            ? stroke.size * 3.4
           : stroke.size * (0.45 + averagePressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.moveTo(
@@ -2781,10 +2241,6 @@ export default function Home() {
       return;
     }
 
-    if (stylusOnly && event.pointerType !== "pen") {
-      return;
-    }
-
     const point = canvasPointFromClient(
       event.clientX,
       event.clientY,
@@ -2848,23 +2304,6 @@ export default function Home() {
     const nativeEvents =
       event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
     const stroke = activeStrokeRef.current;
-
-    if (
-      stroke.tool === "line" ||
-      stroke.tool === "rectangle" ||
-      stroke.tool === "ellipse"
-    ) {
-      const rawPoint = canvasPointFromClient(
-        event.clientX,
-        event.clientY,
-        event.pressure,
-        event.pointerType,
-      );
-      stroke.points = [stroke.points[0], rawPoint];
-      redrawSketch();
-      return;
-    }
-
     const firstNewIndex = stroke.points.length;
     const smoothing = Math.max(0.18, 1 - strokeStabilization * 0.82);
 
@@ -3063,44 +2502,6 @@ export default function Home() {
     }
   };
 
-  const duplicateSketchPage = async (page: SketchPage) => {
-    try {
-      let dataUrl = page.dataUrl;
-      if (!dataUrl) {
-        const response = await fetch(`/api/sketches/${page.id}`);
-        if (!response.ok) throw new Error("Could not open this page copy.");
-        dataUrl = await blobAsDataUrl(await response.blob());
-      }
-      const title = `${page.title} — copy`;
-      if (isNative()) {
-        await AereaStorage.saveSketch({
-          title,
-          pageStyle: page.pageStyle,
-          dataUrl,
-        });
-      } else {
-        const now = new Date().toISOString();
-        writeBrowserSketches<SketchPage>([
-          {
-            ...page,
-            id: crypto.randomUUID(),
-            title,
-            createdAt: now,
-            updatedAt: now,
-            dataUrl,
-          },
-          ...readBrowserSketches<SketchPage>(),
-        ]);
-      }
-      await refreshSketches();
-      setSketchMessage(`Made a copy of “${page.title}”.`);
-    } catch (error) {
-      setSketchMessage(
-        error instanceof Error ? error.message : "Could not copy this page.",
-      );
-    }
-  };
-
   const sendSyncCode = async () => {
     setSyncMessage("Sending your private sign-in code…");
     try {
@@ -3136,13 +2537,6 @@ export default function Home() {
     setSyncCodeSent(false);
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
-
-  const eventTimingIsValid = eventHasValidTiming(eventDraft);
-  const minimumEventEnd = addMinutesToEventTiming(
-    eventDraft.date,
-    eventDraft.time || "09:00",
-    1,
-  );
 
   return (
     <main
@@ -3236,8 +2630,6 @@ export default function Home() {
               completeReminder={(id) =>
                 updateDoneIds((current) => [...current, id])
               }
-              editReminder={openReminderEditor}
-              addReminder={() => openReminderEditor()}
               restoreReminder={(id) =>
                 updateDoneIds((current) =>
                   current.filter((item) => item !== id),
@@ -3250,16 +2642,12 @@ export default function Home() {
               todayKey={todayKey}
               weekDays={homeWeek}
               selectedDateEvents={selectedHomeEvents}
-              openEventDetail={(event) => {
-                setSelectedEventDetail(event);
-                setSelectedEventOccurrenceDate(selectedHomeDate);
-                setEventCopyDate(selectedHomeDate);
-              }}
+              openEventDetail={setSelectedEventDetail}
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
               showDayCharm={activeTheme.showCharm !== false}
-              dayPart={dayPart}
+              isNight={isNight}
             />
           )}
 
@@ -3361,15 +2749,18 @@ export default function Home() {
                     }
                   >
                     <div className="timer-color-well" aria-hidden="true" />
-                    <div className="timer-clock-decoration" aria-hidden="true">
-                      <span className="timer-clock-sparkle sparkle-one">✦</span>
-                      <span className="timer-clock-sparkle sparkle-two">✦</span>
-                      <span className="timer-clock-pal">
-                        <i />
-                        <i />
-                        <b />
-                      </span>
-                    </div>
+                    <span className="timer-keepsake keepsake-one" aria-hidden="true">
+                      ୨୧
+                    </span>
+                    <span className="timer-keepsake keepsake-two" aria-hidden="true">
+                      ♡
+                    </span>
+                    <span className="timer-keepsake keepsake-three" aria-hidden="true">
+                      ✦
+                    </span>
+                    <span className="timer-keepsake keepsake-four" aria-hidden="true">
+                      ❀
+                    </span>
                     <div className="timer-bloom-face">
                       <span className="tiny-label">GENTLE FOCUS</span>
                       <strong>{formatTimer(focusSeconds)}</strong>
@@ -3757,36 +3148,10 @@ export default function Home() {
                             <span>✎</span> Pen
                           </button>
                           <button
-                            className={
-                              penTool === "highlighter" ? "active" : ""
-                            }
-                            onClick={() => setPenTool("highlighter")}
-                          >
-                            <span>▰</span> Highlight
-                          </button>
-                          <button
                             className={penTool === "eraser" ? "active" : ""}
                             onClick={() => setPenTool("eraser")}
                           >
                             <span>▱</span> Eraser
-                          </button>
-                          <button
-                            className={penTool === "line" ? "active" : ""}
-                            onClick={() => setPenTool("line")}
-                          >
-                            <span>╱</span> Line
-                          </button>
-                          <button
-                            className={penTool === "rectangle" ? "active" : ""}
-                            onClick={() => setPenTool("rectangle")}
-                          >
-                            <span>▭</span> Box
-                          </button>
-                          <button
-                            className={penTool === "ellipse" ? "active" : ""}
-                            onClick={() => setPenTool("ellipse")}
-                          >
-                            <span>○</span> Oval
                           </button>
                         </div>
                       </div>
@@ -3892,15 +3257,6 @@ export default function Home() {
                           </small>
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        className={stylusOnly ? "stylus-only active" : "stylus-only"}
-                        onClick={() => setStylusOnly((current) => !current)}
-                        aria-pressed={stylusOnly}
-                      >
-                        <span>{stylusOnly ? "✓" : "○"}</span>
-                        Stylus only
-                      </button>
                       <button
                         className="clear-page"
                         onClick={() => clearCanvas()}
@@ -4103,13 +3459,6 @@ export default function Home() {
                                 <small>{page.pageStyle} page</small>
                               </button>
                               <button
-                                className="duplicate-sketch"
-                                onClick={() => duplicateSketchPage(page)}
-                                aria-label={`Duplicate ${page.title}`}
-                              >
-                                ⧉
-                              </button>
-                              <button
                                 className="delete-sketch"
                                 onClick={() => deleteSketchPage(page.id)}
                                 aria-label={`Delete ${page.title}`}
@@ -4143,21 +3492,12 @@ export default function Home() {
       </section>
 
       {calendarOpen && (
-        <div
-          className={
-            calendarExpanded && !eventEditorOpen
-              ? "modal-backdrop calendar-expanded-backdrop"
-              : "modal-backdrop"
-          }
-          role="presentation"
-        >
+        <div className="modal-backdrop" role="presentation">
           <section
             className={
               eventEditorOpen
                 ? "calendar-modal calendar-event-mode"
-                : calendarExpanded
-                  ? "calendar-modal calendar-expanded-mode"
-                  : "calendar-modal"
+                : "calendar-modal"
             }
             role="dialog"
             aria-modal="true"
@@ -4186,7 +3526,7 @@ export default function Home() {
                     className="event-save-button"
                     type="button"
                     onClick={saveCalendarEvent}
-                    disabled={!eventDraft.title.trim() || !eventTimingIsValid}
+                    disabled={!eventDraft.title.trim()}
                   >
                     Save
                   </button>
@@ -4248,16 +3588,24 @@ export default function Home() {
                         <input
                           type="date"
                           value={eventDraft.date}
-                          onChange={(event) =>
-                            updateEventStartDate(event.target.value)
-                          }
+                          onChange={(event) => {
+                            const nextDate = event.target.value;
+                            setEventDraft((current) => ({
+                              ...current,
+                              date: nextDate,
+                              endDate:
+                                !current.endDate || current.endDate < nextDate
+                                  ? nextDate
+                                  : current.endDate,
+                            }));
+                          }}
                         />
                         {!eventDraft.allDay && (
                           <input
                             type="time"
                             value={eventDraft.time}
                             onChange={(event) =>
-                              updateEventStartTime(event.target.value)
+                              updateEventDraft("time", event.target.value)
                             }
                           />
                         )}
@@ -4269,42 +3617,20 @@ export default function Home() {
                           min={eventDraft.date}
                           value={eventDraft.endDate}
                           onChange={(event) =>
-                            updateEventEndDate(event.target.value)
+                            updateEventDraft("endDate", event.target.value)
                           }
                         />
                         {!eventDraft.allDay && (
                           <input
                             type="time"
                             value={eventDraft.endTime}
-                            min={
-                              (eventDraft.endDate || eventDraft.date) ===
-                                eventDraft.date &&
-                              minimumEventEnd.date === eventDraft.date
-                                ? minimumEventEnd.time
-                                : undefined
-                            }
                             onChange={(event) =>
-                              updateEventEndTime(event.target.value)
+                              updateEventDraft("endTime", event.target.value)
                             }
                           />
                         )}
                       </label>
                     </div>
-                    {!eventDraft.allDay && (
-                      <p className="event-time-readable">
-                        {formatTimeWithPeriod(eventDraft.time)}
-                        <span aria-hidden="true"> → </span>
-                        {formatTimeWithPeriod(eventDraft.endTime)}
-                        {eventDraft.endDate !== eventDraft.date
-                          ? ` · ${readableDate(eventDraft.endDate)}`
-                          : ""}
-                      </p>
-                    )}
-                    {!eventTimingIsValid && !eventDraft.allDay && (
-                      <p className="event-time-error" role="alert">
-                        The event must end after it starts.
-                      </p>
-                    )}
 
                     <label className="event-row switch-row">
                       <span className="event-row-icon">⌖</span>
@@ -4565,7 +3891,7 @@ export default function Home() {
                   <button
                     className="mobile-event-save"
                     type="submit"
-                    disabled={!eventDraft.title.trim() || !eventTimingIsValid}
+                    disabled={!eventDraft.title.trim()}
                   >
                     Save event
                   </button>
@@ -4582,50 +3908,13 @@ export default function Home() {
                       ←
                     </button>
                     <div>
-                      {calendarExpanded ? (
-                        <p className="tiny-label expanded-planner-title">
-                          YOUR WHOLE RHYTHM
-                        </p>
-                      ) : (
-                        <p className="tiny-label">YOUR WHOLE RHYTHM</p>
-                      )}
-                      {calendarExpanded ? (
-                        <h2 className="calendar-date-selectors">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCalendarPickerOpen((current) =>
-                                current === "month" ? null : "month",
-                              )
-                            }
-                            aria-expanded={calendarPickerOpen === "month"}
-                          >
-                            {viewMonth.toLocaleDateString("en", {
-                              month: "long",
-                            })}
-                            <span>⌄</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCalendarPickerOpen((current) =>
-                                current === "year" ? null : "year",
-                              )
-                            }
-                            aria-expanded={calendarPickerOpen === "year"}
-                          >
-                            {calendarYear}
-                            <span>⌄</span>
-                          </button>
-                        </h2>
-                      ) : (
-                        <h2>
-                          {viewMonth.toLocaleDateString("en", {
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </h2>
-                      )}
+                      <p className="tiny-label">YOUR WHOLE RHYTHM</p>
+                      <h2>
+                        {viewMonth.toLocaleDateString("en", {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </h2>
                     </div>
                     <button
                       onClick={() => shiftCalendarMonth(1)}
@@ -4641,66 +3930,6 @@ export default function Home() {
                     ×
                   </button>
                 </div>
-                {calendarExpanded && calendarPickerOpen && (
-                  <div
-                    className={`calendar-date-picker ${calendarPickerOpen}`}
-                    role="dialog"
-                    aria-label={
-                      calendarPickerOpen === "month"
-                        ? "Choose a month"
-                        : "Choose a year"
-                    }
-                  >
-                    <header>
-                      <strong>
-                        {calendarPickerOpen === "month"
-                          ? `Choose a month in ${calendarYear}`
-                          : "Choose a year"}
-                      </strong>
-                      <button
-                        type="button"
-                        onClick={() => setCalendarPickerOpen(null)}
-                        aria-label="Close picker"
-                      >
-                        ×
-                      </button>
-                    </header>
-                    {calendarPickerOpen === "month" ? (
-                      <div className="calendar-month-options">
-                        {Array.from({ length: 12 }, (_, month) => (
-                          <button
-                            type="button"
-                            className={
-                              month === calendarMonth ? "active" : ""
-                            }
-                            key={month}
-                            onClick={() => chooseCalendarMonth(month)}
-                          >
-                            {new Date(2026, month, 1).toLocaleDateString("en", {
-                              month: "short",
-                            })}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="calendar-year-options">
-                        {Array.from(
-                          { length: 15 },
-                          (_, index) => calendarYear - 7 + index,
-                        ).map((year) => (
-                          <button
-                            type="button"
-                            className={year === calendarYear ? "active" : ""}
-                            key={year}
-                            onClick={() => chooseCalendarYear(year)}
-                          >
-                            {year}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
                 <div className="calendar-sources">
                   <span>
                     <i className="source-android" /> Android calendar
@@ -4708,107 +3937,20 @@ export default function Home() {
                   <span>
                     <i className="source-aerea" /> aérea
                   </span>
-                  <span className="mood-source">˶ᵔ ᵕ ᵔ˶ mood stickers</span>
+                  <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
-                  <button
-                    className="calendar-view-toggle"
-                    type="button"
-                    aria-pressed={calendarExpanded}
-                    onClick={() => setCalendarExpanded((current) => !current)}
-                  >
-                    <span aria-hidden="true">{calendarExpanded ? "▦" : "▤"}</span>
-                    {calendarExpanded ? "Compact month" : "Read events"}
-                  </button>
                 </div>
-                {calendarExpanded && (
-                  <section className="calendar-planner-overview">
-                    <div className="planner-priorities">
-                      <span>
-                        <b>♡</b>
-                        My priorities this month
-                      </span>
-                      <textarea
-                        value={calendarPlannerPriorities[calendarMonthKey] ?? ""}
-                        onFocus={(event) => {
-                          if (!event.currentTarget.value.trim()) {
-                            const input = event.currentTarget;
-                            setCalendarPlannerPriorities((current) => ({
-                              ...current,
-                              [calendarMonthKey]: "1. ",
-                            }));
-                            window.requestAnimationFrame(() => {
-                              input.setSelectionRange(3, 3);
-                            });
-                          }
-                        }}
-                        onChange={(event) =>
-                          setCalendarPlannerPriorities((current) => ({
-                            ...current,
-                            [calendarMonthKey]: event.target.value,
-                          }))
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter") return;
-                          event.preventDefault();
-                          const input = event.currentTarget;
-                          const before = input.value.slice(0, input.selectionStart);
-                          const after = input.value.slice(input.selectionEnd);
-                          const currentLine = before.split("\n").at(-1) ?? "";
-                          const currentNumber = currentLine.match(/^\s*(\d+)\.\s*/);
-                          const nextNumber = currentNumber
-                            ? Number(currentNumber[1]) + 1
-                            : before.split("\n").length + 1;
-                          const addition = `\n${nextNumber}. `;
-                          const nextValue = `${before}${addition}${after}`;
-                          const nextCursor = before.length + addition.length;
-                          setCalendarPlannerPriorities((current) => ({
-                            ...current,
-                            [calendarMonthKey]: nextValue,
-                          }));
-                          window.requestAnimationFrame(() => {
-                            input.setSelectionRange(nextCursor, nextCursor);
-                          });
-                        }}
-                        placeholder={"1. Take care of myself\n2. Finish one important thing\n3. Leave room for joy"}
-                        aria-label="Monthly priorities"
-                      />
-                    </div>
-                    <label className="planner-month-notes">
-                      <span>
-                        <b>✿</b>
-                        Notes
-                      </span>
-                      <textarea
-                        value={calendarPlannerNotes[calendarMonthKey] ?? ""}
-                        onChange={(event) =>
-                          setCalendarPlannerNotes((current) => ({
-                            ...current,
-                            [calendarMonthKey]: event.target.value,
-                          }))
-                        }
-                        placeholder="A little thought for this month…"
-                        aria-label="Monthly notes"
-                      />
-                    </label>
-                  </section>
-                )}
                 <div className="month-grid-viewport">
                   <div
                     key={`${calendarYear}-${calendarMonth}`}
                     className={[
                       "month-grid",
-                      calendarExpanded ? "expanded" : "",
                       calendarSlideDirection
                         ? `calendar-slide-${calendarSlideDirection}`
                         : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    style={
-                      {
-                        "--calendar-week-rows": calendarWeekRows,
-                      } as CSSProperties
-                    }
                     onAnimationEnd={() => setCalendarSlideDirection(null)}
                     onTouchStart={startCalendarSwipe}
                     onTouchEnd={finishCalendarSwipe}
@@ -4818,23 +3960,10 @@ export default function Home() {
                     (day) => <strong key={day}>{day}</strong>,
                   )}
                   {Array.from({ length: leadingDays }, (_, index) => (
-                    <i
-                      className={[
-                        index % 7 === 0 ? "week-start" : "",
-                        index % 7 >= 5 ? "weekend" : "",
-                        `weekday-${index % 7}`,
-                        Math.floor(index / 7) % 2 === 1
-                          ? "alternate-week"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      key={`empty-${index}`}
-                    />
+                    <i key={`empty-${index}`} />
                   ))}
                   {Array.from({ length: daysInViewMonth }, (_, index) => {
                     const day = index + 1;
-                    const gridIndex = leadingDays + index;
                     const dayKey = calendarDateKey(
                       calendarYear,
                       calendarMonth,
@@ -4846,11 +3975,6 @@ export default function Home() {
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
                     );
-                    const daySticker = dayStickers.find(
-                      (sticker) =>
-                        sticker.id === dayStickerHistory[dayKey],
-                    );
-                    const dayPlannerNote = calendarDayNotes[dayKey];
                     const dayComplete = completedDays[dayKey] === true;
                     const dayMissed = dayKey < todayKey && !dayComplete;
                     return (
@@ -4860,50 +3984,15 @@ export default function Home() {
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",
-                          daySticker ? "has-life-sticker" : "",
-                          dayPlannerNote ? "has-planner-note" : "",
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
-                          dayKey < todayKey ? "past-day" : "",
                           dayKey === todayKey ? "today" : "",
-                          gridIndex % 7 === 0 ? "week-start" : "",
-                          gridIndex % 7 >= 5 ? "weekend" : "",
-                          `weekday-${gridIndex % 7}`,
-                          Math.floor(gridIndex / 7) % 2 === 1
-                            ? "alternate-week"
-                            : "",
-                          day === 1 ? "month-first-day" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => selectCalendarDay(dayKey)}
-                        onContextMenu={(event) => event.preventDefault()}
-                        onPointerDown={() => startDayLongPress(dayKey)}
-                        onPointerLeave={clearDayLongPress}
-                        onPointerCancel={clearDayLongPress}
-                        onPointerUp={clearDayLongPress}
+                        onClick={() => setSelectedCalendarDate(dayKey)}
                       >
                         <span className="calendar-day-number">{day}</span>
-                        {calendarExpanded && dayPlannerNote && (
-                          <span
-                            className={[
-                              "calendar-grid-note",
-                              dayPlannerNote.color,
-                              dayPlannerNote.style,
-                            ].join(" ")}
-                            title={dayPlannerNote.text}
-                          >
-                            {dayPlannerNote.text}
-                          </span>
-                        )}
-                        {daySticker && (
-                          <i
-                            className={`calendar-life-sticker ${daySticker.tint}`}
-                            title={daySticker.label}
-                          >
-                            {daySticker.icon}
-                          </i>
-                        )}
                         {dayMood && (
                           <i
                             className={`calendar-mood-sticker ${dayMood.color}`}
@@ -4912,23 +4001,23 @@ export default function Home() {
                             {dayMood.face}
                           </i>
                         )}
-                        {calendarExpanded && dayEvents.length > 0 ? (
-                          <span className="calendar-event-preview-list">
-                            {dayEvents.slice(0, 3).map((event) => (
-                              <span
-                                className={`calendar-event-preview ${event.color}`}
-                                key={event.id}
-                                title={`${event.title} · ${eventTimeLabel(event)}`}
-                              >
-                                <b>{event.title}</b>
-                                <small>{eventTimeLabel(event)}</small>
-                              </span>
-                            ))}
-                            {dayEvents.length > 3 && (
-                              <em>+{dayEvents.length - 3} more</em>
-                            )}
-                          </span>
-                        ) : dayEvents.length > 0 && (
+                        {(dayComplete || dayMissed) && (
+                          <i
+                            className={
+                              dayComplete
+                                ? "calendar-day-status complete"
+                                : "calendar-day-status missed"
+                            }
+                            title={
+                              dayComplete
+                                ? "Everything completed"
+                                : "Day not marked complete"
+                            }
+                          >
+                            {dayComplete ? "✓" : "×"}
+                          </i>
+                        )}
+                        {dayEvents.length > 0 && (
                           <>
                             <span className="calendar-event-dots">
                               {dayEvents.slice(0, 3).map((event) => (
@@ -4948,60 +4037,8 @@ export default function Home() {
                       </button>
                     );
                   })}
-                  {Array.from(
-                    {
-                      length:
-                        calendarWeekRows * 7 -
-                        leadingDays -
-                        daysInViewMonth,
-                    },
-                    (_, index) => (
-                      <i
-                        className="calendar-adjacent-day"
-                        key={`next-${index + 1}`}
-                        aria-hidden="true"
-                      >
-                        <span>{index + 1}</span>
-                      </i>
-                    ),
-                  )}
                   </div>
                 </div>
-                {calendarExpanded && (
-                  <section className="calendar-expanded-selected-summary">
-                    <div>
-                      <p className="tiny-label">SELECTED DAY</p>
-                      <h3>{readableDate(selectedCalendarDate)}</h3>
-                    </div>
-                    <button
-                      className="calendar-expanded-add-event"
-                      type="button"
-                      onClick={() => openNewEvent()}
-                    >
-                      <span aria-hidden="true">＋</span>
-                      Add event
-                    </button>
-                    <button
-                      className="calendar-expanded-event-count"
-                      type="button"
-                      onClick={() => setDayPeekDate(selectedCalendarDate)}
-                    >
-                      <span aria-hidden="true">
-                        {selectedDateMood?.face ?? "☁"}
-                      </span>
-                      <strong>
-                        {selectedDateEvents.length === 0
-                          ? "No events yet"
-                          : `You have ${selectedDateEvents.length} ${
-                              selectedDateEvents.length === 1
-                                ? "event"
-                                : "events"
-                            }`}
-                      </strong>
-                      <i aria-hidden="true">⌄</i>
-                    </button>
-                  </section>
-                )}
                 <div className="selected-day-panel">
                   <div className="selected-day-heading">
                     <div>
@@ -5113,24 +4150,11 @@ export default function Home() {
                           className={`event-chip ${calendarEvent.color}`}
                           key={calendarEvent.id}
                         >
-                          <span className="event-chip-times">
-                            {calendarEvent.allDay ? (
-                              <strong>ALL DAY</strong>
-                            ) : (
-                              <>
-                                <strong>
-                                  {formatTimeWithPeriod(calendarEvent.time)}
-                                </strong>
-                                <strong>
-                                  {formatTimeWithPeriod(calendarEvent.endTime)}
-                                </strong>
-                              </>
-                            )}
-                          </span>
+                          <span>{eventTimeLabel(calendarEvent)}</span>
                           <button
                             className="event-chip-main"
                             onClick={() => openEventEditor(calendarEvent)}
-                            aria-label={`Open ${calendarEvent.title}`}
+                            aria-label={`Edit ${calendarEvent.title}`}
                           >
                             <strong>{calendarEvent.title}</strong>
                             <small>
@@ -5145,10 +4169,13 @@ export default function Home() {
                           </button>
                           <button
                             className="event-chip-delete"
-                            onClick={() => setEventDeleteRequest({
-                              event: calendarEvent,
-                              occurrenceDate: selectedCalendarDate,
-                            })}
+                            onClick={() =>
+                              setCalendarEvents((current) =>
+                                current.filter(
+                                  (item) => item.id !== calendarEvent.id,
+                                ),
+                              )
+                            }
                             aria-label={`Delete ${calendarEvent.title}`}
                           >
                             ×
@@ -5165,196 +4192,6 @@ export default function Home() {
                   <span>＋</span>
                   Add something to {readableDate(selectedCalendarDate)}
                 </button>
-                {dayPeekDate && (
-                  <div
-                    className="calendar-day-peek-backdrop"
-                    role="presentation"
-                    onClick={() => setDayPeekDate(null)}
-                  >
-                    <section
-                      className="calendar-day-peek-card"
-                      role="dialog"
-                      aria-modal="true"
-                      aria-label={`Plans and stickers for ${readableDate(dayPeekDate)}`}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <header>
-                        <div>
-                          <p className="tiny-label">DAY AT A GLANCE</p>
-                          <h3>{readableDate(dayPeekDate)}</h3>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setDayPeekDate(null)}
-                          aria-label="Close day details"
-                        >
-                          ×
-                        </button>
-                      </header>
-
-                      <div className="calendar-day-peek-events">
-                        {dayPeekEvents.length === 0 ? (
-                          <p className="calendar-day-peek-empty">
-                            No events yet—this day is still open.
-                          </p>
-                        ) : (
-                          dayPeekEvents.map((calendarEvent) => (
-                            <button
-                              className={`calendar-day-peek-event ${calendarEvent.color}`}
-                              key={calendarEvent.id}
-                              type="button"
-                              onClick={() => {
-                                setDayPeekDate(null);
-                                setSelectedEventDetail(calendarEvent);
-                                setSelectedEventOccurrenceDate(dayPeekDate);
-                                setEventCopyDate(dayPeekDate);
-                              }}
-                            >
-                              <span>
-                                {calendarEvent.allDay
-                                  ? "ALL DAY"
-                                  : formatTimeWithPeriod(calendarEvent.time)}
-                              </span>
-                              <strong>{calendarEvent.title}</strong>
-                              <small>
-                                {calendarEvent.allDay
-                                  ? calendarEvent.calendar ?? "Personal"
-                                  : `${formatTimeWithPeriod(calendarEvent.time)} – ${formatTimeWithPeriod(calendarEvent.endTime)}`}
-                              </small>
-                            </button>
-                          ))
-                        )}
-                      </div>
-
-                      <div className="calendar-sticker-picker">
-                        <div>
-                          <p className="tiny-label">A LITTLE STICKER</p>
-                          <strong>What did this day hold?</strong>
-                        </div>
-                        <div className="calendar-sticker-options">
-                          {dayStickers.map((sticker) => (
-                            <button
-                              className={[
-                                sticker.tint,
-                                dayPeekSticker?.id === sticker.id
-                                  ? "selected"
-                                  : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
-                              key={sticker.id}
-                              type="button"
-                              onClick={() =>
-                                setDaySticker(dayPeekDate, sticker.id)
-                              }
-                              aria-pressed={dayPeekSticker?.id === sticker.id}
-                              title={sticker.label}
-                            >
-                              <span aria-hidden="true">{sticker.icon}</span>
-                              <small>{sticker.label}</small>
-                            </button>
-                          ))}
-                        </div>
-                        {dayPeekSticker && (
-                          <button
-                            className="calendar-sticker-clear"
-                            type="button"
-                            onClick={() => clearDaySticker(dayPeekDate)}
-                          >
-                            Remove sticker
-                          </button>
-                        )}
-                      </div>
-                      <div className="calendar-day-note-editor">
-                        <div>
-                          <p className="tiny-label">WRITE ON THIS SQUARE</p>
-                          <strong>A tiny note in your calendar</strong>
-                        </div>
-                        <textarea
-                          value={calendarDayNoteDraft}
-                          maxLength={90}
-                          onChange={(event) =>
-                            setCalendarDayNoteDraft(event.target.value)
-                          }
-                          placeholder="Coffee with Ana, exam reminder, a tiny thought…"
-                          aria-label="Note written inside this calendar day"
-                        />
-                        <div className="calendar-note-controls">
-                          <div
-                            className="calendar-note-colors"
-                            aria-label="Note color"
-                          >
-                            {(
-                              [
-                                "pink",
-                                "blue",
-                                "mint",
-                                "yellow",
-                                "lilac",
-                              ] as PlannerNoteColor[]
-                            ).map((color) => (
-                              <button
-                                type="button"
-                                className={
-                                  calendarDayNoteColor === color ? "active" : ""
-                                }
-                                data-color={color}
-                                key={color}
-                                onClick={() => setCalendarDayNoteColor(color)}
-                                aria-label={`${color} note`}
-                                aria-pressed={calendarDayNoteColor === color}
-                              />
-                            ))}
-                          </div>
-                          <div
-                            className="calendar-note-styles"
-                            aria-label="Note style"
-                          >
-                            <button
-                              type="button"
-                              className={
-                                calendarDayNoteStyle === "handwritten"
-                                  ? "active"
-                                  : ""
-                              }
-                              onClick={() =>
-                                setCalendarDayNoteStyle("handwritten")
-                              }
-                            >
-                              handwritten
-                            </button>
-                            <button
-                              type="button"
-                              className={
-                                calendarDayNoteStyle === "sticky"
-                                  ? "active"
-                                  : ""
-                              }
-                              onClick={() => setCalendarDayNoteStyle("sticky")}
-                            >
-                              little label
-                            </button>
-                          </div>
-                        </div>
-                        <button
-                          className="calendar-note-save"
-                          type="button"
-                          onClick={() => saveCalendarDayNote(dayPeekDate)}
-                          disabled={
-                            !calendarDayNoteDraft.trim() &&
-                            !calendarDayNotes[dayPeekDate]
-                          }
-                        >
-                          {calendarDayNoteDraft.trim()
-                            ? "Keep this note"
-                            : calendarDayNotes[dayPeekDate]
-                              ? "Remove note"
-                              : "Nothing to save yet"}
-                        </button>
-                      </div>
-                    </section>
-                  </div>
-                )}
               </>
             )}
           </section>
@@ -5455,7 +4292,7 @@ export default function Home() {
                               <span aria-hidden="true">{entry.feeling}</span>
                               <div>
                                 <small>{entry.date}</small>
-                                <p>{firstSentencePreview(entry.text)}</p>
+                                <p>{notePreview(entry.text, 88)}</p>
                               </div>
                             </button>
                             <button
@@ -5697,10 +4534,7 @@ export default function Home() {
                 <h2>{selectedEventDetail.title}</h2>
               </div>
               <button
-                onClick={() => {
-                  setSelectedEventDetail(null);
-                  setSelectedEventOccurrenceDate(null);
-                }}
+                onClick={() => setSelectedEventDetail(null)}
                 aria-label="Close event details"
               >
                 ×
@@ -5712,7 +4546,7 @@ export default function Home() {
               <div>
                 <strong>{eventTimeLabel(selectedEventDetail)}</strong>
                 <small>
-                  {readableDate(selectedEventOccurrenceDate ?? selectedEventDetail.date)}
+                  {readableDate(selectedEventDetail.date)}
                   {selectedEventDetail.endDate &&
                   selectedEventDetail.endDate !== selectedEventDetail.date
                     ? ` → ${readableDate(selectedEventDetail.endDate)}`
@@ -5860,24 +4694,6 @@ export default function Home() {
               </a>
             )}
 
-            <section className="event-detail-copy">
-              <label>
-                <span>♡ Copy this event to another day</span>
-                <input
-                  type="date"
-                  value={eventCopyDate}
-                  onChange={(event) => setEventCopyDate(event.target.value)}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => copyCalendarEvent(selectedEventDetail, eventCopyDate)}
-                disabled={!eventCopyDate}
-              >
-                Copy event
-              </button>
-            </section>
-
             <button
               className="event-detail-edit"
               onClick={() => {
@@ -5894,69 +4710,6 @@ export default function Home() {
             >
               ✎ Edit this event
             </button>
-            <button
-              type="button"
-              className="event-detail-delete"
-              onClick={() => setEventDeleteRequest({
-                event: selectedEventDetail,
-                occurrenceDate: selectedEventOccurrenceDate ?? selectedEventDetail.date,
-              })}
-            >
-              Delete event…
-            </button>
-          </section>
-        </div>
-      )}
-
-      {eventDeleteRequest && (
-        <div className="modal-backdrop event-delete-backdrop" role="presentation">
-          <section
-            className="event-delete-dialog"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label={`Delete ${eventDeleteRequest.event.title}`}
-          >
-            <span className="event-delete-face" aria-hidden="true">(｡•́︿•̀｡)</span>
-            <p className="tiny-label">REMOVE FROM YOUR CALENDAR</p>
-            <h2>{eventDeleteRequest.event.title}</h2>
-            <p>
-              {(eventDeleteRequest.event.repeat ?? "Never") === "Never"
-                ? "Delete this event? This cannot be undone."
-                : "This event repeats. Choose how much of the series to remove."}
-            </p>
-            <div className="event-delete-actions">
-              {(eventDeleteRequest.event.repeat ?? "Never") === "Never" ? (
-                <button
-                  className="danger"
-                  onClick={() => deleteCalendarOccurrence(
-                    eventDeleteRequest.event,
-                    eventDeleteRequest.occurrenceDate,
-                    "all",
-                  )}
-                >
-                  Delete event
-                </button>
-              ) : (
-                <>
-                  <button onClick={() => deleteCalendarOccurrence(
-                    eventDeleteRequest.event,
-                    eventDeleteRequest.occurrenceDate,
-                    "only",
-                  )}>Only this event</button>
-                  <button onClick={() => deleteCalendarOccurrence(
-                    eventDeleteRequest.event,
-                    eventDeleteRequest.occurrenceDate,
-                    "future",
-                  )}>This and future events</button>
-                  <button className="danger" onClick={() => deleteCalendarOccurrence(
-                    eventDeleteRequest.event,
-                    eventDeleteRequest.occurrenceDate,
-                    "all",
-                  )}>All matching events</button>
-                </>
-              )}
-              <button className="cancel" onClick={() => setEventDeleteRequest(null)}>Keep it</button>
-            </div>
           </section>
         </div>
       )}
@@ -6135,7 +4888,7 @@ export default function Home() {
                 ))}
               </div>
               <p className="theme-credit">
-                Theme stickers use artwork by{" "}
+                Hand-drawn theme stickers by{" "}
                 <a
                   href="https://openmoji.org/"
                   target="_blank"
@@ -6252,74 +5005,6 @@ export default function Home() {
                 the same little world follows you to your tablet.
               </p>
             </div>
-          </section>
-        </div>
-      )}
-
-      {reminderEditorOpen && (
-        <div className="modal-backdrop reminder-editor-backdrop" role="presentation">
-          <section
-            className="class-editor-modal reminder-editor-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={editingReminderId === null ? "Add reminder" : "Edit reminder"}
-          >
-            <header>
-              <div>
-                <p className="tiny-label">DAILY LITTLE THING</p>
-                <h2>{editingReminderId === null ? "Add a reminder" : "Edit this reminder"}</h2>
-              </div>
-              <button onClick={() => setReminderEditorOpen(false)} aria-label="Close reminder editor">×</button>
-            </header>
-            <label>
-              Reminder
-              <input
-                value={reminderDraft.title}
-                onChange={(event) => setReminderDraft((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Drink a little water"
-                autoFocus
-              />
-            </label>
-            <label>
-              Gentle note
-              <input
-                value={reminderDraft.detail}
-                onChange={(event) => setReminderDraft((current) => ({ ...current, detail: event.target.value }))}
-                placeholder="Your first glass of the day"
-              />
-            </label>
-            <div className="class-editor-row">
-              <label>
-                Emoji
-                <input
-                  value={reminderDraft.icon}
-                  onChange={(event) => setReminderDraft((current) => ({ ...current, icon: event.target.value }))}
-                  maxLength={8}
-                  aria-label="Reminder emoji"
-                />
-              </label>
-              <fieldset>
-                <legend>Color</legend>
-                {["blue", "yellow", "lilac", "pink", "mint"].map((tint) => (
-                  <button
-                    type="button"
-                    key={tint}
-                    className={`reminder-tint ${tint} ${reminderDraft.tint === tint ? "active" : ""}`}
-                    onClick={() => setReminderDraft((current) => ({ ...current, tint }))}
-                    aria-label={`Use ${tint}`}
-                    aria-pressed={reminderDraft.tint === tint}
-                  />
-                ))}
-              </fieldset>
-            </div>
-            <footer>
-              {editingReminderId !== null ? (
-                <button className="delete-class" onClick={deleteReminder}>Delete reminder</button>
-              ) : <span />}
-              <span />
-              <button className="cancel-class" onClick={() => setReminderEditorOpen(false)}>Cancel</button>
-              <button className="save-class" onClick={saveReminder} disabled={!reminderDraft.title.trim()}>Save reminder</button>
-            </footer>
           </section>
         </div>
       )}
@@ -6520,8 +5205,6 @@ function TodayScreen({
   pending,
   completed,
   completeReminder,
-  editReminder,
-  addReminder,
   restoreReminder,
   openCalendar,
   selectedDate,
@@ -6535,13 +5218,11 @@ function TodayScreen({
   dayCharmLabel,
   dayCharmText,
   showDayCharm,
-  dayPart,
+  isNight,
 }: {
   pending: Reminder[];
   completed: Reminder[];
   completeReminder: (id: number) => void;
-  editReminder: (reminder: Reminder) => void;
-  addReminder: () => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
   selectedDate: string;
@@ -6555,7 +5236,7 @@ function TodayScreen({
   dayCharmLabel: string;
   dayCharmText: string;
   showDayCharm: boolean;
-  dayPart: DayPart;
+  isNight: boolean;
 }) {
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
@@ -6578,20 +5259,16 @@ function TodayScreen({
           </p>
           <h2>
             {selectedIsToday
-              ? dayPart === "evening"
+              ? isNight
                 ? "Good evening, lovely."
-                : dayPart === "afternoon"
-                  ? "Good afternoon, lovely."
-                  : "Good morning, lovely."
+                : "Good morning, lovely."
               : `A little look at ${selectedWeekday}.`}
           </h2>
           <p className="soft-copy">
             {selectedIsToday
-              ? dayPart === "evening"
+              ? isNight
                 ? "You did enough today. Let the evening soften around you."
-                : dayPart === "afternoon"
-                  ? "There is still time to move gently through the day."
-                  : "Let’s make today feel a little lighter."
+                : "Let’s make today feel a little lighter."
               : "Tap today whenever you want to come back."}
           </p>
         </div>
@@ -6599,39 +5276,38 @@ function TodayScreen({
           <div
             className={[
               "day-charm",
-              "curved-copy",
-              dayCharmText.length >= 17
-                ? "long-copy"
-                : dayCharmText.length >= 14
-                  ? "medium-copy"
-                  : "short-copy",
+              dayCharmText === "you may rest" ? "curved-copy" : "",
             ]
               .filter(Boolean)
               .join(" ")}
             aria-label={`${dayCharmLabel}: ${dayCharmText}`}
           >
             <img src={dayCharm} alt="" />
-            <svg
-              className="day-charm-curve"
-              viewBox="0 0 100 100"
-              aria-hidden="true"
-            >
-              <defs>
-                <path
-                  id="day-charm-message-curve"
-                  d="M 12 67 Q 50 91 88 67"
-                />
-              </defs>
-              <text>
-                <textPath
-                  href="#day-charm-message-curve"
-                  startOffset="50%"
-                  textAnchor="middle"
-                >
-                  {dayCharmText.toUpperCase()}
-                </textPath>
-              </text>
-            </svg>
+            {dayCharmText === "you may rest" ? (
+              <svg
+                className="day-charm-curve"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+              >
+                <defs>
+                  <path
+                    id="you-may-rest-curve"
+                    d="M 15 70 Q 50 94 85 70"
+                  />
+                </defs>
+                <text>
+                  <textPath
+                    href="#you-may-rest-curve"
+                    startOffset="50%"
+                    textAnchor="middle"
+                  >
+                    YOU MAY REST
+                  </textPath>
+                </text>
+              </svg>
+            ) : (
+              <span>{dayCharmText}</span>
+            )}
           </div>
         )}
       </section>
@@ -6715,19 +5391,9 @@ function TodayScreen({
               <p className="tiny-label">LITTLE REMINDERS</p>
               <h3>Take care of you</h3>
             </div>
-            <div className="reminder-heading-actions">
-              <button
-                type="button"
-                className="reminder-add-button"
-                onClick={addReminder}
-                aria-label="Add a daily reminder"
-              >
-                ＋
-              </button>
-              <span className="progress-pill">
-                {completed.length}/{pending.length + completed.length}
-              </span>
-            </div>
+            <span className="progress-pill">
+              {completed.length}/{reminders.length}
+            </span>
           </div>
           <div className="reminder-card">
             {pending.length === 0 ? (
@@ -6738,40 +5404,25 @@ function TodayScreen({
               </div>
             ) : (
               pending.map((item) => (
-                <div
+                <button
                   className={`reminder-row ${item.tint}`}
                   key={item.id}
+                  onClick={() => completeReminder(item.id)}
                 >
-                  <button
-                    type="button"
-                    className="reminder-edit-trigger"
-                    onClick={() => editReminder(item)}
-                    aria-label={`Edit ${item.title}`}
-                  >
-                    <span className="reminder-icon">{item.icon}</span>
-                    <span className="reminder-copy">
-                      <strong>{item.title}</strong>
-                      <small>{item.detail}</small>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="check-circle"
-                    onClick={() => completeReminder(item.id)}
-                    aria-label={`Complete ${item.title}`}
-                  >
-                    ✓
-                  </button>
-                </div>
+                  <span className="reminder-icon">{item.icon}</span>
+                  <span className="reminder-copy">
+                    <strong>{item.title}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                  <span className="check-circle">✓</span>
+                </button>
               ))
             )}
           </div>
           <div className="completed-wrap">
             <div className="completed-history-line">
               <p className="completed-title">COMPLETED TODAY</p>
-              <span>
-                Yesterday {yesterdayDoneCount}/{pending.length + completed.length}
-              </span>
+              <span>Yesterday {yesterdayDoneCount}/{reminders.length}</span>
             </div>
             {completed.length === 0 ? (
               <p className="empty-completed">
