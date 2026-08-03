@@ -793,6 +793,14 @@ function eventTimeLabel(event: CalendarEvent) {
   return event.time;
 }
 
+function eventStartTimeLabel(event: CalendarEvent) {
+  if (event.allDay) return "All day";
+  const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return event.time;
+  const hour = Number(match[1]);
+  return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 function eventRepeatLabel(event: CalendarEvent) {
   if (!event.repeat || event.repeat === "Never") return "Does not repeat";
   if (event.repeat !== "Custom") return event.repeat;
@@ -4079,12 +4087,12 @@ export default function Home() {
                           <span className="calendar-cell-events">
                             {dayEvents.slice(0, 3).map((calendarEvent) => (
                               <span
-                                className="calendar-cell-event"
+                                className={`calendar-cell-event ${calendarEvent.color}`}
                                 key={calendarEvent.id}
                                 title={calendarEvent.title}
                               >
-                                <b className={`event-dot ${calendarEvent.color}`} />
-                                <span>{calendarEvent.title}</span>
+                                <strong>{calendarEvent.title}</strong>
+                                <small>{eventStartTimeLabel(calendarEvent)}</small>
                               </span>
                             ))}
                             {dayEvents.length > 3 && (

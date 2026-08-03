@@ -121,7 +121,9 @@ test("keeps compact calendar and offers a distinct extended month view", () => {
   assert.match(pageSource, /outside-month/);
   assert.match(pageSource, /dayEvents\.slice\(0, 3\)/);
   assert.match(pageSource, /calendar-cell-events/);
+  assert.match(pageSource, /eventStartTimeLabel\(calendarEvent\)/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
+  assert.match(cssSource, /min-width: 920px/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {
