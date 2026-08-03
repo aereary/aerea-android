@@ -3169,12 +3169,21 @@ p {
 }
 
 .calendar-expanded .month-grid {
-  gap: 10px;
+  gap: 12px;
 }
 
-.calendar-expanded .month-grid > i,
 .calendar-expanded .month-grid > button {
-  min-height: clamp(108px, 14vh, 178px);
+  aspect-ratio: 0.9;
+  background: var(--paper);
+  border: 2px solid color-mix(in srgb, var(--line) 82%, white);
+  border-radius: 22px;
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--blue) 6%, transparent);
+  min-height: 0;
+}
+
+.calendar-expanded .month-grid > i {
+  aspect-ratio: 0.9;
+  min-height: 0;
 }
 
 .month-grid > button.outside-month {
@@ -4660,12 +4669,18 @@ p {
   }
 
   .calendar-expanded .month-grid {
-    gap: 4px;
+    gap: 5px;
   }
 
-  .calendar-expanded .month-grid > i,
   .calendar-expanded .month-grid > button {
-    min-height: 78px;
+    aspect-ratio: 0.82;
+    border-radius: 12px;
+    min-height: 0;
+  }
+
+  .calendar-expanded .month-grid > i {
+    aspect-ratio: 0.82;
+    min-height: 0;
   }
 
   .calendar-month-heading h2 {
