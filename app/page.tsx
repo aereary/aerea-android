@@ -4283,17 +4283,10 @@ export default function Home() {
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onPointerDown={() => beginCalendarLongPress(dayKey)}
-                        onPointerUp={cancelCalendarLongPress}
-                        onPointerCancel={cancelCalendarLongPress}
-                        onPointerLeave={cancelCalendarLongPress}
                         onContextMenu={(event) => event.preventDefault()}
                         onClick={() => {
-                          if (calendarLongPressedRef.current) {
-                            calendarLongPressedRef.current = false;
-                            return;
-                          }
                           setSelectedCalendarDate(dayKey);
+                          setDaySummaryDate(dayKey);
                         }}
                       >
                         <span className="calendar-day-number">{day}</span>
@@ -4510,35 +4503,42 @@ export default function Home() {
         const summaryEvents = calendarEvents.filter((event) =>
           eventOccursOn(event, daySummaryDate),
         );
+        const summaryMood = moods.find((mood) => mood.label === moodHistory[daySummaryDate]);
         return (
-          <div className="modal-backdrop day-summary-backdrop" role="presentation">
+          <div className="modal-backdrop day-summary-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setDaySummaryDate(null); }}>
             <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
+              <span className="day-summary-tape" aria-hidden="true" />
               <header>
                 <div>
-                  <p className="tiny-label">YOUR DAY AT A GLANCE</p>
+                  <p className="tiny-label">A LITTLE NOTE FOR</p>
                   <h2>{readableDate(daySummaryDate)}</h2>
+                  <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
                 </div>
-                <button onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
+                <div className="day-summary-corner">
+                  {summaryMood && <span className={`selected-mood-sticker ${summaryMood.color}`}>{summaryMood.face}</span>}
+                  <button onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
+                </div>
               </header>
               {summaryEvents.length === 0 ? (
-                <div className="day-summary-empty"><span>☁</span><p>No plans yet. This space is all yours.</p></div>
+                <div className="day-summary-empty"><span>☁</span><strong>Nothing written here yet</strong><p>This little page is completely yours.</p></div>
               ) : (
                 <div className="day-summary-events">
                   {summaryEvents.map((event) => (
-                    <article className={`day-summary-event ${event.color}`} key={event.id}>
+                    <button className={`day-summary-event ${event.color}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
                       <div className="day-summary-event-heading">
                         <span>{event.memo ? "✎" : "♡"}</span>
                         <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
+                        <i aria-hidden="true">›</i>
                       </div>
                       {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
                       {!!event.todos?.length && (
                         <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
                       )}
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
-              <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>＋ Add something sweet</button>
+              <footer><span>♡ tap a plan to see everything</span><button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>＋ Add event</button></footer>
             </section>
           </div>
         );
