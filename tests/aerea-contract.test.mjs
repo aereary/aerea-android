@@ -121,7 +121,7 @@ test("opens saved notes fully and edits calendar rows directly", () => {
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
   assert.match(pageSource, /Daily schedule/);
-  assert.match(pageSource, /schedule-shell/);
+  assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
   assert.match(pageSource, /outside-month/);
@@ -129,17 +129,16 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /startScheduleSwipe/);
   assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /scheduleEventIcon/);
-  assert.match(pageSource, /schedule-event-extras/);
-  assert.match(pageSource, /schedule-brand-back/);
+  assert.match(pageSource, /agenda-v2-event-extras/);
+  assert.match(pageSource, /agenda-v2-brand/);
   assert.match(pageSource, /Cronograma/);
-  assert.match(pageSource, /schedule-now-line/);
-  assert.match(pageSource, /schedule-bottom-dock/);
+  assert.match(pageSource, /agenda-v2-now/);
+  assert.match(pageSource, /agenda-v2-nav/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
-  assert.match(cssSource, /\.schedule-timeline/);
-  assert.match(cssSource, /\.schedule-event/);
-  assert.match(cssSource, /\.schedule-event-category/);
-  assert.match(cssSource, /--schedule-highlight/);
-  assert.match(cssSource, /--agenda-accent:#6d56e8/);
+  assert.match(cssSource, /\.agenda-v2-timeline/);
+  assert.match(cssSource, /\.agenda-v2-event/);
+  assert.match(cssSource, /\.agenda-v2-event-category/);
+  assert.match(cssSource, /--v2-highlight/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 

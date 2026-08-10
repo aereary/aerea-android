@@ -4351,6 +4351,7 @@ export default function Home() {
               "calendar-modal",
               eventEditorOpen ? "calendar-event-mode" : "",
               calendarExpanded && !eventEditorOpen ? "calendar-expanded" : "",
+              calendarExpanded && !eventEditorOpen ? "agenda-v2-modal" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -4755,9 +4756,9 @@ export default function Home() {
             ) : (
               <>
                 {calendarExpanded ? (
-                  <header className="schedule-clean-topbar">
+                  <header className="agenda-v2-header">
                     <button
-                      className="schedule-brand-back"
+                      className="agenda-v2-brand"
                       type="button"
                       onClick={() => {
                         setCalendarExpanded(false);
@@ -4765,18 +4766,18 @@ export default function Home() {
                       }}
                       aria-label="Back to month"
                     >
-                      <span className="schedule-mini-mark" aria-hidden="true">♡</span>
+                      <span className="agenda-v2-brand-mark" aria-hidden="true">♡</span>
                       <span>
                         <small>MY LITTLE DAY</small>
                         <strong>aérea</strong>
                       </span>
                     </button>
-                    <button className="schedule-title-chip" type="button" onClick={goToScheduleToday}>
+                    <button className="agenda-v2-title" type="button" onClick={goToScheduleToday}>
                       <span aria-hidden="true">▣</span>
                       <strong>Cronograma</strong>
                     </button>
                     <button
-                      className="schedule-settings-button"
+                      className="agenda-v2-settings"
                       type="button"
                       onClick={() => setSettingsOpen(true)}
                       aria-label="Open settings"
@@ -4875,14 +4876,14 @@ export default function Home() {
                   )}
                 </div>
                 {calendarExpanded && (
-                  <div className="schedule-shell">
+                  <div className="agenda-v2">
                     <div
-                      className="schedule-mobile-date-card"
+                      className="agenda-v2-week"
                       onTouchStart={startScheduleSwipe}
                       onTouchEnd={finishScheduleSwipe}
                       aria-label="Week. Swipe left or right to change week."
                     >
-                      <div className="schedule-date-heading">
+                      <div className="agenda-v2-week-heading">
                         <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">‹</button>
                         <strong>
                           {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
@@ -4893,7 +4894,7 @@ export default function Home() {
                         </strong>
                         <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">›</button>
                       </div>
-                      <div className="schedule-mobile-days" aria-label="Choose a day">
+                      <div className="agenda-v2-days" aria-label="Choose a day">
                         {scheduleDays.map((date) => {
                           const dateKey = localDateKey(date);
                           return (
@@ -4910,34 +4911,18 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="schedule-selected-summary">
-                      <div>
-                        <p>{readableDate(selectedCalendarDate)}</p>
-                        <h3>
-                          {selectedCalendarDate === todayKey
-                            ? "Today"
-                            : dateFromKey(selectedCalendarDate).toLocaleDateString("en", { weekday: "long" })}
-                        </h3>
-                      </div>
-                      <small>
-                        {selectedDateEvents.length === 0
-                          ? "A clear day"
-                          : `${selectedDateEvents.length} ${selectedDateEvents.length === 1 ? "event" : "events"}`}
-                      </small>
-                    </div>
-
                     <div
-                      className={`schedule-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`}
+                      className={`agenda-v2-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`}
                     >
                       {scheduleHasAllDayEvents && (
                         <>
-                          <span className="schedule-all-day-label">ALL DAY</span>
-                          <div className="schedule-all-day-columns">
+                          <span className="agenda-v2-all-day-label">ALL DAY</span>
+                          <div className="agenda-v2-all-day-list">
                             <div className="selected">
                               {selectedScheduleAllDayEvents.slice(0, 2).map((event) => (
                                 <button
                                   key={event.id}
-                                  className={`schedule-all-day-event ${event.color}`}
+                                  className={`agenda-v2-all-day-event ${event.color}`}
                                   onClick={() => setSelectedEventDetail(event)}
                                 >
                                   {event.title}
@@ -4951,9 +4936,9 @@ export default function Home() {
                         </>
                       )}
 
-                      <div className="schedule-timeline-scroll" ref={scheduleTimelineScrollRef}>
-                        <div className="schedule-timeline">
-                          <div className="schedule-hour-labels" aria-hidden="true">
+                      <div className="agenda-v2-scroll" ref={scheduleTimelineScrollRef}>
+                        <div className="agenda-v2-timeline">
+                          <div className="agenda-v2-hours" aria-hidden="true">
                             {scheduleHours.map((hour) => (
                               <span key={hour} style={{ top: `${((hour - 6) / 18) * 100}%` }}>
                                 <b>{String(hour % 12 || 12).padStart(2, "0")}:00</b>
@@ -4961,10 +4946,10 @@ export default function Home() {
                               </span>
                             ))}
                           </div>
-                          <div className="schedule-day-columns">
+                          <div className="agenda-v2-day-wrap">
                             <div
                               className={[
-                                "schedule-day-column",
+                                "agenda-v2-day",
                                 "selected",
                                 selectedCalendarDate === todayKey ? "today" : "",
                               ].filter(Boolean).join(" ")}
@@ -4977,7 +4962,7 @@ export default function Home() {
                             >
                               {selectedCalendarDate === todayKey && currentScheduleMinute >= 6 * 60 && currentScheduleMinute <= 24 * 60 && (
                                 <span
-                                  className="schedule-now-line"
+                                  className="agenda-v2-now"
                                   style={{ top: `${((currentScheduleMinute - 6 * 60) / (18 * 60)) * 100}%` }}
                                 />
                               )}
@@ -4987,7 +4972,7 @@ export default function Home() {
                                 return (
                                   <button
                                     key={event.id}
-                                    className={`schedule-event ${event.color}`}
+                                    className={`agenda-v2-event ${event.color}`}
                                     style={{
                                       top: `${((visibleStart - 6 * 60) / (18 * 60)) * 100}%`,
                                       height: `${Math.max(3.8, ((visibleEnd - visibleStart) / (18 * 60)) * 100)}%`,
@@ -4999,15 +4984,15 @@ export default function Home() {
                                       setSelectedEventDetail(event);
                                     }}
                                   >
-                                    <span className="schedule-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
-                                    <span className="schedule-event-copy">
+                                    <span className="agenda-v2-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
+                                    <span className="agenda-v2-event-copy">
                                       <strong>{event.title}</strong>
                                       <small>
                                         {eventStartTimeLabel(event)}
                                         {event.endTime ? ` – ${eventEndTimeLabel(event)}` : ""}
                                       </small>
                                       {(event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location) && (
-                                        <span className="schedule-event-extras">
+                                        <span className="agenda-v2-event-extras">
                                           {(event.memo || event.note?.trim()) && (
                                             <span title={event.note || "Memo attached"}>
                                               ✎ {event.note?.trim() ? notePreview(event.note, 38) : "Memo"}
@@ -5024,7 +5009,7 @@ export default function Home() {
                                         </span>
                                       )}
                                     </span>
-                                    <span className="schedule-event-category">{event.calendar || "Personal"}</span>
+                                    <span className="agenda-v2-event-category">{event.calendar || "Personal"}</span>
                                   </button>
                                 );
                               })}
@@ -5033,7 +5018,7 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    <nav className="schedule-bottom-dock" aria-label="Main navigation">
+                    <nav className="agenda-v2-nav" aria-label="Main navigation">
                       {tabs.map((tab) => (
                         <button
                           key={tab.id}
