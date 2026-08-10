@@ -230,7 +230,100 @@ type PlannerPage = {
   affirmation: string;
   gratitude: string;
   notes: string;
+  inkData?: string;
 };
+
+function PlannerInkCanvas({
+  page,
+  onChange,
+}: {
+  page: PlannerPage;
+  onChange: (inkData: string) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const [tool, setTool] = useState<"pen" | "eraser">("pen");
+  const [color, setColor] = useState("#735d55");
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (!page.inkData) return;
+    const image = new Image();
+    image.onload = () => context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.src = page.inkData;
+  }, [page.id, page.inkData]);
+
+  const point = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+  };
+  const start = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event.pointerType === "touch") return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drawingRef.current = true;
+    lastPointRef.current = point(event);
+  };
+  const move = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!drawingRef.current || !lastPointRef.current) return;
+    const next = point(event);
+    const context = canvasRef.current?.getContext("2d");
+    if (!context) return;
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = tool === "eraser" ? 28 : Math.max(3, 4 * (event.pressure || .7));
+    context.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
+    context.strokeStyle = color;
+    context.beginPath();
+    context.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+    context.lineTo(next.x, next.y);
+    context.stroke();
+    context.restore();
+    lastPointRef.current = next;
+  };
+  const stop = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    lastPointRef.current = null;
+    const data = canvasRef.current?.toDataURL("image/png");
+    if (data) onChange(data);
+  };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    onChange("");
+  };
+
+  return (
+    <div className={`writeable-planner-page ${page.template}`}>
+      <div className="planner-paper-art" aria-hidden="true">
+        <div className="paper-title"><span>{page.template === "strawberry" ? "🍓 DAILY" : page.template === "cozy" ? "🎀 DAY" : "📚 STUDY"}</span><strong>PLANNER</strong><small>small steps · big progress ♡</small></div>
+        <div className="paper-date">DATE: ____ / ____ / ____</div>
+        <section className="paper-today"><h3>TODAY'S PLAN</h3>{Array.from({length:7},(_,i)=><i key={i}>□</i>)}</section>
+        <section className="paper-priority"><h3>TOP 3 PRIORITIES</h3>{Array.from({length:3},(_,i)=><i key={i}>{i+1}.</i>)}</section>
+        <section className="paper-schedule"><h3>SCHEDULE</h3>{["6 AM","8 AM","10 AM","12 PM","2 PM","4 PM","6 PM","8 PM"].map(time=><i key={time}>{time}</i>)}</section>
+        <section className="paper-todo"><h3>TO-DO LIST</h3>{Array.from({length:5},(_,i)=><i key={i}>♡</i>)}</section>
+        <section className="paper-water"><h3>WATER INTAKE</h3><p>♡ ♡ ♡ ♡ ♡ ♡ ♡ ♡</p></section>
+        <section className="paper-grateful"><h3>GRATITUDE</h3></section>
+        <section className="paper-notes"><h3>NOTES</h3></section>
+        <span className="paper-friend">{page.template === "strawberry" ? "🍓🌷" : page.template === "cozy" ? "🐻🐰" : "🌱✏️"}</span>
+      </div>
+      <canvas ref={canvasRef} width={1000} height={1414} onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} aria-label="Write freely on this planner page" />
+      <div className="planner-pencil-palette">
+        <button className={tool === "pen" ? "active" : ""} onClick={() => setTool("pen")}>✎</button>
+        <button className={tool === "eraser" ? "active" : ""} onClick={() => setTool("eraser")}>▱</button>
+        {["#735d55", "#d8879d", "#839d68", "#7289b0"].map(value => <button key={value} className="ink-color" style={{background:value}} onClick={() => { setColor(value); setTool("pen"); }} aria-label={`Ink ${value}`} />)}
+        <button onClick={clear} aria-label="Clear handwriting">⌫</button>
+      </div>
+    </div>
+  );
+}
 
 function makePlannerPage(template: PlannerPage["template"]): PlannerPage {
   return {
@@ -4479,20 +4572,12 @@ export default function Home() {
                   <aside className="planner-page-tabs">
                     {plannerPages.map((page) => <button key={page.id} className={page.id === activePage.id ? "active" : ""} onClick={() => setActivePlannerPageId(page.id)}><span>{page.template === "strawberry" ? "🍓" : page.template === "cozy" ? "🐰" : "✏️"}</span><strong>{page.title}</strong><small>{page.date}</small></button>)}
                   </aside>
-                  <article className={`planner-sheet ${activePage.template}`}>
-                    <div className="planner-sheet-title"><input value={activePage.title} onChange={(event) => updatePage({ title: event.target.value })} aria-label="Planner page title"/><input type="date" value={activePage.date} onChange={(event) => updatePage({ date: event.target.value })}/></div>
-                    <section className="planner-priorities"><h3>Top 3 priorities</h3>{activePage.priorities.map((value, index) => <label key={index}><span>{index + 1}</span><input value={value} onChange={(event) => { const priorities = [...activePage.priorities]; priorities[index] = event.target.value; updatePage({ priorities }); }}/></label>)}</section>
-                    <section className="planner-schedule"><h3>Schedule</h3>{activePage.schedule.map((value, index) => <label key={index}><span>{["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"][index]}</span><input value={value} onChange={(event) => { const schedule = [...activePage.schedule]; schedule[index] = event.target.value; updatePage({ schedule }); }}/></label>)}</section>
-                    <section className="planner-todos"><h3>To-do list</h3>{activePage.todos.map((value, index) => <label key={index}><span>♡</span><input value={value} onChange={(event) => { const todos = [...activePage.todos]; todos[index] = event.target.value; updatePage({ todos }); }}/></label>)}</section>
-                    <section className="planner-water"><h3>Water</h3><div>{activePage.water.map((filled, index) => <button key={index} className={filled ? "filled" : ""} onClick={() => { const water = [...activePage.water]; water[index] = !water[index]; updatePage({ water }); }}>♡</button>)}</div></section>
-                    <section className="planner-mood"><h3>Mood</h3><div>{["🌸", "😊", "😌", "😴", "🌧️"].map((mood) => <button key={mood} className={activePage.mood === mood ? "active" : ""} onClick={() => updatePage({ mood })}>{mood}</button>)}</div></section>
-                    <label className="planner-affirmation"><h3>Daily affirmation</h3><textarea value={activePage.affirmation} onChange={(event) => updatePage({ affirmation: event.target.value })}/></label>
-                    <label className="planner-gratitude"><h3>Gratitude</h3><textarea value={activePage.gratitude} onChange={(event) => updatePage({ gratitude: event.target.value })}/></label>
-                    <label className="planner-notes"><h3>Notes</h3><textarea value={activePage.notes} onChange={(event) => updatePage({ notes: event.target.value })}/></label>
+                  <div className="planner-page-stage">
+                    <PlannerInkCanvas page={activePage} onChange={(inkData) => updatePage({ inkData })} />
                     <button className="planner-delete" onClick={() => { if (!window.confirm("Delete this planner page?")) return; setPlannerPages((pages) => pages.filter((page) => page.id !== activePage.id)); setActivePlannerPageId(null); }}>Delete page</button>
-                  </article>
+                  </div>
                 </div>
-              ) : <div className="planner-empty"><span>🎀</span><h3>Choose a template to begin</h3><p>Every field saves automatically on this device.</p></div>}
+              ) : <div className="planner-empty"><span>🎀</span><h3>Choose a template to begin</h3><p>Then write directly on the page with your tablet pen.</p></div>}
             </section>
           </div>
         );
