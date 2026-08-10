@@ -122,7 +122,11 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /Cronograma/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
-  assert.match(pageSource, /agenda-v2-nav/);
+  assert.match(pageSource, /topbar agenda-v2-homebar/);
+  assert.match(pageSource, /bottom-nav agenda-v2-home-nav/);
+  assert.match(pageSource, /className=\{tab\.id === activeTab \? "nav-item active" : "nav-item"\}/);
+  assert.match(pageSource, /aria-label="Back to compact calendar"/);
+  assert.match(pageSource, />\s*Calendar\s*<\/button>/);
   assert.match(pageSource, /agenda-overlay-backdrop/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.agenda-v2-timeline/);

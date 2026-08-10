@@ -14533,12 +14533,17 @@ body {
   background:var(--app-backdrop)!important;
   border:0;
   border-radius:0;
-  grid-template-rows:84px minmax(0,1fr);
+  grid-template-rows:106px minmax(0,1fr);
   height:100dvh;
   max-height:100dvh;
   max-width:none;
   overflow:hidden;
   width:100vw;
+}
+
+/* The schedule deliberately reuses Home's real chrome instead of imitating it. */
+.agenda-v2-homebar {
+  width:100%;
 }
 
 .agenda-v3-scene {
@@ -14763,15 +14768,7 @@ body {
 }
 
 @media (max-width:720px) {
-  .calendar-modal.calendar-expanded.agenda-v2-modal { grid-template-rows:76px minmax(0,1fr); }
-  .agenda-v2-header {
-    gap:7px;
-    grid-template-columns:minmax(126px,1fr) auto 42px;
-    padding:10px 12px 6px;
-  }
-  .agenda-v2-brand { height:44px; }
-  .agenda-v2-title { height:40px; padding:0 12px; }
-  .agenda-v2-settings { height:40px; width:40px; }
+  .calendar-modal.calendar-expanded.agenda-v2-modal { grid-template-rows:93px minmax(0,1fr); }
   .agenda-v2 { gap:14px; padding:4px 12px 0; }
   .agenda-v2-week { flex-basis:116px; margin-inline:4px; padding:7px 8px 8px; }
   .agenda-v2-week-heading { margin-bottom:3px; }
@@ -14792,13 +14789,9 @@ body {
   .agenda-v2-event-copy > strong { font-size:10px; }
   .agenda-v2-event-copy > small { font-size:7px; }
   .agenda-v2-event-category { font-size:6px; max-width:57px; }
-  .agenda-v2-nav { width:calc(100% - 16px); }
 }
 
 @media (max-width:390px) {
-  .agenda-v2-title { font-size:10px; padding-inline:9px; }
-  .agenda-v2-title strong { font-size:10px; }
-  .agenda-v2-calendar-icon { height:14px; width:14px; }
   .agenda-v2-event:not(.is-compact):not(.is-overlap) { grid-template-columns:30px minmax(0,1fr); }
   .agenda-v2-event:not(.is-compact):not(.is-overlap) .agenda-v2-event-category { display:none; }
 }

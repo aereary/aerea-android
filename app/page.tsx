@@ -4379,16 +4379,42 @@ export default function Home() {
                         </>
                       )}
                     </div>
-                    <header className="agenda-v2-header">
-                      <button className="agenda-v2-brand" type="button" onClick={() => setCalendarExpanded(false)} aria-label="Back to compact month">
-                        <span className="agenda-v2-brand-mark" aria-hidden="true">♡</span>
-                        <span><small>MY LITTLE DAY</small><strong>aérea</strong></span>
-                      </button>
-                      <button className="agenda-v2-title" type="button" onClick={goToScheduleToday}>
-                        <span className="agenda-v2-calendar-icon" aria-hidden="true" />
-                        <strong>Cronograma</strong>
-                      </button>
-                      <button className="agenda-v2-settings" type="button" onClick={() => setSettingsOpen(true)} aria-label="Open settings">⚙</button>
+                    <header className="topbar agenda-v2-homebar">
+                      <div className="brand-wrap">
+                        <span className="brand-mark profile-mark">
+                          {profilePhoto ? (
+                            <img src={profilePhoto} alt="" />
+                          ) : (
+                            <span aria-hidden="true">♡</span>
+                          )}
+                        </span>
+                        <span>
+                          <span className="eyebrow">MY LITTLE DAY</span>
+                          <strong className="wordmark">aérea</strong>
+                        </span>
+                      </div>
+                      <div className="header-actions">
+                        <button
+                          className="calendar-button"
+                          type="button"
+                          onClick={() => {
+                            setMonthPickerOpen(false);
+                            setCalendarExpanded(false);
+                          }}
+                          aria-label="Back to compact calendar"
+                        >
+                          <span className="calendar-glyph" aria-hidden="true" />
+                          Calendar
+                        </button>
+                        <button
+                          className="avatar-button"
+                          type="button"
+                          onClick={() => setSettingsOpen(true)}
+                          aria-label="Open appearance settings"
+                        >
+                          <span>⚙</span>
+                        </button>
+                      </div>
                     </header>
                   </>
                 )}
@@ -4657,11 +4683,11 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    <nav className="agenda-v2-nav" aria-label="Main navigation">
+                    <nav className="bottom-nav agenda-v2-home-nav" aria-label="Primary navigation">
                       {tabs.map((tab) => (
                         <button
                           key={tab.id}
-                          className={tab.id === activeTab ? "active" : ""}
+                          className={tab.id === activeTab ? "nav-item active" : "nav-item"}
                           type="button"
                           onClick={() => {
                             setCalendarExpanded(false);
