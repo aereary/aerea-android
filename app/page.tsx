@@ -1038,7 +1038,7 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
-  const [scheduleDayCount, setScheduleDayCount] = useState<5 | 7>(5);
+  const [scheduleDayCount, setScheduleDayCount] = useState<5 | 7>(7);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
@@ -4700,7 +4700,11 @@ export default function Home() {
                     >
                       ←
                     </button>
-                    <p>MY SCHEDULE</p>
+                    <p>
+                      {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
+                        month: "long",
+                      })}
+                    </p>
                     <div>
                       <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◎</button>
                       <button
@@ -4794,9 +4798,9 @@ export default function Home() {
                       type="button"
                       aria-pressed={false}
                       onClick={() => {
-                        const weekdays = scheduleDatesFor(selectedCalendarDate, 5);
-                        if (!weekdays.some((date) => localDateKey(date) === selectedCalendarDate)) {
-                          setSelectedCalendarDate(localDateKey(weekdays[0]));
+                        const visibleDates = scheduleDatesFor(selectedCalendarDate, scheduleDayCount);
+                        if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) {
+                          setSelectedCalendarDate(localDateKey(visibleDates[0]));
                         }
                         setCalendarExpanded(true);
                       }}
@@ -4834,20 +4838,38 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="schedule-mobile-days" aria-label="Choose a day">
-                      {scheduleDays.map((date) => {
-                        const dateKey = localDateKey(date);
-                        return (
-                          <button
-                            key={dateKey}
-                            className={selectedCalendarDate === dateKey ? "selected" : ""}
-                            onClick={() => setSelectedCalendarDate(dateKey)}
-                          >
-                            <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
-                            <strong>{date.getDate()}</strong>
-                          </button>
-                        );
-                      })}
+                    <div className="schedule-mobile-date-card">
+                      <button
+                        className="schedule-mobile-week-shift"
+                        type="button"
+                        onClick={() => shiftScheduleWeek(-1)}
+                        aria-label="Previous week"
+                      >
+                        ‹
+                      </button>
+                      <div className="schedule-mobile-days" aria-label="Choose a day">
+                        {scheduleDays.map((date) => {
+                          const dateKey = localDateKey(date);
+                          return (
+                            <button
+                              key={dateKey}
+                              className={selectedCalendarDate === dateKey ? "selected" : ""}
+                              onClick={() => setSelectedCalendarDate(dateKey)}
+                            >
+                              <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
+                              <strong>{date.getDate()}</strong>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        className="schedule-mobile-week-shift"
+                        type="button"
+                        onClick={() => shiftScheduleWeek(1)}
+                        aria-label="Next week"
+                      >
+                        ›
+                      </button>
                     </div>
 
                     <div className="schedule-selected-summary">
