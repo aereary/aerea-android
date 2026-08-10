@@ -13977,7 +13977,7 @@ body {
   border:0;
   box-shadow:none;
   display:grid;
-  grid-template-rows:104px minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
   height:100dvh;
   max-height:100dvh;
   overflow:hidden;
@@ -13987,32 +13987,33 @@ body {
 
 .modal-backdrop.agenda-overlay-backdrop {
   align-items:stretch;
-  backdrop-filter:blur(5px) saturate(.94);
-  background:color-mix(in srgb,var(--paper) 13%,transparent);
+  backdrop-filter:none;
+  background:transparent;
   padding:0;
 }
 
-.calendar-modal.agenda-v2-modal::after {
-  background:linear-gradient(180deg,color-mix(in srgb,var(--hero) 38%,transparent),color-mix(in srgb,var(--cream) 66%,transparent));
-  content:"";
-  inset:0;
+.phone-canvas:has(> .agenda-overlay-backdrop) > .main-content,
+.phone-canvas:has(> .agenda-overlay-backdrop) > .bottom-nav {
+  opacity:0;
   pointer-events:none;
-  position:absolute;
-  z-index:-2;
+}
+
+.phone-canvas:has(> .agenda-overlay-backdrop) > .topbar {
+  position:relative;
+  z-index:240;
+}
+
+.phone-canvas:has(> .agenda-overlay-backdrop) > .storybook-scene {
+  opacity:1;
+  visibility:visible;
+}
+
+.calendar-modal.agenda-v2-modal::after {
+  display:none;
 }
 
 .calendar-modal.agenda-v2-modal::before {
-  background:
-    radial-gradient(circle at 78% 22px,#fff 0 25px,transparent 26px),
-    radial-gradient(circle at 83% 38px,#fff 0 33px,transparent 34px),
-    radial-gradient(circle at 88% 25px,#fff 0 24px,transparent 25px),
-    radial-gradient(circle at 50% 215px,color-mix(in srgb,var(--leaf) 62%,transparent) 0 240px,transparent 241px);
-  content:"";
-  inset:0;
-  opacity:.52;
-  pointer-events:none;
-  position:absolute;
-  z-index:-1;
+  display:none;
 }
 
 .agenda-v2-modal > .calendar-sources,
@@ -14113,7 +14114,7 @@ body {
   margin:0 auto;
   max-width:820px;
   min-height:0;
-  padding:6px 30px 0;
+  padding:112px 30px 0;
   position:relative;
   width:100%;
 }
@@ -14265,10 +14266,6 @@ body {
   position:relative;
 }
 .agenda-v2-hours { position:relative; }
-.agenda-v2-hours {
-  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 26%,transparent) calc(100% - 1px));
-  background-size:100% 1.388889%;
-}
 .agenda-v2-hours::after {
   border-right:1px dashed color-mix(in srgb,var(--line) 64%,transparent);
   bottom:0;
@@ -14298,8 +14295,8 @@ body {
 }
 
 .agenda-v2-day::before {
-  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 62%,transparent) calc(100% - 1px));
-  background-size:28px 1.388889%;
+  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 48%,transparent) calc(100% - 1px));
+  background-size:28px 5.555556%;
   content:"";
   inset:0 auto 0 -10px;
   pointer-events:none;
@@ -14307,13 +14304,24 @@ body {
   width:28px;
   z-index:1;
 }
-.agenda-v2-now {
-  background:var(--orange);
-  height:2px;
-  left:-14px;
+.agenda-v2-day::after {
+  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 25%,transparent) calc(100% - 1px));
+  background-size:9px 1.388889%;
+  content:"";
+  inset:0 auto 0 -10px;
   pointer-events:none;
   position:absolute;
-  right:7px;
+  width:9px;
+  z-index:1;
+}
+.agenda-v2-now {
+  background:var(--orange);
+  height:22px;
+  left:-10px;
+  pointer-events:none;
+  position:absolute;
+  transform:translateY(-11px);
+  width:2px;
   z-index:5;
 }
 .agenda-v2-now::before {
@@ -14321,9 +14329,19 @@ body {
   border-radius:50%;
   content:"";
   height:8px;
-  left:-2px;
+  left:-3px;
   position:absolute;
-  top:-3px;
+  top:-4px;
+  width:8px;
+}
+.agenda-v2-now::after {
+  background:var(--orange);
+  border-radius:50%;
+  bottom:-4px;
+  content:"";
+  height:8px;
+  left:-3px;
+  position:absolute;
   width:8px;
 }
 
@@ -14440,7 +14458,7 @@ body {
 @media (max-width:720px) {
   .calendar-modal.calendar-expanded.agenda-v2-modal {
     background:transparent;
-    grid-template-rows:86px minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr);
   }
   .agenda-v2-header {
     gap:8px;
@@ -14455,7 +14473,7 @@ body {
   .agenda-v2-title > span { font-size:16px; }
   .agenda-v2-calendar-icon { height:16px; width:16px; }
   .agenda-v2-settings { font-size:19px; height:40px; width:40px; }
-  .agenda-v2 { gap:22px; padding:4px 20px 0; }
+  .agenda-v2 { gap:22px; padding:90px 20px 0; }
   .agenda-v2-week { border-radius:25px; flex-basis:118px; margin-inline:7px; padding:7px 9px 9px; }
   .agenda-v2-week-heading { grid-template-columns:32px minmax(0,1fr) 32px; margin-bottom:3px; }
   .agenda-v2-week-heading button { font-size:19px; height:30px; width:30px; }

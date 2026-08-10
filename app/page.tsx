@@ -3349,10 +3349,11 @@ export default function Home() {
           <div className="header-actions">
             <button
               className="calendar-button"
-              onClick={openCalendarAtToday}
+              onClick={calendarExpanded ? goToScheduleToday : openCalendarAtToday}
+              aria-label={calendarExpanded ? "Go to today in the schedule" : "Open calendar"}
             >
               <span className="calendar-glyph" aria-hidden="true" />
-              Calendar
+              {calendarExpanded ? "Cronograma" : "Calendar"}
             </button>
             <button
               className="avatar-button"
@@ -4758,37 +4759,7 @@ export default function Home() {
               </>
             ) : (
               <>
-                {calendarExpanded ? (
-                  <header className="agenda-v2-header">
-                    <button
-                      className="agenda-v2-brand"
-                      type="button"
-                      onClick={() => {
-                        setCalendarExpanded(false);
-                        setMonthPickerOpen(false);
-                      }}
-                      aria-label="Back to month"
-                    >
-                      <span className="agenda-v2-brand-mark" aria-hidden="true">♡</span>
-                      <span>
-                        <small>MY LITTLE DAY</small>
-                        <strong>aérea</strong>
-                      </span>
-                    </button>
-                    <button className="agenda-v2-title" type="button" onClick={goToScheduleToday}>
-                      <span className="agenda-v2-calendar-icon" aria-hidden="true" />
-                      <strong>Cronograma</strong>
-                    </button>
-                    <button
-                      className="agenda-v2-settings"
-                      type="button"
-                      onClick={() => setSettingsOpen(true)}
-                      aria-label="Open settings"
-                    >
-                      ⚙
-                    </button>
-                  </header>
-                ) : (
+                {!calendarExpanded && (
                   <div className="modal-top">
                     <div className="calendar-month-heading">
                       <button onClick={() => shiftCalendarMonth(-1)} aria-label="Previous month">←</button>
