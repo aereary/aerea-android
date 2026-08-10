@@ -235,7 +235,7 @@ type SketchTool = SketchStroke["tool"] | "eyedropper";
 
 type PlannerPage = {
   id: string;
-  template: "strawberry" | "cozy" | "study";
+  template: "blank" | "strawberry" | "cozy" | "study";
   title: string;
   date: string;
   priorities: string[];
@@ -261,6 +261,16 @@ function PlannerInkCanvas({
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const [tool, setTool] = useState<"pen" | "eraser">("pen");
   const [color, setColor] = useState("#735d55");
+  const [showColors, setShowColors] = useState(false);
+  const [historyState, setHistoryState] = useState({ undo: false, redo: false });
+  const historyRef = useRef<string[]>([]);
+  const redoRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    historyRef.current = [page.inkData ?? ""];
+    redoRef.current = [];
+    setHistoryState({ undo: false, redo: false });
+  }, [page.id]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -308,23 +318,47 @@ function PlannerInkCanvas({
     drawingRef.current = false;
     lastPointRef.current = null;
     const data = canvasRef.current?.toDataURL("image/png");
-    if (data) onChange(data);
+    if (data) {
+      historyRef.current.push(data);
+      redoRef.current = [];
+      setHistoryState({ undo: true, redo: false });
+      onChange(data);
+    }
   };
   const clear = () => {
     const canvas = canvasRef.current;
     canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    historyRef.current.push("");
+    redoRef.current = [];
+    setHistoryState({ undo: true, redo: false });
     onChange("");
+  };
+  const undo = () => {
+    if (historyRef.current.length < 2) return;
+    const current = historyRef.current.pop() ?? "";
+    redoRef.current.push(current);
+    const previous = historyRef.current.at(-1) ?? "";
+    setHistoryState({ undo: historyRef.current.length > 1, redo: true });
+    onChange(previous);
+  };
+  const redo = () => {
+    const next = redoRef.current.pop();
+    if (next === undefined) return;
+    historyRef.current.push(next);
+    setHistoryState({ undo: true, redo: redoRef.current.length > 0 });
+    onChange(next);
   };
 
   return (
     <div className={`writeable-planner-page ${page.template}`}>
-      <img
-        className="planner-template-image"
-        src={`/templates/${page.template === "strawberry" ? "strawberry-daily" : page.template === "cozy" ? "cozy-day" : "soft-study"}.svg`}
-        alt=""
-        aria-hidden="true"
-      />
-      <div className="planner-paper-art" aria-hidden="true">
+      {page.template !== "blank" && <img
+          className="planner-template-image"
+          src={`/templates/${page.template === "strawberry" ? "strawberry-daily" : page.template === "cozy" ? "cozy-day" : "soft-study"}.svg`}
+          alt=""
+          aria-hidden="true"
+        />}
+      {page.template === "blank" && <div className="secret-paper-decoration" aria-hidden="true"><span>🎀</span><i>♡</i><b>☾</b><em>⋆</em></div>}
+      {page.template !== "blank" && <div className="planner-paper-art" aria-hidden="true">
         <div className="paper-title"><span>{page.template === "strawberry" ? "🍓 DAILY" : page.template === "cozy" ? "🎀 DAY" : "📚 STUDY"}</span><strong>PLANNER</strong><small>small steps · big progress ♡</small></div>
         <div className="paper-date">DATE: ____ / ____ / ____</div>
         <section className="paper-today"><h3>TODAY'S PLAN</h3>{Array.from({length:7},(_,i)=><i key={i}>□</i>)}</section>
@@ -335,13 +369,16 @@ function PlannerInkCanvas({
         <section className="paper-grateful"><h3>GRATITUDE</h3></section>
         <section className="paper-notes"><h3>NOTES</h3></section>
         <span className="paper-friend">{page.template === "strawberry" ? "🍓🌷" : page.template === "cozy" ? "🐻🐰" : "🌱✏️"}</span>
-      </div>
+      </div>}
       <canvas ref={canvasRef} width={1000} height={1414} onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} aria-label="Write freely on this planner page" />
       <div className="planner-pencil-palette">
-        <button className={tool === "pen" ? "active" : ""} onClick={() => setTool("pen")}>✎</button>
-        <button className={tool === "eraser" ? "active" : ""} onClick={() => setTool("eraser")}>▱</button>
-        {["#735d55", "#d8879d", "#839d68", "#7289b0"].map(value => <button key={value} className="ink-color" style={{background:value}} onClick={() => { setColor(value); setTool("pen"); }} aria-label={`Ink ${value}`} />)}
-        <button onClick={clear} aria-label="Clear handwriting">⌫</button>
+        <button className={tool === "pen" ? "active" : ""} onClick={() => setTool("pen")} aria-label="Pencil">✎</button>
+        <button className={tool === "eraser" ? "active" : ""} onClick={() => setTool("eraser")} aria-label="Eraser">▱</button>
+        <button onClick={undo} disabled={!historyState.undo} aria-label="Undo">↶</button>
+        <button onClick={redo} disabled={!historyState.redo} aria-label="Redo">↷</button>
+        <button onClick={() => setShowColors((open) => !open)} aria-label="Colors">◉</button>
+        {showColors && <div className="planner-color-popover">{["#735d55", "#e37e9e", "#839d68", "#7289b0", "#2f3040"].map(value => <button key={value} className="ink-color" style={{background:value}} onClick={() => { setColor(value); setTool("pen"); setShowColors(false); }} aria-label={`Ink ${value}`} />)}</div>}
+        <button className="planner-clear-ink" onClick={clear} aria-label="Clear page">⌫</button>
       </div>
     </div>
   );
@@ -351,7 +388,7 @@ function makePlannerPage(template: PlannerPage["template"]): PlannerPage {
   return {
     id: `planner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     template,
-    title: template === "strawberry" ? "My daily planner" : template === "cozy" ? "A cozy little day" : "Soft study day",
+    title: template === "blank" ? "Mi página secreta" : template === "strawberry" ? "My daily planner" : template === "cozy" ? "A cozy little day" : "Soft study day",
     date: localDateKey(new Date()),
     priorities: ["", "", ""],
     todos: ["", "", "", "", ""],
@@ -1102,6 +1139,7 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
   const [syncCodeSent, setSyncCodeSent] = useState(false);
   const [refugeOpen, setRefugeOpen] = useState(false);
+  const [secretWelcomeOpen, setSecretWelcomeOpen] = useState(true);
   const [plannerPages, setPlannerPages] = useState<PlannerPage[]>([]);
   const [activePlannerPageId, setActivePlannerPageId] = useState<string | null>(null);
   const [safePlaceMode, setSafePlaceMode] =
@@ -3349,11 +3387,11 @@ export default function Home() {
           <div className="header-actions">
             <button
               className="calendar-button"
-              onClick={calendarExpanded ? goToScheduleToday : openCalendarAtToday}
-              aria-label={calendarExpanded ? "Go to today in the schedule" : "Open calendar"}
+              onClick={openCalendarAtToday}
+              aria-label="Open calendar"
             >
               <span className="calendar-glyph" aria-hidden="true" />
-              {calendarExpanded ? "Cronograma" : "Calendar"}
+              Calendar
             </button>
             <button
               className="avatar-button"
@@ -4343,6 +4381,19 @@ export default function Home() {
             </button>
           ))}
         </nav>}
+        {!sketchFullscreen && !refugeOpen && (
+          <button
+            className="secret-moon-button"
+            type="button"
+            onClick={() => {
+              setSecretWelcomeOpen(true);
+              setRefugeOpen(true);
+            }}
+            aria-label="Open my secret space"
+          >
+            ☾
+          </button>
+        )}
       </section>
 
       {calendarOpen && (
@@ -4759,6 +4810,39 @@ export default function Home() {
               </>
             ) : (
               <>
+                {calendarExpanded && (
+                  <>
+                    <div className="storybook-scene agenda-v3-scene" data-visual={activeTheme.id} aria-hidden="true">
+                      <span className="storybook-cloud cloud-one" />
+                      <span className="storybook-cloud cloud-two" />
+                      <span className="storybook-hill hill-one" />
+                      <span className="storybook-hill hill-two" />
+                      {activeTheme.decoratedScene && (
+                        <>
+                          <span className="theme-scene-sparkle sparkle-one">✦</span>
+                          <span className="theme-scene-sparkle sparkle-two">✧</span>
+                          <span className="theme-scene-sparkle sparkle-three">✦</span>
+                          <span className="theme-scene-frame" />
+                          <span className="theme-scene-ribbon" />
+                          <span className="theme-scene-dots" />
+                          <img className="theme-scene-accent accent-1" src={activeTheme.accents[0]} alt="" />
+                          <img className="theme-scene-accent accent-2" src={activeTheme.accents[1]} alt="" />
+                        </>
+                      )}
+                    </div>
+                    <header className="agenda-v2-header">
+                      <button className="agenda-v2-brand" type="button" onClick={() => setCalendarExpanded(false)} aria-label="Back to compact month">
+                        <span className="agenda-v2-brand-mark" aria-hidden="true">♡</span>
+                        <span><small>MY LITTLE DAY</small><strong>aérea</strong></span>
+                      </button>
+                      <button className="agenda-v2-title" type="button" onClick={goToScheduleToday}>
+                        <span className="agenda-v2-calendar-icon" aria-hidden="true" />
+                        <strong>Cronograma</strong>
+                      </button>
+                      <button className="agenda-v2-settings" type="button" onClick={() => setSettingsOpen(true)} aria-label="Open settings">⚙</button>
+                    </header>
+                  </>
+                )}
                 {!calendarExpanded && (
                   <div className="modal-top">
                     <div className="calendar-month-heading">
@@ -5321,41 +5405,66 @@ export default function Home() {
         );
       })()}
 
-      {false && (() => {
-        const activePage = plannerPages.find((page) => page.id === activePlannerPageId) ?? plannerPages[0];
+      {refugeOpen && (() => {
+        const secretPages = plannerPages.filter((page) => page.template === "blank");
+        const activePage = secretPages.find((page) => page.id === activePlannerPageId) ?? secretPages[0];
         const updatePage = (patch: Partial<PlannerPage>) => {
           if (!activePage) return;
           setPlannerPages((pages) => pages.map((page) => page.id === activePage.id ? { ...page, ...patch } : page));
         };
-        const addPage = (template: PlannerPage["template"]) => {
-          const page = makePlannerPage(template);
+        const addBlankPage = () => {
+          const page = makePlannerPage("blank");
           setPlannerPages((pages) => [page, ...pages]);
           setActivePlannerPageId(page.id);
+          return page;
+        };
+        const enterSecretSpace = () => {
+          if (!activePage) addBlankPage();
+          setSecretWelcomeOpen(false);
         };
         return (
-          <div className="modal-backdrop planner-backdrop" role="presentation">
-            <section className="private-planner-modal" role="dialog" aria-modal="true" aria-label="Private planner pages">
-              <header className="private-planner-header">
-                <div><p className="tiny-label">MY PRIVATE PLANNER</p><h2>Pages made for your own rhythm</h2></div>
-                <button onClick={() => setRefugeOpen(false)} aria-label="Close private planner">×</button>
-              </header>
-              <nav className="planner-template-bar" aria-label="Planner templates">
-                <button onClick={() => addPage("strawberry")}>🍓 Strawberry daily</button>
-                <button onClick={() => addPage("cozy")}>🐻 Cozy friends</button>
-                <button onClick={() => addPage("study")}>📚 Soft study</button>
-              </nav>
-              {activePage ? (
-                <div className="planner-workspace">
-                  <aside className="planner-page-tabs">
-                    {plannerPages.map((page) => <button key={page.id} className={page.id === activePage.id ? "active" : ""} onClick={() => setActivePlannerPageId(page.id)}><span>{page.template === "strawberry" ? "🍓" : page.template === "cozy" ? "🐰" : "✏️"}</span><strong>{page.title}</strong><small>{page.date}</small></button>)}
-                  </aside>
-                  <div className="planner-page-stage">
-                    <PlannerInkCanvas page={activePage} onChange={(inkData) => updatePage({ inkData })} />
-                    <button className="planner-delete" onClick={() => { if (!window.confirm("Delete this planner page?")) return; setPlannerPages((pages) => pages.filter((page) => page.id !== activePage.id)); setActivePlannerPageId(null); }}>Delete page</button>
+          <div className="modal-backdrop secret-studio-backdrop" role="presentation">
+            {secretWelcomeOpen ? (
+              <section className="secret-entry-card" role="dialog" aria-modal="true" aria-label="Enter my secret space">
+                <span className="secret-entry-tape" aria-hidden="true" />
+                <button className="secret-entry-close" onClick={() => setRefugeOpen(false)} aria-label="Close secret space">×</button>
+                <div className="secret-entry-art" aria-hidden="true">☁<b>♡</b>☾</div>
+                <p>este es tu</p>
+                <h2>espacio secreto</h2>
+                <span className="secret-entry-heart" aria-hidden="true">♥</span>
+                <small>rayar, escribir,<br />desahogarte, soñar…</small>
+                <button className="secret-enter-button" onClick={enterSecretSpace}>entrar ♥</button>
+              </section>
+            ) : (
+              <section className="secret-studio-modal" role="dialog" aria-modal="true" aria-label="My secret drawing pages">
+                <header className="secret-studio-header">
+                  <button onClick={() => setRefugeOpen(false)} aria-label="Close my secret space">‹</button>
+                  <strong>mi espacio secreto <span>♥</span></strong>
+                  <button onClick={addBlankPage} aria-label="New blank secret page">＋</button>
+                </header>
+                {activePage ? (
+                  <div className="secret-studio-workspace">
+                    <div className="secret-page-stage">
+                      <PlannerInkCanvas page={activePage} onChange={(inkData) => updatePage({ inkData })} />
+                      <button className="secret-page-delete" onClick={() => { if (!window.confirm("¿Eliminar esta página secreta?")) return; setPlannerPages((pages) => pages.filter((page) => page.id !== activePage.id)); setActivePlannerPageId(secretPages.find((page) => page.id !== activePage.id)?.id ?? null); }}>eliminar página</button>
+                    </div>
+                    <aside className="secret-saved-pages">
+                      <div><span>mis páginas secretas</span><button onClick={addBlankPage} aria-label="New blank page">＋</button></div>
+                      {secretPages.map((page) => (
+                        <button key={page.id} className={page.id === activePage.id ? "active" : ""} onClick={() => setActivePlannerPageId(page.id)}>
+                          <i aria-hidden="true">{page.inkData ? "✎" : "♡"}</i>
+                          <span><strong>{page.date}</strong><small>{page.title}</small></span>
+                          <b aria-hidden="true">⋮</b>
+                        </button>
+                      ))}
+                      <button className="secret-new-page" onClick={addBlankPage}>＋ nueva página en blanco</button>
+                    </aside>
                   </div>
-                </div>
-              ) : <div className="planner-empty"><span>🎀</span><h3>Choose a template to begin</h3><p>Then write directly on the page with your tablet pen.</p></div>}
-            </section>
+                ) : (
+                  <div className="secret-empty-page"><span>♡</span><p>Tu primera página está en blanco.</p><button onClick={addBlankPage}>crear página</button></div>
+                )}
+              </section>
+            )}
           </div>
         );
       })()}

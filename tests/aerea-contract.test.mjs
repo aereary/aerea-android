@@ -130,8 +130,8 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
-  assert.match(pageSource, /calendarExpanded \? "Cronograma" : "Calendar"/);
   assert.match(pageSource, /Cronograma/);
+  assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /agenda-v2-nav/);
   assert.match(pageSource, /agenda-overlay-backdrop/);
@@ -141,8 +141,22 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.agenda-v2-event/);
   assert.match(cssSource, /\.agenda-v2-event-category/);
   assert.match(cssSource, /--v2-highlight/);
-  assert.match(cssSource, /background-size:9px 1\.388889%/);
+  assert.match(cssSource, /background-size:28px 5\.555556%/);
+  assert.match(cssSource, /\.agenda-v2-day::after \{ display:none; \}/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
+});
+
+test("restores a blank-paper secret studio with saved drawing pages", () => {
+  assert.match(pageSource, /secret-moon-button/);
+  assert.match(pageSource, /secretWelcomeOpen/);
+  assert.match(pageSource, /makePlannerPage\("blank"\)/);
+  assert.match(pageSource, /const secretPages = plannerPages\.filter/);
+  assert.match(pageSource, /<PlannerInkCanvas/);
+  assert.match(pageSource, /historyRef/);
+  assert.match(pageSource, /redoRef/);
+  assert.match(cssSource, /\.secret-entry-card/);
+  assert.match(cssSource, /\.writeable-planner-page\.blank/);
+  assert.match(cssSource, /\.secret-saved-pages/);
 });
 
 test("adds Neon heartbreak as an isolated complete theme", () => {
