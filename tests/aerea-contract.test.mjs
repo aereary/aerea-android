@@ -141,6 +141,14 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
   assert.match(pageSource, /bottom-nav agenda-v2-home-nav/);
+  assert.match(pageSource, /welcome-row agenda-v2-greeting/);
+  assert.match(pageSource, /Good evening, lovely\./);
+  assert.match(pageSource, /A little look at \$\{selectedScheduleWeekday\}/);
+  assert.match(pageSource, /agenda-v2-week-arrow/);
+  assert.match(pageSource, /agenda-v2-section-heading/);
+  assert.match(pageSource, /onClick=\{goToScheduleToday\}/);
+  assert.match(pageSource, /const goToScheduleToday[\s\S]*setScheduleSlideDirection/);
+  assert.match(pageSource, />\s*Return to today\s*<\/button>/);
   assert.match(pageSource, /className=\{tab\.id === activeTab \? "nav-item active" : "nav-item"\}/);
   assert.match(pageSource, /aria-label="Back to compact calendar"/);
   assert.match(pageSource, />\s*Calendar\s*<\/button>/);
@@ -158,6 +166,9 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.agenda-v2-time-grid > span:last-child \.agenda-v2-time-label/);
   assert.match(cssSource, /\.agenda-v2-week-content\.schedule-slide-next/);
   assert.match(cssSource, /\.agenda-v2-days button\.today:not\(\.selected\)/);
+  assert.match(cssSource, /\.agenda-v2-greeting/);
+  assert.match(cssSource, /\.agenda-v2-week-content[\s\S]*grid-template-columns:42px minmax\(0,1fr\) 42px/);
+  assert.match(cssSource, /\.agenda-v2-return-today/);
   assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });

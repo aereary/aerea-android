@@ -1346,6 +1346,11 @@ export default function Home() {
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
+  const selectedScheduleDateObject = dateFromKey(selectedCalendarDate);
+  const selectedScheduleIsToday = selectedCalendarDate === todayKey;
+  const selectedScheduleWeekday = selectedScheduleDateObject.toLocaleDateString("en", {
+    weekday: "long",
+  });
   const selectedDayComplete = completedDays[selectedCalendarDate] === true;
   const homeWeek = useMemo(() => weekForDate(todayKey), [todayKey]);
   const selectedHomeEvents = calendarEvents
@@ -1558,6 +1563,13 @@ export default function Home() {
   };
 
   const goToScheduleToday = () => {
+    if (selectedCalendarDate !== todayKey) {
+      setScheduleSlideDirection(
+        dateFromKey(todayKey).getTime() > dateFromKey(selectedCalendarDate).getTime()
+          ? "next"
+          : "previous",
+      );
+    }
     const today = dateFromKey(todayKey);
     setSelectedCalendarDate(todayKey);
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -4525,6 +4537,72 @@ export default function Home() {
                 </div>
                 {calendarExpanded && (
                   <div className="agenda-v2">
+                    <section className="welcome-row agenda-v2-greeting">
+                      <div>
+                        <p className="date-label">
+                          {selectedScheduleDateObject
+                            .toLocaleDateString("en", {
+                              weekday: "long",
+                              month: "long",
+                              day: "numeric",
+                            })
+                            .toUpperCase()}
+                        </p>
+                        <h2>
+                          {selectedScheduleIsToday
+                            ? isNight
+                              ? "Good evening, lovely."
+                              : "Good morning, lovely."
+                            : `A little look at ${selectedScheduleWeekday}.`}
+                        </h2>
+                        <p className="soft-copy">
+                          {selectedScheduleIsToday
+                            ? isNight
+                              ? "You did enough today. Let the evening soften around you."
+                              : "Let’s make today feel a little lighter."
+                            : "Return to today whenever you want to come back."}
+                        </p>
+                      </div>
+                      {activeTheme.showCharm !== false && (
+                        <div
+                          className={[
+                            "day-charm",
+                            activeTheme.charm === "you may rest" ? "curved-copy" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          aria-label={`${activeTheme.name}: ${activeTheme.charm}`}
+                        >
+                          <img src={activeTheme.art} alt="" />
+                          {activeTheme.charm === "you may rest" ? (
+                            <svg
+                              className="day-charm-curve"
+                              viewBox="0 0 100 100"
+                              aria-hidden="true"
+                            >
+                              <defs>
+                                <path
+                                  id="agenda-you-may-rest-curve"
+                                  d="M 15 70 Q 50 94 85 70"
+                                />
+                              </defs>
+                              <text>
+                                <textPath
+                                  href="#agenda-you-may-rest-curve"
+                                  startOffset="50%"
+                                  textAnchor="middle"
+                                >
+                                  YOU MAY REST
+                                </textPath>
+                              </text>
+                            </svg>
+                          ) : (
+                            <span>{activeTheme.charm}</span>
+                          )}
+                        </div>
+                      )}
+                    </section>
+
                     <div
                       className="agenda-v2-week"
                       onTouchStart={startScheduleSwipe}
@@ -4541,17 +4619,14 @@ export default function Home() {
                         ].filter(Boolean).join(" ")}
                         onAnimationEnd={() => setScheduleSlideDirection(null)}
                       >
-                        <div className="agenda-v2-week-heading">
-                          <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">‹</button>
-                          <strong>
-                            {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
-                              weekday: "long",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </strong>
-                          <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">›</button>
-                        </div>
+                        <button
+                          className="agenda-v2-week-arrow"
+                          type="button"
+                          onClick={() => shiftScheduleWeek(-1)}
+                          aria-label="Previous week"
+                        >
+                          ‹
+                        </button>
                         <div className="agenda-v2-days" aria-label="Choose a day">
                           {scheduleDays.map((date) => {
                             const dateKey = localDateKey(date);
@@ -4572,7 +4647,33 @@ export default function Home() {
                             );
                           })}
                         </div>
+                        <button
+                          className="agenda-v2-week-arrow"
+                          type="button"
+                          onClick={() => shiftScheduleWeek(1)}
+                          aria-label="Next week"
+                        >
+                          ›
+                        </button>
                       </div>
+                    </div>
+
+                    <div className="section-heading agenda-v2-section-heading">
+                      <div>
+                        <p className="tiny-label">YOUR RHYTHM</p>
+                        <h3>
+                          {selectedScheduleIsToday
+                            ? "Today’s schedule"
+                            : `${selectedScheduleWeekday}’s schedule`}
+                        </h3>
+                      </div>
+                      <button
+                        className="text-button agenda-v2-return-today"
+                        type="button"
+                        onClick={goToScheduleToday}
+                      >
+                        Return to today
+                      </button>
                     </div>
 
                     <div
