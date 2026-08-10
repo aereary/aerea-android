@@ -12480,3 +12480,609 @@ body {
     width:56px;
   }
 }
+
+/* The schedule is a focused daily agenda on every screen. */
+.calendar-expanded .schedule-shell {
+  align-items:stretch;
+  background:var(--paper);
+  border-radius:0;
+  box-shadow:none;
+  padding:12px clamp(12px,3vw,34px) 0;
+}
+.schedule-toolbar,
+.schedule-day-heads,
+.schedule-time-corner,
+.schedule-floating-add { display:none !important; }
+.schedule-mobile-date-card {
+  align-items:stretch;
+  background:var(--paper);
+  border:1px solid color-mix(in srgb,var(--line) 52%,transparent);
+  border-radius:22px;
+  box-shadow:0 12px 34px color-mix(in srgb,var(--ink) 8%,transparent);
+  display:grid;
+  flex:0 0 auto;
+  grid-template-columns:34px minmax(0,1fr) 34px;
+  margin:0 auto 10px;
+  max-width:760px;
+  min-height:82px;
+  overflow:hidden;
+  padding:6px;
+  width:100%;
+}
+.schedule-mobile-days {
+  display:flex;
+  gap:3px;
+  min-width:0;
+  overflow:hidden;
+  padding:0;
+}
+.schedule-mobile-days button {
+  align-items:center;
+  background:transparent;
+  border:0;
+  border-radius:16px;
+  color:var(--ink);
+  display:flex;
+  flex:1 1 0;
+  flex-direction:column;
+  gap:4px;
+  justify-content:center;
+  min-width:0;
+  padding:8px 2px;
+}
+.schedule-mobile-days button small {
+  color:var(--muted);
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:capitalize;
+}
+.schedule-mobile-days button strong { font-size:16px; }
+.schedule-mobile-days button.selected {
+  background:linear-gradient(155deg,color-mix(in srgb,var(--blue) 44%,#7560df),color-mix(in srgb,var(--lilac) 42%,#5f4dca));
+  box-shadow:0 9px 20px color-mix(in srgb,#5f4dca 23%,transparent);
+  color:white;
+  transform:translateY(-1px);
+}
+.schedule-mobile-days button.selected small { color:color-mix(in srgb,white 84%,transparent); }
+.schedule-mobile-week-shift {
+  background:transparent;
+  border:0;
+  border-radius:13px;
+  color:color-mix(in srgb,var(--ink) 62%,var(--muted));
+  font-size:22px;
+  padding:0;
+}
+.schedule-mobile-week-shift:hover,
+.schedule-mobile-week-shift:focus-visible { background:color-mix(in srgb,var(--lilac) 35%,transparent); }
+.schedule-selected-summary {
+  align-items:center;
+  flex:0 0 auto;
+  margin:0 auto;
+  max-width:760px;
+  padding:12px 10px 14px;
+  width:100%;
+}
+.schedule-selected-summary p { font-size:9px; }
+.schedule-selected-summary h3 { font-size:clamp(28px,4vw,38px); }
+.schedule-selected-summary > small {
+  background:transparent;
+  color:var(--muted);
+  padding:0;
+}
+.schedule-board,
+.schedule-board.has-all-day {
+  background:var(--paper);
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  flex:1 1 auto;
+  grid-template-columns:64px minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  margin:0 auto;
+  max-width:760px;
+  overflow:hidden;
+  width:100%;
+}
+.schedule-board.has-all-day { grid-template-rows:minmax(36px,auto) minmax(0,1fr); }
+.schedule-board.has-all-day .schedule-all-day-label { grid-column:1; grid-row:1; }
+.schedule-board.has-all-day .schedule-all-day-columns { grid-column:2; grid-row:1; }
+.schedule-all-day-columns { display:grid; grid-template-columns:1fr; }
+.schedule-all-day-columns > div { display:grid; }
+.schedule-timeline-scroll {
+  border-top:1px solid color-mix(in srgb,var(--line) 28%,transparent);
+  grid-column:1 / -1;
+  padding-bottom:82px;
+}
+.schedule-timeline {
+  grid-template-columns:64px minmax(0,1fr);
+  height:1152px;
+}
+.schedule-day-columns { display:grid; grid-template-columns:1fr; }
+.schedule-day-column { border-right:0; }
+.schedule-event {
+  border-radius:15px;
+  box-shadow:0 7px 20px color-mix(in srgb,var(--ink) 7%,transparent);
+  padding:10px 13px;
+}
+.schedule-event::after { display:none; }
+.schedule-event strong { font-size:clamp(11px,1.7vw,14px); padding-left:0; }
+.schedule-event small { font-size:clamp(8px,1.2vw,10px); padding-left:0; }
+.schedule-event i { font-size:9px; padding-left:0; }
+.schedule-bottom-dock {
+  align-items:center;
+  background:color-mix(in srgb,var(--paper) 94%,transparent);
+  border:1px solid color-mix(in srgb,var(--line) 48%,transparent);
+  border-radius:25px;
+  bottom:13px;
+  box-shadow:0 14px 38px color-mix(in srgb,var(--ink) 16%,transparent);
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  left:50%;
+  max-width:390px;
+  padding:6px 8px;
+  position:absolute;
+  transform:translateX(-50%);
+  width:calc(100% - 38px);
+  z-index:12;
+}
+.schedule-bottom-dock button {
+  background:transparent;
+  border:0;
+  border-radius:16px;
+  color:var(--muted);
+  font-size:17px;
+  height:44px;
+  padding:0;
+}
+.schedule-bottom-dock button:hover,
+.schedule-bottom-dock button:focus-visible { background:color-mix(in srgb,var(--lilac) 35%,transparent); color:var(--ink); }
+.schedule-bottom-dock .schedule-dock-add {
+  background:linear-gradient(155deg,color-mix(in srgb,var(--blue) 44%,#7560df),color-mix(in srgb,var(--lilac) 42%,#5f4dca));
+  border:3px solid var(--paper);
+  border-radius:18px;
+  box-shadow:0 8px 18px color-mix(in srgb,#5f4dca 26%,transparent);
+  color:white;
+  font-size:25px;
+  height:58px;
+  margin:-15px auto 0;
+  width:58px;
+}
+
+@media (max-width:720px) {
+  .calendar-expanded .schedule-shell { padding:9px 0 0; }
+  .schedule-mobile-date-card { border-radius:20px; grid-template-columns:27px minmax(0,1fr) 27px; margin-inline:12px; min-height:72px; width:calc(100% - 24px); }
+  .schedule-mobile-days { gap:0; }
+  .schedule-mobile-days button { border-radius:14px; min-height:62px; padding:7px 1px; }
+  .schedule-mobile-days button small { font-size:7px; }
+  .schedule-mobile-days button strong { font-size:14px; }
+  .schedule-selected-summary { padding:12px 18px 13px; }
+  .schedule-board,
+  .schedule-board.has-all-day { grid-template-columns:48px minmax(0,1fr); }
+  .schedule-timeline { grid-template-columns:48px minmax(0,1fr); height:1080px; }
+  .schedule-event { padding:9px 12px; }
+  .schedule-bottom-dock { bottom:11px; }
+}
+
+/* Neon heartbreak is intentionally its own complete visual system. */
+.app-shell[data-theme="neonheart"]:not([data-color-mode="dark"]) {
+  --ink:#09070b;
+  --ink-soft:#362b37;
+  --muted:#786d79;
+  --cream:#f4f3f5;
+  --cream-deep:#e9e7eb;
+  --paper:#ffffff;
+  --hero:#09070b;
+  --blue:#ff8bd3;
+  --lime-wash:#ffe3f4;
+  --lime-soft:#ffb9e2;
+  --leaf:#ff0a9a;
+  --leaf-deep:#b9006e;
+  --yellow:#ffffff;
+  --yellow-soft:#ffd9ef;
+  --orange:#ff0a9a;
+  --orange-soft:#ff89cf;
+  --coral:#ff0a9a;
+  --pink:#ffc3e7;
+  --lilac:#d9d6dc;
+  --sage:#f0edf1;
+  --line:rgba(9,7,11,.2);
+  --shadow:9px 9px 0 #09070b;
+  --shadow-soft:5px 5px 0 rgba(9,7,11,.92);
+  --app-backdrop:
+    radial-gradient(circle at 8% 8%,rgba(255,10,154,.92),transparent 18rem),
+    repeating-linear-gradient(135deg,#09070b 0 16px,#161217 16px 32px);
+  color-scheme:light;
+}
+
+.app-shell[data-theme="neonheart"][data-color-mode="dark"] {
+  --ink:#fffafd;
+  --ink-soft:#e8dce4;
+  --muted:#bfaebb;
+  --cream:#0c0a0d;
+  --cream-deep:#050406;
+  --paper:#151116;
+  --hero:#050406;
+  --blue:#ff72c9;
+  --lime-wash:#3a102b;
+  --lime-soft:#631144;
+  --leaf:#ff31aa;
+  --leaf-deep:#ff8bd3;
+  --yellow:#fffafd;
+  --yellow-soft:#4b1436;
+  --orange:#ff0a9a;
+  --orange-soft:#5d1643;
+  --coral:#ff3fb0;
+  --pink:#471333;
+  --lilac:#302b31;
+  --sage:#242025;
+  --line:rgba(255,250,253,.28);
+  --shadow:9px 9px 0 #ff0a9a;
+  --shadow-soft:5px 5px 0 rgba(255,10,154,.82);
+  --app-backdrop:
+    radial-gradient(circle at 88% 8%,rgba(255,10,154,.54),transparent 20rem),
+    repeating-linear-gradient(135deg,#050406 0 16px,#151116 16px 32px);
+  color-scheme:dark;
+}
+
+.app-shell[data-theme="neonheart"] {
+  font-family:var(--font-geist-sans),"Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+}
+
+.app-shell[data-theme="neonheart"] .paper-grain {
+  background-image:
+    radial-gradient(circle,rgba(255,10,154,.38) 0 1.5px,transparent 2px),
+    radial-gradient(circle,rgba(9,7,11,.28) 0 1px,transparent 1.5px);
+  background-position:0 0,12px 12px;
+  background-size:24px 24px;
+  mask-image:none;
+  opacity:.34;
+}
+
+.app-shell[data-theme="neonheart"] .phone-canvas {
+  background:linear-gradient(180deg,var(--hero) 0 292px,var(--cream) 292px 100%);
+  border:4px solid #09070b;
+  border-radius:30px;
+  box-shadow:12px 12px 0 #ff0a9a,0 34px 80px rgba(0,0,0,.32);
+}
+
+.app-shell[data-theme="neonheart"] .storybook-scene[data-visual="neonheart"] {
+  background:
+    radial-gradient(circle at 77% 30%,#ff0a9a 0 6px,transparent 7px),
+    radial-gradient(circle at 82% 36%,#ff0a9a 0 3px,transparent 4px),
+    repeating-linear-gradient(90deg,transparent 0 35px,rgba(255,10,154,.1) 35px 36px),
+    repeating-linear-gradient(0deg,transparent 0 35px,rgba(255,10,154,.1) 35px 36px),
+    #09070b;
+}
+
+.storybook-scene[data-visual="neonheart"]::before {
+  color:#ff0a9a;
+  content:"♥  ✦  ★";
+  filter:drop-shadow(5px 5px 0 rgba(255,255,255,.14));
+  font-size:clamp(38px,7vw,78px);
+  font-weight:1000;
+  letter-spacing:.12em;
+  position:absolute;
+  right:5%;
+  top:56px;
+  transform:rotate(-8deg);
+}
+
+.storybook-scene[data-visual="neonheart"]::after {
+  border:4px solid #ff0a9a;
+  border-radius:38% 62% 54% 46%;
+  color:#ffffff;
+  content:"PRETTY\A CHAOS";
+  font-size:11px;
+  font-weight:1000;
+  left:9%;
+  letter-spacing:.18em;
+  line-height:1.4;
+  padding:13px 17px;
+  position:absolute;
+  text-align:center;
+  top:98px;
+  transform:rotate(-7deg);
+  white-space:pre;
+}
+
+.storybook-scene[data-visual="neonheart"] :is(
+  .storybook-cloud,.storybook-sun,.storybook-hill,.storybook-flower,
+  .theme-scene-character,.theme-scene-accent
+) { display:none; }
+
+.storybook-scene[data-visual="neonheart"] .theme-scene-sparkle {
+  color:#ff0a9a;
+  display:block;
+  filter:none;
+  font-size:34px;
+  text-shadow:3px 3px 0 #ffffff;
+}
+
+.storybook-scene[data-visual="neonheart"] .sparkle-one { left:45%; top:130px; }
+.storybook-scene[data-visual="neonheart"] .sparkle-two { color:#ffffff; right:4%; top:156px; }
+.storybook-scene[data-visual="neonheart"] .sparkle-three { left:27%; top:62px; }
+
+.app-shell[data-theme="neonheart"] .topbar { padding-top:18px; }
+.app-shell[data-theme="neonheart"] .brand-wrap {
+  background:#ffffff;
+  border:3px solid #09070b;
+  border-radius:12px 24px 12px 24px;
+  box-shadow:5px 5px 0 #ff0a9a;
+  color:#09070b;
+  transform:rotate(-1deg);
+}
+
+.app-shell[data-theme="neonheart"] .brand-mark {
+  background:#09070b;
+  border:3px solid #ff0a9a;
+  border-radius:50% 42% 50% 44%;
+  box-shadow:none;
+  color:#ff0a9a;
+}
+
+.app-shell[data-theme="neonheart"] .brand-wrap .eyebrow { color:#b9006e; }
+.app-shell[data-theme="neonheart"] .brand-wrap .wordmark { color:#09070b; font-weight:1000; }
+
+.app-shell[data-theme="neonheart"] .header-actions > :is(.cloud-save-status,.calendar-button,.avatar-button) {
+  background:#ffffff;
+  border:3px solid #09070b;
+  border-radius:13px;
+  box-shadow:4px 4px 0 #ff0a9a;
+  color:#09070b;
+}
+
+.app-shell[data-theme="neonheart"] .calendar-button .calendar-glyph { color:#ff0a9a; }
+
+.app-shell[data-theme="neonheart"] .main-content {
+  background:
+    radial-gradient(circle at 7px 7px,color-mix(in srgb,#ff0a9a 17%,transparent) 0 1.2px,transparent 1.6px) 0 0 / 22px 22px,
+    var(--cream);
+  border-radius:28px 28px 0 0;
+}
+
+.app-shell[data-theme="neonheart"] :is(
+  .card,.welcome-row,.week-strip,.schedule-card,.reminder-card,.habit-row,
+  .timer-card,.focus-side,.journal-compose,.space-card,.record-card,.audio-item,
+  .class-list,.selected-day-panel,.calendar-mood-picker,.day-completion-control,
+  .event-editor-card,.event-options-card,.mode-card,.install-card,.profile-card,
+  .sync-card,.custom-theme-card,.theme-wardrobe,.screen-intro,.event-detail-note,
+  .day-summary-card,.planner-card
+) {
+  background:var(--paper);
+  border:3px solid var(--ink);
+  border-radius:18px;
+  box-shadow:var(--shadow-soft);
+}
+
+.app-shell[data-theme="neonheart"] :is(.welcome-row,.screen-intro) {
+  background:
+    linear-gradient(135deg,transparent 0 72%,color-mix(in srgb,#ff0a9a 22%,transparent) 72%),
+    var(--paper);
+}
+
+.app-shell[data-theme="neonheart"] .welcome-row::after {
+  background:#ff0a9a;
+  border:3px solid var(--ink);
+  box-shadow:3px 3px 0 var(--ink);
+}
+
+.app-shell[data-theme="neonheart"] :is(.eyebrow,.tiny-label,.date-label,.section-heading p) {
+  color:var(--leaf-deep);
+  font-weight:1000;
+  letter-spacing:.13em;
+}
+
+.app-shell[data-theme="neonheart"] :is(.welcome-row h2,.screen-intro h2,.section-heading h3,.inner-header h2) {
+  font-weight:1000;
+  letter-spacing:-.055em;
+}
+
+.app-shell[data-theme="neonheart"] .week-strip { padding:8px; }
+.app-shell[data-theme="neonheart"] .week-strip .day { border:2px solid transparent; border-radius:11px; }
+.app-shell[data-theme="neonheart"] .week-strip .day.active {
+  background:#09070b;
+  border-color:#ff0a9a;
+  box-shadow:3px 3px 0 #ff0a9a;
+  color:#ffffff;
+  transform:rotate(-1deg);
+}
+.app-shell[data-theme="neonheart"] .week-strip .day.active :is(span,strong) { color:#ffffff; }
+.app-shell[data-theme="neonheart"] .week-strip .day.today:not(.active) {
+  background:#ffb9e2;
+  border-color:#09070b;
+  color:#09070b;
+}
+
+.app-shell[data-theme="neonheart"] :is(
+  .add-event-button,.calendar-add-large,.record-button,.journal-actions button,
+  .save-page,.timer-main,.mobile-event-save,.text-button,.calendar-date-menu-done,
+  .event-detail-edit,.recording-edit-actions button
+) {
+  background:#ff0a9a;
+  border:3px solid #09070b;
+  border-radius:11px;
+  box-shadow:4px 4px 0 #09070b;
+  color:#ffffff;
+  font-weight:1000;
+}
+
+.app-shell[data-theme="neonheart"] :is(.schedule-card,.habit-row,.audio-item,.reminder-row) {
+  border-radius:13px;
+}
+.app-shell[data-theme="neonheart"] .schedule-card:nth-of-type(even),
+.app-shell[data-theme="neonheart"] .habit-row:nth-of-type(even) { box-shadow:5px 5px 0 #ff0a9a; }
+.app-shell[data-theme="neonheart"] .schedule-line { background:#ff0a9a; border-radius:2px; }
+.app-shell[data-theme="neonheart"] .progress-pill { background:#09070b; color:#ffffff; }
+.app-shell[data-theme="neonheart"] .reminder-icon { border:2px solid #09070b; border-radius:11px; }
+.app-shell[data-theme="neonheart"] .check-button { border:3px solid #ff0a9a; }
+.app-shell[data-theme="neonheart"] .check-button.done { background:#09070b; color:#ff0a9a; }
+
+.app-shell[data-theme="neonheart"] .timer-ring {
+  background:conic-gradient(#ff0a9a var(--timer-progress,65%),var(--cream-deep) 0);
+  border:4px solid var(--ink);
+  box-shadow:7px 7px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .journal-paper {
+  background:
+    linear-gradient(90deg,transparent 34px,#ff8bd3 34px 36px,transparent 36px),
+    repeating-linear-gradient(transparent 0 31px,color-mix(in srgb,var(--ink) 14%,transparent) 31px 32px),
+    var(--paper);
+  border-color:var(--ink);
+}
+.app-shell[data-theme="neonheart"] .space-card::after { color:#ff0a9a; content:"♥"; }
+
+.app-shell[data-theme="neonheart"] .bottom-nav {
+  background:color-mix(in srgb,var(--paper) 96%,transparent);
+  border:3px solid var(--ink);
+  border-bottom:0;
+  border-radius:18px 18px 0 0;
+  box-shadow:0 -5px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .bottom-nav button { border-radius:9px; }
+.app-shell[data-theme="neonheart"] .bottom-nav button.active {
+  background:#09070b;
+  color:#ff0a9a;
+  transform:translateY(-3px) rotate(-1deg);
+}
+
+.app-shell[data-theme="neonheart"] .modal-backdrop {
+  background:rgba(9,7,11,.76);
+  backdrop-filter:blur(5px) grayscale(.25);
+}
+.app-shell[data-theme="neonheart"] :is(.calendar-modal,.settings-modal,.class-editor-modal,.habit-editor-modal) {
+  background:
+    radial-gradient(circle at 8px 8px,color-mix(in srgb,#ff0a9a 16%,transparent) 0 1px,transparent 1.5px) 0 0 / 24px 24px,
+    var(--cream);
+  border:4px solid var(--ink);
+  border-radius:21px;
+  box-shadow:10px 10px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .modal-top > button,
+.app-shell[data-theme="neonheart"] .calendar-month-heading > button {
+  background:#09070b;
+  border:2px solid #ff0a9a;
+  color:#ffffff;
+}
+.app-shell[data-theme="neonheart"] .calendar-date-menu {
+  background:var(--paper);
+  border:3px solid var(--ink);
+  border-radius:14px;
+  box-shadow:6px 6px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .calendar-date-menu-list button.active {
+  background:#09070b;
+  color:#ffffff;
+}
+.app-shell[data-theme="neonheart"] .month-grid > button {
+  border:2px solid color-mix(in srgb,var(--ink) 18%,transparent);
+  border-radius:10px;
+}
+.app-shell[data-theme="neonheart"] .month-grid > button.selected {
+  border-color:#09070b;
+  box-shadow:3px 3px 0 #ff0a9a;
+}
+
+.app-shell[data-theme="neonheart"] .calendar-modal.calendar-expanded {
+  background:
+    radial-gradient(circle at 7px 7px,color-mix(in srgb,#ff0a9a 13%,transparent) 0 1px,transparent 1.5px) 0 0 / 22px 22px,
+    var(--cream);
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+.app-shell[data-theme="neonheart"] .schedule-clean-topbar {
+  background:var(--paper);
+  border:3px solid var(--ink);
+  border-radius:15px;
+  box-shadow:5px 5px 0 #ff0a9a;
+  margin:4px auto 12px;
+  max-width:760px;
+  padding:7px;
+  width:calc(100% - 18px);
+}
+.app-shell[data-theme="neonheart"] .schedule-clean-topbar button {
+  background:#09070b;
+  border:2px solid #ff0a9a;
+  color:#ffffff;
+}
+.app-shell[data-theme="neonheart"] .calendar-expanded .schedule-shell { background:transparent; }
+.app-shell[data-theme="neonheart"] .schedule-mobile-date-card {
+  border:3px solid var(--ink);
+  border-radius:16px;
+  box-shadow:5px 5px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .schedule-mobile-days button.selected {
+  background:#09070b;
+  border:2px solid #ff0a9a;
+  box-shadow:3px 3px 0 #ff0a9a;
+  color:#ffffff;
+}
+.app-shell[data-theme="neonheart"] .schedule-board,
+.app-shell[data-theme="neonheart"] .schedule-board.has-all-day {
+  background:var(--paper);
+  border-left:3px solid var(--ink);
+  border-right:3px solid var(--ink);
+}
+.app-shell[data-theme="neonheart"] .schedule-hour-labels { border-right:2px solid var(--ink); }
+.app-shell[data-theme="neonheart"] .schedule-day-column {
+  background:repeating-linear-gradient(180deg,transparent 0 calc(100% / 18 - 1px),color-mix(in srgb,var(--ink) 16%,transparent) calc(100% / 18 - 1px) calc(100% / 18));
+}
+.app-shell[data-theme="neonheart"] .schedule-event {
+  border:2px solid #09070b;
+  border-left:7px solid #ff0a9a;
+  border-radius:9px;
+  box-shadow:3px 3px 0 #09070b;
+}
+.app-shell[data-theme="neonheart"] .schedule-now-line { background:#ff0a9a; box-shadow:0 0 0 2px var(--paper); }
+.app-shell[data-theme="neonheart"] .schedule-now-line::before { background:#ff0a9a; border:2px solid #09070b; }
+.app-shell[data-theme="neonheart"] .schedule-bottom-dock {
+  background:var(--paper);
+  border:3px solid var(--ink);
+  border-radius:15px;
+  box-shadow:5px 5px 0 #ff0a9a;
+}
+.app-shell[data-theme="neonheart"] .schedule-bottom-dock button { color:var(--ink); }
+.app-shell[data-theme="neonheart"] .schedule-bottom-dock .schedule-dock-add {
+  background:#ff0a9a;
+  border:3px solid #09070b;
+  border-radius:12px;
+  box-shadow:4px 4px 0 #09070b;
+  color:#ffffff;
+}
+
+.theme-option[data-theme-option="neonheart"] {
+  background:
+    radial-gradient(circle at 83% 24%,#ff0a9a 0 8px,transparent 9px),
+    repeating-linear-gradient(135deg,#09070b 0 10px,#1b161c 10px 20px);
+  border-color:#ff0a9a;
+  color:#ffffff;
+}
+.theme-option[data-theme-option="neonheart"] .theme-option-art {
+  background:#ffffff;
+  border:3px solid #ff0a9a;
+  border-radius:10px;
+  box-shadow:4px 4px 0 #ff0a9a;
+}
+.theme-option[data-theme-option="neonheart"] .theme-option-art::after {
+  color:#ff0a9a;
+  content:"♥✦";
+  font-size:25px;
+  font-weight:1000;
+  inset:auto 8px 5px auto;
+  position:absolute;
+}
+.theme-option[data-theme-option="neonheart"] .theme-option-copy :is(strong,small) { color:#ffffff; }
+.theme-option[data-theme-option="neonheart"].active { box-shadow:0 0 0 4px #ff0a9a,6px 6px 0 #09070b; }
+
+@media (max-width:680px) {
+  .app-shell[data-theme="neonheart"] { padding:0; }
+  .app-shell[data-theme="neonheart"] .phone-canvas { border:0; border-radius:0; box-shadow:none; }
+  .app-shell[data-theme="neonheart"] .brand-wrap { box-shadow:3px 3px 0 #ff0a9a; }
+  .app-shell[data-theme="neonheart"] .main-content { border-radius:22px 22px 0 0; }
+  .storybook-scene[data-visual="neonheart"]::before { font-size:35px; right:2%; top:68px; }
+  .storybook-scene[data-visual="neonheart"]::after { left:5%; top:106px; }
+  .app-shell[data-theme="neonheart"] .schedule-clean-topbar { border-left:0; border-radius:0; border-right:0; margin-top:0; width:100%; }
+  .app-shell[data-theme="neonheart"] .schedule-board,
+  .app-shell[data-theme="neonheart"] .schedule-board.has-all-day { border-left:0; border-right:0; }
+}

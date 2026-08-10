@@ -39,18 +39,19 @@ test("keeps the approved theme collection and its cute additions", () => {
     "peachpuppy",
     "matchabunny",
     "cherryribbon",
+    "neonheart",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    6,
-    "the six decorated themes should hide the welcome charm",
+    7,
+    "the seven decorated themes should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    6,
-    "the six approved decorated themes should decorate the sky",
+    7,
+    "the seven approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -117,19 +118,30 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(cssSource, /\.note-detail-text/);
 });
 
-test("keeps compact calendar and offers an interactive weekly schedule", () => {
+test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /Weekly schedule/);
+  assert.match(pageSource, /Daily schedule/);
   assert.match(pageSource, /schedule-shell/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
   assert.match(pageSource, /outside-month/);
-  assert.match(pageSource, /scheduleDayCount/);
+  assert.match(pageSource, /selectedTimedScheduleEvents/);
+  assert.match(pageSource, /shiftScheduleDay/);
   assert.match(pageSource, /schedule-now-line/);
+  assert.match(pageSource, /schedule-bottom-dock/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.schedule-timeline/);
   assert.match(cssSource, /\.schedule-event/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
+});
+
+test("adds Neon heartbreak as an isolated complete theme", () => {
+  assert.match(pageSource, /id: "neonheart"/);
+  assert.match(pageSource, /name: "Neon heartbreak"/);
+  assert.match(cssSource, /\.app-shell\[data-theme="neonheart"\]/);
+  assert.match(cssSource, /\.storybook-scene\[data-visual="neonheart"\]/);
+  assert.match(cssSource, /\.theme-option\[data-theme-option="neonheart"\]/);
+  assert.match(cssSource, /#ff0a9a/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {

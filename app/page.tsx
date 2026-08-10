@@ -50,6 +50,7 @@ type AppTheme =
   | "peachpuppy"
   | "matchabunny"
   | "cherryribbon"
+  | "neonheart"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -624,6 +625,18 @@ const themeOptions: {
   {
     id: "cherryribbon", name: "Cherry ribbon journal", description: "Cherry pink ribbons, vanilla pages, and a little stationery sparkle.", colors: ["#efb3c1", "#fff8f1", "#bdcf9c"], icon: "🎀", art: "/assets/openmoji/strawberry.svg", accents: ["/assets/openmoji/blossom.svg", "/assets/openmoji/star.svg"], charm: "made with love", showCharm: false, decoratedScene: true,
   },
+  {
+    id: "neonheart",
+    name: "Neon heartbreak",
+    description: "Ink-black edges, paper white, electric pink hearts, stars, and pretty chaos.",
+    colors: ["#ff0a9a", "#ffffff", "#09070b"],
+    icon: "🖤",
+    art: "/assets/openmoji/star.svg",
+    accents: ["/assets/openmoji/moon.svg", "/assets/openmoji/blossom.svg"],
+    charm: "pretty chaos",
+    showCharm: false,
+    decoratedScene: true,
+  },
 ];
 
 const safePlaceHoldMessages = [
@@ -1038,7 +1051,6 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
-  const [scheduleDayCount, setScheduleDayCount] = useState<5 | 7>(7);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
@@ -1547,23 +1559,24 @@ export default function Home() {
     ];
   }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
   const scheduleDays = useMemo(
-    () => scheduleDatesFor(selectedCalendarDate, scheduleDayCount),
-    [scheduleDayCount, selectedCalendarDate],
+    () => scheduleDatesFor(selectedCalendarDate, 7),
+    [selectedCalendarDate],
   );
   const scheduleHours = useMemo(
     () => Array.from({ length: 19 }, (_, index) => index + 6),
     [],
   );
-  const scheduleHasAllDayEvents = scheduleDays.some((date) => {
-    const dateKey = localDateKey(date);
-    return calendarEvents.some(
-      (event) => event.allDay && eventOccursOn(event, dateKey),
-    );
-  });
   const currentScheduleMinute = new Date().getHours() * 60 + new Date().getMinutes();
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const selectedScheduleAllDayEvents = selectedDateEvents.filter(
+    (event) => event.allDay,
+  );
+  const selectedTimedScheduleEvents = layoutScheduleEvents(
+    selectedDateEvents.filter((event) => !event.allDay),
+  ).filter(({ start, end }) => end > 6 * 60 && start < 24 * 60);
+  const scheduleHasAllDayEvents = selectedScheduleAllDayEvents.length > 0;
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
@@ -1763,6 +1776,14 @@ export default function Home() {
   const shiftScheduleWeek = (offset: number) => {
     const next = dateFromKey(selectedCalendarDate);
     next.setDate(next.getDate() + offset * 7);
+    const nextKey = localDateKey(next);
+    setSelectedCalendarDate(nextKey);
+    setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
+  };
+
+  const shiftScheduleDay = (offset: number) => {
+    const next = dateFromKey(selectedCalendarDate);
+    next.setDate(next.getDate() + offset);
     const nextKey = localDateKey(next);
     setSelectedCalendarDate(nextKey);
     setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
@@ -4798,7 +4819,7 @@ export default function Home() {
                       type="button"
                       aria-pressed={false}
                       onClick={() => {
-                        const visibleDates = scheduleDatesFor(selectedCalendarDate, scheduleDayCount);
+                        const visibleDates = scheduleDatesFor(selectedCalendarDate, 7);
                         if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) {
                           setSelectedCalendarDate(localDateKey(visibleDates[0]));
                         }
@@ -4806,38 +4827,12 @@ export default function Home() {
                       }}
                     >
                       <span aria-hidden="true">▦</span>
-                      Weekly schedule
+                      Daily schedule
                     </button>
                   )}
                 </div>
                 {calendarExpanded && (
                   <div className="schedule-shell">
-                    <div className="schedule-toolbar">
-                      <div className="schedule-week-nav" aria-label="Week navigation">
-                        <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">←</button>
-                        <button type="button" onClick={goToScheduleToday}>Today</button>
-                        <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">→</button>
-                      </div>
-                      <div className="schedule-span-toggle" aria-label="Schedule span">
-                        {([5, 7] as const).map((count) => (
-                          <button
-                            key={count}
-                            type="button"
-                            className={scheduleDayCount === count ? "active" : ""}
-                            onClick={() => {
-                              setScheduleDayCount(count);
-                              const dates = scheduleDatesFor(selectedCalendarDate, count);
-                              if (!dates.some((date) => localDateKey(date) === selectedCalendarDate)) {
-                                setSelectedCalendarDate(localDateKey(dates[0]));
-                              }
-                            }}
-                          >
-                            {count === 5 ? "5 days" : "Full week"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
                     <div className="schedule-mobile-date-card">
                       <button
                         className="schedule-mobile-week-shift"
@@ -4890,49 +4885,25 @@ export default function Home() {
 
                     <div
                       className={`schedule-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`}
-                      style={{ "--schedule-days": scheduleDayCount } as CSSProperties}
                     >
-                      <span className="schedule-time-corner" aria-hidden="true" />
-                      <div className="schedule-day-heads">
-                        {scheduleDays.map((date) => {
-                          const dateKey = localDateKey(date);
-                          return (
-                            <button
-                              key={dateKey}
-                              className={[
-                                selectedCalendarDate === dateKey ? "selected" : "",
-                                dateKey === todayKey ? "today" : "",
-                              ].filter(Boolean).join(" ")}
-                              onClick={() => setSelectedCalendarDate(dateKey)}
-                            >
-                              <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
-                              <strong>{date.getDate()}</strong>
-                            </button>
-                          );
-                        })}
-                      </div>
                       {scheduleHasAllDayEvents && (
                         <>
                           <span className="schedule-all-day-label">ALL DAY</span>
                           <div className="schedule-all-day-columns">
-                            {scheduleDays.map((date) => {
-                              const dateKey = localDateKey(date);
-                              const allDayEvents = calendarEvents.filter((event) => event.allDay && eventOccursOn(event, dateKey));
-                              return (
-                                <div key={dateKey} className={selectedCalendarDate === dateKey ? "selected" : ""}>
-                                  {allDayEvents.slice(0, 2).map((event) => (
-                                    <button
-                                      key={event.id}
-                                      className={`schedule-all-day-event ${event.color}`}
-                                      onClick={() => setSelectedEventDetail(event)}
-                                    >
-                                      {event.title}
-                                    </button>
-                                  ))}
-                                  {allDayEvents.length > 2 && <small>+{allDayEvents.length - 2}</small>}
-                                </div>
-                              );
-                            })}
+                            <div className="selected">
+                              {selectedScheduleAllDayEvents.slice(0, 2).map((event) => (
+                                <button
+                                  key={event.id}
+                                  className={`schedule-all-day-event ${event.color}`}
+                                  onClick={() => setSelectedEventDetail(event)}
+                                >
+                                  {event.title}
+                                </button>
+                              ))}
+                              {selectedScheduleAllDayEvents.length > 2 && (
+                                <small>+{selectedScheduleAllDayEvents.length - 2}</small>
+                              )}
+                            </div>
                           </div>
                         </>
                       )}
@@ -4947,71 +4918,68 @@ export default function Home() {
                             ))}
                           </div>
                           <div className="schedule-day-columns">
-                            {scheduleDays.map((date) => {
-                              const dateKey = localDateKey(date);
-                              const positionedEvents = layoutScheduleEvents(
-                                calendarEvents.filter((event) => !event.allDay && eventOccursOn(event, dateKey)),
-                              ).filter(({ start, end }) => end > 6 * 60 && start < 24 * 60);
-                              return (
-                                <div
-                                  key={dateKey}
-                                  className={[
-                                    "schedule-day-column",
-                                    selectedCalendarDate === dateKey ? "selected" : "",
-                                    dateKey === todayKey ? "today" : "",
-                                  ].filter(Boolean).join(" ")}
-                                  onClick={(event) => {
-                                    const bounds = event.currentTarget.getBoundingClientRect();
-                                    const ratio = (event.clientY - bounds.top) / Math.max(1, bounds.height);
-                                    openNewEventAtMinute(dateKey, 6 * 60 + ratio * 18 * 60);
-                                  }}
-                                  aria-label={`Schedule for ${readableDate(dateKey)}. Tap an empty time to add an event.`}
-                                >
-                                  {dateKey === todayKey && currentScheduleMinute >= 6 * 60 && currentScheduleMinute <= 24 * 60 && (
-                                    <span
-                                      className="schedule-now-line"
-                                      style={{ top: `${((currentScheduleMinute - 6 * 60) / (18 * 60)) * 100}%` }}
-                                    />
-                                  )}
-                                  {positionedEvents.map(({ event, start, end, lane, laneCount }) => {
-                                    const visibleStart = Math.max(6 * 60, start);
-                                    const visibleEnd = Math.min(24 * 60, end);
-                                    return (
-                                      <button
-                                        key={event.id}
-                                        className={`schedule-event ${event.color}`}
-                                        style={{
-                                          top: `${((visibleStart - 6 * 60) / (18 * 60)) * 100}%`,
-                                          height: `${Math.max(2.6, ((visibleEnd - visibleStart) / (18 * 60)) * 100)}%`,
-                                          left: `calc(${(lane / laneCount) * 100}% + 3px)`,
-                                          width: `calc(${100 / laneCount}% - 6px)`,
-                                        }}
-                                        onClick={(pointerEvent) => {
-                                          pointerEvent.stopPropagation();
-                                          setSelectedEventDetail(event);
-                                        }}
-                                      >
-                                        <strong>{event.title}</strong>
-                                        <small>{eventStartTimeLabel(event)}{event.endTime ? ` – ${eventTimeLabel(event).split("–")[1]}` : ""}</small>
-                                        {event.location && <i>{event.location}</i>}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })}
+                            <div
+                              className={[
+                                "schedule-day-column",
+                                "selected",
+                                selectedCalendarDate === todayKey ? "today" : "",
+                              ].filter(Boolean).join(" ")}
+                              onClick={(event) => {
+                                const bounds = event.currentTarget.getBoundingClientRect();
+                                const ratio = (event.clientY - bounds.top) / Math.max(1, bounds.height);
+                                openNewEventAtMinute(selectedCalendarDate, 6 * 60 + ratio * 18 * 60);
+                              }}
+                              aria-label={`Schedule for ${readableDate(selectedCalendarDate)}. Tap an empty time to add an event.`}
+                            >
+                              {selectedCalendarDate === todayKey && currentScheduleMinute >= 6 * 60 && currentScheduleMinute <= 24 * 60 && (
+                                <span
+                                  className="schedule-now-line"
+                                  style={{ top: `${((currentScheduleMinute - 6 * 60) / (18 * 60)) * 100}%` }}
+                                />
+                              )}
+                              {selectedTimedScheduleEvents.map(({ event, start, end, lane, laneCount }) => {
+                                const visibleStart = Math.max(6 * 60, start);
+                                const visibleEnd = Math.min(24 * 60, end);
+                                return (
+                                  <button
+                                    key={event.id}
+                                    className={`schedule-event ${event.color}`}
+                                    style={{
+                                      top: `${((visibleStart - 6 * 60) / (18 * 60)) * 100}%`,
+                                      height: `${Math.max(3.8, ((visibleEnd - visibleStart) / (18 * 60)) * 100)}%`,
+                                      left: `calc(${(lane / laneCount) * 100}% + 6px)`,
+                                      width: `calc(${100 / laneCount}% - 12px)`,
+                                    }}
+                                    onClick={(pointerEvent) => {
+                                      pointerEvent.stopPropagation();
+                                      setSelectedEventDetail(event);
+                                    }}
+                                  >
+                                    <strong>{event.title}</strong>
+                                    <small>{eventStartTimeLabel(event)}{event.endTime ? ` – ${eventTimeLabel(event).split("–")[1]}` : ""}</small>
+                                    {event.location && <i>{event.location}</i>}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <button
-                      className="schedule-floating-add"
-                      type="button"
-                      onClick={() => openNewEvent(selectedCalendarDate)}
-                      aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
-                    >
-                      ＋
-                    </button>
+                    <nav className="schedule-bottom-dock" aria-label="Schedule actions">
+                      <button type="button" onClick={() => setCalendarExpanded(false)} aria-label="Month view">▦</button>
+                      <button type="button" onClick={() => shiftScheduleDay(-1)} aria-label="Previous day">←</button>
+                      <button
+                        className="schedule-dock-add"
+                        type="button"
+                        onClick={() => openNewEvent(selectedCalendarDate)}
+                        aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
+                      >
+                        ＋
+                      </button>
+                      <button type="button" onClick={() => shiftScheduleDay(1)} aria-label="Next day">→</button>
+                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◎</button>
+                    </nav>
                   </div>
                 )}
                 <div className="month-grid-viewport">
