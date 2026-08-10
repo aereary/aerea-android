@@ -111,9 +111,15 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /outside-month/);
   assert.match(pageSource, /selectedTimedScheduleEvents/);
   assert.match(pageSource, /startScheduleSwipe/);
+  assert.match(pageSource, /scheduleSlideDirection/);
+  assert.match(pageSource, /schedule-slide-\$\{scheduleSlideDirection\}/);
+  assert.match(pageSource, /todayKey === dateKey \? "today" : ""/);
+  assert.match(pageSource, /aria-current=\{todayKey === dateKey \? "date" : undefined\}/);
   assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
+  assert.match(pageSource, /className=\{`agenda-v2-event[\s\S]*setSelectedEventDetail\(event\)/);
+  assert.match(pageSource, /className="event-detail-edit"[\s\S]*openEventEditor\(event\)/);
   assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /scheduleMarks/);
   assert.match(pageSource, /flushOverlapGroup/);
@@ -137,6 +143,9 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /--v2-highlight/);
   assert.match(cssSource, /\.agenda-v2-now[\s\S]*right:0/);
   assert.match(cssSource, /\.agenda-v2-event\.is-short/);
+  assert.match(cssSource, /\.agenda-v2-week-content\.schedule-slide-next/);
+  assert.match(cssSource, /\.agenda-v2-days button\.today:not\(\.selected\)/);
+  assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 

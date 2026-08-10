@@ -905,6 +905,9 @@ export default function Home() {
   const [calendarSlideDirection, setCalendarSlideDirection] = useState<
     "previous" | "next" | null
   >(null);
+  const [scheduleSlideDirection, setScheduleSlideDirection] = useState<
+    "previous" | "next" | null
+  >(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayKey);
   const [eventEditorOpen, setEventEditorOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -1534,6 +1537,7 @@ export default function Home() {
   };
 
   const shiftScheduleWeek = (offset: number) => {
+    setScheduleSlideDirection(offset > 0 ? "next" : "previous");
     const next = dateFromKey(selectedCalendarDate);
     next.setDate(next.getDate() + offset * 7);
     const nextKey = localDateKey(next);
@@ -4516,31 +4520,47 @@ export default function Home() {
                       onTouchEnd={finishScheduleSwipe}
                       aria-label="Week. Swipe left or right to change week."
                     >
-                      <div className="agenda-v2-week-heading">
-                        <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">‹</button>
-                        <strong>
-                          {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
-                            weekday: "long",
-                            month: "long",
-                            day: "numeric",
+                      <div
+                        key={localDateKey(scheduleDays[0])}
+                        className={[
+                          "agenda-v2-week-content",
+                          scheduleSlideDirection
+                            ? `schedule-slide-${scheduleSlideDirection}`
+                            : "",
+                        ].filter(Boolean).join(" ")}
+                        onAnimationEnd={() => setScheduleSlideDirection(null)}
+                      >
+                        <div className="agenda-v2-week-heading">
+                          <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">‹</button>
+                          <strong>
+                            {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
+                              weekday: "long",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </strong>
+                          <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">›</button>
+                        </div>
+                        <div className="agenda-v2-days" aria-label="Choose a day">
+                          {scheduleDays.map((date) => {
+                            const dateKey = localDateKey(date);
+                            return (
+                              <button
+                                key={dateKey}
+                                className={[
+                                  selectedCalendarDate === dateKey ? "selected" : "",
+                                  todayKey === dateKey ? "today" : "",
+                                ].filter(Boolean).join(" ")}
+                                onClick={() => setSelectedCalendarDate(dateKey)}
+                                aria-pressed={selectedCalendarDate === dateKey}
+                                aria-current={todayKey === dateKey ? "date" : undefined}
+                              >
+                                <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
+                                <strong>{date.getDate()}</strong>
+                              </button>
+                            );
                           })}
-                        </strong>
-                        <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">›</button>
-                      </div>
-                      <div className="agenda-v2-days" aria-label="Choose a day">
-                        {scheduleDays.map((date) => {
-                          const dateKey = localDateKey(date);
-                          return (
-                            <button
-                              key={dateKey}
-                              className={selectedCalendarDate === dateKey ? "selected" : ""}
-                              onClick={() => setSelectedCalendarDate(dateKey)}
-                            >
-                              <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
-                              <strong>{date.getDate()}</strong>
-                            </button>
-                          );
-                        })}
+                        </div>
                       </div>
                     </div>
 

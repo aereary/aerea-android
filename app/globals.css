@@ -8150,7 +8150,7 @@ body {
   display: flex;
   justify-content: center;
   padding: 18px;
-  z-index: 90;
+  z-index: 320;
 }
 
 .event-detail-note {
@@ -14185,7 +14185,7 @@ body {
   box-shadow:0 7px 16px color-mix(in srgb,var(--shadow) 13%,transparent);
   color:var(--v2-ink);
 }
-.agenda-v2-days button.selected::after {
+.agenda-v2-days button.today::after {
   background:var(--orange);
   border-radius:50%;
   bottom:7px;
@@ -14576,7 +14576,21 @@ body {
 .agenda-v2-week {
   border-radius:32px;
   flex-basis:158px;
+  overflow:hidden;
   padding:14px 19px 15px;
+}
+
+.agenda-v2-week-content {
+  min-width:0;
+  width:100%;
+}
+
+.agenda-v2-week-content.schedule-slide-next {
+  animation:calendar-slide-from-right .34s cubic-bezier(.22,.8,.26,1);
+}
+
+.agenda-v2-week-content.schedule-slide-previous {
+  animation:calendar-slide-from-left .34s cubic-bezier(.22,.8,.26,1);
 }
 
 .agenda-v2-week-heading { margin-bottom:7px; }
@@ -14585,6 +14599,12 @@ body {
 .agenda-v2-days button { border-radius:19px; }
 .agenda-v2-days button.selected {
   background:color-mix(in srgb,var(--v2-highlight) 86%,rgba(255,255,255,.72));
+}
+
+.agenda-v2-days button.today:not(.selected) {
+  background:var(--lime-wash);
+  box-shadow:inset 0 0 0 2px var(--leaf),0 7px 16px color-mix(in srgb,var(--shadow) 10%,transparent);
+  color:var(--leaf-deep);
 }
 
 .agenda-v2-board {
