@@ -27,7 +27,7 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps only the approved theme collection", () => {
+test("keeps the approved theme collection and its cute additions", () => {
   for (const theme of [
     "peachparlor",
     "mintletter",
@@ -36,18 +36,21 @@ test("keeps only the approved theme collection", () => {
     "duckmail",
     "calicotea",
     "moonquilt",
+    "peachpuppy",
+    "matchabunny",
+    "cherryribbon",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    3,
-    "only the three new decorated themes should hide the welcome charm",
+    6,
+    "the six decorated themes should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    3,
-    "only the three approved decorated themes should decorate the sky",
+    6,
+    "the six approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",

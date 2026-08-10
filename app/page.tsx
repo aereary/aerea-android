@@ -47,6 +47,9 @@ type AppTheme =
   | "duckmail"
   | "calicotea"
   | "moonquilt"
+  | "peachpuppy"
+  | "matchabunny"
+  | "cherryribbon"
   | "custom";
 type ColorMode = "light" | "dark";
 type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
@@ -213,6 +216,38 @@ type SketchStroke = {
   size: number;
   points: SketchPoint[];
 };
+
+type PlannerPage = {
+  id: string;
+  template: "strawberry" | "cozy" | "study";
+  title: string;
+  date: string;
+  priorities: string[];
+  todos: string[];
+  schedule: string[];
+  water: boolean[];
+  mood: string;
+  affirmation: string;
+  gratitude: string;
+  notes: string;
+};
+
+function makePlannerPage(template: PlannerPage["template"]): PlannerPage {
+  return {
+    id: `planner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    template,
+    title: template === "strawberry" ? "My daily planner" : template === "cozy" ? "A cozy little day" : "Soft study day",
+    date: localDateKey(new Date()),
+    priorities: ["", "", ""],
+    todos: ["", "", "", "", ""],
+    schedule: ["", "", "", "", "", ""],
+    water: Array(8).fill(false),
+    mood: "♡",
+    affirmation: "",
+    gratitude: "",
+    notes: "",
+  };
+}
 
 const themeOptions: {
   id: Exclude<AppTheme, "custom">;
@@ -465,6 +500,15 @@ const themeOptions: {
     charm: "tucked in softly",
     showCharm: false,
     decoratedScene: true,
+  },
+  {
+    id: "peachpuppy", name: "Peach puppy notes", description: "Warm peach paper, puppy cuddles, bows, and cream stationery.", colors: ["#f5c8ae", "#fffaf3", "#d9b58d"], icon: "🐶", art: "/assets/openmoji/basket.svg", accents: ["/assets/openmoji/croissant.svg", "/assets/openmoji/blossom.svg"], charm: "small steps", showCharm: false, decoratedScene: true,
+  },
+  {
+    id: "matchabunny", name: "Matcha bunny desk", description: "Milky matcha, soft green checks, notebooks, and a tiny bunny friend.", colors: ["#b8cf9e", "#fffdf5", "#ead8bc"], icon: "🐰", art: "/assets/openmoji/bunny.svg", accents: ["/assets/openmoji/tulip.svg", "/assets/openmoji/star.svg"], charm: "gently focused", showCharm: false, decoratedScene: true,
+  },
+  {
+    id: "cherryribbon", name: "Cherry ribbon journal", description: "Cherry pink ribbons, vanilla pages, and a little stationery sparkle.", colors: ["#efb3c1", "#fff8f1", "#bdcf9c"], icon: "🎀", art: "/assets/openmoji/strawberry.svg", accents: ["/assets/openmoji/blossom.svg", "/assets/openmoji/star.svg"], charm: "made with love", showCharm: false, decoratedScene: true,
   },
 ];
 
@@ -846,6 +890,7 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [daySummaryDate, setDaySummaryDate] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     makeEventDraft(todayKey),
   );
@@ -858,6 +903,8 @@ export default function Home() {
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
   const [syncCodeSent, setSyncCodeSent] = useState(false);
   const [refugeOpen, setRefugeOpen] = useState(false);
+  const [plannerPages, setPlannerPages] = useState<PlannerPage[]>([]);
+  const [activePlannerPageId, setActivePlannerPageId] = useState<string | null>(null);
   const [safePlaceMode, setSafePlaceMode] =
     useState<SafePlaceMode>("home");
   const [safePlaceMessageIndex, setSafePlaceMessageIndex] = useState(0);
@@ -958,10 +1005,15 @@ export default function Home() {
   const activeStrokeRef = useRef<SketchStroke | null>(null);
   const activeSketchPointerRef = useRef<number | null>(null);
   const sketchBaseImageRef = useRef<HTMLImageElement | null>(null);
+  const sketchImageInputRef = useRef<HTMLInputElement | null>(null);
+  const sketchStrokeStartedAtRef = useRef(0);
+  const [straightenOnHold, setStraightenOnHold] = useState(true);
   const stylusDetectedRef = useRef(false);
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const calendarLongPressRef = useRef<number | null>(null);
+  const calendarLongPressedRef = useRef(false);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -971,6 +1023,25 @@ export default function Home() {
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayDoneCount =
     reminderHistory[localDateKey(yesterdayDate)]?.length ?? 0;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("aerea-private-planner-pages");
+      if (!saved) return;
+      const pages = JSON.parse(saved) as PlannerPage[];
+      setPlannerPages(pages);
+      setActivePlannerPageId(pages[0]?.id ?? null);
+    } catch {
+      // A damaged private draft should never stop the rest of aérea.
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      "aerea-private-planner-pages",
+      JSON.stringify(plannerPages),
+    );
+  }, [plannerPages]);
 
   useEffect(() => {
     const updateDaypart = () => {
@@ -1522,6 +1593,22 @@ export default function Home() {
       return;
     }
     shiftCalendarMonth(deltaX < 0 ? 1 : -1);
+  };
+
+  const beginCalendarLongPress = (dayKey: string) => {
+    calendarLongPressedRef.current = false;
+    if (calendarLongPressRef.current) window.clearTimeout(calendarLongPressRef.current);
+    calendarLongPressRef.current = window.setTimeout(() => {
+      calendarLongPressedRef.current = true;
+      setSelectedCalendarDate(dayKey);
+      setDaySummaryDate(dayKey);
+      navigator.vibrate?.(18);
+    }, 520);
+  };
+
+  const cancelCalendarLongPress = () => {
+    if (calendarLongPressRef.current) window.clearTimeout(calendarLongPressRef.current);
+    calendarLongPressRef.current = null;
   };
 
   const updateProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2256,6 +2343,24 @@ export default function Home() {
     };
   };
 
+  const importSketchImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        sketchBaseImageRef.current = image;
+        resetSketchHistory();
+        redrawSketch();
+        setSketchMessage("Image attached — draw, highlight, or cross things out on top.");
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const startDrawing = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2294,6 +2399,7 @@ export default function Home() {
       size: penSize,
       points: [point],
     };
+    sketchStrokeStartedAtRef.current = performance.now();
     activeSketchPointerRef.current = event.pointerId;
     sketchRedoRef.current = [];
   };
@@ -2388,6 +2494,17 @@ export default function Home() {
       activeStrokeRef.current
     ) {
       const stroke = activeStrokeRef.current;
+      if (
+        straightenOnHold &&
+        stroke.tool === "pen" &&
+        stroke.points.length > 1 &&
+        performance.now() - sketchStrokeStartedAtRef.current >= 520
+      ) {
+        stroke.points = [stroke.points[0], stroke.points[stroke.points.length - 1]];
+        redrawSketch();
+        const context = canvasRef.current?.getContext("2d");
+        if (context) renderStroke(context, stroke);
+      }
       if (stroke.points.length === 1) {
         const context = canvasRef.current?.getContext("2d");
         if (context) renderStroke(context, stroke);
@@ -3239,6 +3356,19 @@ export default function Home() {
                         </div>
                       </div>
                       <div>
+                        <p className="tiny-label">SMART PAPER</p>
+                        <div className="sketch-smart-tools">
+                          <button className={straightenOnHold ? "active" : ""} onClick={() => setStraightenOnHold((value) => !value)} aria-pressed={straightenOnHold}>
+                            <span>╱</span> Hold for straight line
+                          </button>
+                          <button onClick={() => sketchImageInputRef.current?.click()}>
+                            <span>▧</span> Attach an image
+                          </button>
+                          <input ref={sketchImageInputRef} type="file" accept="image/*" onChange={importSketchImage} hidden />
+                        </div>
+                        <small className="smart-paper-note">Draw and keep the pen still for a moment to snap the stroke straight. Attached images stay underneath your ink.</small>
+                      </div>
+                      <div>
                         <p className="tiny-label">PAGE STYLE</p>
                         <div className="page-style-grid">
                           {([
@@ -4060,7 +4190,18 @@ export default function Home() {
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => setSelectedCalendarDate(dayKey)}
+                        onPointerDown={() => beginCalendarLongPress(dayKey)}
+                        onPointerUp={cancelCalendarLongPress}
+                        onPointerCancel={cancelCalendarLongPress}
+                        onPointerLeave={cancelCalendarLongPress}
+                        onContextMenu={(event) => event.preventDefault()}
+                        onClick={() => {
+                          if (calendarLongPressedRef.current) {
+                            calendarLongPressedRef.current = false;
+                            return;
+                          }
+                          setSelectedCalendarDate(dayKey);
+                        }}
                       >
                         <span className="calendar-day-number">{day}</span>
                         {dayMood && (
@@ -4272,7 +4413,92 @@ export default function Home() {
         </div>
       )}
 
-      {refugeOpen && (
+      {daySummaryDate && (() => {
+        const summaryEvents = calendarEvents.filter((event) =>
+          eventOccursOn(event, daySummaryDate),
+        );
+        return (
+          <div className="modal-backdrop day-summary-backdrop" role="presentation">
+            <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
+              <header>
+                <div>
+                  <p className="tiny-label">YOUR DAY AT A GLANCE</p>
+                  <h2>{readableDate(daySummaryDate)}</h2>
+                </div>
+                <button onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
+              </header>
+              {summaryEvents.length === 0 ? (
+                <div className="day-summary-empty"><span>☁</span><p>No plans yet. This space is all yours.</p></div>
+              ) : (
+                <div className="day-summary-events">
+                  {summaryEvents.map((event) => (
+                    <article className={`day-summary-event ${event.color}`} key={event.id}>
+                      <div className="day-summary-event-heading">
+                        <span>{event.memo ? "✎" : "♡"}</span>
+                        <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
+                      </div>
+                      {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
+                      {!!event.todos?.length && (
+                        <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+              <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>＋ Add something sweet</button>
+            </section>
+          </div>
+        );
+      })()}
+
+      {refugeOpen && (() => {
+        const activePage = plannerPages.find((page) => page.id === activePlannerPageId) ?? plannerPages[0];
+        const updatePage = (patch: Partial<PlannerPage>) => {
+          if (!activePage) return;
+          setPlannerPages((pages) => pages.map((page) => page.id === activePage.id ? { ...page, ...patch } : page));
+        };
+        const addPage = (template: PlannerPage["template"]) => {
+          const page = makePlannerPage(template);
+          setPlannerPages((pages) => [page, ...pages]);
+          setActivePlannerPageId(page.id);
+        };
+        return (
+          <div className="modal-backdrop planner-backdrop" role="presentation">
+            <section className="private-planner-modal" role="dialog" aria-modal="true" aria-label="Private planner pages">
+              <header className="private-planner-header">
+                <div><p className="tiny-label">MY PRIVATE PLANNER</p><h2>Pages made for your own rhythm</h2></div>
+                <button onClick={() => setRefugeOpen(false)} aria-label="Close private planner">×</button>
+              </header>
+              <nav className="planner-template-bar" aria-label="Planner templates">
+                <button onClick={() => addPage("strawberry")}>🍓 Strawberry daily</button>
+                <button onClick={() => addPage("cozy")}>🐻 Cozy friends</button>
+                <button onClick={() => addPage("study")}>📚 Soft study</button>
+              </nav>
+              {activePage ? (
+                <div className="planner-workspace">
+                  <aside className="planner-page-tabs">
+                    {plannerPages.map((page) => <button key={page.id} className={page.id === activePage.id ? "active" : ""} onClick={() => setActivePlannerPageId(page.id)}><span>{page.template === "strawberry" ? "🍓" : page.template === "cozy" ? "🐰" : "✏️"}</span><strong>{page.title}</strong><small>{page.date}</small></button>)}
+                  </aside>
+                  <article className={`planner-sheet ${activePage.template}`}>
+                    <div className="planner-sheet-title"><input value={activePage.title} onChange={(event) => updatePage({ title: event.target.value })} aria-label="Planner page title"/><input type="date" value={activePage.date} onChange={(event) => updatePage({ date: event.target.value })}/></div>
+                    <section className="planner-priorities"><h3>Top 3 priorities</h3>{activePage.priorities.map((value, index) => <label key={index}><span>{index + 1}</span><input value={value} onChange={(event) => { const priorities = [...activePage.priorities]; priorities[index] = event.target.value; updatePage({ priorities }); }}/></label>)}</section>
+                    <section className="planner-schedule"><h3>Schedule</h3>{activePage.schedule.map((value, index) => <label key={index}><span>{["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"][index]}</span><input value={value} onChange={(event) => { const schedule = [...activePage.schedule]; schedule[index] = event.target.value; updatePage({ schedule }); }}/></label>)}</section>
+                    <section className="planner-todos"><h3>To-do list</h3>{activePage.todos.map((value, index) => <label key={index}><span>♡</span><input value={value} onChange={(event) => { const todos = [...activePage.todos]; todos[index] = event.target.value; updatePage({ todos }); }}/></label>)}</section>
+                    <section className="planner-water"><h3>Water</h3><div>{activePage.water.map((filled, index) => <button key={index} className={filled ? "filled" : ""} onClick={() => { const water = [...activePage.water]; water[index] = !water[index]; updatePage({ water }); }}>♡</button>)}</div></section>
+                    <section className="planner-mood"><h3>Mood</h3><div>{["🌸", "😊", "😌", "😴", "🌧️"].map((mood) => <button key={mood} className={activePage.mood === mood ? "active" : ""} onClick={() => updatePage({ mood })}>{mood}</button>)}</div></section>
+                    <label className="planner-affirmation"><h3>Daily affirmation</h3><textarea value={activePage.affirmation} onChange={(event) => updatePage({ affirmation: event.target.value })}/></label>
+                    <label className="planner-gratitude"><h3>Gratitude</h3><textarea value={activePage.gratitude} onChange={(event) => updatePage({ gratitude: event.target.value })}/></label>
+                    <label className="planner-notes"><h3>Notes</h3><textarea value={activePage.notes} onChange={(event) => updatePage({ notes: event.target.value })}/></label>
+                    <button className="planner-delete" onClick={() => { if (!window.confirm("Delete this planner page?")) return; setPlannerPages((pages) => pages.filter((page) => page.id !== activePage.id)); setActivePlannerPageId(null); }}>Delete page</button>
+                  </article>
+                </div>
+              ) : <div className="planner-empty"><span>🎀</span><h3>Choose a template to begin</h3><p>Every field saves automatically on this device.</p></div>}
+            </section>
+          </div>
+        );
+      })()}
+
+      {false && (
         <div className="modal-backdrop refuge-backdrop" role="presentation">
           <section
             className="refuge-modal"
