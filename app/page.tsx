@@ -959,6 +959,52 @@ function eventStartTimeLabel(event: CalendarEvent) {
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function minutesFromTime(time = "09:00") {
+  const [hours, minutes] = time.split(":").map(Number);
+  return Math.max(0, Math.min(24 * 60, (hours || 0) * 60 + (minutes || 0)));
+}
+
+function timeFromMinutes(value: number) {
+  const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(value / 15) * 15));
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function scheduleHourLabel(hour: number) {
+  return `${hour % 12 || 12} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function scheduleDatesFor(dateKey: string, count: 5 | 7) {
+  const anchor = dateFromKey(dateKey);
+  const mondayOffset = (anchor.getDay() + 6) % 7;
+  const monday = new Date(anchor);
+  monday.setDate(anchor.getDate() - mondayOffset);
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return date;
+  });
+}
+
+function layoutScheduleEvents(events: CalendarEvent[]) {
+  const timed = events
+    .filter((event) => !event.allDay)
+    .map((event) => {
+      const start = minutesFromTime(event.time);
+      const end = Math.max(start + 30, minutesFromTime(event.endTime || timeFromMinutes(start + 60)));
+      return { event, start, end };
+    })
+    .sort((first, second) => first.start - second.start || first.end - second.end);
+  const laneEnds: number[] = [];
+  const placed = timed.map((item) => {
+    let lane = laneEnds.findIndex((end) => end <= item.start);
+    if (lane < 0) lane = laneEnds.length;
+    laneEnds[lane] = item.end;
+    return { ...item, lane };
+  });
+  const laneCount = Math.max(1, laneEnds.length);
+  return placed.map((item) => ({ ...item, laneCount }));
+}
+
 function eventRepeatLabel(event: CalendarEvent) {
   if (!event.repeat || event.repeat === "Never") return "Does not repeat";
   if (event.repeat !== "Custom") return event.repeat;
@@ -992,6 +1038,7 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [scheduleDayCount, setScheduleDayCount] = useState<5 | 7>(5);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
@@ -1499,6 +1546,31 @@ export default function Home() {
       })),
     ];
   }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
+  const scheduleDays = useMemo(
+    () => scheduleDatesFor(selectedCalendarDate, scheduleDayCount),
+    [scheduleDayCount, selectedCalendarDate],
+  );
+  const scheduleHours = useMemo(
+    () => Array.from({ length: 19 }, (_, index) => index + 6),
+    [],
+  );
+  const scheduleRangeLabel = useMemo(() => {
+    const first = scheduleDays[0];
+    const last = scheduleDays[scheduleDays.length - 1];
+    if (!first || !last) return "Schedule";
+    const sameMonth = first.getMonth() === last.getMonth();
+    const firstLabel = first.toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+    });
+    const lastLabel = last.toLocaleDateString("en", {
+      month: sameMonth ? undefined : "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    return `${firstLabel} – ${lastLabel}`;
+  }, [scheduleDays]);
+  const currentScheduleMinute = new Date().getHours() * 60 + new Date().getMinutes();
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -1696,6 +1768,20 @@ export default function Home() {
     setSelectedCalendarDate(
       calendarDateKey(next.getFullYear(), next.getMonth(), clampedDay),
     );
+  };
+
+  const shiftScheduleWeek = (offset: number) => {
+    const next = dateFromKey(selectedCalendarDate);
+    next.setDate(next.getDate() + offset * 7);
+    const nextKey = localDateKey(next);
+    setSelectedCalendarDate(nextKey);
+    setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
+  };
+
+  const goToScheduleToday = () => {
+    const today = dateFromKey(todayKey);
+    setSelectedCalendarDate(todayKey);
+    setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
   };
 
   const startCalendarSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
@@ -1950,6 +2036,19 @@ export default function Home() {
   const openNewEvent = (dateKey = selectedCalendarDate) => {
     setEditingEventId(null);
     setEventDraft(makeEventDraft(dateKey));
+    setTodoDraft("");
+    setEventEditorOpen(true);
+  };
+
+  const openNewEventAtMinute = (dateKey: string, minute: number) => {
+    const start = Math.max(6 * 60, Math.min(23 * 60 + 30, Math.round(minute / 15) * 15));
+    setSelectedCalendarDate(dateKey);
+    setEditingEventId(null);
+    setEventDraft({
+      ...makeEventDraft(dateKey),
+      time: timeFromMinutes(start),
+      endTime: timeFromMinutes(Math.min(23 * 60 + 45, start + 60)),
+    });
     setTodoDraft("");
     setEventEditorOpen(true);
   };
@@ -4601,29 +4700,33 @@ export default function Home() {
                 <div className="modal-top">
                   <div className="calendar-month-heading">
                     <button
-                      onClick={() => shiftCalendarMonth(-1)}
-                      aria-label="Previous month"
+                      onClick={() => calendarExpanded ? shiftScheduleWeek(-1) : shiftCalendarMonth(-1)}
+                      aria-label={calendarExpanded ? "Previous week" : "Previous month"}
                     >
                       ←
                     </button>
                     <div>
-                      <p className="tiny-label">YOUR WHOLE RHYTHM</p>
+                      <p className="tiny-label">{calendarExpanded ? "YOUR WEEKLY RHYTHM" : "YOUR WHOLE RHYTHM"}</p>
                       <button
                         type="button"
                         className="calendar-date-menu-trigger"
-                        onClick={() => setMonthPickerOpen((open) => !open)}
+                        onClick={() => {
+                          if (!calendarExpanded) setMonthPickerOpen((open) => !open);
+                        }}
                         aria-expanded={monthPickerOpen}
-                        aria-label="Choose month and year"
+                        aria-label={calendarExpanded ? "Current schedule range" : "Choose month and year"}
                       >
-                        {viewMonth.toLocaleDateString("en", {
-                          month: "long",
-                          year: "numeric",
-                        })}
+                        {calendarExpanded
+                          ? scheduleRangeLabel
+                          : viewMonth.toLocaleDateString("en", {
+                              month: "long",
+                              year: "numeric",
+                            })}
                       </button>
                     </div>
                     <button
-                      onClick={() => shiftCalendarMonth(1)}
-                      aria-label="Next month"
+                      onClick={() => calendarExpanded ? shiftScheduleWeek(1) : shiftCalendarMonth(1)}
+                      aria-label={calendarExpanded ? "Next week" : "Next month"}
                     >
                       →
                     </button>
@@ -4634,7 +4737,7 @@ export default function Home() {
                         onClick={() => setCalendarExpanded(false)}
                       >
                         <span aria-hidden="true">▦</span>
-                        Compact month
+                        Month
                       </button>
                     )}
                   </div>
@@ -4649,7 +4752,7 @@ export default function Home() {
                     ×
                   </button>
                 </div>
-                {monthPickerOpen && (
+                {monthPickerOpen && !calendarExpanded && (
                   <div className="calendar-date-menu" role="dialog" aria-label="Choose month and year">
                     <div className="calendar-date-menu-columns">
                       <div className="calendar-date-menu-list" aria-label="Months">
@@ -4694,13 +4797,174 @@ export default function Home() {
                       className="calendar-view-toggle"
                       type="button"
                       aria-pressed={false}
-                      onClick={() => setCalendarExpanded(true)}
+                      onClick={() => {
+                        const weekdays = scheduleDatesFor(selectedCalendarDate, 5);
+                        if (!weekdays.some((date) => localDateKey(date) === selectedCalendarDate)) {
+                          setSelectedCalendarDate(localDateKey(weekdays[0]));
+                        }
+                        setCalendarExpanded(true);
+                      }}
                     >
                       <span aria-hidden="true">▦</span>
-                      Extended month
+                      Weekly schedule
                     </button>
                   )}
                 </div>
+                {calendarExpanded && (
+                  <div className="schedule-shell">
+                    <div className="schedule-toolbar">
+                      <button type="button" onClick={goToScheduleToday}>Today</button>
+                      <div className="schedule-span-toggle" aria-label="Schedule span">
+                        {([5, 7] as const).map((count) => (
+                          <button
+                            key={count}
+                            type="button"
+                            className={scheduleDayCount === count ? "active" : ""}
+                            onClick={() => {
+                              setScheduleDayCount(count);
+                              const dates = scheduleDatesFor(selectedCalendarDate, count);
+                              if (!dates.some((date) => localDateKey(date) === selectedCalendarDate)) {
+                                setSelectedCalendarDate(localDateKey(dates[0]));
+                              }
+                            }}
+                          >
+                            {count === 5 ? "5 days" : "Full week"}
+                          </button>
+                        ))}
+                      </div>
+                      <button className="schedule-add-event" type="button" onClick={() => openNewEvent(selectedCalendarDate)}>＋ Event</button>
+                    </div>
+
+                    <div className="schedule-mobile-days" aria-label="Choose a day">
+                      {scheduleDays.map((date) => {
+                        const dateKey = localDateKey(date);
+                        return (
+                          <button
+                            key={dateKey}
+                            className={selectedCalendarDate === dateKey ? "selected" : ""}
+                            onClick={() => setSelectedCalendarDate(dateKey)}
+                          >
+                            <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
+                            <strong>{date.getDate()}</strong>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className="schedule-board"
+                      style={{ "--schedule-days": scheduleDayCount } as CSSProperties}
+                    >
+                      <span className="schedule-time-corner">TIME</span>
+                      <div className="schedule-day-heads">
+                        {scheduleDays.map((date) => {
+                          const dateKey = localDateKey(date);
+                          return (
+                            <button
+                              key={dateKey}
+                              className={[
+                                selectedCalendarDate === dateKey ? "selected" : "",
+                                dateKey === todayKey ? "today" : "",
+                              ].filter(Boolean).join(" ")}
+                              onClick={() => setSelectedCalendarDate(dateKey)}
+                            >
+                              <small>{date.toLocaleDateString("en", { weekday: "short" })}</small>
+                              <strong>{date.getDate()}</strong>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <span className="schedule-all-day-label">ALL DAY</span>
+                      <div className="schedule-all-day-columns">
+                        {scheduleDays.map((date) => {
+                          const dateKey = localDateKey(date);
+                          const allDayEvents = calendarEvents.filter((event) => event.allDay && eventOccursOn(event, dateKey));
+                          return (
+                            <div key={dateKey} className={selectedCalendarDate === dateKey ? "selected" : ""}>
+                              {allDayEvents.slice(0, 2).map((event) => (
+                                <button
+                                  key={event.id}
+                                  className={`schedule-all-day-event ${event.color}`}
+                                  onClick={() => setSelectedEventDetail(event)}
+                                >
+                                  {event.title}
+                                </button>
+                              ))}
+                              {allDayEvents.length > 2 && <small>+{allDayEvents.length - 2}</small>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="schedule-timeline-scroll">
+                        <div className="schedule-timeline">
+                          <div className="schedule-hour-labels" aria-hidden="true">
+                            {scheduleHours.map((hour) => (
+                              <span key={hour} style={{ top: `${((hour - 6) / 18) * 100}%` }}>
+                                {scheduleHourLabel(hour)}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="schedule-day-columns">
+                            {scheduleDays.map((date) => {
+                              const dateKey = localDateKey(date);
+                              const positionedEvents = layoutScheduleEvents(
+                                calendarEvents.filter((event) => !event.allDay && eventOccursOn(event, dateKey)),
+                              ).filter(({ start, end }) => end > 6 * 60 && start < 24 * 60);
+                              return (
+                                <div
+                                  key={dateKey}
+                                  className={[
+                                    "schedule-day-column",
+                                    selectedCalendarDate === dateKey ? "selected" : "",
+                                    dateKey === todayKey ? "today" : "",
+                                  ].filter(Boolean).join(" ")}
+                                  onClick={(event) => {
+                                    const bounds = event.currentTarget.getBoundingClientRect();
+                                    const ratio = (event.clientY - bounds.top) / Math.max(1, bounds.height);
+                                    openNewEventAtMinute(dateKey, 6 * 60 + ratio * 18 * 60);
+                                  }}
+                                  aria-label={`Schedule for ${readableDate(dateKey)}. Tap an empty time to add an event.`}
+                                >
+                                  {dateKey === todayKey && currentScheduleMinute >= 6 * 60 && currentScheduleMinute <= 24 * 60 && (
+                                    <span
+                                      className="schedule-now-line"
+                                      style={{ top: `${((currentScheduleMinute - 6 * 60) / (18 * 60)) * 100}%` }}
+                                    />
+                                  )}
+                                  {positionedEvents.map(({ event, start, end, lane, laneCount }) => {
+                                    const visibleStart = Math.max(6 * 60, start);
+                                    const visibleEnd = Math.min(24 * 60, end);
+                                    return (
+                                      <button
+                                        key={event.id}
+                                        className={`schedule-event ${event.color}`}
+                                        style={{
+                                          top: `${((visibleStart - 6 * 60) / (18 * 60)) * 100}%`,
+                                          height: `${Math.max(2.6, ((visibleEnd - visibleStart) / (18 * 60)) * 100)}%`,
+                                          left: `calc(${(lane / laneCount) * 100}% + 3px)`,
+                                          width: `calc(${100 / laneCount}% - 6px)`,
+                                        }}
+                                        onClick={(pointerEvent) => {
+                                          pointerEvent.stopPropagation();
+                                          setSelectedEventDetail(event);
+                                        }}
+                                      >
+                                        <strong>{event.title}</strong>
+                                        <small>{eventStartTimeLabel(event)}{event.endTime ? ` – ${eventTimeLabel(event).split("–")[1]}` : ""}</small>
+                                        {event.location && <i>{event.location}</i>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="month-grid-viewport">
                   <div
                     key={`${calendarYear}-${calendarMonth}`}

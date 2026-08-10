@@ -117,15 +117,18 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(cssSource, /\.note-detail-text/);
 });
 
-test("keeps compact calendar and offers a distinct extended month view", () => {
+test("keeps compact calendar and offers an interactive weekly schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /Compact month/);
-  assert.match(pageSource, /Extended month/);
+  assert.match(pageSource, /Weekly schedule/);
+  assert.match(pageSource, /schedule-shell/);
+  assert.match(pageSource, /layoutScheduleEvents/);
+  assert.match(pageSource, /openNewEventAtMinute/);
   assert.match(pageSource, /outside-month/);
-  assert.match(pageSource, /dayEvents\.slice\(0, 3\)/);
-  assert.match(pageSource, /calendar-cell-events/);
-  assert.match(pageSource, /eventStartTimeLabel\(calendarEvent\)/);
+  assert.match(pageSource, /scheduleDayCount/);
+  assert.match(pageSource, /schedule-now-line/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
+  assert.match(cssSource, /\.schedule-timeline/);
+  assert.match(cssSource, /\.schedule-event/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 
