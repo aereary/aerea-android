@@ -134,11 +134,13 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /Cronograma/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /agenda-v2-nav/);
+  assert.match(pageSource, /agenda-overlay-backdrop/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.agenda-v2-timeline/);
   assert.match(cssSource, /\.agenda-v2-event/);
   assert.match(cssSource, /\.agenda-v2-event-category/);
   assert.match(cssSource, /--v2-highlight/);
+  assert.match(cssSource, /background-size:100% 1\.388889%/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 

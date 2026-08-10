@@ -13973,7 +13973,9 @@ body {
   --v2-surface:color-mix(in srgb,var(--paper) 96%,transparent);
   --v2-border:color-mix(in srgb,var(--line) 54%,transparent);
   --v2-ink:var(--ink);
-  background:linear-gradient(180deg,var(--hero) 0 224px,var(--cream) 224px 100%);
+  background:transparent;
+  border:0;
+  box-shadow:none;
   display:grid;
   grid-template-rows:104px minmax(0,1fr);
   height:100dvh;
@@ -13981,6 +13983,22 @@ body {
   overflow:hidden;
   padding:0;
   isolation:isolate;
+}
+
+.modal-backdrop.agenda-overlay-backdrop {
+  align-items:stretch;
+  backdrop-filter:blur(2px) saturate(1.08);
+  background:color-mix(in srgb,var(--hero) 24%,transparent);
+  padding:0;
+}
+
+.calendar-modal.agenda-v2-modal::after {
+  background:linear-gradient(180deg,color-mix(in srgb,var(--hero) 38%,transparent),color-mix(in srgb,var(--cream) 66%,transparent));
+  content:"";
+  inset:0;
+  pointer-events:none;
+  position:absolute;
+  z-index:-2;
 }
 
 .calendar-modal.agenda-v2-modal::before {
@@ -14094,6 +14112,16 @@ body {
   border-radius:32px;
   flex:0 0 170px;
   padding:15px 20px 16px;
+  position:relative;
+}
+
+.agenda-v2-week::after {
+  border:1px solid color-mix(in srgb,var(--v2-border) 46%,transparent);
+  border-radius:25px;
+  content:"";
+  inset:10px;
+  pointer-events:none;
+  position:absolute;
 }
 
 .agenda-v2-week-heading {
@@ -14129,6 +14157,8 @@ body {
   gap:5px;
   grid-template-columns:repeat(7,minmax(0,1fr));
   height:89px;
+  position:relative;
+  z-index:1;
 }
 .agenda-v2-days button {
   align-items:center;
@@ -14218,6 +14248,10 @@ body {
   position:relative;
 }
 .agenda-v2-hours { position:relative; }
+.agenda-v2-hours {
+  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 26%,transparent) calc(100% - 1px));
+  background-size:100% 1.388889%;
+}
 .agenda-v2-hours::after {
   border-right:1px dashed color-mix(in srgb,var(--line) 64%,transparent);
   bottom:0;
@@ -14241,9 +14275,23 @@ body {
 .agenda-v2-hours small { color:var(--muted); font-size:9px; margin-top:5px; }
 .agenda-v2-day-wrap { display:grid; min-width:0; }
 .agenda-v2-day {
-  background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(5.5556% - 1px),color-mix(in srgb,var(--line) 28%,transparent) calc(5.5556% - 1px),color-mix(in srgb,var(--line) 28%,transparent) 5.5556%);
+  background-image:
+    linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 28%,transparent) calc(100% - 1px)),
+    linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 50%,transparent) calc(100% - 1px));
+  background-size:100% 1.388889%,100% 5.555556%;
   min-width:0;
   position:relative;
+}
+
+.agenda-v2-day::before {
+  background-image:linear-gradient(to bottom,transparent calc(100% - 1px),color-mix(in srgb,var(--line) 55%,transparent) calc(100% - 1px));
+  background-size:18px 1.388889%;
+  content:"";
+  inset:0 auto 0 0;
+  pointer-events:none;
+  position:absolute;
+  width:18px;
+  z-index:1;
 }
 .agenda-v2-now {
   background:var(--orange);
@@ -14370,14 +14418,14 @@ body {
   --v2-highlight-strong:#ff0a9a;
   --v2-surface:rgba(16,13,20,.94);
   --v2-border:rgba(255,71,184,.27);
-  background:linear-gradient(180deg,#09070b 0 224px,var(--cream) 224px 100%);
+  background:transparent;
 }
 .app-shell[data-theme="neonheart"] .agenda-v2-event,
 .app-shell[data-theme="neonheart"] .agenda-v2-all-day-event { color:#24101f; }
 
 @media (max-width:720px) {
   .calendar-modal.calendar-expanded.agenda-v2-modal {
-    background:linear-gradient(180deg,var(--hero) 0 194px,var(--cream) 194px 100%);
+    background:transparent;
     grid-template-rows:86px minmax(0,1fr);
   }
   .agenda-v2-header {

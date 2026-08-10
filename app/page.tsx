@@ -4345,7 +4345,10 @@ export default function Home() {
       </section>
 
       {calendarOpen && (
-        <div className="modal-backdrop" role="presentation">
+        <div
+          className={`modal-backdrop ${calendarExpanded && !eventEditorOpen ? "agenda-overlay-backdrop" : ""}`}
+          role="presentation"
+        >
           <section
             className={[
               "calendar-modal",
@@ -4998,12 +5001,12 @@ export default function Home() {
                                               ✎ {event.note?.trim() ? notePreview(event.note, 38) : "Memo"}
                                             </span>
                                           )}
-                                          {!!event.todos?.length && (
-                                            <span title={event.todos.join(" · ")}>
-                                              {event.todoStates?.[0] === "done" ? "✓" : "○"} {event.todos[0]}
-                                              {event.todos.length > 1 ? ` +${event.todos.length - 1}` : ""}
+                                          {event.todos?.slice(0, 2).map((todo, todoIndex) => (
+                                            <span key={`${event.id}-agenda-todo-${todoIndex}`} title={todo}>
+                                              {event.todoStates?.[todoIndex] === "done" ? "✓" : "○"} {todo}
                                             </span>
-                                          )}
+                                          ))}
+                                          {(event.todos?.length ?? 0) > 2 && <span>+{event.todos!.length - 2} steps</span>}
                                           {event.location && <span title={event.location}>⌖ {event.location}</span>}
                                           {!!event.files?.length && <span>▣ {event.files.length}</span>}
                                         </span>
