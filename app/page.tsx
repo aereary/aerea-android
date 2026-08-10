@@ -972,6 +972,31 @@ function eventStartTimeLabel(event: CalendarEvent) {
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function eventEndTimeLabel(event: CalendarEvent) {
+  if (!event.endTime) return "";
+  const match = event.endTime.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return event.endTime;
+  const hour = Number(match[1]);
+  return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function scheduleEventIcon(event: CalendarEvent) {
+  const searchable = `${event.calendar ?? ""} ${event.title}`.toLowerCase();
+  if (searchable.includes("workout") || searchable.includes("health")) return "🏋️";
+  if (searchable.includes("class") || searchable.includes("school")) return "💻";
+  if (searchable.includes("study") || searchable.includes("exam")) return "📖";
+  if (searchable.includes("lunch") || searchable.includes("breakfast") || searchable.includes("dinner")) return "🥗";
+  if (searchable.includes("journal") || event.memo) return "📓";
+  if (event.todos?.length) return "☑️";
+  if (event.location) return "📍";
+  const colorIcons: Record<EventColor, string> = {
+    lilac: "✨", yellow: "☀️", blue: "✏️", pink: "💗",
+    emerald: "🌱", cyan: "💧", brown: "☕", black: "🌙",
+    red: "📌", rose: "🌸", coral: "🍑", orange: "🧡",
+  };
+  return colorIcons[event.color];
+}
+
 function minutesFromTime(time = "09:00") {
   const [hours, minutes] = time.split(":").map(Number);
   return Math.max(0, Math.min(24 * 60, (hours || 0) * 60 + (minutes || 0)));
@@ -980,10 +1005,6 @@ function minutesFromTime(time = "09:00") {
 function timeFromMinutes(value: number) {
   const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(value / 15) * 15));
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-}
-
-function scheduleHourLabel(hour: number) {
-  return `${hour % 12 || 12} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
 function scheduleDatesFor(dateKey: string, count: 5 | 7) {
@@ -1003,7 +1024,11 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
     .filter((event) => !event.allDay)
     .map((event) => {
       const start = minutesFromTime(event.time);
-      const end = Math.max(start + 30, minutesFromTime(event.endTime || timeFromMinutes(start + 60)));
+      const actualEnd = Math.max(start + 30, minutesFromTime(event.endTime || timeFromMinutes(start + 60)));
+      const hasRichDetails = Boolean(
+        event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location,
+      );
+      const end = Math.max(actualEnd, start + (hasRichDetails ? 80 : 60));
       return { event, start, end };
     })
     .sort((first, second) => first.start - second.start || first.end - second.end);
@@ -1793,14 +1818,6 @@ export default function Home() {
   const shiftScheduleWeek = (offset: number) => {
     const next = dateFromKey(selectedCalendarDate);
     next.setDate(next.getDate() + offset * 7);
-    const nextKey = localDateKey(next);
-    setSelectedCalendarDate(nextKey);
-    setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
-  };
-
-  const shiftScheduleDay = (offset: number) => {
-    const next = dateFromKey(selectedCalendarDate);
-    next.setDate(next.getDate() + offset);
     const nextKey = localDateKey(next);
     setSelectedCalendarDate(nextKey);
     setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
@@ -4740,7 +4757,7 @@ export default function Home() {
                 {calendarExpanded ? (
                   <header className="schedule-clean-topbar">
                     <button
-                      className="schedule-back-to-month"
+                      className="schedule-brand-back"
                       type="button"
                       onClick={() => {
                         setCalendarExpanded(false);
@@ -4748,27 +4765,24 @@ export default function Home() {
                       }}
                       aria-label="Back to month"
                     >
-                      ←
+                      <span className="schedule-mini-mark" aria-hidden="true">♡</span>
+                      <span>
+                        <small>MY LITTLE DAY</small>
+                        <strong>aérea</strong>
+                      </span>
                     </button>
-                    <p>
-                      {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
-                        month: "long",
-                      })}
-                    </p>
-                    <div>
-                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◉</button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarExpanded(false);
-                          setMonthPickerOpen(false);
-                          setCalendarOpen(false);
-                        }}
-                        aria-label="Close"
-                      >
-                        ×
-                      </button>
-                    </div>
+                    <button className="schedule-title-chip" type="button" onClick={goToScheduleToday}>
+                      <span aria-hidden="true">▣</span>
+                      <strong>Cronograma</strong>
+                    </button>
+                    <button
+                      className="schedule-settings-button"
+                      type="button"
+                      onClick={() => setSettingsOpen(true)}
+                      aria-label="Open settings"
+                    >
+                      ⚙
+                    </button>
                   </header>
                 ) : (
                   <div className="modal-top">
@@ -4868,6 +4882,17 @@ export default function Home() {
                       onTouchEnd={finishScheduleSwipe}
                       aria-label="Week. Swipe left or right to change week."
                     >
+                      <div className="schedule-date-heading">
+                        <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">‹</button>
+                        <strong>
+                          {dateFromKey(selectedCalendarDate).toLocaleDateString("en", {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </strong>
+                        <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">›</button>
+                      </div>
                       <div className="schedule-mobile-days" aria-label="Choose a day">
                         {scheduleDays.map((date) => {
                           const dateKey = localDateKey(date);
@@ -4931,7 +4956,8 @@ export default function Home() {
                           <div className="schedule-hour-labels" aria-hidden="true">
                             {scheduleHours.map((hour) => (
                               <span key={hour} style={{ top: `${((hour - 6) / 18) * 100}%` }}>
-                                {scheduleHourLabel(hour)}
+                                <b>{String(hour % 12 || 12).padStart(2, "0")}:00</b>
+                                <small>{hour >= 12 ? "PM" : "AM"}</small>
                               </span>
                             ))}
                           </div>
@@ -4973,9 +4999,32 @@ export default function Home() {
                                       setSelectedEventDetail(event);
                                     }}
                                   >
-                                    <strong>{event.title}</strong>
-                                    <small>{eventStartTimeLabel(event)}{event.endTime ? ` – ${eventTimeLabel(event).split("–")[1]}` : ""}</small>
-                                    {event.location && <i>{event.location}</i>}
+                                    <span className="schedule-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
+                                    <span className="schedule-event-copy">
+                                      <strong>{event.title}</strong>
+                                      <small>
+                                        {eventStartTimeLabel(event)}
+                                        {event.endTime ? ` – ${eventEndTimeLabel(event)}` : ""}
+                                      </small>
+                                      {(event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location) && (
+                                        <span className="schedule-event-extras">
+                                          {(event.memo || event.note?.trim()) && (
+                                            <span title={event.note || "Memo attached"}>
+                                              ✎ {event.note?.trim() ? notePreview(event.note, 38) : "Memo"}
+                                            </span>
+                                          )}
+                                          {!!event.todos?.length && (
+                                            <span title={event.todos.join(" · ")}>
+                                              {event.todoStates?.[0] === "done" ? "✓" : "○"} {event.todos[0]}
+                                              {event.todos.length > 1 ? ` +${event.todos.length - 1}` : ""}
+                                            </span>
+                                          )}
+                                          {event.location && <span title={event.location}>⌖ {event.location}</span>}
+                                          {!!event.files?.length && <span>▣ {event.files.length}</span>}
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="schedule-event-category">{event.calendar || "Personal"}</span>
                                   </button>
                                 );
                               })}
@@ -4984,19 +5033,22 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    <nav className="schedule-bottom-dock" aria-label="Schedule actions">
-                      <button type="button" onClick={() => setCalendarExpanded(false)} aria-label="Month view">▦</button>
-                      <button type="button" onClick={() => shiftScheduleDay(-1)} aria-label="Previous day">←</button>
-                      <button
-                        className="schedule-dock-add"
-                        type="button"
-                        onClick={() => openNewEvent(selectedCalendarDate)}
-                        aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
-                      >
-                        ＋
-                      </button>
-                      <button type="button" onClick={() => shiftScheduleDay(1)} aria-label="Next day">→</button>
-                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◎</button>
+                    <nav className="schedule-bottom-dock" aria-label="Main navigation">
+                      {tabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          className={tab.id === "today" ? "active" : ""}
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setCalendarOpen(false);
+                            changeTab(tab.id);
+                          }}
+                        >
+                          <span aria-hidden="true">{tab.icon}</span>
+                          <small>{tab.label}</small>
+                        </button>
+                      ))}
                     </nav>
                   </div>
                 )}
