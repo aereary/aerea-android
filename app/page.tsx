@@ -53,7 +53,6 @@ type AppTheme =
   | "neonheart"
   | "custom";
 type ColorMode = "light" | "dark";
-type SafePlaceMode = "home" | "hold" | "praise" | "cry" | "little";
 
 type AereaWidgetPlugin = {
   sync(options: {
@@ -124,12 +123,6 @@ type JournalEntry = {
   text: string;
 };
 
-type SecretDiaryEntry = {
-  id: number;
-  date: string;
-  feeling: string;
-  text: string;
-};
 
 type Recording = {
   id: number;
@@ -232,174 +225,6 @@ type SketchStroke = {
 };
 
 type SketchTool = SketchStroke["tool"] | "eyedropper";
-
-type PlannerPage = {
-  id: string;
-  template: "blank" | "strawberry" | "cozy" | "study";
-  title: string;
-  date: string;
-  priorities: string[];
-  todos: string[];
-  schedule: string[];
-  water: boolean[];
-  mood: string;
-  affirmation: string;
-  gratitude: string;
-  notes: string;
-  inkData?: string;
-};
-
-function PlannerInkCanvas({
-  page,
-  onChange,
-}: {
-  page: PlannerPage;
-  onChange: (inkData: string) => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const drawingRef = useRef(false);
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-  const [tool, setTool] = useState<"pen" | "eraser">("pen");
-  const [color, setColor] = useState("#735d55");
-  const [showColors, setShowColors] = useState(false);
-  const [historyState, setHistoryState] = useState({ undo: false, redo: false });
-  const historyRef = useRef<string[]>([]);
-  const redoRef = useRef<string[]>([]);
-
-  useEffect(() => {
-    historyRef.current = [page.inkData ?? ""];
-    redoRef.current = [];
-    setHistoryState({ undo: false, redo: false });
-  }, [page.id]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    if (!page.inkData) return;
-    const image = new Image();
-    image.onload = () => context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    image.src = page.inkData;
-  }, [page.id, page.inkData]);
-
-  const point = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
-  };
-  const start = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (event.pointerType === "touch") return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    drawingRef.current = true;
-    lastPointRef.current = point(event);
-  };
-  const move = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current || !lastPointRef.current) return;
-    const next = point(event);
-    const context = canvasRef.current?.getContext("2d");
-    if (!context) return;
-    context.save();
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.lineWidth = tool === "eraser" ? 28 : Math.max(3, 4 * (event.pressure || .7));
-    context.globalCompositeOperation = tool === "eraser" ? "destination-out" : "source-over";
-    context.strokeStyle = color;
-    context.beginPath();
-    context.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-    context.lineTo(next.x, next.y);
-    context.stroke();
-    context.restore();
-    lastPointRef.current = next;
-  };
-  const stop = () => {
-    if (!drawingRef.current) return;
-    drawingRef.current = false;
-    lastPointRef.current = null;
-    const data = canvasRef.current?.toDataURL("image/png");
-    if (data) {
-      historyRef.current.push(data);
-      redoRef.current = [];
-      setHistoryState({ undo: true, redo: false });
-      onChange(data);
-    }
-  };
-  const clear = () => {
-    const canvas = canvasRef.current;
-    canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
-    historyRef.current.push("");
-    redoRef.current = [];
-    setHistoryState({ undo: true, redo: false });
-    onChange("");
-  };
-  const undo = () => {
-    if (historyRef.current.length < 2) return;
-    const current = historyRef.current.pop() ?? "";
-    redoRef.current.push(current);
-    const previous = historyRef.current.at(-1) ?? "";
-    setHistoryState({ undo: historyRef.current.length > 1, redo: true });
-    onChange(previous);
-  };
-  const redo = () => {
-    const next = redoRef.current.pop();
-    if (next === undefined) return;
-    historyRef.current.push(next);
-    setHistoryState({ undo: true, redo: redoRef.current.length > 0 });
-    onChange(next);
-  };
-
-  return (
-    <div className={`writeable-planner-page ${page.template}`}>
-      {page.template !== "blank" && <img
-          className="planner-template-image"
-          src={`/templates/${page.template === "strawberry" ? "strawberry-daily" : page.template === "cozy" ? "cozy-day" : "soft-study"}.svg`}
-          alt=""
-          aria-hidden="true"
-        />}
-      {page.template === "blank" && <div className="secret-paper-decoration" aria-hidden="true"><span>🎀</span><i>♡</i><b>☾</b><em>⋆</em></div>}
-      {page.template !== "blank" && <div className="planner-paper-art" aria-hidden="true">
-        <div className="paper-title"><span>{page.template === "strawberry" ? "🍓 DAILY" : page.template === "cozy" ? "🎀 DAY" : "📚 STUDY"}</span><strong>PLANNER</strong><small>small steps · big progress ♡</small></div>
-        <div className="paper-date">DATE: ____ / ____ / ____</div>
-        <section className="paper-today"><h3>TODAY'S PLAN</h3>{Array.from({length:7},(_,i)=><i key={i}>□</i>)}</section>
-        <section className="paper-priority"><h3>TOP 3 PRIORITIES</h3>{Array.from({length:3},(_,i)=><i key={i}>{i+1}.</i>)}</section>
-        <section className="paper-schedule"><h3>SCHEDULE</h3>{["6 AM","8 AM","10 AM","12 PM","2 PM","4 PM","6 PM","8 PM"].map(time=><i key={time}>{time}</i>)}</section>
-        <section className="paper-todo"><h3>TO-DO LIST</h3>{Array.from({length:5},(_,i)=><i key={i}>♡</i>)}</section>
-        <section className="paper-water"><h3>WATER INTAKE</h3><p>♡ ♡ ♡ ♡ ♡ ♡ ♡ ♡</p></section>
-        <section className="paper-grateful"><h3>GRATITUDE</h3></section>
-        <section className="paper-notes"><h3>NOTES</h3></section>
-        <span className="paper-friend">{page.template === "strawberry" ? "🍓🌷" : page.template === "cozy" ? "🐻🐰" : "🌱✏️"}</span>
-      </div>}
-      <canvas ref={canvasRef} width={1000} height={1414} onPointerDown={start} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop} aria-label="Write freely on this planner page" />
-      <div className="planner-pencil-palette">
-        <button className={tool === "pen" ? "active" : ""} onClick={() => setTool("pen")} aria-label="Pencil">✎</button>
-        <button className={tool === "eraser" ? "active" : ""} onClick={() => setTool("eraser")} aria-label="Eraser">▱</button>
-        <button onClick={undo} disabled={!historyState.undo} aria-label="Undo">↶</button>
-        <button onClick={redo} disabled={!historyState.redo} aria-label="Redo">↷</button>
-        <button onClick={() => setShowColors((open) => !open)} aria-label="Colors">◉</button>
-        {showColors && <div className="planner-color-popover">{["#735d55", "#e37e9e", "#839d68", "#7289b0", "#2f3040"].map(value => <button key={value} className="ink-color" style={{background:value}} onClick={() => { setColor(value); setTool("pen"); setShowColors(false); }} aria-label={`Ink ${value}`} />)}</div>}
-        <button className="planner-clear-ink" onClick={clear} aria-label="Clear page">⌫</button>
-      </div>
-    </div>
-  );
-}
-
-function makePlannerPage(template: PlannerPage["template"]): PlannerPage {
-  return {
-    id: `planner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    template,
-    title: template === "blank" ? "Mi página secreta" : template === "strawberry" ? "My daily planner" : template === "cozy" ? "A cozy little day" : "Soft study day",
-    date: localDateKey(new Date()),
-    priorities: ["", "", ""],
-    todos: ["", "", "", "", ""],
-    schedule: ["", "", "", "", "", ""],
-    water: Array(8).fill(false),
-    mood: "♡",
-    affirmation: "",
-    gratitude: "",
-    notes: "",
-  };
-}
 
 const themeOptions: {
   id: Exclude<AppTheme, "custom">;
@@ -676,62 +501,6 @@ const themeOptions: {
   },
 ];
 
-const safePlaceHoldMessages = [
-  "You’re safe.",
-  "You don’t have to be strong right now.",
-  "It’s okay to let yourself rest.",
-  "You’re doing just fine.",
-  "I’m not here to judge how today went. I’m just happy you came back.",
-  "Rest isn’t something you have to earn.",
-  "Even if today felt messy, you still deserve gentleness.",
-  "Nothing is being asked of you in this moment.",
-  "Let your shoulders drop. You can stay awhile.",
-  "You are allowed to be held without explaining anything.",
-];
-
-const safePlacePraiseMessages = [
-  "Good girl.",
-  "I’m proud of you.",
-  "You tried your best.",
-  "That was enough.",
-  "Come here.",
-  "You did well today.",
-  "You deserve to hear kind things without earning them first.",
-  "I noticed how hard you tried.",
-  "You can be proud of the small things too.",
-];
-
-const safePlaceCryMessages = [
-  "Yes.",
-  "You don’t have to hide it here.",
-  "You can let the tears come without explaining them.",
-  "Crying is not a failure. Your body is letting something move.",
-  "Take all the time you need.",
-];
-
-const safePlaceLittleThings = [
-  {
-    icon: "💧",
-    prompt: "Let’s have a sip of water together.",
-    response: "Good. One small sip was enough.",
-  },
-  {
-    icon: "🍓",
-    prompt: "Maybe something sweet or easy to eat?",
-    response: "Good. You deserve something gentle.",
-  },
-  {
-    icon: "🛏️",
-    prompt: "How about wrapping yourself in a blanket?",
-    response: "Good. Let yourself be warm.",
-  },
-  {
-    icon: "🌬️",
-    prompt: "Can we take one slow breath together?",
-    response: "Good. You do not need to fix everything.",
-  },
-];
-
 const CLEAN_START_VERSION = "android-release-1";
 
 const starterReminders: Reminder[] = [
@@ -844,15 +613,6 @@ const journalFaces = [
   "૮₍ ˃ ⤙ ˂ ₎ა",
   "(˶ᵕ ᵕ˶)੭",
   "₍ᐢ.  ̫.ᐢ₎",
-];
-
-const secretDiaryFeelings = [
-  { icon: "🌙", label: "quiet" },
-  { icon: "🫧", label: "floaty" },
-  { icon: "🌧️", label: "tender" },
-  { icon: "🎀", label: "little" },
-  { icon: "✨", label: "proud" },
-  { icon: "🤍", label: "held" },
 ];
 
 function journalFaceFor(index: number) {
@@ -1044,6 +804,10 @@ function timeFromMinutes(value: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
+const SCHEDULE_START_MINUTE = 6 * 60;
+const SCHEDULE_END_MINUTE = 24 * 60;
+const SCHEDULE_TOTAL_MINUTES = SCHEDULE_END_MINUTE - SCHEDULE_START_MINUTE;
+
 function scheduleDatesFor(dateKey: string, count: 5 | 7) {
   const anchor = dateFromKey(dateKey);
   const mondayOffset = (anchor.getDay() + 6) % 7;
@@ -1061,23 +825,43 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
     .filter((event) => !event.allDay)
     .map((event) => {
       const start = minutesFromTime(event.time);
-      const actualEnd = Math.max(start + 30, minutesFromTime(event.endTime || timeFromMinutes(start + 60)));
-      const hasRichDetails = Boolean(
-        event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location,
-      );
-      const end = Math.max(actualEnd, start + (hasRichDetails ? 80 : 60));
+      const requestedEnd = event.endTime
+        ? minutesFromTime(event.endTime)
+        : start + 60;
+      const end = Math.min(24 * 60, Math.max(start + 15, requestedEnd));
       return { event, start, end };
     })
     .sort((first, second) => first.start - second.start || first.end - second.end);
-  const laneEnds: number[] = [];
-  const placed = timed.map((item) => {
-    let lane = laneEnds.findIndex((end) => end <= item.start);
-    if (lane < 0) lane = laneEnds.length;
-    laneEnds[lane] = item.end;
-    return { ...item, lane };
+
+  const placed: Array<(typeof timed)[number] & { lane: number; laneCount: number }> = [];
+  let overlapGroup: typeof timed = [];
+  let overlapGroupEnd = -1;
+
+  const flushOverlapGroup = () => {
+    if (overlapGroup.length === 0) return;
+    const laneEnds: number[] = [];
+    const groupPlacements = overlapGroup.map((item) => {
+      let lane = laneEnds.findIndex((laneEnd) => laneEnd <= item.start);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = item.end;
+      return { ...item, lane };
+    });
+    const laneCount = Math.max(1, laneEnds.length);
+    placed.push(...groupPlacements.map((item) => ({ ...item, laneCount })));
+    overlapGroup = [];
+    overlapGroupEnd = -1;
+  };
+
+  timed.forEach((item) => {
+    if (overlapGroup.length > 0 && item.start >= overlapGroupEnd) {
+      flushOverlapGroup();
+    }
+    overlapGroup.push(item);
+    overlapGroupEnd = Math.max(overlapGroupEnd, item.end);
   });
-  const laneCount = Math.max(1, laneEnds.length);
-  return placed.map((item) => ({ ...item, laneCount }));
+  flushOverlapGroup();
+
+  return placed;
 }
 
 function eventRepeatLabel(event: CalendarEvent) {
@@ -1138,25 +922,8 @@ export default function Home() {
   const [syncCode, setSyncCode] = useState("");
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
   const [syncCodeSent, setSyncCodeSent] = useState(false);
-  const [refugeOpen, setRefugeOpen] = useState(false);
-  const [secretWelcomeOpen, setSecretWelcomeOpen] = useState(true);
-  const [plannerPages, setPlannerPages] = useState<PlannerPage[]>([]);
-  const [activePlannerPageId, setActivePlannerPageId] = useState<string | null>(null);
-  const [safePlaceMode, setSafePlaceMode] =
-    useState<SafePlaceMode>("home");
-  const [safePlaceMessageIndex, setSafePlaceMessageIndex] = useState(0);
-  const [safePlaceHugging, setSafePlaceHugging] = useState(false);
-  const [safePlaceSoundOn, setSafePlaceSoundOn] = useState(false);
-  const [safePlaceCryText, setSafePlaceCryText] = useState("");
-  const [safePlaceLittleStep, setSafePlaceLittleStep] = useState(0);
-  const [safePlaceLittleReply, setSafePlaceLittleReply] = useState("");
-  const [secretDiaryFeeling, setSecretDiaryFeeling] = useState("quiet");
-  const [secretDiaryEntries, setSecretDiaryEntries] = useState<
-    SecretDiaryEntry[]
-  >([]);
-  const [selectedSecretDiaryEntry, setSelectedSecretDiaryEntry] =
-    useState<SecretDiaryEntry | null>(null);
   const [isNight, setIsNight] = useState(false);
+  const [scheduleNow, setScheduleNow] = useState(() => new Date());
   const [appTheme, setAppTheme] = useState<AppTheme>("storybook");
   const [colorMode, setColorMode] = useState<ColorMode>("light");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -1199,10 +966,6 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const refugeAudioContextRef = useRef<AudioContext | null>(null);
-  const refugeHeartbeatTimerRef = useRef<number | null>(null);
-  const secretDiaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
@@ -1269,76 +1032,15 @@ export default function Home() {
     reminderHistory[localDateKey(yesterdayDate)]?.length ?? 0;
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("aerea-private-planner-pages");
-      if (!saved) return;
-      const pages = JSON.parse(saved) as PlannerPage[];
-      setPlannerPages(pages);
-      setActivePlannerPageId(pages[0]?.id ?? null);
-    } catch {
-      // A damaged private draft should never stop the rest of aérea.
-    }
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(
-      "aerea-private-planner-pages",
-      JSON.stringify(plannerPages),
-    );
-  }, [plannerPages]);
-
-  useEffect(() => {
-    const updateDaypart = () => {
-      const hour = new Date().getHours();
-      setIsNight(hour >= 18 || hour < 5);
+    const updateClock = () => {
+      const now = new Date();
+      setScheduleNow(now);
+      setIsNight(now.getHours() >= 18 || now.getHours() < 5);
     };
-    updateDaypart();
-    const interval = window.setInterval(updateDaypart, 60_000);
+    updateClock();
+    const interval = window.setInterval(updateClock, 30_000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (
-      !refugeOpen ||
-      safePlaceMode === "home" ||
-      safePlaceMode === "little"
-    ) {
-      return;
-    }
-
-    const messageCount =
-      safePlaceMode === "hold"
-        ? safePlaceHoldMessages.length
-        : safePlaceMode === "praise"
-          ? safePlacePraiseMessages.length + 1
-          : safePlaceCryMessages.length;
-    const advance = () =>
-      setSafePlaceMessageIndex((current) => (current + 1) % messageCount);
-    let timer = 0;
-    const schedule = (delay: number) => {
-      timer = window.setTimeout(() => {
-        advance();
-        schedule(20_000 + Math.round(Math.random() * 10_000));
-      }, delay);
-    };
-    schedule(safePlaceMode === "cry" ? 5_500 : 22_000);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [refugeOpen, safePlaceMode]);
-
-  useEffect(
-    () => () => {
-      if (refugeHeartbeatTimerRef.current !== null) {
-        window.clearInterval(refugeHeartbeatTimerRef.current);
-      }
-      if (refugeAudioContextRef.current) {
-        void refugeAudioContextRef.current.close();
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1353,7 +1055,6 @@ export default function Home() {
             reminders?: Reminder[];
             habits?: Habit[];
             entries?: JournalEntry[];
-            secretDiaryEntries?: SecretDiaryEntry[];
             moodHistory?: Record<string, string>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
@@ -1377,9 +1078,6 @@ export default function Home() {
             if (state.reminders) setReminders(state.reminders);
             if (state.habits) setHabits(state.habits);
             if (state.entries) setEntries(state.entries);
-            if (state.secretDiaryEntries) {
-              setSecretDiaryEntries(state.secretDiaryEntries);
-            }
             if (state.moodHistory) setMoodHistory(state.moodHistory);
             if (state.completedDays) setCompletedDays(state.completedDays);
             if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
@@ -1391,7 +1089,6 @@ export default function Home() {
             setReminders(starterReminders);
             setHabits(starterHabits);
             setEntries([]);
-            setSecretDiaryEntries([]);
             setMoodHistory({});
             setCompletedDays({});
             setCalendarEvents([]);
@@ -1489,7 +1186,6 @@ export default function Home() {
               reminders,
               habits,
               entries,
-              secretDiaryEntries,
               moodHistory,
               completedDays,
               calendarEvents,
@@ -1533,7 +1229,6 @@ export default function Home() {
     reminderHistory,
     reminders,
     recordings,
-    secretDiaryEntries,
     stateReady,
     syncEmail,
   ]);
@@ -1627,11 +1322,14 @@ export default function Home() {
     () => scheduleDatesFor(selectedCalendarDate, 7),
     [selectedCalendarDate],
   );
-  const scheduleHours = useMemo(
-    () => Array.from({ length: 19 }, (_, index) => index + 6),
+  const scheduleMarks = useMemo(
+    () => Array.from(
+      { length: SCHEDULE_TOTAL_MINUTES / 30 + 1 },
+      (_, index) => SCHEDULE_START_MINUTE + index * 30,
+    ),
     [],
   );
-  const currentScheduleMinute = new Date().getHours() * 60 + new Date().getMinutes();
+  const currentScheduleMinute = scheduleNow.getHours() * 60 + scheduleNow.getMinutes();
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -1640,7 +1338,7 @@ export default function Home() {
   );
   const selectedTimedScheduleEvents = layoutScheduleEvents(
     selectedDateEvents.filter((event) => !event.allDay),
-  ).filter(({ start, end }) => end > 6 * 60 && start < 24 * 60);
+  ).filter(({ start, end }) => end > SCHEDULE_START_MINUTE && start < SCHEDULE_END_MINUTE);
   const scheduleHasAllDayEvents = selectedScheduleAllDayEvents.length > 0;
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
@@ -1750,27 +1448,6 @@ export default function Home() {
     0,
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
   );
-  const praiseMessages = [
-    ...safePlacePraiseMessages,
-    doneIds.length > 0
-      ? "You kept your promises today."
-      : "Tomorrow is another chance. You are still worthy of gentleness tonight.",
-  ];
-  const currentSafePlaceMessage =
-    safePlaceMode === "hold"
-      ? safePlaceHoldMessages[
-          safePlaceMessageIndex % safePlaceHoldMessages.length
-        ]
-      : safePlaceMode === "praise"
-        ? praiseMessages[safePlaceMessageIndex % praiseMessages.length]
-        : safePlaceCryMessages[
-            safePlaceMessageIndex % safePlaceCryMessages.length
-          ];
-  const currentLittleThing =
-    safePlaceLittleThings[
-      safePlaceLittleStep % safePlaceLittleThings.length
-    ]!;
-
   useEffect(() => {
     if (!calendarOpen || !calendarExpanded) return;
 
@@ -1779,8 +1456,11 @@ export default function Home() {
       if (!timeline) return;
       const firstTimedEvent = selectedTimedScheduleEvents[0]?.start;
       const focusMinute = firstTimedEvent ?? (selectedCalendarDate === todayKey ? currentScheduleMinute : 9 * 60);
-      const scrollMinute = Math.max(6 * 60, Math.min(22 * 60, focusMinute - 60));
-      timeline.scrollTop = ((scrollMinute - 6 * 60) / (18 * 60)) * timeline.scrollHeight;
+      const scrollMinute = Math.max(
+        SCHEDULE_START_MINUTE,
+        Math.min(SCHEDULE_END_MINUTE - 120, focusMinute - 60),
+      );
+      timeline.scrollTop = ((scrollMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * timeline.scrollHeight;
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -2241,124 +1921,6 @@ export default function Home() {
     setSelectedJournalEntry((current) =>
       current?.id === id ? null : current,
     );
-  };
-
-  const saveSecretDiaryEntry = () => {
-    const text = secretDiaryTextareaRef.current?.value.trim() ?? "";
-    if (!text) return;
-    const feeling =
-      secretDiaryFeelings.find((item) => item.label === secretDiaryFeeling)
-        ?.icon ?? "🌙";
-    setSecretDiaryEntries((current) => [
-      {
-        id: Date.now(),
-        date: readableDate(todayKey),
-        feeling,
-        text,
-      },
-      ...current,
-    ]);
-    if (secretDiaryTextareaRef.current) {
-      secretDiaryTextareaRef.current.value = "";
-    }
-  };
-
-  const deleteSecretDiaryEntry = (id: number) => {
-    setSecretDiaryEntries((current) =>
-      current.filter((entry) => entry.id !== id),
-    );
-    setSelectedSecretDiaryEntry((current) =>
-      current?.id === id ? null : current,
-    );
-  };
-
-  const stopSafePlaceHeartbeat = () => {
-    if (refugeHeartbeatTimerRef.current !== null) {
-      window.clearInterval(refugeHeartbeatTimerRef.current);
-      refugeHeartbeatTimerRef.current = null;
-    }
-    if (refugeAudioContextRef.current) {
-      void refugeAudioContextRef.current.close();
-      refugeAudioContextRef.current = null;
-    }
-    setSafePlaceSoundOn(false);
-  };
-
-  const startSafePlaceHeartbeat = () => {
-    stopSafePlaceHeartbeat();
-    if (typeof AudioContext === "undefined") return;
-    const context = new AudioContext();
-    refugeAudioContextRef.current = context;
-    void context.resume();
-
-    const thump = (delay = 0) => {
-      window.setTimeout(() => {
-        if (context.state === "closed") return;
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        const now = context.currentTime;
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(64, now);
-        oscillator.frequency.exponentialRampToValueAtTime(48, now + 0.16);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.055, now + 0.025);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
-        oscillator.connect(gain);
-        gain.connect(context.destination);
-        oscillator.start(now);
-        oscillator.stop(now + 0.24);
-      }, delay);
-    };
-
-    const beat = () => {
-      thump();
-      thump(145);
-    };
-    beat();
-    refugeHeartbeatTimerRef.current = window.setInterval(beat, 1_320);
-    setSafePlaceSoundOn(true);
-  };
-
-  const enterSafePlaceMode = (mode: SafePlaceMode) => {
-    setSafePlaceMode(mode);
-    setSafePlaceMessageIndex(0);
-    setSafePlaceHugging(false);
-    setSafePlaceLittleReply("");
-    if (mode === "hold") startSafePlaceHeartbeat();
-    else stopSafePlaceHeartbeat();
-  };
-
-  const closeSafePlace = () => {
-    stopSafePlaceHeartbeat();
-    setSafePlaceMode("home");
-    setSafePlaceMessageIndex(0);
-    setSafePlaceHugging(false);
-    setRefugeOpen(false);
-  };
-
-  const saveSafePlaceCryNote = () => {
-    if (!safePlaceCryText.trim()) return;
-    setEntries((current) => [
-      {
-        id: Date.now(),
-        date: readableDate(todayKey),
-        mood: "🌧️",
-        text: safePlaceCryText.trim(),
-      },
-      ...current,
-    ]);
-    setSafePlaceCryText("");
-  };
-
-  const completeSafePlaceLittleThing = () => {
-    const current = safePlaceLittleThings[safePlaceLittleStep]!;
-    setSafePlaceLittleReply(current.response);
-    window.setTimeout(() => {
-      setSafePlaceLittleReply("");
-      setSafePlaceLittleStep(
-        (step) => (step + 1) % safePlaceLittleThings.length,
-      );
-    }, 1_900);
   };
 
   const chooseFocusLength = (minutes: number) => {
@@ -4381,19 +3943,6 @@ export default function Home() {
             </button>
           ))}
         </nav>}
-        {!sketchFullscreen && !refugeOpen && (
-          <button
-            className="secret-moon-button"
-            type="button"
-            onClick={() => {
-              setSecretWelcomeOpen(true);
-              setRefugeOpen(true);
-            }}
-            aria-label="Open my secret space"
-          >
-            ☾
-          </button>
-        )}
       </section>
 
       {calendarOpen && (
@@ -4929,7 +4478,7 @@ export default function Home() {
                       }}
                     >
                       <span aria-hidden="true">▦</span>
-                      Daily schedule
+                      Cronograma
                     </button>
                   )}
                 </div>
@@ -4996,13 +4545,26 @@ export default function Home() {
 
                       <div className="agenda-v2-scroll" ref={scheduleTimelineScrollRef}>
                         <div className="agenda-v2-timeline">
-                          <div className="agenda-v2-hours" aria-hidden="true">
-                            {scheduleHours.map((hour) => (
-                              <span key={hour} style={{ top: `${((hour - 6) / 18) * 100}%` }}>
-                                <b>{String(hour % 12 || 12).padStart(2, "0")}:00</b>
-                                <small>{hour >= 12 ? "PM" : "AM"}</small>
-                              </span>
-                            ))}
+                          <div className="agenda-v2-time-grid" aria-hidden="true">
+                            <span className="agenda-v2-time-axis" />
+                            {scheduleMarks.map((minute) => {
+                              const hour = Math.floor(minute / 60) % 24;
+                              const minutes = minute % 60;
+                              const isHour = minutes === 0;
+                              return (
+                                <span
+                                  key={minute}
+                                  className={isHour ? "hour" : "half-hour"}
+                                  style={{ top: `${((minute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%` }}
+                                >
+                                  <span className="agenda-v2-time-label">
+                                    <b>{String(hour % 12 || 12).padStart(2, "0")}:{String(minutes).padStart(2, "0")}</b>
+                                    {isHour && <small>{hour >= 12 ? "PM" : "AM"}</small>}
+                                  </span>
+                                  <i />
+                                </span>
+                              );
+                            })}
                           </div>
                           <div className="agenda-v2-day-wrap">
                             <div
@@ -5014,26 +4576,35 @@ export default function Home() {
                               onClick={(event) => {
                                 const bounds = event.currentTarget.getBoundingClientRect();
                                 const ratio = (event.clientY - bounds.top) / Math.max(1, bounds.height);
-                                openNewEventAtMinute(selectedCalendarDate, 6 * 60 + ratio * 18 * 60);
+                                openNewEventAtMinute(
+                                  selectedCalendarDate,
+                                  SCHEDULE_START_MINUTE + ratio * SCHEDULE_TOTAL_MINUTES,
+                                );
                               }}
                               aria-label={`Schedule for ${readableDate(selectedCalendarDate)}. Tap an empty time to add an event.`}
                             >
-                              {selectedCalendarDate === todayKey && currentScheduleMinute >= 6 * 60 && currentScheduleMinute <= 24 * 60 && (
+                              {selectedCalendarDate === todayKey && currentScheduleMinute >= SCHEDULE_START_MINUTE && currentScheduleMinute <= SCHEDULE_END_MINUTE && (
                                 <span
                                   className="agenda-v2-now"
-                                  style={{ top: `${((currentScheduleMinute - 6 * 60) / (18 * 60)) * 100}%` }}
+                                  style={{ top: `${((currentScheduleMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%` }}
                                 />
                               )}
                               {selectedTimedScheduleEvents.map(({ event, start, end, lane, laneCount }) => {
-                                const visibleStart = Math.max(6 * 60, start);
-                                const visibleEnd = Math.min(24 * 60, end);
+                                const visibleStart = Math.max(SCHEDULE_START_MINUTE, start);
+                                const visibleEnd = Math.min(SCHEDULE_END_MINUTE, end);
+                                const duration = visibleEnd - visibleStart;
+                                const densityClass = duration < 30
+                                  ? "is-short"
+                                  : duration < 60
+                                    ? "is-compact"
+                                    : "";
                                 return (
                                   <button
                                     key={event.id}
-                                    className={`agenda-v2-event ${event.color}`}
+                                    className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""}`.trim()}
                                     style={{
-                                      top: `${((visibleStart - 6 * 60) / (18 * 60)) * 100}%`,
-                                      height: `${Math.max(3.8, ((visibleEnd - visibleStart) / (18 * 60)) * 100)}%`,
+                                      top: `${((visibleStart - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%`,
+                                      height: `${(duration / SCHEDULE_TOTAL_MINUTES) * 100}%`,
                                       left: `calc(${(lane / laneCount) * 100}% + 6px)`,
                                       width: `calc(${100 / laneCount}% - 12px)`,
                                     }}
@@ -5042,14 +4613,22 @@ export default function Home() {
                                       setSelectedEventDetail(event);
                                     }}
                                   >
-                                    <span className="agenda-v2-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
-                                    <span className="agenda-v2-event-copy">
-                                      <strong>{event.title}</strong>
-                                      <small>
-                                        {eventStartTimeLabel(event)}
-                                        {event.endTime ? ` – ${eventEndTimeLabel(event)}` : ""}
-                                      </small>
-                                      {(event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location) && (
+                                    {duration < 30 ? (
+                                      <span className="agenda-v2-event-shortline">
+                                        <time>{eventStartTimeLabel(event)}</time>
+                                        <strong>{event.title}</strong>
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="agenda-v2-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
+                                        <span className="agenda-v2-event-copy">
+                                          <strong>{event.title}</strong>
+                                          <small>
+                                            {eventStartTimeLabel(event)}
+                                            {event.endTime ? ` – ${eventEndTimeLabel(event)}` : ""}
+                                          </small>
+                                          {event.reminder && <span className="agenda-v2-event-reminder">◷ {event.reminder}</span>}
+                                          {duration >= 75 && (event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location) && (
                                         <span className="agenda-v2-event-extras">
                                           {(event.memo || event.note?.trim()) && (
                                             <span title={event.note || "Memo attached"}>
@@ -5065,9 +4644,11 @@ export default function Home() {
                                           {event.location && <span title={event.location}>⌖ {event.location}</span>}
                                           {!!event.files?.length && <span>▣ {event.files.length}</span>}
                                         </span>
-                                      )}
-                                    </span>
-                                    <span className="agenda-v2-event-category">{event.calendar || "Personal"}</span>
+                                          )}
+                                        </span>
+                                        {event.calendar && <span className="agenda-v2-event-category">{event.calendar}</span>}
+                                      </>
+                                    )}
                                   </button>
                                 );
                               })}
@@ -5080,7 +4661,7 @@ export default function Home() {
                       {tabs.map((tab) => (
                         <button
                           key={tab.id}
-                          className={tab.id === "spaces" ? "active" : ""}
+                          className={tab.id === activeTab ? "active" : ""}
                           type="button"
                           onClick={() => {
                             setCalendarExpanded(false);
@@ -5405,365 +4986,6 @@ export default function Home() {
         );
       })()}
 
-      {refugeOpen && (() => {
-        const secretPages = plannerPages.filter((page) => page.template === "blank");
-        const activePage = secretPages.find((page) => page.id === activePlannerPageId) ?? secretPages[0];
-        const updatePage = (patch: Partial<PlannerPage>) => {
-          if (!activePage) return;
-          setPlannerPages((pages) => pages.map((page) => page.id === activePage.id ? { ...page, ...patch } : page));
-        };
-        const addBlankPage = () => {
-          const page = makePlannerPage("blank");
-          setPlannerPages((pages) => [page, ...pages]);
-          setActivePlannerPageId(page.id);
-          return page;
-        };
-        const enterSecretSpace = () => {
-          if (!activePage) addBlankPage();
-          setSecretWelcomeOpen(false);
-        };
-        return (
-          <div className="modal-backdrop secret-studio-backdrop" role="presentation">
-            {secretWelcomeOpen ? (
-              <section className="secret-entry-card" role="dialog" aria-modal="true" aria-label="Enter my secret space">
-                <span className="secret-entry-tape" aria-hidden="true" />
-                <button className="secret-entry-close" onClick={() => setRefugeOpen(false)} aria-label="Close secret space">×</button>
-                <div className="secret-entry-art" aria-hidden="true">☁<b>♡</b>☾</div>
-                <p>este es tu</p>
-                <h2>espacio secreto</h2>
-                <span className="secret-entry-heart" aria-hidden="true">♥</span>
-                <small>rayar, escribir,<br />desahogarte, soñar…</small>
-                <button className="secret-enter-button" onClick={enterSecretSpace}>entrar ♥</button>
-              </section>
-            ) : (
-              <section className="secret-studio-modal" role="dialog" aria-modal="true" aria-label="My secret drawing pages">
-                <header className="secret-studio-header">
-                  <button onClick={() => setRefugeOpen(false)} aria-label="Close my secret space">‹</button>
-                  <strong>mi espacio secreto <span>♥</span></strong>
-                  <button onClick={addBlankPage} aria-label="New blank secret page">＋</button>
-                </header>
-                {activePage ? (
-                  <div className="secret-studio-workspace">
-                    <div className="secret-page-stage">
-                      <PlannerInkCanvas page={activePage} onChange={(inkData) => updatePage({ inkData })} />
-                      <button className="secret-page-delete" onClick={() => { if (!window.confirm("¿Eliminar esta página secreta?")) return; setPlannerPages((pages) => pages.filter((page) => page.id !== activePage.id)); setActivePlannerPageId(secretPages.find((page) => page.id !== activePage.id)?.id ?? null); }}>eliminar página</button>
-                    </div>
-                    <aside className="secret-saved-pages">
-                      <div><span>mis páginas secretas</span><button onClick={addBlankPage} aria-label="New blank page">＋</button></div>
-                      {secretPages.map((page) => (
-                        <button key={page.id} className={page.id === activePage.id ? "active" : ""} onClick={() => setActivePlannerPageId(page.id)}>
-                          <i aria-hidden="true">{page.inkData ? "✎" : "♡"}</i>
-                          <span><strong>{page.date}</strong><small>{page.title}</small></span>
-                          <b aria-hidden="true">⋮</b>
-                        </button>
-                      ))}
-                      <button className="secret-new-page" onClick={addBlankPage}>＋ nueva página en blanco</button>
-                    </aside>
-                  </div>
-                ) : (
-                  <div className="secret-empty-page"><span>♡</span><p>Tu primera página está en blanco.</p><button onClick={addBlankPage}>crear página</button></div>
-                )}
-              </section>
-            )}
-          </div>
-        );
-      })()}
-
-      {false && (
-        <div className="modal-backdrop refuge-backdrop" role="presentation">
-          <section
-            className="refuge-modal"
-            data-safe-mode={safePlaceMode}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Safe Place"
-          >
-            <header className="refuge-header">
-              <div>
-                <p className="tiny-label">🌙 SAFE PLACE · SECRET DIARY</p>
-                <h2>Welcome back, sweetheart.</h2>
-                <p>A hidden page for the things you only want to tell yourself.</p>
-              </div>
-              <button onClick={closeSafePlace} aria-label="Close Safe Place">
-                ×
-              </button>
-            </header>
-
-            <div className="refuge-ribbon" aria-hidden="true">
-              <span>♡</span>
-              <i />
-              <strong>soft · quiet · here with you</strong>
-              <i />
-              <span>♡</span>
-            </div>
-
-            {safePlaceMode === "home" ? (
-              <div className="secret-diary-home">
-                <article className="secret-diary-page">
-                  <div className="secret-diary-date">
-                    <span>PRIVATE PAGE</span>
-                    <time>{readableDate(todayKey)}</time>
-                  </div>
-                  <h3>What can stay between these pages?</h3>
-                  <div
-                    className="secret-diary-feelings"
-                    aria-label="How this page feels"
-                  >
-                    {secretDiaryFeelings.map((feeling) => (
-                      <button
-                        key={feeling.label}
-                        className={
-                          secretDiaryFeeling === feeling.label ? "active" : ""
-                        }
-                        onClick={() => setSecretDiaryFeeling(feeling.label)}
-                        aria-pressed={secretDiaryFeeling === feeling.label}
-                        aria-label={feeling.label}
-                      >
-                        <span aria-hidden="true">{feeling.icon}</span>
-                        <small>{feeling.label}</small>
-                      </button>
-                    ))}
-                  </div>
-                  <label className="secret-diary-writing">
-                    <span>Dear secret diary,</span>
-                    <textarea
-                      ref={secretDiaryTextareaRef}
-                      placeholder="You can be completely honest here…"
-                      aria-label="Write a secret diary entry"
-                    />
-                  </label>
-                  <button
-                    className="secret-diary-save"
-                    onClick={saveSecretDiaryEntry}
-                  >
-                    <span aria-hidden="true">🔒</span>
-                    Close and keep this page
-                  </button>
-                </article>
-
-                <aside className="secret-diary-side">
-                  <section className="secret-pages">
-                    <div>
-                      <p className="tiny-label">BEHIND THE RIBBON</p>
-                      <h3>My hidden pages</h3>
-                    </div>
-                    {secretDiaryEntries.length === 0 ? (
-                      <p className="secret-pages-empty">
-                        Your first page will wait here quietly.
-                      </p>
-                    ) : (
-                      <div className="secret-page-list">
-                        {secretDiaryEntries.slice(0, 4).map((entry) => (
-                          <article key={entry.id}>
-                            <button
-                              className="secret-page-open"
-                              onClick={() => setSelectedSecretDiaryEntry(entry)}
-                              aria-label={`Open secret page from ${entry.date}`}
-                            >
-                              <span aria-hidden="true">{entry.feeling}</span>
-                              <div>
-                                <small>{entry.date}</small>
-                                <p>{notePreview(entry.text, 88)}</p>
-                              </div>
-                            </button>
-                            <button
-                              onClick={() => deleteSecretDiaryEntry(entry.id)}
-                              aria-label={`Delete secret page from ${entry.date}`}
-                            >
-                              ×
-                            </button>
-                          </article>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-
-                  <details className="comfort-drawer">
-                    <summary>
-                      <span>♡</span>
-                      Open my comfort drawer
-                    </summary>
-                    <p>Nothing here is a task. Choose only what feels kind.</p>
-                    <div
-                      className="refuge-needs"
-                      aria-label="Choose what you need"
-                    >
-                      <button
-                        className="safe-choice hold"
-                        onClick={() => enterSafePlaceMode("hold")}
-                      >
-                        <span>🧸</span>
-                        <strong>Hold me</strong>
-                        <small>Stay with a soft heartbeat.</small>
-                      </button>
-                      <button
-                        className="safe-choice praise"
-                        onClick={() => enterSafePlaceMode("praise")}
-                      >
-                        <span>🎀</span>
-                        <strong>Need praise</strong>
-                        <small>Kind words, one at a time.</small>
-                      </button>
-                      <button
-                        className="safe-choice cry"
-                        onClick={() => enterSafePlaceMode("cry")}
-                      >
-                        <span>🤍</span>
-                        <strong>Can I cry?</strong>
-                        <small>Rain, quiet, and room to feel.</small>
-                      </button>
-                      <button
-                        className="safe-choice little"
-                        onClick={() => enterSafePlaceMode("little")}
-                      >
-                        <span>🌸</span>
-                        <strong>Little things</strong>
-                        <small>Tiny care, never a demand.</small>
-                      </button>
-                    </div>
-                  </details>
-                </aside>
-              </div>
-            ) : (
-              <div className="safe-experience">
-                <button
-                  className="safe-back"
-                  onClick={() => enterSafePlaceMode("home")}
-                >
-                  ← Safe Place
-                </button>
-
-                {safePlaceMode === "hold" && (
-                  <article className="safe-hold-card">
-                    <button
-                      className={
-                        safePlaceHugging
-                          ? "safe-teddy hugging"
-                          : "safe-teddy"
-                      }
-                      onClick={() =>
-                        setSafePlaceHugging((current) => !current)
-                      }
-                      aria-pressed={safePlaceHugging}
-                      aria-label="Hug the teddy"
-                    >
-                      <span aria-hidden="true">🧸</span>
-                      <small>
-                        {safePlaceHugging
-                          ? "hugging you back"
-                          : "tap for a hug"}
-                      </small>
-                    </button>
-                    <div className="safe-message" aria-live="polite">
-                      <p>{currentSafePlaceMessage}</p>
-                      <span>New words will arrive when they’re ready.</span>
-                    </div>
-                    <button
-                      className="safe-sound-toggle"
-                      onClick={() =>
-                        safePlaceSoundOn
-                          ? stopSafePlaceHeartbeat()
-                          : startSafePlaceHeartbeat()
-                      }
-                      aria-pressed={safePlaceSoundOn}
-                    >
-                      {safePlaceSoundOn
-                        ? "♡ soft heartbeat on"
-                        : "♡ play soft heartbeat"}
-                    </button>
-                  </article>
-                )}
-
-                {safePlaceMode === "praise" && (
-                  <article className="safe-praise-card">
-                    <span className="safe-bow" aria-hidden="true">
-                      🎀
-                    </span>
-                    <p className="safe-praise-message" aria-live="polite">
-                      {currentSafePlaceMessage}
-                    </p>
-                    <small>
-                      These words are written into aérea. Nothing is generated
-                      while you’re here.
-                    </small>
-                  </article>
-                )}
-
-                {safePlaceMode === "cry" && (
-                  <article className="safe-cry-card">
-                    <div className="safe-rain" aria-hidden="true">
-                      {Array.from({ length: 8 }, (_, index) => (
-                        <i key={index} style={{ "--drop": index } as CSSProperties} />
-                      ))}
-                    </div>
-                    <p className="safe-cry-message" aria-live="polite">
-                      {currentSafePlaceMessage}
-                    </p>
-                    <textarea
-                      value={safePlaceCryText}
-                      onChange={(event) =>
-                        setSafePlaceCryText(event.target.value)
-                      }
-                      placeholder="You can write here, or leave this space quiet."
-                      aria-label="A private note for this moment"
-                    />
-                    <button
-                      onClick={saveSafePlaceCryNote}
-                      disabled={!safePlaceCryText.trim()}
-                    >
-                      Keep this in my journal
-                    </button>
-                  </article>
-                )}
-
-                {safePlaceMode === "little" && (
-                  <article className="safe-little-card">
-                    <span aria-hidden="true">{currentLittleThing.icon}</span>
-                    <p>
-                      {safePlaceLittleReply ||
-                        currentLittleThing.prompt}
-                    </p>
-                    {!safePlaceLittleReply && (
-                      <div>
-                        <button onClick={completeSafePlaceLittleThing}>
-                          We did it
-                        </button>
-                        <button
-                          className="safe-skip"
-                          onClick={() =>
-                            setSafePlaceLittleStep(
-                              (step) =>
-                                (step + 1) % safePlaceLittleThings.length,
-                            )
-                          }
-                        >
-                          Not this one
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                )}
-              </div>
-            )}
-
-            <div className="refuge-consent">
-              <span>◇</span>
-              <p>
-                <strong>You are in charge of this space.</strong>
-                You can pause, leave, skip anything, or come back whenever you
-                want. Care never requires you to ignore a boundary.
-              </p>
-            </div>
-
-            {safePlaceMode === "home" && (
-              <button className="refuge-home-button" onClick={closeSafePlace}>
-                Close and lock my diary
-              </button>
-            )}
-          </section>
-        </div>
-      )}
-
       {selectedJournalEntry && (
         <NoteDetailDialog
           date={selectedJournalEntry.date}
@@ -5772,20 +4994,6 @@ export default function Home() {
           text={selectedJournalEntry.text}
           onClose={() => setSelectedJournalEntry(null)}
           onDelete={() => deleteJournalEntry(selectedJournalEntry.id)}
-        />
-      )}
-
-      {selectedSecretDiaryEntry && (
-        <NoteDetailDialog
-          date={selectedSecretDiaryEntry.date}
-          face={selectedSecretDiaryEntry.feeling}
-          label="PRIVATE DIARY PAGE"
-          text={selectedSecretDiaryEntry.text}
-          secret
-          onClose={() => setSelectedSecretDiaryEntry(null)}
-          onDelete={() =>
-            deleteSecretDiaryEntry(selectedSecretDiaryEntry.id)
-          }
         />
       )}
 
@@ -6882,7 +6090,6 @@ function NoteDetailDialog({
   face,
   label,
   text,
-  secret = false,
   onClose,
   onDelete,
 }: {
@@ -6890,19 +6097,11 @@ function NoteDetailDialog({
   face: string;
   label: string;
   text: string;
-  secret?: boolean;
   onClose: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div
-      className={
-        secret
-          ? "modal-backdrop note-detail-backdrop secret"
-          : "modal-backdrop note-detail-backdrop"
-      }
-      role="presentation"
-    >
+    <div className="modal-backdrop note-detail-backdrop" role="presentation">
       <section
         className="note-detail-card"
         role="dialog"
@@ -6921,7 +6120,7 @@ function NoteDetailDialog({
         </header>
         <p className="note-detail-text">{text}</p>
         <footer>
-          <small>{secret ? "This page stays private." : "Your words, fully here."}</small>
+          <small>Your words, fully here.</small>
           <button onClick={onDelete}>Delete note</button>
         </footer>
       </section>

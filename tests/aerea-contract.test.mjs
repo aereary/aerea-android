@@ -77,22 +77,6 @@ test("curves the Lavender rest message", () => {
   assert.match(pageSource, /Q 50 94 85 70/);
 });
 
-test("ships Safe Place as authored offline copy", () => {
-  for (const phrase of [
-    "Welcome back, sweetheart.",
-    "SECRET DIARY",
-    "What can stay between these pages?",
-    "My hidden pages",
-    "Hold me",
-    "Need praise",
-    "Can I cry?",
-    "Little things",
-    "Nothing is generated",
-  ]) {
-    assert.match(pageSource, new RegExp(phrase.replace(/[?]/g, "\\?")));
-  }
-});
-
 test("ships a clean draining focus clock and varied journal faces", () => {
   assert.doesNotMatch(pageSource, /timer-status-dot/);
   assert.doesNotMatch(pageSource, /timer-leaf/);
@@ -120,7 +104,7 @@ test("opens saved notes fully and edits calendar rows directly", () => {
 
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /Daily schedule/);
+  assert.match(pageSource, />\s*Cronograma\s*</);
   assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
@@ -130,33 +114,37 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
+  assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
+  assert.match(pageSource, /scheduleMarks/);
+  assert.match(pageSource, /flushOverlapGroup/);
+  assert.match(pageSource, /duration \/ SCHEDULE_TOTAL_MINUTES/);
+  assert.match(pageSource, /is-short/);
   assert.match(pageSource, /Cronograma/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /agenda-v2-nav/);
   assert.match(pageSource, /agenda-overlay-backdrop/);
-  assert.match(cssSource, /phone-canvas:has\(> \.agenda-overlay-backdrop\)/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.agenda-v2-timeline/);
+  assert.match(cssSource, /\.agenda-v2-time-grid \.half-hour i/);
+  assert.match(cssSource, /\.agenda-v2-time-axis/);
   assert.match(cssSource, /\.agenda-v2-event/);
   assert.match(cssSource, /\.agenda-v2-event-category/);
   assert.match(cssSource, /--v2-highlight/);
-  assert.match(cssSource, /background-size:28px 5\.555556%/);
-  assert.match(cssSource, /\.agenda-v2-day::after \{ display:none; \}/);
+  assert.match(cssSource, /\.agenda-v2-now[\s\S]*right:0/);
+  assert.match(cssSource, /\.agenda-v2-event\.is-short/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 
-test("restores a blank-paper secret studio with saved drawing pages", () => {
-  assert.match(pageSource, /secret-moon-button/);
-  assert.match(pageSource, /secretWelcomeOpen/);
-  assert.match(pageSource, /makePlannerPage\("blank"\)/);
-  assert.match(pageSource, /const secretPages = plannerPages\.filter/);
-  assert.match(pageSource, /<PlannerInkCanvas/);
-  assert.match(pageSource, /historyRef/);
-  assert.match(pageSource, /redoRef/);
-  assert.match(cssSource, /\.secret-entry-card/);
-  assert.match(cssSource, /\.writeable-planner-page\.blank/);
-  assert.match(cssSource, /\.secret-saved-pages/);
+test("removes the secret area and all of its entry points", () => {
+  assert.doesNotMatch(pageSource, /SafePlace/);
+  assert.doesNotMatch(pageSource, /safePlace/);
+  assert.doesNotMatch(pageSource, /refuge/);
+  assert.doesNotMatch(pageSource, /secretDiary/);
+  assert.doesNotMatch(pageSource, /secret-moon-button/);
+  assert.doesNotMatch(pageSource, /PlannerInkCanvas/);
+  assert.doesNotMatch(cssSource, /\.secret-studio-backdrop/);
+  assert.doesNotMatch(cssSource, /\.secret-moon-button/);
 });
 
 test("adds Neon heartbreak as an isolated complete theme", () => {
@@ -176,20 +164,6 @@ test("toggles selected moods and keeps reminders editable", () => {
   assert.match(pageSource, /deleteReminder/);
   assert.match(pageSource, /delete-reminder-button/);
   assert.doesNotMatch(pageSource, /Day not marked complete/);
-});
-
-test("keeps Safe Place light enough for mobile typing", () => {
-  assert.match(pageSource, /secretDiaryTextareaRef/);
-  assert.doesNotMatch(pageSource, /value=\{secretDiaryText\}/);
-  assert.match(cssSource, /\.refuge-backdrop \{\s+animation: none;/);
-  assert.match(
-    cssSource,
-    /\.app-shell\[data-refuge-open="true"\] \.phone-canvas \*/,
-  );
-  assert.match(
-    cssSource,
-    /\.app-shell\[data-refuge-open="true"\] > \.phone-canvas[\s\S]*content-visibility: hidden/,
-  );
 });
 
 test("keeps pinch zoom on the compositor until the gesture ends", () => {
