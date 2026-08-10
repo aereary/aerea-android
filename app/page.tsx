@@ -1656,6 +1656,8 @@ export default function Home() {
     setSelectedCalendarDate(todayKey);
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setEventEditorOpen(false);
+    setCalendarExpanded(false);
+    setMonthPickerOpen(false);
     setCalendarOpen(true);
   };
 
@@ -4235,9 +4237,23 @@ export default function Home() {
                     >
                       →
                     </button>
+                    {calendarExpanded && (
+                      <button
+                        className="calendar-view-toggle calendar-view-toggle-heading"
+                        type="button"
+                        onClick={() => setCalendarExpanded(false)}
+                      >
+                        <span aria-hidden="true">▦</span>
+                        Compact month
+                      </button>
+                    )}
                   </div>
                   <button
-                    onClick={() => setCalendarOpen(false)}
+                    onClick={() => {
+                      setCalendarExpanded(false);
+                      setMonthPickerOpen(false);
+                      setCalendarOpen(false);
+                    }}
                     aria-label="Close"
                   >
                     ×
@@ -4283,15 +4299,17 @@ export default function Home() {
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
-                  <button
-                    className="calendar-view-toggle"
-                    type="button"
-                    aria-pressed={calendarExpanded}
-                    onClick={() => setCalendarExpanded((expanded) => !expanded)}
-                  >
-                    <span aria-hidden="true">▦</span>
-                    {calendarExpanded ? "Compact month" : "Extended month"}
-                  </button>
+                  {!calendarExpanded && (
+                    <button
+                      className="calendar-view-toggle"
+                      type="button"
+                      aria-pressed={false}
+                      onClick={() => setCalendarExpanded(true)}
+                    >
+                      <span aria-hidden="true">▦</span>
+                      Extended month
+                    </button>
+                  )}
                 </div>
                 <div className="month-grid-viewport">
                   <div
@@ -4374,7 +4392,7 @@ export default function Home() {
                                 />
                               ))}
                             </span>
-                            <small>
+                            <small className="calendar-compact-event-label">
                               {dayEvents.length === 1
                                 ? dayEvents[0].title
                                 : `${dayEvents.length} plans`}

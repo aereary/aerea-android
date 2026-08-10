@@ -11719,3 +11719,29 @@ body {
   .calendar-expanded .month-grid { grid-template-rows:25px repeat(6,minmax(0,1fr)); }
   .calendar-expanded .calendar-cell-events { bottom:3px; top:27px; }
 }
+
+.calendar-month-heading > .calendar-view-toggle-heading {
+  background:color-mix(in srgb,var(--lilac) 52%,white);
+  border-radius:999px;
+  color:var(--ink);
+  font-size:11px;
+  font-weight:900;
+  gap:7px;
+  height:38px;
+  padding:5px 12px 5px 6px;
+  white-space:nowrap;
+  width:auto;
+}
+.calendar-view-toggle-heading > span { background:color-mix(in srgb,var(--paper) 82%,transparent); border-radius:50%; display:grid; height:27px; place-items:center; width:27px; }
+.calendar-modal.calendar-expanded { grid-template-rows:auto minmax(0,1fr); }
+.calendar-expanded .calendar-sources { display:none; }
+
+@media (min-width:721px) and (max-width:1280px) {
+  .calendar-modal:not(.calendar-expanded) .calendar-compact-event-label { display:none; }
+}
+
+@media (max-width:720px) {
+  .calendar-month-heading { gap:7px; }
+  .calendar-month-heading > .calendar-view-toggle-heading { font-size:0; height:36px; padding:4px; width:36px; }
+  .calendar-view-toggle-heading > span { font-size:13px; height:28px; width:28px; }
+}
