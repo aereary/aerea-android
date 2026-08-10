@@ -211,11 +211,26 @@ type SketchPoint = {
 };
 
 type SketchStroke = {
-  tool: "pen" | "eraser";
+  id: string;
+  tool:
+    | "pen"
+    | "pencil"
+    | "highlighter"
+    | "eraser"
+    | "line"
+    | "rectangle"
+    | "ellipse"
+    | "tape"
+    | "text"
+    | "lasso";
   color: string;
   size: number;
   points: SketchPoint[];
+  text?: string;
+  revealed?: boolean;
 };
+
+type SketchTool = SketchStroke["tool"] | "eyedropper";
 
 type PlannerPage = {
   id: string;
@@ -1069,12 +1084,10 @@ export default function Home() {
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
-  const [penTool, setPenTool] = useState<"pen" | "eraser">("pen");
+  const [penTool, setPenTool] = useState<SketchTool>("pen");
   const [sketchFullscreen, setSketchFullscreen] = useState(false);
   const [sketchToolbarOpen, setSketchToolbarOpen] = useState(true);
-  const [sketchTitle, setSketchTitle] = useState(
-    "Differential Equations — notes",
-  );
+  const [sketchTitle, setSketchTitle] = useState("Untitled page");
   const [savedPages, setSavedPages] = useState<SketchPage[]>([]);
   const [sketchSaving, setSketchSaving] = useState(false);
   const [sketchMessage, setSketchMessage] = useState("");
@@ -1108,6 +1121,12 @@ export default function Home() {
   const sketchImageInputRef = useRef<HTMLInputElement | null>(null);
   const sketchStrokeStartedAtRef = useRef(0);
   const [straightenOnHold, setStraightenOnHold] = useState(true);
+  const [scratchToErase, setScratchToErase] = useState(true);
+  const [selectedSketchStrokeIds, setSelectedSketchStrokeIds] = useState<string[]>([]);
+  const [sketchTextEditor, setSketchTextEditor] = useState<{ point: SketchPoint; text: string } | null>(null);
+  const selectedSketchStrokeIdsRef = useRef<string[]>([]);
+  const sketchSelectionBoxRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null);
+  const sketchSelectionDragRef = useRef<{ point: SketchPoint; originals: Map<string, SketchPoint[]> } | null>(null);
   const stylusDetectedRef = useRef(false);
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
@@ -2252,6 +2271,23 @@ export default function Home() {
     });
   };
 
+  const setSketchSelection = (ids: string[]) => {
+    selectedSketchStrokeIdsRef.current = ids;
+    setSelectedSketchStrokeIds(ids);
+    if (ids.length === 0) sketchSelectionBoxRef.current = null;
+  };
+
+  const strokeBounds = (stroke: SketchStroke) => {
+    const xs = stroke.points.map((point) => point.x);
+    const ys = stroke.points.map((point) => point.y);
+    return {
+      left: Math.min(...xs),
+      top: Math.min(...ys),
+      right: Math.max(...xs),
+      bottom: Math.max(...ys),
+    };
+  };
+
   const canvasPointFromClient = (
     clientX: number,
     clientY: number,
@@ -2285,18 +2321,82 @@ export default function Home() {
 
     context.save();
     context.globalCompositeOperation =
-      stroke.tool === "eraser" ? "destination-out" : "source-over";
+      stroke.tool === "eraser"
+        ? "destination-out"
+        : stroke.tool === "highlighter"
+          ? "multiply"
+          : "source-over";
+    context.globalAlpha =
+      stroke.tool === "highlighter"
+        ? 0.26
+        : stroke.tool === "pencil"
+          ? 0.72
+          : stroke.tool === "tape" && stroke.revealed
+            ? 0.13
+            : 1;
     context.strokeStyle = stroke.color;
     context.fillStyle = stroke.color;
     context.lineCap = "round";
     context.lineJoin = "round";
+
+    if (stroke.tool === "text" && stroke.text) {
+      const point = stroke.points[0];
+      context.globalAlpha = 1;
+      context.font = `600 ${Math.max(18, stroke.size * 5) * cssToCanvas}px ui-rounded, system-ui, sans-serif`;
+      context.textBaseline = "top";
+      context.fillText(stroke.text, point.x * canvas.width, point.y * canvas.height);
+      context.restore();
+      return;
+    }
+
+    if (["line", "rectangle", "ellipse"].includes(stroke.tool) && stroke.points.length > 1) {
+      const first = stroke.points[0];
+      const last = stroke.points[stroke.points.length - 1];
+      context.lineWidth = stroke.size * cssToCanvas;
+      context.beginPath();
+      if (stroke.tool === "line") {
+        context.moveTo(first.x * canvas.width, first.y * canvas.height);
+        context.lineTo(last.x * canvas.width, last.y * canvas.height);
+      } else if (stroke.tool === "rectangle") {
+        context.rect(
+          first.x * canvas.width,
+          first.y * canvas.height,
+          (last.x - first.x) * canvas.width,
+          (last.y - first.y) * canvas.height,
+        );
+      } else {
+        const centerX = ((first.x + last.x) / 2) * canvas.width;
+        const centerY = ((first.y + last.y) / 2) * canvas.height;
+        context.ellipse(
+          centerX,
+          centerY,
+          Math.abs(last.x - first.x) * canvas.width / 2,
+          Math.abs(last.y - first.y) * canvas.height / 2,
+          0,
+          0,
+          Math.PI * 2,
+        );
+      }
+      context.stroke();
+      context.restore();
+      return;
+    }
+
+    if (stroke.tool === "lasso") {
+      context.globalAlpha = 0.85;
+      context.strokeStyle = "#719aac";
+      context.lineWidth = 1.5 * cssToCanvas;
+      context.setLineDash([6 * cssToCanvas, 5 * cssToCanvas]);
+    }
 
     if (stroke.points.length === 1) {
       const point = stroke.points[0];
       const width =
         (stroke.tool === "eraser"
           ? stroke.size * 4
-          : stroke.size * (0.45 + point.pressure * 1.1)) * cssToCanvas;
+          : stroke.tool === "highlighter" || stroke.tool === "tape"
+            ? stroke.size * 4.5
+            : stroke.size * (0.45 + point.pressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.arc(
         point.x * canvas.width,
@@ -2321,7 +2421,9 @@ export default function Home() {
       context.lineWidth =
         (stroke.tool === "eraser"
           ? stroke.size * 4
-          : stroke.size * (0.45 + averagePressure * 1.1)) * cssToCanvas;
+          : stroke.tool === "highlighter" || stroke.tool === "tape"
+            ? stroke.size * 4.5
+            : stroke.size * (0.45 + averagePressure * 1.1)) * cssToCanvas;
       context.beginPath();
       context.moveTo(
         previous.x * canvas.width,
@@ -2358,6 +2460,27 @@ export default function Home() {
     if (activeStrokeRef.current) {
       renderStroke(context, activeStrokeRef.current);
     }
+    if (sketchSelectionBoxRef.current) {
+      const box = sketchSelectionBoxRef.current;
+      context.save();
+      context.strokeStyle = "#6fa8bd";
+      context.fillStyle = "rgba(169, 220, 235, .08)";
+      context.lineWidth = Math.max(2, canvas.width / 700);
+      context.setLineDash([10, 7]);
+      context.fillRect(
+        box.left * canvas.width,
+        box.top * canvas.height,
+        (box.right - box.left) * canvas.width,
+        (box.bottom - box.top) * canvas.height,
+      );
+      context.strokeRect(
+        box.left * canvas.width,
+        box.top * canvas.height,
+        (box.right - box.left) * canvas.width,
+        (box.bottom - box.top) * canvas.height,
+      );
+      context.restore();
+    }
     context.restore();
   };
   useEffect(() => {
@@ -2369,6 +2492,7 @@ export default function Home() {
     sketchRedoRef.current = [];
     activeStrokeRef.current = null;
     activeSketchPointerRef.current = null;
+    setSketchSelection([]);
     setHistoryDepth({ undo: 0, redo: 0 });
   };
 
@@ -2477,6 +2601,73 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
+  const pointInsideBox = (
+    point: SketchPoint,
+    box: { left: number; top: number; right: number; bottom: number },
+  ) =>
+    point.x >= box.left &&
+    point.x <= box.right &&
+    point.y >= box.top &&
+    point.y <= box.bottom;
+
+  const refreshSketchSelectionBox = (ids = selectedSketchStrokeIdsRef.current) => {
+    const selected = sketchStrokesRef.current.filter((stroke) => ids.includes(stroke.id));
+    if (selected.length === 0) {
+      sketchSelectionBoxRef.current = null;
+      return;
+    }
+    const bounds = selected.map(strokeBounds);
+    sketchSelectionBoxRef.current = {
+      left: Math.max(0, Math.min(...bounds.map((box) => box.left)) - 0.008),
+      top: Math.max(0, Math.min(...bounds.map((box) => box.top)) - 0.012),
+      right: Math.min(1, Math.max(...bounds.map((box) => box.right)) + 0.008),
+      bottom: Math.min(1, Math.max(...bounds.map((box) => box.bottom)) + 0.012),
+    };
+  };
+
+  const deleteSketchSelection = () => {
+    const ids = selectedSketchStrokeIdsRef.current;
+    if (ids.length === 0) return;
+    sketchStrokesRef.current = sketchStrokesRef.current.filter((stroke) => !ids.includes(stroke.id));
+    setSketchSelection([]);
+    syncSketchHistory();
+    redrawSketch();
+  };
+
+  const duplicateSketchSelection = () => {
+    const ids = selectedSketchStrokeIdsRef.current;
+    if (ids.length === 0) return;
+    const copies = sketchStrokesRef.current
+      .filter((stroke) => ids.includes(stroke.id))
+      .map((stroke) => ({
+        ...stroke,
+        id: crypto.randomUUID(),
+        points: stroke.points.map((point) => ({
+          ...point,
+          x: Math.min(1, point.x + 0.025),
+          y: Math.min(1, point.y + 0.025),
+        })),
+      }));
+    sketchStrokesRef.current.push(...copies);
+    setSketchSelection(copies.map((stroke) => stroke.id));
+    refreshSketchSelectionBox(copies.map((stroke) => stroke.id));
+    syncSketchHistory();
+    redrawSketch();
+  };
+
+  const isScratchGesture = (stroke: SketchStroke) => {
+    if (stroke.points.length < 14) return false;
+    let reversals = 0;
+    let previousDirection = 0;
+    stroke.points.slice(1).forEach((point, index) => {
+      const direction = Math.sign(point.x - stroke.points[index].x);
+      if (direction && previousDirection && direction !== previousDirection) reversals += 1;
+      if (direction) previousDirection = direction;
+    });
+    const box = strokeBounds(stroke);
+    return reversals >= 4 && box.right - box.left > 0.045 && box.bottom - box.top > 0.012;
+  };
+
   const startDrawing = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2509,9 +2700,62 @@ export default function Home() {
       event.pressure,
       event.pointerType,
     );
+
+    if (penTool === "eyedropper") {
+      const context = canvas.getContext("2d");
+      if (context) {
+        const pixel = context.getImageData(
+          Math.min(canvas.width - 1, Math.max(0, Math.round(point.x * canvas.width))),
+          Math.min(canvas.height - 1, Math.max(0, Math.round(point.y * canvas.height))),
+          1,
+          1,
+        ).data;
+        setPenColor(`#${[pixel[0], pixel[1], pixel[2]].map((value) => value.toString(16).padStart(2, "0")).join("")}`);
+      }
+      setPenTool("pen");
+      setSketchMessage("Color picked from the page.");
+      return;
+    }
+
+    if (
+      penTool === "lasso" &&
+      sketchSelectionBoxRef.current &&
+      pointInsideBox(point, sketchSelectionBoxRef.current)
+    ) {
+      sketchSelectionDragRef.current = {
+        point,
+        originals: new Map(
+          sketchStrokesRef.current
+            .filter((stroke) => selectedSketchStrokeIdsRef.current.includes(stroke.id))
+            .map((stroke) => [stroke.id, stroke.points.map((item) => ({ ...item }))]),
+        ),
+      };
+      activeSketchPointerRef.current = event.pointerId;
+      return;
+    }
+
+    if (penTool === "text") {
+      setSketchTextEditor({ point, text: "" });
+      return;
+    }
+
+    if (penTool === "tape") {
+      const tape = sketchStrokesRef.current.find((stroke) =>
+        stroke.tool === "tape" &&
+        stroke.points.some((item) => Math.hypot(item.x - point.x, item.y - point.y) < 0.025),
+      );
+      if (tape) {
+        tape.revealed = !tape.revealed;
+        redrawSketch();
+        return;
+      }
+    }
+
+    if (penTool !== "lasso") setSketchSelection([]);
     activeStrokeRef.current = {
-      tool: penTool,
-      color: penColor,
+      id: crypto.randomUUID(),
+      tool: penTool as SketchStroke["tool"],
+      color: penTool === "tape" ? "#f4cdd9" : penColor,
       size: penSize,
       points: [point],
     };
@@ -2557,8 +2801,27 @@ export default function Home() {
 
     if (
       activeSketchPointerRef.current !== event.pointerId ||
-      !activeStrokeRef.current
+      (!activeStrokeRef.current && !sketchSelectionDragRef.current)
     ) {
+      return;
+    }
+
+    if (sketchSelectionDragRef.current) {
+      const current = canvasPointFromClient(event.clientX, event.clientY, event.pressure, event.pointerType);
+      const drag = sketchSelectionDragRef.current;
+      const deltaX = current.x - drag.point.x;
+      const deltaY = current.y - drag.point.y;
+      sketchStrokesRef.current.forEach((stroke) => {
+        const original = drag.originals.get(stroke.id);
+        if (!original) return;
+        stroke.points = original.map((point) => ({
+          ...point,
+          x: Math.min(1, Math.max(0, point.x + deltaX)),
+          y: Math.min(1, Math.max(0, point.y + deltaY)),
+        }));
+      });
+      refreshSketchSelectionBox();
+      redrawSketch();
       return;
     }
     const context = canvasRef.current?.getContext("2d");
@@ -2586,11 +2849,21 @@ export default function Home() {
           (rawPoint.pressure - previous.pressure) * Math.max(0.45, smoothing),
       };
       const distance = Math.hypot(point.x - previous.x, point.y - previous.y);
-      if (distance > 0.00008) stroke.points.push(point);
+      if (distance > 0.00008) {
+        if (["line", "rectangle", "ellipse"].includes(stroke.tool)) {
+          stroke.points = [stroke.points[0], point];
+        } else {
+          stroke.points.push(point);
+        }
+      }
     });
 
     if (stroke.points.length > firstNewIndex) {
-      renderStroke(context, stroke, firstNewIndex);
+      if (["line", "rectangle", "ellipse", "lasso"].includes(stroke.tool)) {
+        redrawSketch();
+      } else {
+        renderStroke(context, stroke, firstNewIndex);
+      }
     }
   };
 
@@ -2604,12 +2877,54 @@ export default function Home() {
       sketchGestureRef.current = null;
       setSketchZoom(sketchZoomRef.current);
     }
+    if (sketchSelectionDragRef.current) {
+      sketchSelectionDragRef.current = null;
+      activeSketchPointerRef.current = null;
+      syncSketchHistory();
+      redrawSketch();
+      return;
+    }
     if (
       event &&
       activeSketchPointerRef.current === event.pointerId &&
       activeStrokeRef.current
     ) {
       const stroke = activeStrokeRef.current;
+      if (stroke.tool === "lasso") {
+        const box = strokeBounds(stroke);
+        const ids = sketchStrokesRef.current
+          .filter((candidate) =>
+            candidate.tool !== "eraser" &&
+            candidate.points.some((point) => pointInsideBox(point, box)),
+          )
+          .map((candidate) => candidate.id);
+        setSketchSelection(ids);
+        refreshSketchSelectionBox(ids);
+        activeStrokeRef.current = null;
+        activeSketchPointerRef.current = null;
+        redrawSketch();
+        return;
+      }
+      if (
+        scratchToErase &&
+        ["pen", "pencil"].includes(stroke.tool) &&
+        performance.now() - sketchStrokeStartedAtRef.current < 1800 &&
+        isScratchGesture(stroke)
+      ) {
+        const box = strokeBounds(stroke);
+        const before = sketchStrokesRef.current.length;
+        sketchStrokesRef.current = sketchStrokesRef.current.filter((candidate) =>
+          !candidate.points.some((point) => pointInsideBox(point, box)),
+        );
+        if (sketchStrokesRef.current.length < before) {
+          activeStrokeRef.current = null;
+          activeSketchPointerRef.current = null;
+          syncSketchHistory();
+          redrawSketch();
+          setSketchMessage("Scratch-out removed the ink underneath.");
+          return;
+        }
+      }
       if (
         straightenOnHold &&
         stroke.tool === "pen" &&
@@ -3433,22 +3748,58 @@ export default function Home() {
                       }
                     >
                       <div>
-                        <p className="tiny-label">DRAWING TOOL</p>
-                        <div className="drawing-tool-toggle">
-                          <button
-                            className={penTool === "pen" ? "active" : ""}
-                            onClick={() => setPenTool("pen")}
-                          >
-                            <span>✎</span> Pen
-                          </button>
-                          <button
-                            className={penTool === "eraser" ? "active" : ""}
-                            onClick={() => setPenTool("eraser")}
-                          >
-                            <span>▱</span> Eraser
-                          </button>
+                        <p className="tiny-label">YOUR PENCIL CASE</p>
+                        <div className="drawing-tool-toggle sketch-primary-tools">
+                          {([
+                            ["pen", "✎", "Pen"],
+                            ["pencil", "⌁", "Pencil"],
+                            ["highlighter", "▰", "Marker"],
+                            ["eraser", "▱", "Eraser"],
+                            ["lasso", "◌", "Select"],
+                          ] as [SketchTool, string, string][]).map(([tool, icon, label]) => (
+                            <button
+                              key={tool}
+                              className={penTool === tool ? "active" : ""}
+                              onClick={() => setPenTool(tool)}
+                              aria-pressed={penTool === tool}
+                            >
+                              <span>{icon}</span>{label}
+                            </button>
+                          ))}
                         </div>
                       </div>
+                      <div>
+                        <p className="tiny-label">SHAPES & NOTES</p>
+                        <div className="drawing-tool-toggle sketch-shape-tools">
+                          {([
+                            ["line", "╱", "Line"],
+                            ["rectangle", "□", "Box"],
+                            ["ellipse", "○", "Circle"],
+                            ["text", "T", "Text"],
+                            ["tape", "▤", "Tape"],
+                            ["eyedropper", "◉", "Color"],
+                          ] as [SketchTool, string, string][]).map(([tool, icon, label]) => (
+                            <button
+                              key={tool}
+                              className={penTool === tool ? "active" : ""}
+                              onClick={() => setPenTool(tool)}
+                              aria-pressed={penTool === tool}
+                            >
+                              <span>{icon}</span>{label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {selectedSketchStrokeIds.length > 0 && (
+                        <div className="sketch-selection-actions">
+                          <p><strong>{selectedSketchStrokeIds.length}</strong> selected · drag to move</p>
+                          <div>
+                            <button onClick={duplicateSketchSelection}>Duplicate</button>
+                            <button onClick={deleteSketchSelection}>Delete</button>
+                            <button onClick={() => { setSketchSelection([]); redrawSketch(); }}>Done</button>
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <p className="tiny-label">QUICK CORRECTIONS</p>
                         <div className="sketch-history-controls">
@@ -3477,9 +3828,12 @@ export default function Home() {
                           <button onClick={() => sketchImageInputRef.current?.click()}>
                             <span>▧</span> Attach an image
                           </button>
+                          <button className={scratchToErase ? "active" : ""} onClick={() => setScratchToErase((value) => !value)} aria-pressed={scratchToErase}>
+                            <span>⌁</span> Scratch-out gesture
+                          </button>
                           <input ref={sketchImageInputRef} type="file" accept="image/*" onChange={importSketchImage} hidden />
                         </div>
-                        <small className="smart-paper-note">Draw and keep the pen still for a moment to snap the stroke straight. Attached images stay underneath your ink.</small>
+                        <small className="smart-paper-note">Hold any pen stroke to straighten it. Scribble quickly over ink to erase it. Use Select to circle, move, duplicate, or delete strokes. Tap Tape to reveal it.</small>
                       </div>
                       <div>
                         <p className="tiny-label">PAGE STYLE</p>
@@ -3652,6 +4006,42 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
+                      {sketchTextEditor && (
+                        <div className="sketch-text-sheet" role="dialog" aria-label="Add text to the page">
+                          <div>
+                            <p className="tiny-label">TEXT NOTE</p>
+                            <strong>Place a neat text box</strong>
+                          </div>
+                          <textarea
+                            autoFocus
+                            value={sketchTextEditor.text}
+                            onChange={(event) => setSketchTextEditor((current) => current ? { ...current, text: event.target.value } : current)}
+                            placeholder="Type something for this spot…"
+                          />
+                          <footer>
+                            <button onClick={() => setSketchTextEditor(null)}>Cancel</button>
+                            <button
+                              disabled={!sketchTextEditor.text.trim()}
+                              onClick={() => {
+                                sketchStrokesRef.current.push({
+                                  id: crypto.randomUUID(),
+                                  tool: "text",
+                                  color: penColor,
+                                  size: penSize,
+                                  points: [sketchTextEditor.point],
+                                  text: sketchTextEditor.text.trim(),
+                                });
+                                sketchRedoRef.current = [];
+                                setSketchTextEditor(null);
+                                syncSketchHistory();
+                                redrawSketch();
+                              }}
+                            >
+                              Add to page
+                            </button>
+                          </footer>
+                        </div>
+                      )}
                       <div
                         className="sketch-viewport"
                         ref={sketchViewportRef}
@@ -4352,6 +4742,7 @@ export default function Home() {
                           dayEvents.length > 0 ? "has-event" : "",
                           dayMood ? "has-mood" : "",
                           dayComplete ? "day-complete" : "",
+                          date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
                           dayKey === todayKey ? "today" : "",
                         ]
                           .filter(Boolean)
