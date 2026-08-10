@@ -11332,6 +11332,61 @@ body {
   .calendar-expanded .calendar-cell-event > small { font-size:clamp(6px,1.6vw,8px); }
 }
 
+/* Compact scrapbook-style day pocket. */
+.day-summary-card {
+  background:
+    radial-gradient(circle at 94% 8%,rgba(199,226,239,.55),transparent 92px),
+    linear-gradient(145deg,#fffaf6,#fdf5fb 66%,#f2f8f4);
+  background-image:
+    radial-gradient(circle at 94% 8%,rgba(199,226,239,.55),transparent 92px),
+    linear-gradient(145deg,#fffaf6,#fdf5fb 66%,#f2f8f4);
+  border:2px solid #fff;
+  border-radius:28px;
+  box-shadow:0 22px 55px #3f385047,0 0 0 1px #e9dce4;
+  max-height:min(78dvh,650px);
+  max-width:500px;
+  padding:23px 20px 18px;
+}
+.day-summary-sparkles { color:#dc9faf; font-size:17px; position:absolute; right:72px; top:19px; }
+.day-summary-card > header { align-items:center; border:0; padding:0 0 14px; }
+.day-summary-card > header > div:first-child { min-width:0; }
+.day-summary-card > header .tiny-label { color:#a26f82; letter-spacing:.18em; }
+.day-summary-card > header h2 {
+  background:#f5d7df;
+  border-radius:7px 18px 18px 7px;
+  color:#574c61;
+  display:inline-block;
+  font-family:inherit;
+  font-size:clamp(20px,5vw,29px);
+  font-weight:800;
+  margin-top:7px;
+  padding:8px 14px;
+}
+.day-summary-card > header small { color:#9a8d9d; margin:7px 0 0 4px; }
+.day-summary-card > header .day-summary-corner > button { background:#fff; border:1px solid #eadde4; box-shadow:0 3px 0 #eee2e8; }
+.day-summary-events { gap:8px; margin-top:4px; }
+.day-summary-event {
+  background:color-mix(in srgb,var(--event-card,#f4eaf6) 72%,white);
+  border:1px solid #ffffffcc;
+  border-left:0;
+  border-radius:15px;
+  box-shadow:0 4px 10px #69597010;
+  padding:11px 12px;
+}
+.day-summary-event.lilac { --event-card:#e8e0f7; }.day-summary-event.yellow { --event-card:#fff0c9; }.day-summary-event.pink,.day-summary-event.rose { --event-card:#f8dfea; }.day-summary-event.blue { --event-card:#deebf8; }.day-summary-event.cyan { --event-card:#d9f1f4; }.day-summary-event.emerald { --event-card:#dff2df; }.day-summary-event.red,.day-summary-event.coral { --event-card:#f7dddd; }.day-summary-event.orange { --event-card:#fae6ce; }.day-summary-event.brown { --event-card:#eee3db; }
+.day-summary-event-heading > span { background:#ffffff9e; border-radius:50%; height:30px; width:30px; }
+.day-summary-event-heading strong { color:#554c5c; }
+.day-summary-memo { background:#ffffff8c; border:0; border-radius:10px; margin-left:38px; }
+.day-summary-event ul { background:#ffffff70; border-radius:10px; margin-left:38px; padding:8px 10px; }
+.day-summary-empty { background:#ffffff8a; border:1px dashed #dfcbd6; border-radius:18px; margin:5px 0; padding:34px 12px; }
+.day-summary-card > footer { border:0; margin-top:12px; padding-top:0; }
+.day-summary-add { background:#f6d887; box-shadow:0 4px 0 #eac56d; }
+
+@media (max-width:520px) {
+  .day-summary-card { max-height:74dvh; width:calc(100vw - 30px); }
+  .day-summary-card > header h2 { max-width:100%; }
+}
+
 /* Calendar day note — intentionally paper-like, not a generic app dialog. */
 .day-summary-backdrop { backdrop-filter:blur(7px); background:#514b6240; padding:14px; }
 .day-summary-card {
@@ -11429,3 +11484,18 @@ body {
   .calendar-expanded .month-grid { grid-template-rows:28px repeat(6,minmax(0,1fr)); }
   .calendar-expanded .month-grid > strong { font-size:9px; padding:7px 1px; }
 }
+
+/* Final scrapbook skin (kept last so legacy note rules cannot override it). */
+.day-summary-backdrop .day-summary-card { background:radial-gradient(circle at 94% 8%,rgba(199,226,239,.55),transparent 92px),linear-gradient(145deg,#fffaf6,#fdf5fb 66%,#f2f8f4); border:2px solid #fff; border-radius:28px; box-shadow:0 22px 55px #3f385047,0 0 0 1px #e9dce4; max-height:min(78dvh,650px); max-width:500px; padding:23px 20px 18px; }
+.day-summary-card .day-summary-sparkles { color:#dc9faf; font-size:17px; position:absolute; right:72px; top:19px; }
+.day-summary-card > header { align-items:center; border:0; padding:0 0 14px; }
+.day-summary-card > header .tiny-label { color:#a26f82; letter-spacing:.18em; }
+.day-summary-card > header h2 { background:#f5d7df; border-radius:7px 18px 18px 7px; color:#574c61; display:inline-block; font-family:inherit; font-size:clamp(20px,5vw,29px); font-weight:800; margin-top:7px; padding:8px 14px; }
+.day-summary-card > header small { color:#9a8d9d; margin:7px 0 0 4px; }
+.day-summary-card > header .day-summary-corner > button { background:#fff; border:1px solid #eadde4; box-shadow:0 3px 0 #eee2e8; }
+.day-summary-card .day-summary-events { gap:8px; margin-top:4px; }
+.day-summary-card .day-summary-event { background:color-mix(in srgb,var(--event-card,#f4eaf6) 72%,white); border:1px solid #ffffffcc; border-left:0; border-radius:15px; box-shadow:0 4px 10px #69597010; padding:11px 12px; }
+.day-summary-card .day-summary-event.lilac { --event-card:#e8e0f7; }.day-summary-card .day-summary-event.yellow { --event-card:#fff0c9; }.day-summary-card .day-summary-event.pink,.day-summary-card .day-summary-event.rose { --event-card:#f8dfea; }.day-summary-card .day-summary-event.blue { --event-card:#deebf8; }.day-summary-card .day-summary-event.cyan { --event-card:#d9f1f4; }.day-summary-card .day-summary-event.emerald { --event-card:#dff2df; }.day-summary-card .day-summary-event.red,.day-summary-card .day-summary-event.coral { --event-card:#f7dddd; }.day-summary-card .day-summary-event.orange { --event-card:#fae6ce; }
+.day-summary-card .day-summary-event-heading > span { background:#ffffff9e; border-radius:50%; height:30px; width:30px; }.day-summary-card .day-summary-memo { background:#ffffff8c; border:0; border-radius:10px; margin-left:38px; }.day-summary-card .day-summary-event ul { background:#ffffff70; border-radius:10px; margin-left:38px; padding:8px 10px; }
+.day-summary-card .day-summary-empty { background:#ffffff8a; border:1px dashed #dfcbd6; border-radius:18px; margin:5px 0; padding:34px 12px; }.day-summary-card > footer { border:0; margin-top:12px; padding-top:0; }.day-summary-card .day-summary-add { background:#f6d887; box-shadow:0 4px 0 #eac56d; }
+@media (max-width:520px) { .day-summary-backdrop .day-summary-card { max-height:74dvh; width:calc(100vw - 30px); } }

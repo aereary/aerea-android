@@ -1107,6 +1107,7 @@ export default function Home() {
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const calendarLongPressRef = useRef<number | null>(null);
   const calendarLongPressedRef = useRef(false);
+  const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1688,20 +1689,33 @@ export default function Home() {
     shiftCalendarMonth(deltaX < 0 ? 1 : -1);
   };
 
-  const beginCalendarLongPress = (dayKey: string) => {
+  const beginCalendarLongPress = (
+    dayKey: string,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
     calendarLongPressedRef.current = false;
+    calendarPressStartRef.current = { x: event.clientX, y: event.clientY };
     if (calendarLongPressRef.current) window.clearTimeout(calendarLongPressRef.current);
     calendarLongPressRef.current = window.setTimeout(() => {
       calendarLongPressedRef.current = true;
       setSelectedCalendarDate(dayKey);
       setDaySummaryDate(dayKey);
       navigator.vibrate?.(18);
-    }, 520);
+    }, 560);
+  };
+
+  const moveCalendarLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = calendarPressStartRef.current;
+    if (!start) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) {
+      cancelCalendarLongPress();
+    }
   };
 
   const cancelCalendarLongPress = () => {
     if (calendarLongPressRef.current) window.clearTimeout(calendarLongPressRef.current);
     calendarLongPressRef.current = null;
+    calendarPressStartRef.current = null;
   };
 
   const updateProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
@@ -4283,10 +4297,13 @@ export default function Home() {
                         ]
                           .filter(Boolean)
                           .join(" ")}
+                        onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
+                        onPointerMove={moveCalendarLongPress}
+                        onPointerUp={cancelCalendarLongPress}
+                        onPointerCancel={cancelCalendarLongPress}
                         onContextMenu={(event) => event.preventDefault()}
                         onClick={() => {
                           setSelectedCalendarDate(dayKey);
-                          setDaySummaryDate(dayKey);
                         }}
                       >
                         <span className="calendar-day-number">{day}</span>
@@ -4507,10 +4524,10 @@ export default function Home() {
         return (
           <div className="modal-backdrop day-summary-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setDaySummaryDate(null); }}>
             <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
-              <span className="day-summary-tape" aria-hidden="true" />
+              <span className="day-summary-sparkles" aria-hidden="true">✦ ♡</span>
               <header>
                 <div>
-                  <p className="tiny-label">A LITTLE NOTE FOR</p>
+                  <p className="tiny-label">DAY POCKET</p>
                   <h2>{readableDate(daySummaryDate)}</h2>
                   <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
                 </div>
