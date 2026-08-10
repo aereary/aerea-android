@@ -135,6 +135,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /agenda-v2-nav/);
   assert.match(pageSource, /agenda-overlay-backdrop/);
+  assert.match(pageSource, /agenda-v2-calendar-icon/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.agenda-v2-timeline/);
   assert.match(cssSource, /\.agenda-v2-event/);

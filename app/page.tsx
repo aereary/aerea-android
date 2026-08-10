@@ -4776,7 +4776,7 @@ export default function Home() {
                       </span>
                     </button>
                     <button className="agenda-v2-title" type="button" onClick={goToScheduleToday}>
-                      <span aria-hidden="true">▣</span>
+                      <span className="agenda-v2-calendar-icon" aria-hidden="true" />
                       <strong>Cronograma</strong>
                     </button>
                     <button
@@ -5025,7 +5025,7 @@ export default function Home() {
                       {tabs.map((tab) => (
                         <button
                           key={tab.id}
-                          className={tab.id === "today" ? "active" : ""}
+                          className={tab.id === "spaces" ? "active" : ""}
                           type="button"
                           onClick={() => {
                             setCalendarExpanded(false);
