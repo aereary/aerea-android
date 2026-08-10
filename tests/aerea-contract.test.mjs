@@ -127,11 +127,14 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /outside-month/);
   assert.match(pageSource, /selectedTimedScheduleEvents/);
   assert.match(pageSource, /shiftScheduleDay/);
+  assert.match(pageSource, /startScheduleSwipe/);
+  assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /schedule-now-line/);
   assert.match(pageSource, /schedule-bottom-dock/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded/);
   assert.match(cssSource, /\.schedule-timeline/);
   assert.match(cssSource, /\.schedule-event/);
+  assert.match(cssSource, /--agenda-accent:#6d56e8/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 

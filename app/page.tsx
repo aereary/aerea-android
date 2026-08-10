@@ -1190,6 +1190,8 @@ export default function Home() {
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const scheduleSwipeStartRef = useRef<number | null>(null);
+  const scheduleTimelineScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarLongPressRef = useRef<number | null>(null);
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -1707,6 +1709,21 @@ export default function Home() {
     ]!;
 
   useEffect(() => {
+    if (!calendarOpen || !calendarExpanded) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const timeline = scheduleTimelineScrollRef.current;
+      if (!timeline) return;
+      const firstTimedEvent = selectedTimedScheduleEvents[0]?.start;
+      const focusMinute = firstTimedEvent ?? (selectedCalendarDate === todayKey ? currentScheduleMinute : 9 * 60);
+      const scrollMinute = Math.max(6 * 60, Math.min(22 * 60, focusMinute - 60));
+      timeline.scrollTop = ((scrollMinute - 6 * 60) / (18 * 60)) * timeline.scrollHeight;
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [calendarEvents, calendarExpanded, calendarOpen, selectedCalendarDate, todayKey]);
+
+  useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
 
     const nextEvent = todayWidgetEvents[0];
@@ -1787,6 +1804,18 @@ export default function Home() {
     const nextKey = localDateKey(next);
     setSelectedCalendarDate(nextKey);
     setViewMonth(new Date(next.getFullYear(), next.getMonth(), 1));
+  };
+
+  const startScheduleSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    scheduleSwipeStartRef.current = event.changedTouches[0]?.clientX ?? null;
+  };
+
+  const finishScheduleSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const startX = scheduleSwipeStartRef.current;
+    const endX = event.changedTouches[0]?.clientX;
+    scheduleSwipeStartRef.current = null;
+    if (startX === null || endX === undefined || Math.abs(endX - startX) < 46) return;
+    shiftScheduleWeek(endX < startX ? 1 : -1);
   };
 
   const goToScheduleToday = () => {
@@ -4727,7 +4756,7 @@ export default function Home() {
                       })}
                     </p>
                     <div>
-                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◎</button>
+                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◉</button>
                       <button
                         type="button"
                         onClick={() => {
@@ -4833,15 +4862,12 @@ export default function Home() {
                 </div>
                 {calendarExpanded && (
                   <div className="schedule-shell">
-                    <div className="schedule-mobile-date-card">
-                      <button
-                        className="schedule-mobile-week-shift"
-                        type="button"
-                        onClick={() => shiftScheduleWeek(-1)}
-                        aria-label="Previous week"
-                      >
-                        ‹
-                      </button>
+                    <div
+                      className="schedule-mobile-date-card"
+                      onTouchStart={startScheduleSwipe}
+                      onTouchEnd={finishScheduleSwipe}
+                      aria-label="Week. Swipe left or right to change week."
+                    >
                       <div className="schedule-mobile-days" aria-label="Choose a day">
                         {scheduleDays.map((date) => {
                           const dateKey = localDateKey(date);
@@ -4857,14 +4883,6 @@ export default function Home() {
                           );
                         })}
                       </div>
-                      <button
-                        className="schedule-mobile-week-shift"
-                        type="button"
-                        onClick={() => shiftScheduleWeek(1)}
-                        aria-label="Next week"
-                      >
-                        ›
-                      </button>
                     </div>
 
                     <div className="schedule-selected-summary">
@@ -4908,7 +4926,7 @@ export default function Home() {
                         </>
                       )}
 
-                      <div className="schedule-timeline-scroll">
+                      <div className="schedule-timeline-scroll" ref={scheduleTimelineScrollRef}>
                         <div className="schedule-timeline">
                           <div className="schedule-hour-labels" aria-hidden="true">
                             {scheduleHours.map((hour) => (
