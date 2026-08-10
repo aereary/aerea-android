@@ -11379,3 +11379,53 @@ body {
   .day-summary-card > footer { align-items:stretch; flex-direction:column-reverse; text-align:center; }
   .day-summary-add { width:100%; }
 }
+
+/* The day note floats over the still-visible calendar. */
+.day-summary-backdrop {
+  align-items:center;
+  background:transparent;
+  backdrop-filter:none;
+  pointer-events:none;
+  z-index:260;
+}
+.day-summary-card {
+  box-shadow:0 26px 70px #39334655,0 5px 0 #eee3d8;
+  pointer-events:auto;
+}
+
+/* Extended mode is the calendar page itself, edge to edge. */
+.calendar-modal.calendar-expanded {
+  border:0;
+  border-radius:0;
+  height:100dvh;
+  max-height:none;
+  max-width:none;
+  overflow:hidden;
+  padding:18px clamp(10px,2.5vw,34px) 14px;
+  width:100vw;
+}
+.calendar-expanded .modal-top { margin-bottom:6px; }
+.calendar-expanded .calendar-sources { margin-bottom:8px; }
+.calendar-expanded .calendar-sources > span:not(.mood-source):not(.swipe-source) { display:none; }
+.calendar-expanded .month-grid-viewport { height:calc(100dvh - 142px); overflow:hidden; padding:0; }
+.calendar-expanded .month-grid {
+  border:0;
+  border-radius:0;
+  grid-template-rows:36px repeat(6,minmax(0,1fr));
+  height:100%;
+}
+.calendar-expanded .month-grid > button,
+.calendar-expanded .month-grid > i { min-height:0; }
+.calendar-expanded .selected-day-panel,
+.calendar-expanded .calendar-add-large { display:none; }
+
+@media (max-width:720px) {
+  .calendar-modal.calendar-expanded { padding:10px 5px 6px; }
+  .calendar-expanded .calendar-month-heading h2 { font-size:28px; }
+  .calendar-expanded .calendar-sources { gap:5px; margin:2px 0 6px; }
+  .calendar-expanded .calendar-sources .mood-source,
+  .calendar-expanded .calendar-sources .swipe-source { display:none; }
+  .calendar-expanded .month-grid-viewport { height:calc(100dvh - 112px); }
+  .calendar-expanded .month-grid { grid-template-rows:28px repeat(6,minmax(0,1fr)); }
+  .calendar-expanded .month-grid > strong { font-size:9px; padding:7px 1px; }
+}
