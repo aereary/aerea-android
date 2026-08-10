@@ -3958,11 +3958,22 @@ export default function Home() {
             className={[
               "calendar-modal",
               eventEditorOpen ? "calendar-event-mode" : "",
+              eventEditorOpen ? "event-editor-themed" : "",
               calendarExpanded && !eventEditorOpen ? "calendar-expanded" : "",
               calendarExpanded && !eventEditorOpen ? "agenda-v2-modal" : "",
             ]
               .filter(Boolean)
               .join(" ")}
+            style={
+              eventEditorOpen
+                ? ({
+                    "--event-editor-accent":
+                      eventColors.find(
+                        (color) => color.value === eventDraft.color,
+                      )?.hex ?? "#ae96d8",
+                  } as CSSProperties)
+                : undefined
+            }
             role="dialog"
             aria-modal="true"
             aria-label={

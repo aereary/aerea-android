@@ -3901,8 +3901,15 @@ p {
 }
 
 .calendar-event-mode {
+  --event-editor-accent: #ae96d8;
+  --event-editor-control: color-mix(in srgb, var(--event-editor-accent) 68%, white);
+  --event-editor-control-ink: color-mix(in srgb, var(--event-editor-accent) 18%, #2c2730);
+  --event-editor-deep: color-mix(in srgb, var(--event-editor-accent) 62%, #3b3440);
+  --event-editor-line: color-mix(in srgb, var(--event-editor-accent) 28%, var(--line));
+  --event-editor-soft: color-mix(in srgb, var(--event-editor-accent) 32%, var(--paper));
+  --event-editor-wash: color-mix(in srgb, var(--event-editor-accent) 15%, var(--paper));
   background:
-    linear-gradient(180deg, var(--lime-soft) 0 135px, var(--cream) 135px);
+    linear-gradient(180deg, var(--event-editor-soft) 0 135px, var(--cream) 135px);
   max-width: 760px;
   padding: 0 0 28px;
 }
@@ -3928,7 +3935,8 @@ p {
 }
 
 .event-editor-back {
-  background: rgba(255, 255, 255, 0.66);
+  background: var(--event-editor-wash);
+  color: var(--event-editor-deep);
   border-radius: 50%;
   font-size: 22px;
   height: 44px;
@@ -3936,8 +3944,9 @@ p {
 }
 
 .event-save-button {
-  background: var(--yellow);
+  background: var(--event-editor-control);
   border-radius: 999px;
+  color: var(--event-editor-control-ink);
   min-height: 40px;
   padding: 0 16px;
 }
@@ -3958,11 +3967,11 @@ p {
 }
 
 .event-title-input:focus-within {
-  border-color: var(--yellow);
+  border-color: var(--event-editor-accent);
 }
 
 .event-title-input > span {
-  color: var(--leaf-deep);
+  color: var(--event-editor-deep);
   display: block;
   font-size: 10px;
   font-weight: 900;
@@ -3989,7 +3998,7 @@ p {
 
 .event-editor-card {
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--event-editor-line);
   border-radius: 22px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
@@ -4013,9 +4022,9 @@ p {
 
 .event-row-icon {
   align-items: center;
-  background: var(--lime-wash);
+  background: var(--event-editor-wash);
   border-radius: 12px;
-  color: var(--leaf-deep);
+  color: var(--event-editor-deep);
   display: flex;
   font-size: 17px;
   font-weight: 900;
@@ -4059,7 +4068,7 @@ p {
 
 .switch-row input[type="checkbox"],
 .day-counter-option input[type="checkbox"] {
-  accent-color: var(--leaf);
+  accent-color: var(--event-editor-accent);
   height: 23px;
   width: 41px;
 }
@@ -4072,7 +4081,7 @@ p {
 }
 
 .event-dates > label {
-  background: #f3f5eb;
+  background: var(--event-editor-wash);
   border-radius: 15px;
   padding: 10px;
 }
@@ -4130,7 +4139,7 @@ p {
 }
 
 .event-color-palette button.active {
-  box-shadow: 0 0 0 2px var(--ink);
+  box-shadow: 0 0 0 2px var(--event-editor-deep);
 }
 
 .event-options-card {
@@ -4155,7 +4164,8 @@ p {
 
 .event-option > span {
   align-items: center;
-  background: var(--yellow-soft);
+  background: var(--event-editor-soft);
+  color: var(--event-editor-deep);
   border-radius: 10px;
   display: flex;
   height: 30px;
@@ -4184,7 +4194,7 @@ p {
 
 .custom-repeat {
   align-items: center;
-  background: var(--lime-wash);
+  background: var(--event-editor-wash);
   border-radius: 14px;
   display: flex;
   gap: 7px;
@@ -4228,7 +4238,7 @@ p {
 
 .event-note-field textarea,
 .event-todo-field input {
-  background: #f3f5eb;
+  background: var(--event-editor-wash);
   border: 0;
   border-radius: 13px;
   outline: 0;
@@ -4248,16 +4258,17 @@ p {
 }
 
 .event-todo-field > div button {
-  background: var(--yellow);
+  background: var(--event-editor-control);
   border: 0;
   border-radius: 12px;
+  color: var(--event-editor-control-ink);
   font-weight: 850;
   padding: 0 14px;
 }
 
 .event-todo-item {
   align-items: center;
-  background: #f1f4e9;
+  background: var(--event-editor-wash);
   border: 0;
   border-radius: 11px;
   display: grid;
@@ -4271,7 +4282,7 @@ p {
 
 .event-todo-item i {
   align-items: center;
-  background: var(--leaf);
+  background: var(--event-editor-accent);
   border-radius: 50%;
   color: white;
   display: flex;
@@ -4299,13 +4310,42 @@ p {
 }
 
 .mobile-event-save {
-  background: var(--leaf);
+  background: var(--event-editor-control);
   border: 0;
   border-radius: 999px;
-  color: white;
+  color: var(--event-editor-control-ink);
   display: none;
   font-weight: 900;
   min-height: 50px;
+}
+
+.calendar-event-mode .event-editor-top .tiny-label,
+.calendar-event-mode :is(.event-note-field, .event-todo-field, .event-file-field) > span {
+  color: var(--event-editor-deep);
+}
+
+.calendar-event-mode .event-editor-card {
+  box-shadow: 0 9px 24px color-mix(in srgb, var(--event-editor-accent) 12%, transparent);
+}
+
+.calendar-event-mode :is(.event-dates input, .event-row select, .event-row input, .event-option input, .event-option select, .event-note-field textarea, .event-todo-field input):focus {
+  outline: 2px solid color-mix(in srgb, var(--event-editor-accent) 52%, transparent);
+  outline-offset: 2px;
+}
+
+.calendar-event-mode .event-file-field input::file-selector-button {
+  background: var(--event-editor-wash);
+  border: 1px solid var(--event-editor-line);
+  border-radius: 10px;
+  color: var(--event-editor-deep);
+  font-weight: 800;
+  margin-right: 9px;
+  padding: 7px 10px;
+}
+
+.calendar-event-mode :is(.event-save-button, .mobile-event-save):disabled {
+  filter: grayscale(.35);
+  opacity: .55;
 }
 
 .bottom-nav {
@@ -4873,7 +4913,7 @@ p {
   }
 
   .calendar-event-mode {
-    background: linear-gradient(180deg, var(--lime-soft) 0 116px, var(--cream) 116px);
+    background: linear-gradient(180deg, var(--event-editor-soft) 0 116px, var(--cream) 116px);
     padding: 0 0 86px;
   }
 
@@ -14531,8 +14571,10 @@ body {
 
 .calendar-modal.calendar-expanded.agenda-v2-modal {
   background:var(--app-backdrop)!important;
-  border:0;
-  border-radius:0;
+  border:3px solid color-mix(in srgb,white 82%,transparent);
+  border-bottom:0;
+  border-radius:38px 38px 0 0;
+  box-sizing:border-box;
   grid-template-rows:106px minmax(0,1fr);
   height:100dvh;
   max-height:100dvh;
@@ -14653,6 +14695,10 @@ body {
 .agenda-v2-time-label b { font-size:11px; font-weight:700; }
 .agenda-v2-time-label small { color:var(--muted); font-size:8px; margin-top:4px; }
 .agenda-v2-time-grid .half-hour .agenda-v2-time-label b { color:color-mix(in srgb,var(--muted) 78%,transparent); font-size:8px; font-weight:650; }
+
+.agenda-v2-time-grid > span:last-child .agenda-v2-time-label {
+  transform:translateY(calc(-100% + 2px));
+}
 
 .agenda-v2-time-grid i {
   background:repeating-linear-gradient(to right,color-mix(in srgb,var(--line) 52%,transparent) 0 3px,transparent 3px 9px);
@@ -14796,7 +14842,7 @@ body {
   .agenda-v2-days { height:61px; }
   .agenda-v2-days strong { font-size:15px; margin-top:4px; }
   .agenda-v2-board { grid-template-columns:72px minmax(0,1fr); }
-  .agenda-v2-scroll { padding:18px 8px 88px 0; }
+  .agenda-v2-scroll { padding:18px 8px 124px 0; }
   .agenda-v2-timeline { grid-template-columns:72px minmax(0,1fr); height:1368px; }
   .agenda-v2-time-grid > span:not(.agenda-v2-time-axis) { grid-template-columns:72px minmax(0,1fr); }
   .agenda-v2-time-label { padding-right:15px; }

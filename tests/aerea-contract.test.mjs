@@ -102,6 +102,17 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(cssSource, /\.note-detail-text/);
 });
 
+test("tints the event editor from the chosen event color", () => {
+  assert.match(pageSource, /eventEditorOpen \? "event-editor-themed" : ""/);
+  assert.match(pageSource, /"--event-editor-accent"/);
+  assert.match(pageSource, /color\.value === eventDraft\.color/);
+  assert.match(cssSource, /--event-editor-control:/);
+  assert.match(cssSource, /\.event-row-icon[\s\S]*var\(--event-editor-wash\)/);
+  assert.match(cssSource, /\.event-dates > label[\s\S]*var\(--event-editor-wash\)/);
+  assert.match(cssSource, /\.event-todo-field > div button[\s\S]*var\(--event-editor-control\)/);
+  assert.match(cssSource, /\.mobile-event-save[\s\S]*var\(--event-editor-control\)/);
+});
+
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
   assert.match(pageSource, />\s*Cronograma\s*</);
@@ -143,6 +154,8 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /--v2-highlight/);
   assert.match(cssSource, /\.agenda-v2-now[\s\S]*right:0/);
   assert.match(cssSource, /\.agenda-v2-event\.is-short/);
+  assert.match(cssSource, /border-radius:38px 38px 0 0/);
+  assert.match(cssSource, /\.agenda-v2-time-grid > span:last-child \.agenda-v2-time-label/);
   assert.match(cssSource, /\.agenda-v2-week-content\.schedule-slide-next/);
   assert.match(cssSource, /\.agenda-v2-days button\.today:not\(\.selected\)/);
   assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
