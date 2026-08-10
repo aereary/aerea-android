@@ -302,6 +302,12 @@ function PlannerInkCanvas({
 
   return (
     <div className={`writeable-planner-page ${page.template}`}>
+      <img
+        className="planner-template-image"
+        src={`/templates/${page.template === "strawberry" ? "strawberry-daily" : page.template === "cozy" ? "cozy-day" : "soft-study"}.svg`}
+        alt=""
+        aria-hidden="true"
+      />
       <div className="planner-paper-art" aria-hidden="true">
         <div className="paper-title"><span>{page.template === "strawberry" ? "🍓 DAILY" : page.template === "cozy" ? "🎀 DAY" : "📚 STUDY"}</span><strong>PLANNER</strong><small>small steps · big progress ♡</small></div>
         <div className="paper-date">DATE: ____ / ____ / ____</div>
@@ -971,6 +977,7 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -4212,12 +4219,19 @@ export default function Home() {
                     </button>
                     <div>
                       <p className="tiny-label">YOUR WHOLE RHYTHM</p>
-                      <h2>
+                      <button
+                        type="button"
+                        className="calendar-date-menu-trigger"
+                        onClick={() => setMonthPickerOpen((open) => !open)}
+                        aria-expanded={monthPickerOpen}
+                        aria-label="Choose month and year"
+                      >
                         {viewMonth.toLocaleDateString("en", {
                           month: "long",
                           year: "numeric",
                         })}
-                      </h2>
+                        <span aria-hidden="true">⌄</span>
+                      </button>
                     </div>
                     <button
                       onClick={() => shiftCalendarMonth(1)}
@@ -4233,6 +4247,37 @@ export default function Home() {
                     ×
                   </button>
                 </div>
+                {monthPickerOpen && (
+                  <div className="calendar-date-menu" role="dialog" aria-label="Choose month and year">
+                    <div className="calendar-date-menu-columns">
+                      <div className="calendar-date-menu-list" aria-label="Months">
+                        {Array.from({ length: 12 }, (_, month) => (
+                          <button
+                            key={month}
+                            className={month === calendarMonth ? "active" : ""}
+                            aria-current={month === calendarMonth ? "date" : undefined}
+                            onClick={() => setViewMonth(new Date(calendarYear, month, 1))}
+                          >
+                            {new Date(2026, month, 1).toLocaleDateString("en", { month: "long" })}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="calendar-date-menu-list years" aria-label="Years">
+                        {Array.from({ length: 11 }, (_, index) => calendarYear - 5 + index).map((year) => (
+                          <button
+                            key={year}
+                            className={year === calendarYear ? "active" : ""}
+                            aria-current={year === calendarYear ? "date" : undefined}
+                            onClick={() => setViewMonth(new Date(year, calendarMonth, 1))}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button className="calendar-date-menu-done" onClick={() => setMonthPickerOpen(false)}>Done</button>
+                  </div>
+                )}
                 <div className="calendar-sources">
                   <span>
                     <i className="source-android" /> Android calendar
@@ -4353,7 +4398,7 @@ export default function Home() {
                               </span>
                             ))}
                             {dayEvents.length > 3 && (
-                              <small>+{dayEvents.length - 3} more</small>
+                              <small className="calendar-more-events">+{dayEvents.length - 3}</small>
                             )}
                           </span>
                         )}
