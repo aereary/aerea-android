@@ -2815,7 +2815,6 @@ export default function Home() {
       className="app-shell"
       data-theme={appTheme}
       data-color-mode={colorMode}
-      data-refuge-open={refugeOpen}
       style={customThemeStyle}
     >
       <div className="paper-grain" aria-hidden="true" />
@@ -2859,10 +2858,8 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
-          <button
+          <div
             className="brand-wrap"
-            onClick={() => setRefugeOpen(true)}
-            aria-label="Open Safe Place"
           >
             <span className="brand-mark profile-mark">
               {profilePhoto ? (
@@ -2875,7 +2872,7 @@ export default function Home() {
               <span className="eyebrow">MY LITTLE DAY</span>
               <strong className="wordmark">aérea</strong>
             </span>
-          </button>
+          </div>
           <div className="header-actions">
             <button
               className="calendar-button"
@@ -4230,7 +4227,6 @@ export default function Home() {
                           month: "long",
                           year: "numeric",
                         })}
-                        <span aria-hidden="true">⌄</span>
                       </button>
                     </div>
                     <button
@@ -4606,7 +4602,7 @@ export default function Home() {
         );
       })()}
 
-      {refugeOpen && (() => {
+      {false && (() => {
         const activePage = plannerPages.find((page) => page.id === activePlannerPageId) ?? plannerPages[0];
         const updatePage = (patch: Partial<PlannerPage>) => {
           if (!activePage) return;

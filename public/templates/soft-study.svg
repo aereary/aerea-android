@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1414">
-  <rect width="1000" height="1414" fill="#fbfcf4"/><rect x="40" y="40" width="920" height="1334" rx="28" fill="none" stroke="#b7c69c" stroke-width="4"/>
-  <text x="70" y="120" font-family="Arial,sans-serif" font-size="55" font-weight="800" fill="#839a68">SOFT STUDY DAY</text><text x="72" y="158" font-family="Arial,sans-serif" font-size="17" fill="#9a8d78" letter-spacing="4">LEARN · BREATHE · BLOOM</text>
-  <g fill="#fffef9" stroke="#cbd4b8" stroke-width="3"><rect x="55" y="205" width="890" height="95" rx="20"/><rect x="55" y="335" width="430" height="340" rx="20"/><rect x="515" y="335" width="430" height="340" rx="20"/><rect x="55" y="710" width="280" height="300" rx="20"/><rect x="360" y="710" width="585" height="300" rx="20"/><rect x="55" y="1045" width="890" height="280" rx="20"/></g>
-  <g font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#789060"><text x="85" y="250">DATE: ____ / ____ / ____     SUBJECT: ____________________</text><text x="85" y="375">TODAY'S FOCUS</text><text x="545" y="375">STUDY SCHEDULE</text><text x="85" y="750">TASKS</text><text x="390" y="750">KEY IDEAS &amp; QUESTIONS</text><text x="85" y="1085">FREE NOTES</text></g>
-  <g stroke="#d5d8c9" stroke-width="2" stroke-dasharray="8 8"><path d="M95 435h350M95 495h350M95 555h350M95 615h350M555 435h350M555 495h350M555 555h350M555 615h350M95 810h200M95 865h200M95 920h200M95 975h200M400 810h505M400 865h505M400 920h505M400 975h505M95 1150h810M95 1210h810M95 1270h810"/></g>
-  <g fill="#dce8c9" stroke="#9caf79" stroke-width="3"><path d="M870 115c-38-30-71 5-48 39 17 25 55 35 72 37 4-17 6-57-12-80-4-5-8-8-12-10z"/><path d="M874 117q-18 38-50 66"/></g>
-</svg>
