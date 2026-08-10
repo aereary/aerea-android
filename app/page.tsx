@@ -1554,22 +1554,12 @@ export default function Home() {
     () => Array.from({ length: 19 }, (_, index) => index + 6),
     [],
   );
-  const scheduleRangeLabel = useMemo(() => {
-    const first = scheduleDays[0];
-    const last = scheduleDays[scheduleDays.length - 1];
-    if (!first || !last) return "Schedule";
-    const sameMonth = first.getMonth() === last.getMonth();
-    const firstLabel = first.toLocaleDateString("en", {
-      month: "short",
-      day: "numeric",
-    });
-    const lastLabel = last.toLocaleDateString("en", {
-      month: sameMonth ? undefined : "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    return `${firstLabel} – ${lastLabel}`;
-  }, [scheduleDays]);
+  const scheduleHasAllDayEvents = scheduleDays.some((date) => {
+    const dateKey = localDateKey(date);
+    return calendarEvents.some(
+      (event) => event.allDay && eventOccursOn(event, dateKey),
+    );
+  });
   const currentScheduleMinute = new Date().getHours() * 60 + new Date().getMinutes();
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
@@ -4697,61 +4687,67 @@ export default function Home() {
               </>
             ) : (
               <>
-                <div className="modal-top">
-                  <div className="calendar-month-heading">
+                {calendarExpanded ? (
+                  <header className="schedule-clean-topbar">
                     <button
-                      onClick={() => calendarExpanded ? shiftScheduleWeek(-1) : shiftCalendarMonth(-1)}
-                      aria-label={calendarExpanded ? "Previous week" : "Previous month"}
+                      className="schedule-back-to-month"
+                      type="button"
+                      onClick={() => {
+                        setCalendarExpanded(false);
+                        setMonthPickerOpen(false);
+                      }}
+                      aria-label="Back to month"
                     >
                       ←
                     </button>
+                    <p>MY SCHEDULE</p>
                     <div>
-                      <p className="tiny-label">{calendarExpanded ? "YOUR WEEKLY RHYTHM" : "YOUR WHOLE RHYTHM"}</p>
+                      <button type="button" onClick={goToScheduleToday} aria-label="Go to today">◎</button>
                       <button
                         type="button"
-                        className="calendar-date-menu-trigger"
                         onClick={() => {
-                          if (!calendarExpanded) setMonthPickerOpen((open) => !open);
+                          setCalendarExpanded(false);
+                          setMonthPickerOpen(false);
+                          setCalendarOpen(false);
                         }}
-                        aria-expanded={monthPickerOpen}
-                        aria-label={calendarExpanded ? "Current schedule range" : "Choose month and year"}
+                        aria-label="Close"
                       >
-                        {calendarExpanded
-                          ? scheduleRangeLabel
-                          : viewMonth.toLocaleDateString("en", {
-                              month: "long",
-                              year: "numeric",
-                            })}
+                        ×
                       </button>
                     </div>
+                  </header>
+                ) : (
+                  <div className="modal-top">
+                    <div className="calendar-month-heading">
+                      <button onClick={() => shiftCalendarMonth(-1)} aria-label="Previous month">←</button>
+                      <div>
+                        <p className="tiny-label">YOUR WHOLE RHYTHM</p>
+                        <button
+                          type="button"
+                          className="calendar-date-menu-trigger"
+                          onClick={() => setMonthPickerOpen((open) => !open)}
+                          aria-expanded={monthPickerOpen}
+                          aria-label="Choose month and year"
+                        >
+                          {viewMonth.toLocaleDateString("en", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </button>
+                      </div>
+                      <button onClick={() => shiftCalendarMonth(1)} aria-label="Next month">→</button>
+                    </div>
                     <button
-                      onClick={() => calendarExpanded ? shiftScheduleWeek(1) : shiftCalendarMonth(1)}
-                      aria-label={calendarExpanded ? "Next week" : "Next month"}
+                      onClick={() => {
+                        setMonthPickerOpen(false);
+                        setCalendarOpen(false);
+                      }}
+                      aria-label="Close"
                     >
-                      →
+                      ×
                     </button>
-                    {calendarExpanded && (
-                      <button
-                        className="calendar-view-toggle calendar-view-toggle-heading"
-                        type="button"
-                        onClick={() => setCalendarExpanded(false)}
-                      >
-                        <span aria-hidden="true">▦</span>
-                        Month
-                      </button>
-                    )}
                   </div>
-                  <button
-                    onClick={() => {
-                      setCalendarExpanded(false);
-                      setMonthPickerOpen(false);
-                      setCalendarOpen(false);
-                    }}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
+                )}
                 {monthPickerOpen && !calendarExpanded && (
                   <div className="calendar-date-menu" role="dialog" aria-label="Choose month and year">
                     <div className="calendar-date-menu-columns">
@@ -4813,7 +4809,11 @@ export default function Home() {
                 {calendarExpanded && (
                   <div className="schedule-shell">
                     <div className="schedule-toolbar">
-                      <button type="button" onClick={goToScheduleToday}>Today</button>
+                      <div className="schedule-week-nav" aria-label="Week navigation">
+                        <button type="button" onClick={() => shiftScheduleWeek(-1)} aria-label="Previous week">←</button>
+                        <button type="button" onClick={goToScheduleToday}>Today</button>
+                        <button type="button" onClick={() => shiftScheduleWeek(1)} aria-label="Next week">→</button>
+                      </div>
                       <div className="schedule-span-toggle" aria-label="Schedule span">
                         {([5, 7] as const).map((count) => (
                           <button
@@ -4832,7 +4832,6 @@ export default function Home() {
                           </button>
                         ))}
                       </div>
-                      <button className="schedule-add-event" type="button" onClick={() => openNewEvent(selectedCalendarDate)}>＋ Event</button>
                     </div>
 
                     <div className="schedule-mobile-days" aria-label="Choose a day">
@@ -4851,11 +4850,27 @@ export default function Home() {
                       })}
                     </div>
 
+                    <div className="schedule-selected-summary">
+                      <div>
+                        <p>{readableDate(selectedCalendarDate)}</p>
+                        <h3>
+                          {selectedCalendarDate === todayKey
+                            ? "Today"
+                            : dateFromKey(selectedCalendarDate).toLocaleDateString("en", { weekday: "long" })}
+                        </h3>
+                      </div>
+                      <small>
+                        {selectedDateEvents.length === 0
+                          ? "A clear day"
+                          : `${selectedDateEvents.length} ${selectedDateEvents.length === 1 ? "event" : "events"}`}
+                      </small>
+                    </div>
+
                     <div
-                      className="schedule-board"
+                      className={`schedule-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`}
                       style={{ "--schedule-days": scheduleDayCount } as CSSProperties}
                     >
-                      <span className="schedule-time-corner">TIME</span>
+                      <span className="schedule-time-corner" aria-hidden="true" />
                       <div className="schedule-day-heads">
                         {scheduleDays.map((date) => {
                           const dateKey = localDateKey(date);
@@ -4874,27 +4889,31 @@ export default function Home() {
                           );
                         })}
                       </div>
-                      <span className="schedule-all-day-label">ALL DAY</span>
-                      <div className="schedule-all-day-columns">
-                        {scheduleDays.map((date) => {
-                          const dateKey = localDateKey(date);
-                          const allDayEvents = calendarEvents.filter((event) => event.allDay && eventOccursOn(event, dateKey));
-                          return (
-                            <div key={dateKey} className={selectedCalendarDate === dateKey ? "selected" : ""}>
-                              {allDayEvents.slice(0, 2).map((event) => (
-                                <button
-                                  key={event.id}
-                                  className={`schedule-all-day-event ${event.color}`}
-                                  onClick={() => setSelectedEventDetail(event)}
-                                >
-                                  {event.title}
-                                </button>
-                              ))}
-                              {allDayEvents.length > 2 && <small>+{allDayEvents.length - 2}</small>}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {scheduleHasAllDayEvents && (
+                        <>
+                          <span className="schedule-all-day-label">ALL DAY</span>
+                          <div className="schedule-all-day-columns">
+                            {scheduleDays.map((date) => {
+                              const dateKey = localDateKey(date);
+                              const allDayEvents = calendarEvents.filter((event) => event.allDay && eventOccursOn(event, dateKey));
+                              return (
+                                <div key={dateKey} className={selectedCalendarDate === dateKey ? "selected" : ""}>
+                                  {allDayEvents.slice(0, 2).map((event) => (
+                                    <button
+                                      key={event.id}
+                                      className={`schedule-all-day-event ${event.color}`}
+                                      onClick={() => setSelectedEventDetail(event)}
+                                    >
+                                      {event.title}
+                                    </button>
+                                  ))}
+                                  {allDayEvents.length > 2 && <small>+{allDayEvents.length - 2}</small>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
 
                       <div className="schedule-timeline-scroll">
                         <div className="schedule-timeline">
@@ -4963,6 +4982,14 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
+                    <button
+                      className="schedule-floating-add"
+                      type="button"
+                      onClick={() => openNewEvent(selectedCalendarDate)}
+                      aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
+                    >
+                      ＋
+                    </button>
                   </div>
                 )}
                 <div className="month-grid-viewport">
