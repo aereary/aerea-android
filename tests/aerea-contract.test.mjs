@@ -27,8 +27,13 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps the approved theme collection and the five Rhea additions", () => {
+test("keeps the approved theme collection and both Rhea theme drops", () => {
   for (const theme of [
+    "piggyparcel",
+    "rainywindow",
+    "scrapbookdesk",
+    "tinyliner",
+    "pocketcomputer",
     "piggygelato",
     "calicocafe",
     "pawcloud",
@@ -50,8 +55,8 @@ test("keeps the approved theme collection and the five Rhea additions", () => {
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    8,
-    "the eight approved decorated themes should decorate the sky",
+    13,
+    "the thirteen approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -228,6 +233,11 @@ test("removes the secret area and all of its entry points", () => {
 
 test("gives every Rhea theme a complete isolated interface", () => {
   for (const theme of [
+    "piggyparcel",
+    "rainywindow",
+    "scrapbookdesk",
+    "tinyliner",
+    "pocketcomputer",
     "piggygelato",
     "calicocafe",
     "pawcloud",
@@ -244,7 +254,25 @@ test("gives every Rhea theme a complete isolated interface", () => {
   assert.match(pageSource, /interfaceIdea: "floating controls"/);
   assert.match(pageSource, /interfaceIdea: "telemetry panels"/);
   assert.match(pageSource, /interfaceIdea: "pixel inventory"/);
+  assert.match(pageSource, /interfaceIdea: "postage tabs"/);
+  assert.match(pageSource, /interfaceIdea: "frosted panes"/);
+  assert.match(pageSource, /interfaceIdea: "paper collage"/);
+  assert.match(pageSource, /interfaceIdea: "station board"/);
+  assert.match(pageSource, /interfaceIdea: "desktop windows"/);
   assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
+});
+
+test("shares the event-note anatomy and keeps compact calendar tools small", () => {
+  assert.match(cssSource, /The loved event-note anatomy is shared by every world/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
+  assert.match(cssSource, /grid-template-columns:72px 4px minmax\(0,1fr\) 40px/);
+  assert.match(cssSource, /--note-accent,#ec7192/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.time-block/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.mini-people/);
+  assert.match(cssSource, /Compact calendar tools: useful, visible/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger,[\s\S]*flex:0 0 auto/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger \{ margin-left:auto; \}/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-view-toggle > span \{ height:21px; width:21px; \}/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {

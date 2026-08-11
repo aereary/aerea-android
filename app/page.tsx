@@ -29,6 +29,11 @@ type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type AppTheme =
+  | "piggyparcel"
+  | "rainywindow"
+  | "scrapbookdesk"
+  | "tinyliner"
+  | "pocketcomputer"
   | "piggygelato"
   | "calicocafe"
   | "pawcloud"
@@ -245,6 +250,86 @@ const themeOptions: {
   featured?: boolean;
   interfaceIdea?: string;
 }[] = [
+  {
+    id: "piggyparcel",
+    name: "Piggy parcel post",
+    description: "Postage-stamp tabs, little envelopes, coral ink, and a piglet sorting happy mail.",
+    colors: ["#ef879f", "#fffaf0", "#71b9c7"],
+    icon: "💌",
+    art: "/assets/openmoji/love-letter.svg",
+    accents: [
+      "/assets/openmoji/pig-face.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "special delivery",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "postage tabs",
+  },
+  {
+    id: "rainywindow",
+    name: "Rainy window room",
+    description: "Dusky glass panes, quiet rain, aqua glimmers, and controls that float like window droplets.",
+    colors: ["#365b78", "#e9f4f3", "#8fd6d0"],
+    icon: "☔",
+    art: "/assets/openmoji/umbrella.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/moon.svg",
+    ],
+    charm: "listen to rain",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "frosted panes",
+  },
+  {
+    id: "scrapbookdesk",
+    name: "Pocket scrapbook",
+    description: "Torn paper, washi tape, pencil marks, and layered notes scattered across a warm desk.",
+    colors: ["#d99f74", "#fffaf0", "#88aa78"],
+    icon: "📔",
+    art: "/assets/openmoji/notebook.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/love-letter.svg",
+    ],
+    charm: "keep this page",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "paper collage",
+  },
+  {
+    id: "tinyliner",
+    name: "Tiny liner station",
+    description: "A miniature rail timetable, platform tickets, warm signal red, and a train ready for the day.",
+    colors: ["#173b57", "#fff4d7", "#e6645a"],
+    icon: "🚂",
+    art: "/assets/openmoji/locomotive.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "next little stop",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "station board",
+  },
+  {
+    id: "pocketcomputer",
+    name: "Pocket computer 2000",
+    description: "Tiny desktop windows, beveled buttons, lilac title bars, and a playful little taskbar.",
+    colors: ["#7774c9", "#f2f1e9", "#62cad3"],
+    icon: "💾",
+    art: "/assets/openmoji/floppy-disk.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cat-face.svg",
+    ],
+    charm: "saved for today",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "desktop windows",
+  },
   {
     id: "piggygelato",
     name: "Piggy gelato club",
