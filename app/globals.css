@@ -18958,3 +18958,327 @@ body {
   .app-shell[data-theme] .schedule-card .time-block { height:57px; }
   .app-shell[data-theme] .schedule-card .mini-people { height:30px; width:30px; }
 }
+
+/* Event notes v2 — one exact card silhouette in every theme and calendar list. */
+.app-shell[data-theme] .schedule-card {
+  background:color-mix(in srgb,var(--paper) 96%,white);
+  border:1px solid color-mix(in srgb,var(--event-tint) 24%,var(--line));
+  border-radius:28px;
+  box-shadow:
+    0 6px 0 color-mix(in srgb,#efb9ca 47%,transparent),
+    0 15px 30px color-mix(in srgb,var(--ink) 9%,transparent);
+  gap:16px;
+  grid-template-columns:72px 4px minmax(0,1fr) 40px;
+  min-height:116px;
+  padding:18px;
+}
+
+.app-shell[data-theme] .schedule-card::before {
+  background:color-mix(in srgb,var(--event-tint) 86%,var(--paper));
+  border-radius:0 28px 0 100%;
+  height:120px;
+  opacity:.82;
+  right:-31px;
+  top:-39px;
+  width:120px;
+}
+
+.app-shell[data-theme] .schedule-card::after {
+  background:linear-gradient(90deg,color-mix(in srgb,var(--event-tint) 35%,transparent),transparent 72%);
+  border-radius:0 0 28px 28px;
+  bottom:0;
+  height:7px;
+  left:0;
+  width:100%;
+}
+
+.app-shell[data-theme] .schedule-card .time-block {
+  background:color-mix(in srgb,var(--event-tint) 78%,var(--paper));
+  border:0;
+  border-radius:22px;
+  box-shadow:none;
+  height:72px;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-line {
+  background:#ec7192;
+  box-shadow:0 0 0 1px rgba(236,113,146,.12);
+  height:58px;
+  width:4px;
+}
+
+.app-shell[data-theme] .schedule-card .card-tag {
+  color:var(--leaf-deep);
+  font-family:inherit;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.15em;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-copy h4 {
+  font-family:inherit;
+  font-size:19px;
+  font-weight:950;
+  text-transform:none;
+}
+
+.app-shell[data-theme] .schedule-card .mini-people {
+  background:color-mix(in srgb,var(--paper) 92%,white);
+  border:1px solid color-mix(in srgb,white 76%,var(--line));
+  border-radius:50%;
+  box-shadow:0 6px 15px color-mix(in srgb,var(--ink) 8%,transparent);
+  color:color-mix(in srgb,var(--ink) 82%,#77334d);
+  height:40px;
+  width:40px;
+}
+
+.app-shell[data-theme] .event-chip {
+  align-items:center;
+  background:color-mix(in srgb,var(--paper) 96%,white);
+  border:1px solid color-mix(in srgb,var(--chip-color) 31%,var(--line));
+  border-radius:28px;
+  box-shadow:
+    0 6px 0 color-mix(in srgb,#efb9ca 47%,transparent),
+    0 15px 30px color-mix(in srgb,var(--ink) 8%,transparent);
+  display:grid;
+  gap:16px;
+  grid-template-columns:72px 4px minmax(0,1fr) 40px;
+  isolation:isolate;
+  min-height:116px;
+  overflow:hidden;
+  padding:18px;
+  position:relative;
+}
+
+.app-shell[data-theme] .event-chip::before {
+  background:color-mix(in srgb,var(--chip-color) 84%,var(--paper));
+  border-radius:0 28px 0 100%;
+  content:"";
+  height:120px;
+  opacity:.86;
+  position:absolute;
+  right:-31px;
+  top:-39px;
+  width:120px;
+  z-index:-1;
+}
+
+.app-shell[data-theme] .event-chip::after {
+  background:linear-gradient(90deg,color-mix(in srgb,var(--chip-color) 35%,transparent),transparent 72%);
+  border-radius:0 0 28px 28px;
+  bottom:0;
+  content:"";
+  height:7px;
+  left:0;
+  position:absolute;
+  width:100%;
+}
+
+.app-shell[data-theme] .event-chip-time {
+  align-items:center;
+  align-self:center;
+  background:color-mix(in srgb,var(--chip-color) 78%,var(--paper));
+  border-radius:22px;
+  display:flex;
+  flex-direction:column;
+  height:72px;
+  justify-content:center;
+  min-width:0;
+  position:relative;
+  z-index:1;
+}
+
+.app-shell[data-theme] .event-chip-time strong {
+  color:var(--ink);
+  font-size:16px;
+  font-weight:950;
+  letter-spacing:-.03em;
+  line-height:1;
+}
+
+.app-shell[data-theme] .event-chip-time small {
+  color:var(--ink-soft);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.17em;
+  margin-top:7px;
+}
+
+.app-shell[data-theme] .event-chip-line {
+  background:#ec7192;
+  border-radius:999px;
+  height:58px;
+  width:4px;
+}
+
+.app-shell[data-theme] .event-chip-main {
+  align-self:center;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  padding:0;
+  position:relative;
+  z-index:1;
+}
+
+.app-shell[data-theme] .event-chip-main .event-chip-category {
+  color:var(--leaf-deep);
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.15em;
+  margin:0 0 5px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .event-chip-main strong {
+  color:var(--ink);
+  font-family:inherit;
+  font-size:19px;
+  font-weight:950;
+  line-height:1.15;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .event-chip-main em {
+  color:var(--muted);
+  font-size:12px;
+  font-style:normal;
+  margin-top:6px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .event-chip-delete {
+  align-items:center;
+  align-self:center;
+  background:color-mix(in srgb,var(--paper) 92%,white);
+  border:1px solid color-mix(in srgb,white 76%,var(--line));
+  border-radius:50%;
+  box-shadow:0 6px 15px color-mix(in srgb,var(--ink) 8%,transparent);
+  color:var(--muted);
+  display:flex;
+  font-size:17px;
+  height:40px;
+  justify-content:center;
+  position:relative;
+  width:40px;
+  z-index:2;
+}
+
+/* Icon-only calendar tools: no filled pills and no visible labels. */
+.calendar-sources .calendar-search-trigger,
+.calendar-sources .calendar-view-toggle {
+  align-items:center;
+  background:transparent;
+  border:1px solid color-mix(in srgb,var(--line) 82%,transparent);
+  border-radius:50%;
+  box-shadow:none;
+  color:var(--muted);
+  display:inline-flex;
+  flex:0 0 30px;
+  gap:0;
+  height:30px;
+  justify-content:center;
+  margin:0;
+  min-height:30px;
+  padding:0;
+  width:30px;
+}
+
+.calendar-sources .calendar-search-trigger { margin-left:auto; }
+.calendar-sources .calendar-search-trigger:hover,
+.calendar-sources .calendar-search-trigger:focus-visible,
+.calendar-sources .calendar-view-toggle:hover,
+.calendar-sources .calendar-view-toggle:focus-visible {
+  background:color-mix(in srgb,var(--paper) 76%,transparent);
+  border-color:color-mix(in srgb,var(--blue) 52%,var(--line));
+  color:var(--ink);
+  outline:0;
+}
+
+.calendar-sources .calendar-search-glyph {
+  border-width:1.7px;
+  height:11px;
+  width:11px;
+}
+
+.calendar-sources .calendar-search-glyph::after {
+  bottom:-4px;
+  height:5px;
+  right:-3px;
+  width:1.7px;
+}
+
+.calendar-sources .calendar-view-toggle > span {
+  background:transparent;
+  border:0;
+  border-radius:0;
+  font-size:14px;
+  height:auto;
+  line-height:1;
+  width:auto;
+}
+
+@media (max-width:680px) {
+  .app-shell[data-theme] .schedule-card,
+  .app-shell[data-theme] .event-chip {
+    border-radius:25px;
+    gap:12px;
+    grid-template-columns:61px 3px minmax(0,1fr) 34px;
+    min-height:101px;
+    padding:13px;
+  }
+
+  .app-shell[data-theme] .schedule-card::before,
+  .app-shell[data-theme] .event-chip::before {
+    border-radius:0 25px 0 100%;
+    height:98px;
+    right:-29px;
+    top:-32px;
+    width:98px;
+  }
+
+  .app-shell[data-theme] .schedule-card .time-block,
+  .app-shell[data-theme] .event-chip-time {
+    border-radius:19px;
+    height:61px;
+  }
+
+  .app-shell[data-theme] .event-chip-time strong { font-size:14px; }
+  .app-shell[data-theme] .event-chip-line { height:50px; width:3px; }
+  .app-shell[data-theme] .event-chip-main strong { font-size:16px; }
+  .app-shell[data-theme] .event-chip-main em { font-size:11px; }
+  .app-shell[data-theme] .event-chip-delete { font-size:15px; height:34px; width:34px; }
+}
+
+@media (max-width:420px) {
+  .calendar-sources .calendar-search-trigger,
+  .calendar-sources .calendar-view-toggle {
+    flex:0 0 29px;
+    height:29px;
+    margin:0;
+    min-height:29px;
+    padding:0;
+    width:29px;
+  }
+
+  .calendar-sources .calendar-search-trigger { margin-left:auto; }
+}
+
+@media (max-width:360px) {
+  .app-shell[data-theme] .schedule-card,
+  .app-shell[data-theme] .event-chip {
+    gap:9px;
+    grid-template-columns:55px 3px minmax(0,1fr) 30px;
+    padding:11px;
+  }
+
+  .app-shell[data-theme] .event-chip-time { height:57px; }
+  .app-shell[data-theme] .event-chip-delete { height:30px; width:30px; }
+}

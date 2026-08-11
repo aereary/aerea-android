@@ -139,7 +139,7 @@ test("tints the event editor from the chosen event color", () => {
 
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, />\s*Cronograma\s*</);
+  assert.match(pageSource, /aria-label="Open schedule"/);
   assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
@@ -160,7 +160,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /flushOverlapGroup/);
   assert.match(pageSource, /duration \/ SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /is-short/);
-  assert.match(pageSource, /Cronograma/);
+  assert.match(pageSource, /title="Open schedule"/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
@@ -262,17 +262,25 @@ test("gives every Rhea theme a complete isolated interface", () => {
   assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
 });
 
-test("shares the event-note anatomy and keeps compact calendar tools small", () => {
-  assert.match(cssSource, /The loved event-note anatomy is shared by every world/);
+test("uses one event-note anatomy everywhere and icon-only calendar tools", () => {
+  assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
   assert.match(cssSource, /grid-template-columns:72px 4px minmax\(0,1fr\) 40px/);
-  assert.match(cssSource, /--note-accent,#ec7192/);
+  assert.match(cssSource, /background:#ec7192/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.time-block/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.mini-people/);
-  assert.match(cssSource, /Compact calendar tools: useful, visible/);
-  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger,[\s\S]*flex:0 0 auto/);
+  assert.match(pageSource, /className="event-chip-time"/);
+  assert.match(pageSource, /className="event-chip-line"/);
+  assert.match(pageSource, /className="event-chip-category"/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-chip/);
+  assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger,[\s\S]*flex:0 0 30px/);
+  assert.match(cssSource, /background:transparent;[\s\S]*border-radius:50%/);
   assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger \{ margin-left:auto; \}/);
-  assert.match(cssSource, /\.calendar-sources \.calendar-view-toggle > span \{ height:21px; width:21px; \}/);
+  assert.match(pageSource, /title="Search events"/);
+  assert.match(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, />\s*Search\s*<\/button>/);
+  assert.doesNotMatch(pageSource, />\s*Cronograma\s*<\/button>/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {

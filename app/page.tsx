@@ -4865,9 +4865,9 @@ export default function Home() {
                         setCalendarSearchOpen(true);
                       }}
                       aria-label="Search calendar events"
+                      title="Search events"
                     >
                       <span className="calendar-search-glyph" aria-hidden="true" />
-                      Search
                     </button>
                   )}
                   {!calendarExpanded && (
@@ -4875,6 +4875,8 @@ export default function Home() {
                       className="calendar-view-toggle"
                       type="button"
                       aria-pressed={false}
+                      aria-label="Open schedule"
+                      title="Open schedule"
                       onClick={() => {
                         const visibleDates = scheduleDatesFor(selectedCalendarDate, 7);
                         if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) {
@@ -4884,7 +4886,6 @@ export default function Home() {
                       }}
                     >
                       <span aria-hidden="true">▦</span>
-                      Cronograma
                     </button>
                   )}
                 </div>
@@ -5620,22 +5621,30 @@ export default function Home() {
                           className={`event-chip ${calendarEvent.color}`}
                           key={calendarEvent.id}
                         >
-                          <span>{eventTimeLabel(calendarEvent)}</span>
+                          <span className="event-chip-time">
+                            <strong>
+                              {calendarEvent.allDay ? "ALL" : calendarEvent.time}
+                            </strong>
+                            <small>{calendarEvent.allDay ? "DAY" : "TIME"}</small>
+                          </span>
+                          <i className="event-chip-line" aria-hidden="true" />
                           <button
                             className="event-chip-main"
                             onClick={() => openEventEditor(calendarEvent)}
                             aria-label={`Edit ${calendarEvent.title}`}
                           >
-                            <strong>{calendarEvent.title}</strong>
-                            <small>
+                            <small className="event-chip-category">
                               {calendarEvent.calendar ?? "Personal"}
+                            </small>
+                            <strong>{calendarEvent.title}</strong>
+                            <em>
+                              {calendarEvent.location ||
+                                calendarEvent.note ||
+                                "Saved in your calendar"}
                               {(calendarEvent.repeat ?? "Never") !== "Never"
                                 ? ` · ${calendarEvent.repeat}`
                                 : ""}
-                              {calendarEvent.location
-                                ? ` · ${calendarEvent.location}`
-                                : ""}
-                            </small>
+                            </em>
                           </button>
                           <button
                             className="event-chip-delete"
@@ -6600,7 +6609,7 @@ function TodayScreen({
                   </span>
                 </div>
                 <div className="mini-people">
-                  {event.color === "yellow" ? "☀️" : "✦"}
+                  ✦
                 </div>
               </button>
             ))
