@@ -966,6 +966,13 @@ export default function Home() {
   const sketchRedoRef = useRef<SketchStroke[]>([]);
   const activeStrokeRef = useRef<SketchStroke | null>(null);
   const activeSketchPointerRef = useRef<number | null>(null);
+  const activeSketchCanvasRectRef = useRef<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const resizeSketchCanvasRef = useRef<() => void>(() => undefined);
   const sketchBaseImageRef = useRef<HTMLImageElement | null>(null);
   const sketchImageInputRef = useRef<HTMLInputElement | null>(null);
   const sketchStrokeStartedAtRef = useRef(0);
@@ -2072,7 +2079,8 @@ export default function Home() {
   ): SketchPoint => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0, pressure: 0.5 };
-    const rect = canvas.getBoundingClientRect();
+    const liveRect = canvas.getBoundingClientRect();
+    const rect = activeSketchCanvasRectRef.current ?? liveRect;
     const safeWidth = Math.max(1, rect.width);
     const safeHeight = Math.max(1, rect.height);
     return {
@@ -2447,6 +2455,14 @@ export default function Home() {
   const startDrawing = (event: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    event.preventDefault();
+    const canvasRect = canvas.getBoundingClientRect();
+    activeSketchCanvasRectRef.current = {
+      left: canvasRect.left,
+      top: canvasRect.top,
+      width: canvasRect.width,
+      height: canvasRect.height,
+    };
     sketchPointersRef.current.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,
@@ -2461,12 +2477,14 @@ export default function Home() {
     if (event.pointerType === "touch" && sketchPointersRef.current.size >= 2) {
       activeStrokeRef.current = null;
       activeSketchPointerRef.current = null;
+      activeSketchCanvasRectRef.current = null;
       redrawSketch();
       sketchGestureRef.current = sketchGesture();
       return;
     }
 
     if (event.pointerType === "touch" && stylusDetectedRef.current) {
+      activeSketchCanvasRectRef.current = null;
       return;
     }
 
@@ -2490,6 +2508,7 @@ export default function Home() {
       }
       setPenTool("pen");
       setSketchMessage("Color picked from the page.");
+      activeSketchCanvasRectRef.current = null;
       return;
     }
 
@@ -2512,6 +2531,7 @@ export default function Home() {
 
     if (penTool === "text") {
       setSketchTextEditor({ point, text: "" });
+      activeSketchCanvasRectRef.current = null;
       return;
     }
 
@@ -2523,6 +2543,7 @@ export default function Home() {
       if (tape) {
         tape.revealed = !tape.revealed;
         redrawSketch();
+        activeSketchCanvasRectRef.current = null;
         return;
       }
     }
@@ -2541,6 +2562,7 @@ export default function Home() {
   };
 
   const draw = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
     if (sketchPointersRef.current.has(event.pointerId)) {
       sketchPointersRef.current.set(event.pointerId, {
         x: event.clientX,
@@ -2603,8 +2625,13 @@ export default function Home() {
     const context = canvasRef.current?.getContext("2d");
     if (!context) return;
 
+    // Samsung tablet pens can report coalesced samples in a transient visual
+    // viewport coordinate space. The primary pen event is stable and keeps a
+    // finished stroke from stretching vertically after the next redraw.
     const nativeEvents =
-      event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
+      event.pointerType === "pen"
+        ? [event.nativeEvent]
+        : event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
     const stroke = activeStrokeRef.current;
     const firstNewIndex = stroke.points.length;
     const smoothing = Math.max(0.18, 1 - strokeStabilization * 0.82);
@@ -2644,6 +2671,10 @@ export default function Home() {
   };
 
   const stopDrawing = (event?: ReactPointerEvent<HTMLCanvasElement>) => {
+    const releaseCanvasGeometry = () => {
+      activeSketchCanvasRectRef.current = null;
+      resizeSketchCanvasRef.current();
+    };
     if (event) {
       sketchPointersRef.current.delete(event.pointerId);
     } else {
@@ -2658,6 +2689,7 @@ export default function Home() {
       activeSketchPointerRef.current = null;
       syncSketchHistory();
       redrawSketch();
+      releaseCanvasGeometry();
       return;
     }
     if (
@@ -2679,6 +2711,7 @@ export default function Home() {
         activeStrokeRef.current = null;
         activeSketchPointerRef.current = null;
         redrawSketch();
+        releaseCanvasGeometry();
         return;
       }
       if (
@@ -2698,6 +2731,7 @@ export default function Home() {
           syncSketchHistory();
           redrawSketch();
           setSketchMessage("Scratch-out removed the ink underneath.");
+          releaseCanvasGeometry();
           return;
         }
       }
@@ -2722,6 +2756,7 @@ export default function Home() {
       sketchRedoRef.current = [];
       syncSketchHistory();
     }
+    releaseCanvasGeometry();
   };
 
   const clearCanvas = (remember = true) => {
@@ -2737,6 +2772,7 @@ export default function Home() {
     let frame = 0;
 
     const resizeCanvas = () => {
+      if (activeSketchPointerRef.current !== null) return;
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const rect = canvas.getBoundingClientRect();
@@ -2759,12 +2795,14 @@ export default function Home() {
       });
     };
 
+    resizeSketchCanvasRef.current = resizeCanvas;
     const observer = new ResizeObserver(resizeCanvas);
     observer.observe(canvas);
     resizeCanvas();
     return () => {
       window.cancelAnimationFrame(frame);
       observer.disconnect();
+      resizeSketchCanvasRef.current = () => undefined;
     };
   }, [activeTab, sketchFullscreen, space]);
 

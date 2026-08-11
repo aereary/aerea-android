@@ -10802,10 +10802,12 @@ body {
 }
 
 .note-detail-card {
+  --note-rule-step: 40px;
   background:
     linear-gradient(90deg, transparent 0 43px, color-mix(in srgb, var(--pink) 36%, transparent) 44px 46px, transparent 47px),
-    repeating-linear-gradient(transparent 0 35px, color-mix(in srgb, var(--blue) 24%, transparent) 36px 37px),
+    repeating-linear-gradient(transparent 0 39px, color-mix(in srgb, var(--blue) 24%, transparent) 39px var(--note-rule-step)),
     var(--paper);
+  background-position: 0 0, 0 6px, 0 0;
   border: 3px solid color-mix(in srgb, white 72%, transparent);
   border-radius: 28px;
   box-shadow: 0 26px 70px rgba(25, 33, 36, 0.28);
@@ -10869,10 +10871,10 @@ body {
 
 .note-detail-text {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(18px, 4vw, 23px);
-  line-height: 1.75;
-  margin: 27px 0;
-  min-height: 170px;
+  font-size: clamp(19px, 2.4vw, 22px);
+  line-height: var(--note-rule-step);
+  margin: 24px 0 20px;
+  min-height: 160px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -10959,6 +10961,7 @@ body {
   }
 
   .note-detail-card {
+    background-position: 0 0, 0 13px, 0 0;
     border-radius: 25px;
     max-height: calc(100dvh - 20px);
     padding: 22px 18px 20px 45px;
