@@ -19317,3 +19317,556 @@ body {
   padding:8px 17px!important;
   text-transform:none!important;
 }
+
+/* Event notes v3 — the marked time tile and corner are now the reference shape. */
+.app-shell[data-theme] .schedule-card,
+.app-shell[data-theme] .event-chip {
+  background:#fffdfa;
+  border:0;
+  border-radius:30px;
+  box-shadow:
+    -4px 6px 0 rgba(207,219,244,.3),
+    0 8px 0 rgba(242,203,215,.42),
+    0 18px 34px rgba(98,65,89,.08);
+  gap:20px;
+  grid-template-columns:84px 5px minmax(0,1fr) 46px;
+  margin-bottom:22px;
+  min-height:144px;
+  overflow:hidden;
+  padding:22px 24px;
+  position:relative;
+  touch-action:pan-y;
+}
+
+.app-shell[data-theme] .schedule-card::before,
+.app-shell[data-theme] .event-chip::before {
+  background:var(--event-tint,var(--chip-color,var(--lilac)));
+  border-radius:0 30px 0 100%;
+  height:118px;
+  opacity:.58;
+  right:0;
+  top:0;
+  width:136px;
+}
+
+.app-shell[data-theme] .schedule-card .time-block,
+.app-shell[data-theme] .event-chip-time {
+  background:var(--event-tint,var(--chip-color,var(--lilac)));
+  border:0;
+  border-radius:24px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38);
+  height:88px;
+  min-width:84px;
+}
+
+.app-shell[data-theme] .schedule-card .time-block strong,
+.app-shell[data-theme] .event-chip-time strong {
+  color:#513348;
+  font-size:19px;
+  font-weight:950;
+}
+
+.app-shell[data-theme] .schedule-card .time-block span,
+.app-shell[data-theme] .event-chip-time small {
+  color:#785769;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.18em;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-line,
+.app-shell[data-theme] .event-chip-line {
+  background:#ec7192;
+  border-radius:999px;
+  height:78px;
+  width:5px;
+}
+
+.app-shell[data-theme] .schedule-card .card-tag,
+.app-shell[data-theme] .event-chip-main .event-chip-category {
+  color:#6b8136;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.14em;
+  margin-bottom:7px;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-copy h4,
+.app-shell[data-theme] .event-chip-main strong {
+  color:#553047;
+  font-size:25px;
+  font-weight:950;
+  line-height:1.06;
+  margin-bottom:8px;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-copy > span,
+.app-shell[data-theme] .event-chip-main em {
+  color:#8a7988;
+  font-size:16px;
+}
+
+.app-shell[data-theme] .schedule-card .mini-people,
+.app-shell[data-theme] .event-chip-delete {
+  align-items:center;
+  background:rgba(255,255,255,.88);
+  border:0;
+  border-radius:50%;
+  box-shadow:0 7px 18px rgba(83,48,71,.09);
+  color:#5d3049;
+  display:flex;
+  font-size:21px;
+  height:46px;
+  justify-content:center;
+  position:relative;
+  width:46px;
+  z-index:2;
+}
+
+.app-shell[data-theme] .schedule-card:active {
+  transform:scale(.99);
+}
+
+/* Long-press event card — shared faithfully by every theme. */
+.app-shell[data-theme] .event-detail-backdrop {
+  align-items:center;
+  backdrop-filter:blur(7px) saturate(.82);
+  -webkit-backdrop-filter:blur(7px) saturate(.82);
+  background:rgba(38,43,73,.53);
+  display:flex;
+  justify-content:center;
+  padding:22px;
+  z-index:320;
+}
+
+.app-shell[data-theme] .event-detail-note {
+  --detail-ink:#31386c;
+  background:#fffdf8;
+  border:2px solid rgba(255,255,255,.86);
+  border-radius:38px;
+  box-shadow:
+    0 4px 0 rgba(226,217,238,.68),
+    0 28px 78px rgba(24,30,57,.34);
+  box-sizing:border-box;
+  color:var(--detail-ink);
+  isolation:isolate;
+  max-height:min(88dvh,820px);
+  max-width:520px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  padding:38px 34px 32px;
+  position:relative;
+  scrollbar-width:thin;
+  width:100%;
+}
+
+.app-shell[data-theme] .event-detail-corner {
+  background:#fff0de;
+  border-radius:0 38px 0 100%;
+  height:174px;
+  pointer-events:none;
+  position:absolute;
+  right:0;
+  top:0;
+  width:184px;
+  z-index:-1;
+}
+
+.app-shell[data-theme] .event-detail-corner::after {
+  background:rgba(246,213,232,.42);
+  border-radius:58% 0 0 100%;
+  bottom:-22px;
+  content:"";
+  height:92px;
+  position:absolute;
+  right:0;
+  width:118px;
+}
+
+.app-shell[data-theme] .event-detail-header {
+  align-items:flex-start;
+  display:flex;
+  gap:24px;
+  justify-content:space-between;
+  position:relative;
+  z-index:2;
+}
+
+.app-shell[data-theme] .event-detail-heading-copy {
+  min-width:0;
+  padding-top:4px;
+}
+
+.app-shell[data-theme] .event-detail-category {
+  background:#eadffa;
+  border-radius:999px;
+  color:#666494;
+  display:inline-flex;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.15em;
+  line-height:1;
+  margin:0 0 25px;
+  max-width:230px;
+  overflow:hidden;
+  padding:10px 18px;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .event-detail-header h2 {
+  color:var(--detail-ink);
+  font-family:var(--font-geist-sans),"Nunito Sans","Segoe UI",sans-serif;
+  font-size:clamp(40px,9vw,56px);
+  font-weight:950;
+  letter-spacing:-.06em;
+  line-height:.96;
+  margin:0;
+  overflow-wrap:anywhere;
+}
+
+.app-shell[data-theme] .event-detail-header > button {
+  align-items:center;
+  background:#ddd2f6;
+  border:3px solid rgba(255,255,255,.88);
+  border-radius:50%;
+  box-shadow:0 4px 12px rgba(88,69,126,.08);
+  color:#554d91;
+  display:flex;
+  flex:0 0 58px;
+  font-family:Arial,sans-serif;
+  font-size:38px;
+  font-weight:400;
+  height:58px;
+  justify-content:center;
+  line-height:1;
+  padding:0 0 5px;
+  position:relative;
+  width:58px;
+  z-index:3;
+}
+
+.app-shell[data-theme] .event-detail-doodle {
+  height:74px;
+  margin:-13px 20px -5px 118px;
+  pointer-events:none;
+  position:relative;
+}
+
+.app-shell[data-theme] .event-detail-doodle img {
+  display:block;
+  height:100%;
+  object-fit:contain;
+  object-position:left center;
+  width:100%;
+}
+
+.app-shell[data-theme] .event-detail-divider {
+  border-top:2px dashed #d9cbed;
+  height:24px;
+  margin:0 2px 5px;
+  position:relative;
+}
+
+.app-shell[data-theme] .event-detail-divider span {
+  background:#fffdf8;
+  color:#c6abe9;
+  font-size:20px;
+  padding-left:9px;
+  position:absolute;
+  right:-1px;
+  top:-14px;
+}
+
+.app-shell[data-theme] .event-detail-time {
+  align-items:center;
+  background:#eee7fb;
+  border-radius:25px;
+  display:grid;
+  gap:16px;
+  grid-template-columns:62px minmax(0,1fr);
+  margin:0 0 20px;
+  padding:18px 20px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon,
+.app-shell[data-theme] .event-detail-reminder-icon {
+  align-items:center;
+  background:#d9cdf8;
+  border-radius:19px;
+  display:flex;
+  height:62px;
+  justify-content:center;
+  width:62px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon svg,
+.app-shell[data-theme] .event-detail-reminder-icon svg {
+  fill:none;
+  height:35px;
+  stroke:#5e6197;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:1.8;
+  width:35px;
+}
+
+.app-shell[data-theme] .event-detail-time strong {
+  align-items:center;
+  color:var(--detail-ink);
+  display:flex;
+  flex-wrap:wrap;
+  font-size:25px;
+  font-weight:950;
+  gap:10px;
+  letter-spacing:-.035em;
+  line-height:1.08;
+}
+
+.app-shell[data-theme] .event-detail-time strong em {
+  background:#d9cdf8;
+  border-radius:999px;
+  color:#62639a;
+  font-size:11px;
+  font-style:normal;
+  letter-spacing:.09em;
+  padding:7px 11px;
+}
+
+.app-shell[data-theme] .event-detail-time small {
+  color:#67678f;
+  display:block;
+  font-size:14px;
+  line-height:1.25;
+  margin-top:7px;
+}
+
+.app-shell[data-theme] .event-detail-reminder {
+  align-items:center;
+  background:#fff9ea;
+  border:1.5px solid #f1dfad;
+  border-radius:23px;
+  display:grid;
+  gap:15px;
+  grid-template-columns:54px minmax(0,1fr) 28px;
+  margin-bottom:22px;
+  padding:16px 18px;
+}
+
+.app-shell[data-theme] .event-detail-reminder-icon {
+  background:#ffedb7;
+  border-radius:17px;
+  height:54px;
+  width:54px;
+}
+
+.app-shell[data-theme] .event-detail-reminder-icon svg {
+  height:31px;
+  stroke:#826c3f;
+  width:31px;
+}
+
+.app-shell[data-theme] .event-detail-reminder small {
+  color:#6d678c;
+  display:block;
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.13em;
+  margin-bottom:5px;
+}
+
+.app-shell[data-theme] .event-detail-reminder strong {
+  color:var(--detail-ink);
+  display:block;
+  font-size:17px;
+  font-weight:900;
+}
+
+.app-shell[data-theme] .event-detail-reminder b {
+  color:#c8b3ef;
+  font-size:25px;
+  font-weight:400;
+  text-align:center;
+}
+
+.app-shell[data-theme] .event-detail-facts {
+  display:grid;
+  gap:10px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.app-shell[data-theme] .event-detail-facts:empty { display:none; }
+
+.app-shell[data-theme] .event-detail-facts > div {
+  background:#f8f2fc;
+  border:1px solid #eadff5;
+  border-radius:18px;
+  color:var(--detail-ink);
+}
+
+.app-shell[data-theme] .event-detail-section {
+  background:#faf5fb;
+  border:1px solid #eee4f5;
+  border-radius:20px;
+  color:#4d4f78;
+}
+
+.app-shell[data-theme] .event-detail-files span { background:#fff; }
+.app-shell[data-theme] .event-detail-link { color:#62639a; }
+
+.app-shell[data-theme] .event-detail-edit {
+  align-items:center;
+  background:linear-gradient(180deg,#ff8f82,#f8796e);
+  border:0;
+  border-radius:24px;
+  box-shadow:0 7px 0 #e86f66,0 13px 24px rgba(229,106,97,.18);
+  color:#fff;
+  display:grid;
+  font-size:19px;
+  font-weight:950;
+  gap:10px;
+  grid-template-columns:28px 1fr 28px;
+  margin-top:24px;
+  min-height:68px;
+  padding:0 24px;
+  width:100%;
+}
+
+.app-shell[data-theme] .event-detail-edit > span { font-size:26px; }
+.app-shell[data-theme] .event-detail-edit > i { font-size:18px; font-style:normal; }
+
+@media (max-width:680px) {
+  .app-shell[data-theme] .schedule-card,
+  .app-shell[data-theme] .event-chip {
+    border-radius:25px;
+    gap:13px;
+    grid-template-columns:64px 4px minmax(0,1fr) 34px;
+    margin-bottom:17px;
+    min-height:108px;
+    padding:15px 16px;
+  }
+
+  .app-shell[data-theme] .schedule-card::before,
+  .app-shell[data-theme] .event-chip::before {
+    border-radius:0 25px 0 100%;
+    height:86px;
+    width:98px;
+  }
+
+  .app-shell[data-theme] .schedule-card .time-block,
+  .app-shell[data-theme] .event-chip-time {
+    border-radius:18px;
+    height:68px;
+    min-width:64px;
+  }
+
+  .app-shell[data-theme] .schedule-card .time-block strong,
+  .app-shell[data-theme] .event-chip-time strong { font-size:15px; }
+  .app-shell[data-theme] .schedule-card .time-block span,
+  .app-shell[data-theme] .event-chip-time small { font-size:8px; }
+  .app-shell[data-theme] .schedule-card .schedule-line,
+  .app-shell[data-theme] .event-chip-line { height:58px; width:4px; }
+  .app-shell[data-theme] .schedule-card .card-tag,
+  .app-shell[data-theme] .event-chip-main .event-chip-category { font-size:9px; margin-bottom:5px; }
+  .app-shell[data-theme] .schedule-card .schedule-copy h4,
+  .app-shell[data-theme] .event-chip-main strong { font-size:18px; margin-bottom:6px; }
+  .app-shell[data-theme] .schedule-card .schedule-copy > span,
+  .app-shell[data-theme] .event-chip-main em { font-size:11px; }
+  .app-shell[data-theme] .schedule-card .mini-people,
+  .app-shell[data-theme] .event-chip-delete { font-size:16px; height:34px; width:34px; }
+}
+
+@media (max-width:520px) {
+  .app-shell[data-theme] .event-detail-backdrop { padding:14px; }
+
+  .app-shell[data-theme] .event-detail-note {
+    border-radius:31px;
+    max-height:calc(100dvh - 28px);
+    padding:29px 23px 27px;
+  }
+
+  .app-shell[data-theme] .event-detail-corner {
+    border-radius:0 31px 0 100%;
+    height:143px;
+    width:150px;
+  }
+
+  .app-shell[data-theme] .event-detail-category {
+    font-size:10px;
+    margin-bottom:21px;
+    max-width:180px;
+    padding:9px 15px;
+  }
+
+  .app-shell[data-theme] .event-detail-header h2 { font-size:42px; }
+
+  .app-shell[data-theme] .event-detail-header > button {
+    flex-basis:50px;
+    font-size:33px;
+    height:50px;
+    width:50px;
+  }
+
+  .app-shell[data-theme] .event-detail-doodle {
+    height:61px;
+    margin:-8px 8px -1px 82px;
+  }
+
+  .app-shell[data-theme] .event-detail-divider { height:18px; margin-bottom:4px; }
+
+  .app-shell[data-theme] .event-detail-time {
+    border-radius:21px;
+    gap:13px;
+    grid-template-columns:52px minmax(0,1fr);
+    margin-bottom:16px;
+    padding:15px;
+  }
+
+  .app-shell[data-theme] .event-detail-time-icon {
+    border-radius:16px;
+    height:52px;
+    width:52px;
+  }
+
+  .app-shell[data-theme] .event-detail-time-icon svg { height:29px; width:29px; }
+  .app-shell[data-theme] .event-detail-time strong { font-size:20px; gap:7px; }
+  .app-shell[data-theme] .event-detail-time strong em { font-size:9px; padding:6px 8px; }
+  .app-shell[data-theme] .event-detail-time small { font-size:12px; margin-top:5px; }
+
+  .app-shell[data-theme] .event-detail-reminder {
+    border-radius:20px;
+    gap:12px;
+    grid-template-columns:48px minmax(0,1fr) 24px;
+    margin-bottom:18px;
+    padding:13px 14px;
+  }
+
+  .app-shell[data-theme] .event-detail-reminder-icon {
+    border-radius:15px;
+    height:48px;
+    width:48px;
+  }
+
+  .app-shell[data-theme] .event-detail-reminder strong { font-size:15px; }
+  .app-shell[data-theme] .event-detail-facts { grid-template-columns:1fr; }
+  .app-shell[data-theme] .event-detail-edit { border-radius:21px; font-size:17px; min-height:60px; }
+}
+
+@media (max-width:380px) {
+  .app-shell[data-theme] .schedule-card,
+  .app-shell[data-theme] .event-chip {
+    gap:10px;
+    grid-template-columns:58px 3px minmax(0,1fr) 31px;
+    padding:13px;
+  }
+
+  .app-shell[data-theme] .schedule-card .time-block,
+  .app-shell[data-theme] .event-chip-time {
+    height:62px;
+    min-width:58px;
+  }
+
+  .app-shell[data-theme] .schedule-card .mini-people,
+  .app-shell[data-theme] .event-chip-delete { height:31px; width:31px; }
+}

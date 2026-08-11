@@ -835,6 +835,16 @@ function readableDate(dateKey: string) {
   }).format(new Date(year, month - 1, day));
 }
 
+function eventDetailDate(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
 function dateFromKey(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -892,12 +902,6 @@ function eventOccursOn(event: CalendarEvent, dateKey: string) {
   return daysApart % (every * 7) === 0;
 }
 
-function eventTimeLabel(event: CalendarEvent) {
-  if (event.allDay) return "All day";
-  if (event.endTime) return `${event.time}–${event.endTime}`;
-  return event.time;
-}
-
 function eventStartTimeLabel(event: CalendarEvent) {
   if (event.allDay) return "All day";
   const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
@@ -912,6 +916,34 @@ function eventEndTimeLabel(event: CalendarEvent) {
   if (!match) return event.endTime;
   const hour = Number(match[1]);
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function eventDetailTimeParts(event: CalendarEvent) {
+  if (event.allDay) return { range: "All day", period: "" };
+
+  const formatPart = (value: string) => {
+    const match = value.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return { clock: value, period: "" };
+    const hour = Number(match[1]);
+    return {
+      clock: `${String(hour % 12 || 12).padStart(2, "0")}:${match[2]}`,
+      period: hour >= 12 ? "PM" : "AM",
+    };
+  };
+
+  const start = formatPart(event.time);
+  if (!event.endTime) return { range: start.clock, period: start.period };
+  const end = formatPart(event.endTime);
+  if (start.period && end.period && start.period !== end.period) {
+    return {
+      range: `${start.clock} ${start.period} – ${end.clock}`,
+      period: end.period,
+    };
+  }
+  return {
+    range: `${start.clock} – ${end.clock}`,
+    period: end.period || start.period,
+  };
 }
 
 function normalizeCalendarSearch(value: string) {
@@ -5733,87 +5765,129 @@ export default function Home() {
         />
       )}
 
-      {selectedEventDetail && (
-        <div className="modal-backdrop event-detail-backdrop" role="presentation">
-          <section
-            className={`event-detail-note ${selectedEventDetail.color}`}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Details for ${selectedEventDetail.title}`}
-          >
-            <header className="event-detail-header">
-              <div>
-                <p className="tiny-label">
-                  {selectedEventDetail.calendar ?? "PERSONAL"}
-                </p>
-                <h2>{selectedEventDetail.title}</h2>
-              </div>
-              <button
-                onClick={() => setSelectedEventDetail(null)}
-                aria-label="Close event details"
+      {selectedEventDetail &&
+        (() => {
+          const detailTime = eventDetailTimeParts(selectedEventDetail);
+          return (
+            <div
+              className="modal-backdrop event-detail-backdrop"
+              role="presentation"
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setSelectedEventDetail(null);
+                }
+              }}
+            >
+              <section
+                className={`event-detail-note ${selectedEventDetail.color}`}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Details for ${selectedEventDetail.title}`}
               >
-                ×
-              </button>
-            </header>
+                <span className="event-detail-corner" aria-hidden="true" />
+                <header className="event-detail-header">
+                  <div className="event-detail-heading-copy">
+                    <p className="event-detail-category">
+                      {selectedEventDetail.calendar ?? "PERSONAL"}
+                    </p>
+                    <h2>{selectedEventDetail.title}</h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedEventDetail(null)}
+                    aria-label="Close event details"
+                  >
+                    ×
+                  </button>
+                </header>
 
-            <div className="event-detail-time">
-              <span aria-hidden="true">◷</span>
-              <div>
-                <strong>{eventTimeLabel(selectedEventDetail)}</strong>
-                <small>
-                  {readableDate(selectedEventDetail.date)}
-                  {selectedEventDetail.endDate &&
-                  selectedEventDetail.endDate !== selectedEventDetail.date
-                    ? ` → ${readableDate(selectedEventDetail.endDate)}`
-                    : ""}
-                </small>
-              </div>
-            </div>
+                <div className="event-detail-doodle" aria-hidden="true">
+                  {/* Generated UI ornament is already optimized as a tiny transparent PNG. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/assets/event-modal-cloud-sparkles.png"
+                    alt=""
+                  />
+                </div>
 
-            <div className="event-detail-facts">
-              {selectedEventDetail.location && (
-                <div>
-                  <span>⌖</span>
-                  <small>Location</small>
-                  <strong>{selectedEventDetail.location}</strong>
+                <div className="event-detail-divider" aria-hidden="true">
+                  <span>✦</span>
                 </div>
-              )}
-              {selectedEventDetail.guests && (
-                <div>
-                  <span>♡</span>
-                  <small>People</small>
-                  <strong>{selectedEventDetail.guests}</strong>
+
+                <div className="event-detail-time">
+                  <span className="event-detail-time-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="8" />
+                      <path d="M12 7v5l3 2M12 2v2M12 20v2M2 12h2M20 12h2" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong>
+                      <span>{detailTime.range}</span>
+                      {detailTime.period && <em>{detailTime.period}</em>}
+                    </strong>
+                    <small>
+                      {eventDetailDate(selectedEventDetail.date)}
+                      {selectedEventDetail.endDate &&
+                      selectedEventDetail.endDate !== selectedEventDetail.date
+                        ? ` → ${eventDetailDate(selectedEventDetail.endDate)}`
+                        : ""}
+                    </small>
+                  </div>
                 </div>
-              )}
-              {selectedEventDetail.reminder && (
-                <div>
-                  <span>♢</span>
-                  <small>Reminder</small>
-                  <strong>{selectedEventDetail.reminder}</strong>
+
+                <div className="event-detail-reminder">
+                  <span className="event-detail-reminder-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
+                      <path d="M10 20h4" />
+                    </svg>
+                  </span>
+                  <div>
+                    <small>REMINDER</small>
+                    <strong>
+                      {selectedEventDetail.reminder || "No reminder"}
+                    </strong>
+                  </div>
+                  <b aria-hidden="true">♥</b>
                 </div>
-              )}
-              {(selectedEventDetail.repeat ?? "Never") !== "Never" && (
-                <div>
-                  <span>↻</span>
-                  <small>Repeats</small>
-                  <strong>{eventRepeatLabel(selectedEventDetail)}</strong>
+
+                <div className="event-detail-facts">
+                  {selectedEventDetail.location && (
+                    <div>
+                      <span>⌖</span>
+                      <small>Location</small>
+                      <strong>{selectedEventDetail.location}</strong>
+                    </div>
+                  )}
+                  {selectedEventDetail.guests && (
+                    <div>
+                      <span>♡</span>
+                      <small>People</small>
+                      <strong>{selectedEventDetail.guests}</strong>
+                    </div>
+                  )}
+                  {(selectedEventDetail.repeat ?? "Never") !== "Never" && (
+                    <div>
+                      <span>↻</span>
+                      <small>Repeats</small>
+                      <strong>{eventRepeatLabel(selectedEventDetail)}</strong>
+                    </div>
+                  )}
+                  {selectedEventDetail.dayCounter && (
+                    <div>
+                      <span>⌁</span>
+                      <small>Day counter</small>
+                      <strong>Enabled</strong>
+                    </div>
+                  )}
+                  {selectedEventDetail.memo && (
+                    <div>
+                      <span>✎</span>
+                      <small>Saved as</small>
+                      <strong>Memo</strong>
+                    </div>
+                  )}
                 </div>
-              )}
-              {selectedEventDetail.dayCounter && (
-                <div>
-                  <span>⌁</span>
-                  <small>Day counter</small>
-                  <strong>Enabled</strong>
-                </div>
-              )}
-              {selectedEventDetail.memo && (
-                <div>
-                  <span>✎</span>
-                  <small>Saved as</small>
-                  <strong>Memo</strong>
-                </div>
-              )}
-            </div>
 
             {selectedEventDetail.note && (
               <section className="event-detail-section">
@@ -5909,31 +5983,38 @@ export default function Home() {
               </a>
             )}
 
-            <button
-              className="event-detail-edit"
-              onClick={() => {
-                const event =
-                  calendarEvents.find(
-                    (calendarEvent) =>
-                      calendarEvent.id === selectedEventDetail.id,
-                  ) ?? selectedEventDetail;
-                const eventDate = dateFromKey(event.date);
-                setSelectedCalendarDate(event.date);
-                setViewMonth(
-                  new Date(eventDate.getFullYear(), eventDate.getMonth(), 1),
-                );
-                setSelectedEventDetail(null);
-                setCalendarSearchOpen(false);
-                setCalendarSearchQuery("");
-                setCalendarOpen(true);
-                openEventEditor(event);
-              }}
-            >
-              ✎ Edit this event
-            </button>
-          </section>
-        </div>
-      )}
+                <button
+                  className="event-detail-edit"
+                  onClick={() => {
+                    const event =
+                      calendarEvents.find(
+                        (calendarEvent) =>
+                          calendarEvent.id === selectedEventDetail.id,
+                      ) ?? selectedEventDetail;
+                    const eventDate = dateFromKey(event.date);
+                    setSelectedCalendarDate(event.date);
+                    setViewMonth(
+                      new Date(
+                        eventDate.getFullYear(),
+                        eventDate.getMonth(),
+                        1,
+                      ),
+                    );
+                    setSelectedEventDetail(null);
+                    setCalendarSearchOpen(false);
+                    setCalendarSearchQuery("");
+                    setCalendarOpen(true);
+                    openEventEditor(event);
+                  }}
+                >
+                  <span aria-hidden="true">✎</span>
+                  Edit this event
+                  <i aria-hidden="true">✦</i>
+                </button>
+              </section>
+            </div>
+          );
+        })()}
 
       {settingsOpen && (
         <div className="modal-backdrop settings-backdrop" role="presentation">
@@ -6472,11 +6553,72 @@ function TodayScreen({
   isNight: boolean;
 }) {
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
+  const scheduleLongPressTimerRef = useRef<number | null>(null);
+  const scheduleLongPressedRef = useRef(false);
+  const schedulePressStartRef = useRef<{ x: number; y: number } | null>(null);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
+
+  const cancelScheduleLongPress = () => {
+    if (scheduleLongPressTimerRef.current) {
+      window.clearTimeout(scheduleLongPressTimerRef.current);
+    }
+    scheduleLongPressTimerRef.current = null;
+    schedulePressStartRef.current = null;
+  };
+
+  const beginScheduleLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    calendarEvent: CalendarEvent,
+  ) => {
+    scheduleLongPressedRef.current = false;
+    schedulePressStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    cancelScheduleLongPress();
+    schedulePressStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    scheduleLongPressTimerRef.current = window.setTimeout(() => {
+      scheduleLongPressedRef.current = true;
+      scheduleLongPressTimerRef.current = null;
+      openEventDetail(calendarEvent);
+    }, 520);
+  };
+
+  const moveScheduleLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const start = schedulePressStartRef.current;
+    if (
+      start &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+    ) {
+      cancelScheduleLongPress();
+    }
+  };
+
+  const openScheduleEvent = (calendarEvent: CalendarEvent) => {
+    if (scheduleLongPressedRef.current) {
+      scheduleLongPressedRef.current = false;
+      return;
+    }
+    openEventDetail(calendarEvent);
+  };
+
+  useEffect(
+    () => () => {
+      if (scheduleLongPressTimerRef.current) {
+        window.clearTimeout(scheduleLongPressTimerRef.current);
+      }
+    },
+    [],
+  );
 
   return (
     <>
@@ -6593,8 +6735,16 @@ function TodayScreen({
                 type="button"
                 className={`schedule-card ${event.color}-card`}
                 key={event.id}
-                onClick={() => openEventDetail(event)}
+                onPointerDown={(pointerEvent) =>
+                  beginScheduleLongPress(pointerEvent, event)
+                }
+                onPointerMove={moveScheduleLongPress}
+                onPointerUp={cancelScheduleLongPress}
+                onPointerCancel={cancelScheduleLongPress}
+                onContextMenu={(contextEvent) => contextEvent.preventDefault()}
+                onClick={() => openScheduleEvent(event)}
                 aria-label={`Open details for ${event.title}`}
+                title="Hold to preview event"
               >
                 <div className="time-block">
                   <strong>{event.allDay ? "ALL" : event.time}</strong>

@@ -263,12 +263,14 @@ test("gives every Rhea theme a complete isolated interface", () => {
 });
 
 test("uses one event-note anatomy everywhere and icon-only calendar tools", () => {
-  assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
+  assert.match(cssSource, /Event notes v3 — the marked time tile and corner are now the reference shape/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
-  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) 36px/);
+  assert.match(cssSource, /grid-template-columns:84px 5px minmax\(0,1fr\) 46px/);
   assert.match(cssSource, /background:#fffdfa/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:50%/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:0 30px 0 100%/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after[\s\S]*display:none/);
+  assert.match(cssSource, /min-width:84px/);
+  assert.match(cssSource, /height:88px/);
   assert.match(cssSource, /color:#6b8136/);
   assert.match(cssSource, /background:#b9edf2!important/);
   assert.match(cssSource, /background:#ec7192/);
@@ -286,6 +288,26 @@ test("uses one event-note anatomy everywhere and icon-only calendar tools", () =
   assert.match(pageSource, /title="Open schedule"/);
   assert.doesNotMatch(pageSource, />\s*Search\s*<\/button>/);
   assert.doesNotMatch(pageSource, />\s*Cronograma\s*<\/button>/);
+});
+
+test("opens the faithful event note with a real long press", () => {
+  assert.match(pageSource, /scheduleLongPressTimerRef/);
+  assert.match(pageSource, /beginScheduleLongPress/);
+  assert.match(pageSource, /window\.setTimeout\([\s\S]*520/);
+  assert.match(pageSource, /onPointerMove=\{moveScheduleLongPress\}/);
+  assert.match(pageSource, /onContextMenu=\{\(contextEvent\) => contextEvent\.preventDefault\(\)\}/);
+  assert.match(pageSource, /Hold to preview event/);
+  assert.match(pageSource, /eventDetailTimeParts/);
+  assert.match(pageSource, /eventDetailDate/);
+  assert.match(pageSource, /event-detail-corner/);
+  assert.match(pageSource, /event-modal-cloud-sparkles\.png/);
+  assert.match(pageSource, /className="event-detail-reminder"/);
+  assert.match(pageSource, /No reminder/);
+  assert.match(cssSource, /Long-press event card — shared faithfully by every theme/);
+  assert.match(cssSource, /backdrop-filter:blur\(7px\)/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:520px/);
+  assert.match(cssSource, /\.event-detail-corner[\s\S]*border-radius:0 38px 0 100%/);
+  assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {
