@@ -19566,14 +19566,14 @@ body {
   display:grid;
   gap:0;
   grid-template-rows:auto minmax(0,1fr) auto auto auto;
-  height:min(90dvh,820px);
-  max-height:none;
-  max-width:500px;
+  height:auto;
+  max-height:min(86dvh,760px);
+  max-width:460px;
   overflow:hidden;
   padding:24px 28px 20px;
   pointer-events:auto;
   position:relative;
-  width:min(calc(100vw - 28px),500px);
+  width:min(90vw,460px);
 }
 
 .day-summary-card .day-summary-orbs {
@@ -19671,6 +19671,12 @@ body {
   z-index:2;
 }
 
+.day-summary-card .day-summary-doodle {
+  flex:0 0 116px;
+  height:58px;
+  position:relative;
+}
+
 .day-summary-card .day-summary-subline small {
   color:#766c9d;
   flex:none;
@@ -19681,26 +19687,24 @@ body {
 
 .day-summary-card .day-summary-cloud {
   fill:#fffaf2;
-  flex:0 0 72px;
-  height:40px;
+  height:46px;
+  left:22px;
   overflow:visible;
+  position:absolute;
   stroke:#c2a1f2;
   stroke-linecap:round;
   stroke-linejoin:round;
   stroke-width:4;
-  width:72px;
+  top:8px;
+  width:82px;
 }
 
 .day-summary-card .day-summary-sparkles {
-  align-self:stretch;
   color:#ffd35d;
   display:block;
-  flex:1;
   font-size:17px;
-  min-width:38px;
-  position:relative;
-  right:auto;
-  top:auto;
+  inset:0;
+  position:absolute;
 }
 
 .day-summary-card .day-summary-sparkles i {
@@ -19708,9 +19712,9 @@ body {
   position:absolute;
 }
 
-.day-summary-card .day-summary-sparkles i:nth-child(1) { left:1px; top:2px; }
-.day-summary-card .day-summary-sparkles i:nth-child(2) { color:#b68aee; right:4px; top:23px; transform:scale(.76); }
-.day-summary-card .day-summary-sparkles i:nth-child(3) { bottom:0; color:#d1a9f3; left:13px; transform:scale(.55); }
+.day-summary-card .day-summary-sparkles i:nth-child(1) { left:4px; top:4px; }
+.day-summary-card .day-summary-sparkles i:nth-child(2) { color:#ffd35d; right:0; top:10px; transform:scale(1.08); }
+.day-summary-card .day-summary-sparkles i:nth-child(3) { bottom:0; color:#b68aee; right:2px; transform:scale(.78); }
 
 .day-summary-card > header .day-summary-close {
   align-items:center;
@@ -19772,6 +19776,11 @@ body {
 .day-summary-card .day-summary-event.coral { --pocket-color:#f7d9d7; }
 .day-summary-card .day-summary-event.orange { --pocket-color:#f9e0c7; }
 .day-summary-card .day-summary-event.brown { --pocket-color:#eadfd7; }
+.day-summary-card .day-summary-event.pocket-tone-0 { --pocket-color:#e5daf9; }
+.day-summary-card .day-summary-event.pocket-tone-1 { --pocket-color:#ffe9a9; }
+.day-summary-card .day-summary-event.pocket-tone-2 { --pocket-color:#f8d9e8; }
+.day-summary-card .day-summary-event.pocket-tone-3 { --pocket-color:#d8e9f8; }
+.day-summary-card .day-summary-event.pocket-tone-1 .day-summary-event-heart { color:#bd9200; }
 
 .day-summary-card .day-summary-event-heading {
   align-items:center;
@@ -19943,33 +19952,37 @@ body {
   .day-summary-backdrop { padding:10px; }
 
   .day-summary-backdrop .day-summary-card {
-    border-radius:28px;
-    height:92dvh;
-    padding:19px 18px 15px;
-    width:min(calc(100vw - 20px),500px);
+    border-radius:26px;
+    height:auto;
+    max-height:84dvh;
+    padding:17px 17px 14px;
+    width:min(89vw,430px);
   }
 
-  .day-summary-card .day-summary-orbs { height:164px; width:154px; }
-  .day-summary-card > header .tiny-label { font-size:10px; margin-bottom:10px; padding:6px 15px; }
-  .day-summary-card > header h2 { border-radius:17px; font-size:clamp(23px,7vw,31px); padding:10px 14px 11px; }
-  .day-summary-card .day-summary-subline { gap:7px; min-height:54px; padding-top:8px; }
-  .day-summary-card .day-summary-subline small { font-size:13px; }
-  .day-summary-card .day-summary-cloud { flex-basis:58px; height:34px; width:58px; }
-  .day-summary-card > header .day-summary-close { border-width:4px; font-size:30px; height:54px; right:-2px; top:1px; width:54px; }
-  .day-summary-card .day-summary-events { gap:10px; }
-  .day-summary-card .day-summary-event { border-radius:21px; padding:13px 14px; }
-  .day-summary-card .day-summary-event-heading { gap:10px; grid-template-columns:44px minmax(0,1fr) 20px; }
-  .day-summary-card .day-summary-event-heading .day-summary-event-heart { font-size:29px; height:44px; width:44px; }
-  .day-summary-card .day-summary-event-heading strong { font-size:19px; }
-  .day-summary-card .day-summary-event-heading small { font-size:14px; }
-  .day-summary-card .day-summary-event-heading > i { font-size:32px; }
+  .day-summary-card .day-summary-orbs { height:146px; width:142px; }
+  .day-summary-card > header { padding-bottom:13px; }
+  .day-summary-card > header .tiny-label { font-size:9px; margin-bottom:9px; padding:5px 13px; }
+  .day-summary-card > header h2 { border-radius:16px; font-size:clamp(21px,6.2vw,27px); padding:9px 13px 10px; }
+  .day-summary-card .day-summary-subline { gap:5px; min-height:50px; padding:7px 2px 0; }
+  .day-summary-card .day-summary-subline small { font-size:12px; }
+  .day-summary-card .day-summary-doodle { flex-basis:92px; height:48px; }
+  .day-summary-card .day-summary-cloud { height:36px; left:18px; top:8px; width:65px; }
+  .day-summary-card .day-summary-sparkles { font-size:14px; }
+  .day-summary-card > header .day-summary-close { border-width:4px; font-size:27px; height:48px; right:-2px; top:0; width:48px; }
+  .day-summary-card .day-summary-events { gap:9px; padding-bottom:7px; }
+  .day-summary-card .day-summary-event { border-radius:20px; min-height:75px; padding:14px 14px; }
+  .day-summary-card .day-summary-event-heading { gap:10px; grid-template-columns:42px minmax(0,1fr) 19px; }
+  .day-summary-card .day-summary-event-heading .day-summary-event-heart { font-size:27px; height:42px; width:42px; }
+  .day-summary-card .day-summary-event-heading strong { font-size:17px; }
+  .day-summary-card .day-summary-event-heading small { font-size:13px; }
+  .day-summary-card .day-summary-event-heading > i { font-size:29px; }
   .day-summary-card .day-summary-memo,
   .day-summary-card .day-summary-event ul { border-radius:15px; font-size:13px; margin-left:54px; padding:9px 11px; }
-  .day-summary-card .day-summary-divider { margin-top:10px; }
-  .day-summary-card .day-summary-add { border-radius:21px; grid-template-columns:38px minmax(0,1fr) 25px; min-height:61px; padding:7px 13px; }
+  .day-summary-card .day-summary-divider { height:18px; margin:10px 2px 5px; }
+  .day-summary-card .day-summary-add { border-radius:20px; grid-template-columns:35px minmax(0,1fr) 23px; min-height:57px; padding:6px 12px; }
   .day-summary-card .day-summary-add-icon,
-  .day-summary-card .day-summary-add-icon svg { height:35px; width:35px; }
-  .day-summary-card .day-summary-add strong { font-size:20px; }
-  .day-summary-card .day-summary-add-sparkle { font-size:25px; }
-  .day-summary-card .day-summary-hint { font-size:12px; margin-top:9px; }
+  .day-summary-card .day-summary-add-icon svg { height:32px; width:32px; }
+  .day-summary-card .day-summary-add strong { font-size:18px; }
+  .day-summary-card .day-summary-add-sparkle { font-size:23px; }
+  .day-summary-card .day-summary-hint { font-size:11px; margin-top:8px; }
 }

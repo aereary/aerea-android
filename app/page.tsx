@@ -5876,10 +5876,12 @@ export default function Home() {
                   <h2>{readableDate(daySummaryDate)}</h2>
                   <div className="day-summary-subline">
                     <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
-                    <svg className="day-summary-cloud" viewBox="0 0 102 56" aria-hidden="true" focusable="false">
-                      <path d="M24 46h54c10 0 17-6 17-15 0-9-7-15-16-15-3 0-5 .4-7 1.5C68 8 60 3 50 3 37 3 27 12 25 24h-2C13 24 6 30 6 35s7 11 18 11Z" />
-                    </svg>
-                    <span className="day-summary-sparkles" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span>
+                    <span className="day-summary-doodle" aria-hidden="true">
+                      <svg className="day-summary-cloud" viewBox="0 0 102 56" focusable="false">
+                        <path d="M24 46h54c10 0 17-6 17-15 0-9-7-15-16-15-3 0-5 .4-7 1.5C68 8 60 3 50 3 37 3 27 12 25 24h-2C13 24 6 30 6 35s7 11 18 11Z" />
+                      </svg>
+                      <span className="day-summary-sparkles"><i>✦</i><i>✦</i><i>✦</i></span>
+                    </span>
                   </div>
                 </div>
                 <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
@@ -5888,10 +5890,10 @@ export default function Home() {
                 <div className="day-summary-empty"><span>☁</span><strong>Nothing written here yet</strong><p>This little page is completely yours.</p></div>
               ) : (
                 <div className="day-summary-events">
-                  {summaryEvents.map((event) => {
+                  {summaryEvents.map((event, index) => {
                     const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
                     return (
-                      <button className={`day-summary-event ${event.color} ${hasDetails ? "expanded" : "compact"}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
+                      <button className={`day-summary-event ${event.color} pocket-tone-${index % 4} ${hasDetails ? "expanded" : "compact"}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
                         <div className="day-summary-event-heading">
                           <span className="day-summary-event-heart" aria-hidden="true">♡</span>
                           <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
