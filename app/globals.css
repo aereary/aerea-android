@@ -18974,6 +18974,7 @@ body {
   margin-bottom:17px;
   min-height:100px;
   padding:16px;
+  touch-action:pan-y;
 }
 
 .app-shell[data-theme] .schedule-card::before {
@@ -18987,7 +18988,16 @@ body {
 }
 
 .app-shell[data-theme] .schedule-card::after {
-  display:none;
+  background:var(--event-tint,var(--lilac));
+  bottom:0;
+  content:"";
+  display:block;
+  left:0;
+  opacity:.72;
+  pointer-events:none;
+  position:absolute;
+  top:0;
+  width:clamp(8px,2.4%,15px);
 }
 
 .app-shell[data-theme] .schedule-card .time-block {
@@ -19083,7 +19093,16 @@ body {
 }
 
 .app-shell[data-theme] .event-chip::after {
-  display:none;
+  background:var(--chip-color,var(--lilac));
+  bottom:0;
+  content:"";
+  display:block;
+  left:0;
+  opacity:.72;
+  pointer-events:none;
+  position:absolute;
+  top:0;
+  width:clamp(8px,2.4%,15px);
 }
 
 .app-shell[data-theme] .event-chip-time {
@@ -19316,115 +19335,6 @@ body {
   min-height:38px;
   padding:8px 17px!important;
   text-transform:none!important;
-}
-
-/* Event notes v3 — the marked time tile and corner are now the reference shape. */
-.app-shell[data-theme] .schedule-card,
-.app-shell[data-theme] .event-chip {
-  background:#fffdfa;
-  border:0;
-  border-radius:30px;
-  box-shadow:
-    -4px 6px 0 rgba(207,219,244,.3),
-    0 8px 0 rgba(242,203,215,.42),
-    0 18px 34px rgba(98,65,89,.08);
-  gap:20px;
-  grid-template-columns:84px 5px minmax(0,1fr) 46px;
-  margin-bottom:22px;
-  min-height:144px;
-  overflow:hidden;
-  padding:22px 24px;
-  position:relative;
-  touch-action:pan-y;
-}
-
-.app-shell[data-theme] .schedule-card::before,
-.app-shell[data-theme] .event-chip::before {
-  background:var(--event-tint,var(--chip-color,var(--lilac)));
-  border-radius:0 30px 0 100%;
-  height:118px;
-  opacity:.58;
-  right:0;
-  top:0;
-  width:136px;
-}
-
-.app-shell[data-theme] .schedule-card .time-block,
-.app-shell[data-theme] .event-chip-time {
-  background:var(--event-tint,var(--chip-color,var(--lilac)));
-  border:0;
-  border-radius:24px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.38);
-  height:88px;
-  min-width:84px;
-}
-
-.app-shell[data-theme] .schedule-card .time-block strong,
-.app-shell[data-theme] .event-chip-time strong {
-  color:#513348;
-  font-size:19px;
-  font-weight:950;
-}
-
-.app-shell[data-theme] .schedule-card .time-block span,
-.app-shell[data-theme] .event-chip-time small {
-  color:#785769;
-  font-size:10px;
-  font-weight:900;
-  letter-spacing:.18em;
-}
-
-.app-shell[data-theme] .schedule-card .schedule-line,
-.app-shell[data-theme] .event-chip-line {
-  background:#ec7192;
-  border-radius:999px;
-  height:78px;
-  width:5px;
-}
-
-.app-shell[data-theme] .schedule-card .card-tag,
-.app-shell[data-theme] .event-chip-main .event-chip-category {
-  color:#6b8136;
-  font-size:12px;
-  font-weight:950;
-  letter-spacing:.14em;
-  margin-bottom:7px;
-}
-
-.app-shell[data-theme] .schedule-card .schedule-copy h4,
-.app-shell[data-theme] .event-chip-main strong {
-  color:#553047;
-  font-size:25px;
-  font-weight:950;
-  line-height:1.06;
-  margin-bottom:8px;
-}
-
-.app-shell[data-theme] .schedule-card .schedule-copy > span,
-.app-shell[data-theme] .event-chip-main em {
-  color:#8a7988;
-  font-size:16px;
-}
-
-.app-shell[data-theme] .schedule-card .mini-people,
-.app-shell[data-theme] .event-chip-delete {
-  align-items:center;
-  background:rgba(255,255,255,.88);
-  border:0;
-  border-radius:50%;
-  box-shadow:0 7px 18px rgba(83,48,71,.09);
-  color:#5d3049;
-  display:flex;
-  font-size:21px;
-  height:46px;
-  justify-content:center;
-  position:relative;
-  width:46px;
-  z-index:2;
-}
-
-.app-shell[data-theme] .schedule-card:active {
-  transform:scale(.99);
 }
 
 /* Long-press event card — shared faithfully by every theme. */
@@ -19736,47 +19646,6 @@ body {
 .app-shell[data-theme] .event-detail-edit > span { font-size:26px; }
 .app-shell[data-theme] .event-detail-edit > i { font-size:18px; font-style:normal; }
 
-@media (max-width:680px) {
-  .app-shell[data-theme] .schedule-card,
-  .app-shell[data-theme] .event-chip {
-    border-radius:25px;
-    gap:13px;
-    grid-template-columns:64px 4px minmax(0,1fr) 34px;
-    margin-bottom:17px;
-    min-height:108px;
-    padding:15px 16px;
-  }
-
-  .app-shell[data-theme] .schedule-card::before,
-  .app-shell[data-theme] .event-chip::before {
-    border-radius:0 25px 0 100%;
-    height:86px;
-    width:98px;
-  }
-
-  .app-shell[data-theme] .schedule-card .time-block,
-  .app-shell[data-theme] .event-chip-time {
-    border-radius:18px;
-    height:68px;
-    min-width:64px;
-  }
-
-  .app-shell[data-theme] .schedule-card .time-block strong,
-  .app-shell[data-theme] .event-chip-time strong { font-size:15px; }
-  .app-shell[data-theme] .schedule-card .time-block span,
-  .app-shell[data-theme] .event-chip-time small { font-size:8px; }
-  .app-shell[data-theme] .schedule-card .schedule-line,
-  .app-shell[data-theme] .event-chip-line { height:58px; width:4px; }
-  .app-shell[data-theme] .schedule-card .card-tag,
-  .app-shell[data-theme] .event-chip-main .event-chip-category { font-size:9px; margin-bottom:5px; }
-  .app-shell[data-theme] .schedule-card .schedule-copy h4,
-  .app-shell[data-theme] .event-chip-main strong { font-size:18px; margin-bottom:6px; }
-  .app-shell[data-theme] .schedule-card .schedule-copy > span,
-  .app-shell[data-theme] .event-chip-main em { font-size:11px; }
-  .app-shell[data-theme] .schedule-card .mini-people,
-  .app-shell[data-theme] .event-chip-delete { font-size:16px; height:34px; width:34px; }
-}
-
 @media (max-width:520px) {
   .app-shell[data-theme] .event-detail-backdrop { padding:14px; }
 
@@ -19851,22 +19720,4 @@ body {
   .app-shell[data-theme] .event-detail-reminder strong { font-size:15px; }
   .app-shell[data-theme] .event-detail-facts { grid-template-columns:1fr; }
   .app-shell[data-theme] .event-detail-edit { border-radius:21px; font-size:17px; min-height:60px; }
-}
-
-@media (max-width:380px) {
-  .app-shell[data-theme] .schedule-card,
-  .app-shell[data-theme] .event-chip {
-    gap:10px;
-    grid-template-columns:58px 3px minmax(0,1fr) 31px;
-    padding:13px;
-  }
-
-  .app-shell[data-theme] .schedule-card .time-block,
-  .app-shell[data-theme] .event-chip-time {
-    height:62px;
-    min-width:58px;
-  }
-
-  .app-shell[data-theme] .schedule-card .mini-people,
-  .app-shell[data-theme] .event-chip-delete { height:31px; width:31px; }
 }

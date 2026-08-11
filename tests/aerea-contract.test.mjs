@@ -263,14 +263,15 @@ test("gives every Rhea theme a complete isolated interface", () => {
 });
 
 test("uses one event-note anatomy everywhere and icon-only calendar tools", () => {
-  assert.match(cssSource, /Event notes v3 — the marked time tile and corner are now the reference shape/);
+  assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
+  assert.doesNotMatch(cssSource, /Event notes v3 — the marked time tile and corner are now the reference shape/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
-  assert.match(cssSource, /grid-template-columns:84px 5px minmax\(0,1fr\) 46px/);
+  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) 36px/);
   assert.match(cssSource, /background:#fffdfa/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:0 30px 0 100%/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after[\s\S]*display:none/);
-  assert.match(cssSource, /min-width:84px/);
-  assert.match(cssSource, /height:88px/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:50%/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after[\s\S]*background:var\(--event-tint,var\(--lilac\)\)[\s\S]*display:block[\s\S]*width:clamp\(8px,2\.4%,15px\)/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-chip::after[\s\S]*background:var\(--chip-color,var\(--lilac\)\)[\s\S]*display:block/);
+  assert.match(cssSource, /height:64px/);
   assert.match(cssSource, /color:#6b8136/);
   assert.match(cssSource, /background:#b9edf2!important/);
   assert.match(cssSource, /background:#ec7192/);
