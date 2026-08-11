@@ -16308,10 +16308,15 @@ body {
   padding-bottom:90px;
 }
 
+/* Let the themed backdrop continue beneath the floating navigation dock. */
+.agenda-v2 {
+  padding-bottom:20px;
+}
+
 @media (max-width:720px) {
   .agenda-v2 {
     gap:12px;
-    padding:5px 12px 0;
+    padding:5px 12px 12px;
   }
 
   .agenda-v2-greeting {
