@@ -10669,6 +10669,31 @@ body {
   width: 310px;
 }
 
+/* Let the two decorated stationery skies fill a tablet without stretching
+   their compact phone composition. */
+@media (min-width: 681px) {
+  .storybook-scene[data-visual="duckmail"] .theme-scene-frame {
+    height: 132px;
+    width: clamp(250px, 46%, 500px);
+  }
+
+  .storybook-scene[data-visual="duckmail"] .theme-scene-ribbon {
+    width: clamp(104px, 18%, 190px);
+  }
+
+  .storybook-scene[data-visual="duckmail"] .theme-scene-dots {
+    height: 92px;
+    width: clamp(92px, 16%, 170px);
+  }
+
+  .storybook-scene[data-visual="moonquilt"] .theme-scene-dots {
+    height: 148px;
+    left: 50%;
+    transform: translateX(-50%) rotate(2deg);
+    width: min(76%, 760px);
+  }
+}
+
 .event-detail-todos li {
   align-items: center;
   background: color-mix(in srgb, var(--paper) 74%, var(--detail-tint));

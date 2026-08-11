@@ -44,9 +44,7 @@ type AppTheme =
   | "peachparlor"
   | "mintletter"
   | "blueberrynight"
-  | "sunsetsea"
   | "duckmail"
-  | "calicotea"
   | "moonquilt"
   | "custom";
 type ColorMode = "light" | "dark";
@@ -432,19 +430,6 @@ const themeOptions: {
     charm: "safe in the quiet",
   },
   {
-    id: "sunsetsea",
-    name: "Apricot sunset sea",
-    description: "Apricot light, rose water, sleepy waves, and one gentle whale.",
-    colors: ["#f4ae86", "#fff8f2", "#9ecfe1"],
-    icon: "🌅",
-    art: "/assets/openmoji/whale.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "drift, then return",
-  },
-  {
     id: "duckmail",
     name: "Duckling happy mail",
     description: "Blue stationery, scalloped stamps, cloud stickers, and a tiny duck.",
@@ -456,21 +441,6 @@ const themeOptions: {
       "/assets/openmoji/tulip.svg",
     ],
     charm: "a note for you",
-    showCharm: false,
-    decoratedScene: true,
-  },
-  {
-    id: "calicotea",
-    name: "Calico tea nook",
-    description: "Peach gingham, warm tea-table colors, a calico, and tiny pastries.",
-    colors: ["#f7ccb9", "#fffaf2", "#b9d69e"],
-    icon: "🍵",
-    art: "/assets/openmoji/cat.svg",
-    accents: [
-      "/assets/openmoji/croissant.svg",
-      "/assets/openmoji/basket.svg",
-    ],
-    charm: "stay for tea",
     showCharm: false,
     decoratedScene: true,
   },
