@@ -5866,42 +5866,59 @@ export default function Home() {
         const summaryEvents = calendarEvents.filter((event) =>
           eventOccursOn(event, daySummaryDate),
         );
-        const summaryMood = moods.find((mood) => mood.label === moodHistory[daySummaryDate]);
         return (
           <div className="modal-backdrop day-summary-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setDaySummaryDate(null); }}>
             <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
-              <span className="day-summary-sparkles" aria-hidden="true">✦ ♡</span>
+              <span className="day-summary-orbs" aria-hidden="true"><i /><i /><i /></span>
               <header>
-                <div>
+                <div className="day-summary-heading">
                   <p className="tiny-label">DAY POCKET</p>
                   <h2>{readableDate(daySummaryDate)}</h2>
-                  <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
+                  <div className="day-summary-subline">
+                    <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
+                    <svg className="day-summary-cloud" viewBox="0 0 102 56" aria-hidden="true" focusable="false">
+                      <path d="M24 46h54c10 0 17-6 17-15 0-9-7-15-16-15-3 0-5 .4-7 1.5C68 8 60 3 50 3 37 3 27 12 25 24h-2C13 24 6 30 6 35s7 11 18 11Z" />
+                    </svg>
+                    <span className="day-summary-sparkles" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span>
+                  </div>
                 </div>
-                <div className="day-summary-corner">
-                  {summaryMood && <span className={`selected-mood-sticker ${summaryMood.color}`}>{summaryMood.face}</span>}
-                  <button onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
-                </div>
+                <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
               </header>
               {summaryEvents.length === 0 ? (
                 <div className="day-summary-empty"><span>☁</span><strong>Nothing written here yet</strong><p>This little page is completely yours.</p></div>
               ) : (
                 <div className="day-summary-events">
-                  {summaryEvents.map((event) => (
-                    <button className={`day-summary-event ${event.color}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
-                      <div className="day-summary-event-heading">
-                        <span>{event.memo ? "✎" : "♡"}</span>
-                        <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
-                        <i aria-hidden="true">›</i>
-                      </div>
-                      {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
-                      {!!event.todos?.length && (
-                        <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
-                      )}
-                    </button>
-                  ))}
+                  {summaryEvents.map((event) => {
+                    const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
+                    return (
+                      <button className={`day-summary-event ${event.color} ${hasDetails ? "expanded" : "compact"}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
+                        <div className="day-summary-event-heading">
+                          <span className="day-summary-event-heart" aria-hidden="true">♡</span>
+                          <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
+                          <i aria-hidden="true">›</i>
+                        </div>
+                        {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
+                        {!!event.todos?.length && (
+                          <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-              <footer><span>♡ tap a plan to see everything</span><button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>＋ Add event</button></footer>
+              <div className="day-summary-divider" aria-hidden="true"><span>✦</span></div>
+              <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>
+                <span className="day-summary-add-icon" aria-hidden="true">
+                  <svg viewBox="0 0 42 42" focusable="false">
+                    <rect x="5" y="8" width="32" height="28" rx="7" />
+                    <path d="M13 4v9M29 4v9M5 16h32" />
+                    <path d="M21 31s-7-4.3-7-8.1c0-3.5 4.7-4.7 7-1.5 2.3-3.2 7-2 7 1.5 0 3.8-7 8.1-7 8.1Z" />
+                  </svg>
+                </span>
+                <strong>+ Add event</strong>
+                <span className="day-summary-add-sparkle" aria-hidden="true">✦</span>
+              </button>
+              <p className="day-summary-hint">♡&nbsp; tap a plan to see everything</p>
             </section>
           </div>
         );
