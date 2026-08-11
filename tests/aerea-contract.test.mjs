@@ -40,6 +40,7 @@ test("keeps the approved theme collection and its cute additions", () => {
     "matchabunny",
     "cherryribbon",
     "neonheart",
+    "dreambear",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
@@ -50,8 +51,8 @@ test("keeps the approved theme collection and its cute additions", () => {
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    7,
-    "the seven approved decorated themes should decorate the sky",
+    8,
+    "the eight approved decorated themes should decorate the sky",
   );
   for (const removedTheme of [
     "moonpond",
@@ -69,6 +70,10 @@ test("keeps the approved theme collection and its cute additions", () => {
     /className="theme-scene-character"/,
     "the extra animal badge should never float above the welcome card",
   );
+  assert.match(pageSource, /id: "dreambear"/);
+  assert.match(pageSource, /\/assets\/openmoji\/teddy\.svg/);
+  assert.match(cssSource, /data-theme="dreambear"/);
+  assert.match(cssSource, /data-visual="dreambear"/);
 });
 
 test("curves the Lavender rest message", () => {

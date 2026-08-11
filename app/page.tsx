@@ -31,6 +31,7 @@ type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type AppTheme =
   | "storybook"
   | "otter"
+  | "dreambear"
   | "strawberry"
   | "duckpond"
   | "bunnybakery"
@@ -263,6 +264,20 @@ const themeOptions: {
       "/assets/openmoji/blossom.svg",
     ],
     charm: "you may rest",
+  },
+  {
+    id: "dreambear",
+    name: "Starlit teddy sky",
+    description: "Glowing lavender skies, cloud-soft cards, tiny stars, and a teddy who says you may rest.",
+    colors: ["#8f86ea", "#fffaff", "#ff929f"],
+    icon: "🧸",
+    art: "/assets/openmoji/teddy.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "you may rest",
+    decoratedScene: true,
   },
   {
     id: "strawberry",
