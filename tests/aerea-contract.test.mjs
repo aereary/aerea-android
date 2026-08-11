@@ -262,20 +262,18 @@ test("gives every Rhea theme a complete isolated interface", () => {
   assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
 });
 
-test("restores the approved Today note and simple selected-day strip", () => {
-  assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
-  assert.doesNotMatch(cssSource, /Event notes v3 — the marked time tile and corner are now the reference shape/);
-  assert.match(cssSource, /Approved compact Today note/);
-  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) auto/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after \{ display:none; \}/);
-  assert.match(cssSource, /Approved selected-day note/);
-  assert.match(cssSource, /\.selected-day-events \.event-chip[\s\S]*background:var\(--chip-color,var\(--lilac\)\)/);
-  assert.match(cssSource, /grid-template-columns:64px minmax\(0,1fr\) 32px/);
-  assert.match(cssSource, /\.selected-day-events \.event-chip::before,[\s\S]*content:none/);
-  assert.match(cssSource, /height:64px/);
-  assert.match(cssSource, /background:#b9edf2!important/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.time-block/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.mini-people/);
+test("keeps the original event cards without later styling layers", () => {
+  assert.doesNotMatch(cssSource, /Event notes v2/);
+  assert.doesNotMatch(cssSource, /loved event-note anatomy/);
+  assert.doesNotMatch(cssSource, /Approved compact Today note/);
+  assert.doesNotMatch(cssSource, /Approved selected-day note/);
+  assert.doesNotMatch(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
+  assert.match(cssSource, /\.schedule-card \{[\s\S]*background: var\(--paper\);[\s\S]*grid-template-columns: 64px 4px minmax\(0, 1fr\) auto;/);
+  assert.match(cssSource, /\.schedule-card::before \{[\s\S]*height: 110px;[\s\S]*opacity: 0\.55;/);
+  assert.match(cssSource, /\.time-block \{[\s\S]*border-radius: 17px;[\s\S]*height: 64px;/);
+  assert.match(cssSource, /\.schedule-line \{[\s\S]*background: var\(--orange\);/);
+  assert.match(cssSource, /\.text-button \{[\s\S]*background: var\(--blue\);/);
+  assert.match(cssSource, /\.event-chip \{[\s\S]*background: var\(--chip-color, var\(--yellow-soft\)\);[\s\S]*grid-template-columns: 64px minmax\(0, 1fr\) 32px;/);
   assert.doesNotMatch(pageSource, /className="event-chip-time"/);
   assert.doesNotMatch(pageSource, /className="event-chip-line"/);
   assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
