@@ -29,6 +29,11 @@ type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type AppTheme =
+  | "piggygelato"
+  | "calicocafe"
+  | "pawcloud"
+  | "midnightracing"
+  | "pixelpenguin"
   | "storybook"
   | "otter"
   | "dreambear"
@@ -46,11 +51,6 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | "glassreef"
-  | "cherrynotebook"
-  | "mosslibrary"
-  | "primaryplayroom"
-  | "orbitconsole"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -237,9 +237,89 @@ const themeOptions: {
   charm: string;
   showCharm?: boolean;
   decoratedScene?: boolean;
-  uiIdea?: string;
-  experimental?: boolean;
+  featured?: boolean;
+  interfaceIdea?: string;
 }[] = [
+  {
+    id: "piggygelato",
+    name: "Piggy gelato club",
+    description: "Ice-cream piggies, candy clouds, glossy stickers, and a tiny treat-cart mood.",
+    colors: ["#f6a9bf", "#fff8ed", "#8ed8e8"],
+    icon: "🐷",
+    art: "/assets/openmoji/pig-face.svg",
+    accents: [
+      "/assets/openmoji/strawberry.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "tiny treat",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "sticker wallpaper",
+  },
+  {
+    id: "calicocafe",
+    name: "Calico corner café",
+    description: "A warm calico host, buttered pastries, receipt-paper cards, and cocoa checks.",
+    colors: ["#d98b55", "#fff7e8", "#394a56"],
+    icon: "🐈",
+    art: "/assets/openmoji/cat-face.svg",
+    accents: [
+      "/assets/openmoji/croissant.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "café pause",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "menu tickets",
+  },
+  {
+    id: "pawcloud",
+    name: "Paw-print cloud club",
+    description: "Powder-blue air, soft puppy paws, floating bubbles, and friendly rounded controls.",
+    colors: ["#a9def0", "#fffdf7", "#f4c98b"],
+    icon: "🐾",
+    art: "/assets/openmoji/paw-prints.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "good steps",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "floating controls",
+  },
+  {
+    id: "midnightracing",
+    name: "Midnight paddock",
+    description: "Graphite panels, signal red, checkered details, and a compact race-day dashboard.",
+    colors: ["#17191d", "#f3f0e8", "#ef3f4f"],
+    icon: "🏎️",
+    art: "/assets/openmoji/racing-car.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "green light",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "telemetry panels",
+  },
+  {
+    id: "pixelpenguin",
+    name: "Pixel penguin plaza",
+    description: "Icy tiles, arcade-blue blocks, tiny quests, and a playful inventory-style dock.",
+    colors: ["#76c9ec", "#f6fcff", "#164d80"],
+    icon: "🐧",
+    art: "/assets/openmoji/penguin.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "tiny quest",
+    decoratedScene: true,
+    featured: true,
+    interfaceIdea: "pixel inventory",
+  },
   {
     id: "storybook",
     name: "Cloudberry meadow",
@@ -466,91 +546,6 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
-  {
-    id: "glassreef",
-    name: "Glass reef",
-    description: "Sea-glass aqua, deep violet water, bubbles, and a little floating whale.",
-    colors: ["#37c7c8", "#e8fbff", "#8170e8"],
-    icon: "🐋",
-    art: "/assets/openmoji/whale.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "float gently",
-    decoratedScene: true,
-    experimental: true,
-    uiIdea: "Floating glass cards + compact pill actions",
-  },
-  {
-    id: "cherrynotebook",
-    name: "Cherry notebook",
-    description: "Ivory paper, cherry-red ink, green tabs, and pressed-flower stationery.",
-    colors: ["#d95667", "#fff8e8", "#789c59"],
-    icon: "🍓",
-    art: "/assets/openmoji/strawberry.svg",
-    accents: [
-      "/assets/openmoji/blossom.svg",
-      "/assets/openmoji/tulip.svg",
-    ],
-    charm: "one lovely line",
-    decoratedScene: true,
-    experimental: true,
-    uiIdea: "Lined surfaces + notebook-tab navigation",
-  },
-  {
-    id: "mosslibrary",
-    name: "Moss library",
-    description: "Moss green, walnut brown, old paper, berries, and a quiet reading bunny.",
-    colors: ["#58724a", "#f2e9d5", "#af7b4f"],
-    icon: "📚",
-    art: "/assets/openmoji/bunny.svg",
-    accents: [
-      "/assets/openmoji/blueberries.svg",
-      "/assets/openmoji/tulip.svg",
-    ],
-    charm: "small pages count",
-    decoratedScene: true,
-    experimental: true,
-    uiIdea: "Editorial type + compact book-spine cards",
-  },
-  {
-    id: "primaryplayroom",
-    name: "Primary playroom",
-    description: "Cobalt blue, tomato red, butter yellow, chunky shapes, and a friendly teddy.",
-    colors: ["#2468d5", "#fff2a8", "#ed594e"],
-    icon: "🧸",
-    art: "/assets/openmoji/teddy.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "made to play",
-    decoratedScene: true,
-    experimental: true,
-    uiIdea: "Extra-large controls + color-coded sections",
-  },
-  {
-    id: "orbitconsole",
-    name: "Orbit console",
-    description: "Midnight indigo, mint signals, ultraviolet glow, stars, and a tiny moon station.",
-    colors: ["#171d43", "#c9fff1", "#aa76ff"],
-    icon: "🌙",
-    art: "/assets/openmoji/moon.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "signal received",
-    decoratedScene: true,
-    experimental: true,
-    uiIdea: "Status chips + dense modular dashboard",
-  },
-];
-
-const themePickerOptions = [
-  ...themeOptions.filter((theme) => theme.experimental),
-  ...themeOptions.filter((theme) => !theme.experimental),
 ];
 
 const CLEAN_START_VERSION = "android-release-1";
@@ -5677,10 +5672,10 @@ export default function Home() {
                 <span>{themeOptions.length} themes</span>
               </div>
               <div className="theme-grid">
-                {themePickerOptions.map((theme) => (
+                {themeOptions.map((theme) => (
                   <button
                     key={theme.id}
-                    className={`theme-option ${theme.experimental ? "ui-lab" : ""} ${appTheme === theme.id ? "active" : ""}`.trim()}
+                    className={`theme-option ${appTheme === theme.id ? "active" : ""}`}
                     data-theme-option={theme.id}
                     onClick={() => setAppTheme(theme.id)}
                     aria-pressed={appTheme === theme.id}
@@ -5708,10 +5703,10 @@ export default function Home() {
                     <span className="theme-option-copy">
                       <strong>{theme.name}</strong>
                       <small>{theme.description}</small>
-                      {theme.uiIdea && (
-                        <span className="theme-ui-idea">
-                          <b>UI LAB</b>
-                          {theme.uiIdea}
+                      {theme.interfaceIdea && (
+                        <span className="theme-interface-chip">
+                          <b>{theme.featured ? "NEW UI" : "UI"}</b>
+                          {theme.interfaceIdea}
                         </span>
                       )}
                       <i>

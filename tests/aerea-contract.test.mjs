@@ -27,27 +27,26 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps the approved theme collection and its cute additions", () => {
+test("keeps the approved theme collection and the five Rhea additions", () => {
   for (const theme of [
+    "piggygelato",
+    "calicocafe",
+    "pawcloud",
+    "midnightracing",
+    "pixelpenguin",
     "peachparlor",
     "mintletter",
     "blueberrynight",
-    "sunsetsea",
     "duckmail",
-    "calicotea",
     "moonquilt",
-    "peachpuppy",
-    "matchabunny",
-    "cherryribbon",
-    "neonheart",
     "dreambear",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    7,
-    "the seven decorated themes should hide the welcome charm",
+    2,
+    "the two dedicated full-scene themes should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
@@ -61,6 +60,11 @@ test("keeps the approved theme collection and its cute additions", () => {
     "ducktram",
     "startide",
     "catcoast",
+    "glassreef",
+    "cherrynotebook",
+    "mosslibrary",
+    "primaryplayroom",
+    "orbitconsole",
   ]) {
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
@@ -189,7 +193,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal::after[\s\S]*background:var\(--cream\)[\s\S]*height:142px/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav::after/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav \.nav-item/);
-  assert.match(cssSource, /@media \(max-width:720px\)[\s\S]*\.agenda-v2-greeting[\s\S]*flex-basis:172px/);
+  assert.match(cssSource, /@media \(max-width:720px\)[\s\S]*\.agenda-v2-greeting[\s\S]*flex-basis:128px/);
   assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
@@ -205,13 +209,25 @@ test("removes the secret area and all of its entry points", () => {
   assert.doesNotMatch(cssSource, /\.secret-moon-button/);
 });
 
-test("adds Neon heartbreak as an isolated complete theme", () => {
-  assert.match(pageSource, /id: "neonheart"/);
-  assert.match(pageSource, /name: "Neon heartbreak"/);
-  assert.match(cssSource, /\.app-shell\[data-theme="neonheart"\]/);
-  assert.match(cssSource, /\.storybook-scene\[data-visual="neonheart"\]/);
-  assert.match(cssSource, /\.theme-option\[data-theme-option="neonheart"\]/);
-  assert.match(cssSource, /#ff0a9a/);
+test("gives every Rhea theme a complete isolated interface", () => {
+  for (const theme of [
+    "piggygelato",
+    "calicocafe",
+    "pawcloud",
+    "midnightracing",
+    "pixelpenguin",
+  ]) {
+    assert.match(pageSource, new RegExp(`id: "${theme}"`));
+    assert.match(cssSource, new RegExp(`data-theme="${theme}"`));
+    assert.match(cssSource, new RegExp(`data-visual="${theme}"`));
+    assert.match(cssSource, new RegExp(`data-theme-option="${theme}"`));
+  }
+  assert.match(pageSource, /interfaceIdea: "sticker wallpaper"/);
+  assert.match(pageSource, /interfaceIdea: "menu tickets"/);
+  assert.match(pageSource, /interfaceIdea: "floating controls"/);
+  assert.match(pageSource, /interfaceIdea: "telemetry panels"/);
+  assert.match(pageSource, /interfaceIdea: "pixel inventory"/);
+  assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {
