@@ -14713,7 +14713,7 @@ body {
 }
 
 .agenda-v2-board {
-  border-radius:31px 31px 0 0;
+  border-radius:31px;
   grid-template-columns:86px minmax(0,1fr);
 }
 
