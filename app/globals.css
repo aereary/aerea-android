@@ -16469,18 +16469,17 @@ body {
 
 .agenda-v2-board.is-focus-open {
   animation:agenda-focus-card-in .22s ease-out both;
-  bottom:18px;
+  bottom:48px;
   box-shadow:0 24px 70px rgba(24,18,41,.34),inset 0 1px 0 rgba(255,255,255,.88);
   left:50%;
   margin:0;
   max-height:none;
-  max-width:760px;
+  max-width:620px;
   min-height:0;
-  padding-top:62px;
   position:fixed;
-  top:18px;
+  top:48px;
   transform:translateX(-50%);
-  width:calc(100vw - 36px);
+  width:calc(100vw - 96px);
   z-index:60;
 }
 
@@ -16493,58 +16492,6 @@ body {
 .agenda-v2-board.is-focus-open .agenda-v2-scroll {
   overscroll-behavior:contain;
   padding-bottom:18px;
-}
-
-.agenda-v2-focus-card-header {
-  align-items:center;
-  background:color-mix(in srgb,var(--paper) 96%,transparent);
-  border-bottom:1px solid color-mix(in srgb,var(--line) 52%,transparent);
-  display:flex;
-  height:62px;
-  inset:0 0 auto;
-  justify-content:space-between;
-  padding:9px 11px 9px 20px;
-  position:absolute;
-  z-index:8;
-}
-
-.agenda-v2-focus-card-header > div {
-  display:flex;
-  flex-direction:column;
-  min-width:0;
-}
-
-.agenda-v2-focus-card-header small {
-  color:var(--muted);
-  font-size:8px;
-  font-weight:900;
-  letter-spacing:.14em;
-}
-
-.agenda-v2-focus-card-header strong {
-  color:var(--v2-ink);
-  font-family:var(--font-display);
-  font-size:21px;
-  letter-spacing:-.035em;
-  line-height:1.05;
-  margin-top:3px;
-}
-
-.agenda-v2-focus-close {
-  align-items:center;
-  background:color-mix(in srgb,var(--paper) 82%,var(--v2-highlight));
-  border:1px solid color-mix(in srgb,var(--v2-border) 72%,transparent);
-  border-radius:50%;
-  box-shadow:0 7px 16px color-mix(in srgb,var(--shadow) 12%,transparent),inset 0 1px 0 rgba(255,255,255,.7);
-  color:var(--v2-ink);
-  display:flex;
-  flex:0 0 auto;
-  font-size:24px;
-  height:42px;
-  justify-content:center;
-  line-height:1;
-  padding:0 0 3px;
-  width:42px;
 }
 
 @keyframes agenda-focus-backdrop-in {
@@ -16560,25 +16507,9 @@ body {
 @media (max-width:720px) {
   .agenda-v2-board.is-focus-open {
     border-radius:25px;
-    bottom:max(10px,env(safe-area-inset-bottom));
+    bottom:max(42px,env(safe-area-inset-bottom));
     max-width:none;
-    padding-top:56px;
-    top:10px;
-    width:calc(100vw - 20px);
-  }
-
-  .agenda-v2-focus-card-header {
-    height:56px;
-    padding:7px 8px 7px 16px;
-  }
-
-  .agenda-v2-focus-card-header strong {
-    font-size:19px;
-  }
-
-  .agenda-v2-focus-close {
-    font-size:22px;
-    height:38px;
-    width:38px;
+    top:42px;
+    width:calc(100vw - 84px);
   }
 }

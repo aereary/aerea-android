@@ -4779,26 +4779,6 @@ export default function Home() {
                       aria-modal={scheduleFocusOpen ? true : undefined}
                       aria-label={scheduleFocusOpen ? `${selectedScheduleWeekday} schedule` : undefined}
                     >
-                      {scheduleFocusOpen && (
-                        <div className="agenda-v2-focus-card-header">
-                          <div>
-                            <small>YOUR RHYTHM</small>
-                            <strong>
-                              {selectedScheduleIsToday
-                                ? "Today’s schedule"
-                                : `${selectedScheduleWeekday}’s schedule`}
-                            </strong>
-                          </div>
-                          <button
-                            className="agenda-v2-focus-close"
-                            type="button"
-                            onClick={() => setScheduleFocusOpen(false)}
-                            aria-label="Close full-screen schedule"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      )}
                       {selectedScheduleAgendaEvents.length === 0 ? (
                         <div className="agenda-v2-empty-state">
                           <div className="agenda-v2-empty-art" aria-hidden="true">
