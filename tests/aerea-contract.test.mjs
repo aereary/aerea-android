@@ -265,7 +265,12 @@ test("gives every Rhea theme a complete isolated interface", () => {
 test("uses one event-note anatomy everywhere and icon-only calendar tools", () => {
   assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
-  assert.match(cssSource, /grid-template-columns:72px 4px minmax\(0,1fr\) 40px/);
+  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) 36px/);
+  assert.match(cssSource, /background:#fffdfa/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:50%/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after[\s\S]*display:none/);
+  assert.match(cssSource, /color:#6b8136/);
+  assert.match(cssSource, /background:#b9edf2!important/);
   assert.match(cssSource, /background:#ec7192/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.time-block/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.mini-people/);
