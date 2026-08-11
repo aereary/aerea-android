@@ -912,6 +912,7 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [scheduleFocusOpen, setScheduleFocusOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
@@ -1491,6 +1492,21 @@ export default function Home() {
     0,
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
   );
+  useEffect(() => {
+    if (!calendarOpen || !calendarExpanded) {
+      setScheduleFocusOpen(false);
+    }
+  }, [calendarExpanded, calendarOpen]);
+
+  useEffect(() => {
+    if (!scheduleFocusOpen) return;
+    const closeFocusedSchedule = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setScheduleFocusOpen(false);
+    };
+    window.addEventListener("keydown", closeFocusedSchedule);
+    return () => window.removeEventListener("keydown", closeFocusedSchedule);
+  }, [scheduleFocusOpen]);
+
   useEffect(() => {
     if (!calendarOpen || !calendarExpanded) return;
     const datedEvents = calendarEvents.filter((event) =>
@@ -4579,7 +4595,12 @@ export default function Home() {
                   )}
                 </div>
                 {calendarExpanded && (
-                  <div className="agenda-v2">
+                  <div
+                    className={`agenda-v2${scheduleFocusOpen ? " is-focus-open" : ""}`}
+                    role={scheduleFocusOpen ? "dialog" : undefined}
+                    aria-modal={scheduleFocusOpen ? true : undefined}
+                    aria-label={scheduleFocusOpen ? `${selectedScheduleWeekday} schedule` : undefined}
+                  >
                     <section className="welcome-row agenda-v2-greeting">
                       <div>
                         <p className="date-label">
@@ -4705,9 +4726,22 @@ export default function Home() {
                       <div className="agenda-v2-heading-copy">
                         <p className="tiny-label">YOUR RHYTHM</p>
                         <h3>
-                          {selectedScheduleIsToday
-                            ? "Today’s schedule"
-                            : `${selectedScheduleWeekday}’s schedule`}
+                          <button
+                            className="agenda-v2-heading-trigger"
+                            type="button"
+                            onClick={() => setScheduleFocusOpen(true)}
+                            aria-expanded={scheduleFocusOpen}
+                            aria-label={`Open ${selectedScheduleIsToday ? "today’s" : `${selectedScheduleWeekday}’s`} schedule full screen`}
+                          >
+                            <span>
+                              {selectedScheduleIsToday
+                                ? "Today’s schedule"
+                                : `${selectedScheduleWeekday}’s schedule`}
+                            </span>
+                            {!scheduleFocusOpen && (
+                              <span className="agenda-v2-heading-expand" aria-hidden="true">↗</span>
+                            )}
+                          </button>
                         </h3>
                         <span className="agenda-v2-plan-count">
                           {selectedScheduleAgendaEvents.length === 0
@@ -4734,6 +4768,16 @@ export default function Home() {
                           <span aria-hidden="true">＋</span>
                           <small>Add</small>
                         </button>
+                        {scheduleFocusOpen && (
+                          <button
+                            className="agenda-v2-focus-close"
+                            type="button"
+                            onClick={() => setScheduleFocusOpen(false)}
+                            aria-label="Close full-screen schedule"
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
                     </div>
 
