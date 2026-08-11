@@ -16469,17 +16469,17 @@ body {
 
 .agenda-v2-board.is-focus-open {
   animation:agenda-focus-card-in .22s ease-out both;
-  bottom:48px;
+  bottom:40px;
   box-shadow:0 24px 70px rgba(24,18,41,.34),inset 0 1px 0 rgba(255,255,255,.88);
   left:50%;
   margin:0;
   max-height:none;
-  max-width:620px;
+  max-width:660px;
   min-height:0;
   position:fixed;
-  top:48px;
+  top:40px;
   transform:translateX(-50%);
-  width:calc(100vw - 96px);
+  width:calc(100vw - 80px);
   z-index:60;
 }
 
@@ -16492,6 +16492,40 @@ body {
 .agenda-v2-board.is-focus-open .agenda-v2-scroll {
   overscroll-behavior:contain;
   padding-bottom:18px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-time-label b {
+  font-size:10px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-time-label small,
+.agenda-v2-board.is-focus-open .agenda-v2-time-grid .half-hour .agenda-v2-time-label b {
+  font-size:8px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-event-copy > strong,
+.agenda-v2-board.is-focus-open .agenda-v2-event.is-overlap .agenda-v2-event-copy > strong {
+  font-size:11px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-event-copy > small,
+.agenda-v2-board.is-focus-open .agenda-v2-event-reminder,
+.agenda-v2-board.is-focus-open .agenda-v2-event-extras > span,
+.agenda-v2-board.is-focus-open .agenda-v2-day-periods > span small,
+.agenda-v2-board.is-focus-open .agenda-v2-event.is-overlap .agenda-v2-event-copy > small {
+  font-size:8px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-event-shortline time {
+  font-size:8px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-event-shortline strong {
+  font-size:9px;
+}
+
+.agenda-v2-board.is-focus-open .agenda-v2-event-category {
+  font-size:7px;
 }
 
 @keyframes agenda-focus-backdrop-in {
@@ -16507,9 +16541,9 @@ body {
 @media (max-width:720px) {
   .agenda-v2-board.is-focus-open {
     border-radius:25px;
-    bottom:max(42px,env(safe-area-inset-bottom));
+    bottom:max(34px,env(safe-area-inset-bottom));
     max-width:none;
-    top:42px;
-    width:calc(100vw - 84px);
+    top:34px;
+    width:calc(100vw - 68px);
   }
 }
