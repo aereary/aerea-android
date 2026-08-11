@@ -161,6 +161,8 @@ type CalendarEvent = {
   repeat?: RepeatOption;
   customRepeatEvery?: number;
   customRepeatUnit?: "days" | "weeks" | "months";
+  repeatUntil?: string;
+  excludedDates?: string[];
   dayCounter?: boolean;
   location?: string;
   url?: string;
@@ -197,6 +199,11 @@ type EventDraft = Omit<CalendarEvent, "id">;
 type CalendarSearchOccurrence = {
   event: CalendarEvent;
   date: string;
+};
+
+type EventDeleteRequest = {
+  eventId: string;
+  occurrenceDate: string;
 };
 
 type SketchPage = {
@@ -871,6 +878,8 @@ function weekForDate(dateKey: string) {
 
 function eventOccursOn(event: CalendarEvent, dateKey: string) {
   if (dateKey < event.date) return false;
+  if (event.repeatUntil && dateKey > event.repeatUntil) return false;
+  if (event.excludedDates?.includes(dateKey)) return false;
   const repeat = event.repeat ?? "Never";
   if (repeat === "Never") return event.date === dateKey;
 
@@ -900,6 +909,17 @@ function eventOccursOn(event: CalendarEvent, dateKey: string) {
     return monthsApart % every === 0 && candidate.getDate() === start.getDate();
   }
   return daysApart % (every * 7) === 0;
+}
+
+function previousDateKey(dateKey: string) {
+  const date = dateFromKey(dateKey);
+  date.setDate(date.getDate() - 1);
+  return localDateKey(date);
+}
+
+function eventCompactTimeLabel(event: CalendarEvent) {
+  if (event.allDay) return "All day";
+  return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
@@ -1129,6 +1149,12 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [eventDeleteRequest, setEventDeleteRequest] =
+    useState<EventDeleteRequest | null>(null);
+  const [
+    eventTemplateSuggestionsDismissed,
+    setEventTemplateSuggestionsDismissed,
+  ] = useState(false);
   const [daySummaryDate, setDaySummaryDate] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     makeEventDraft(todayKey),
@@ -1559,6 +1585,32 @@ export default function Home() {
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const eventTitleSuggestions = useMemo(() => {
+    const query = normalizeCalendarSearch(eventDraft.title);
+    if (editingEventId || eventTemplateSuggestionsDismissed || query.length < 2) {
+      return [];
+    }
+
+    return calendarEvents
+      .filter((event) => normalizeCalendarSearch(event.title).includes(query))
+      .sort((first, second) => {
+        const firstTitle = normalizeCalendarSearch(first.title);
+        const secondTitle = normalizeCalendarSearch(second.title);
+        const firstStarts = firstTitle.startsWith(query) ? 0 : 1;
+        const secondStarts = secondTitle.startsWith(query) ? 0 : 1;
+        return (
+          firstStarts - secondStarts ||
+          firstTitle.localeCompare(secondTitle) ||
+          first.time.localeCompare(second.time)
+        );
+      })
+      .slice(0, 5);
+  }, [
+    calendarEvents,
+    editingEventId,
+    eventDraft.title,
+    eventTemplateSuggestionsDismissed,
+  ]);
   const calendarSearchResults = useMemo<CalendarSearchOccurrence[]>(() => {
     const query = normalizeCalendarSearch(calendarSearchQuery);
     if (!query) return [];
@@ -2165,6 +2217,7 @@ export default function Home() {
   const openNewEvent = (dateKey = selectedCalendarDate) => {
     setCalendarSearchOpen(false);
     setEditingEventId(null);
+    setEventTemplateSuggestionsDismissed(false);
     setEventDraft(makeEventDraft(dateKey));
     setTodoDraft("");
     setEventEditorOpen(true);
@@ -2174,6 +2227,7 @@ export default function Home() {
     const start = Math.max(0, Math.min(23 * 60 + 30, Math.round(minute / 15) * 15));
     setSelectedCalendarDate(dateKey);
     setEditingEventId(null);
+    setEventTemplateSuggestionsDismissed(false);
     setEventDraft({
       ...makeEventDraft(dateKey),
       time: timeFromMinutes(start),
@@ -2186,6 +2240,7 @@ export default function Home() {
   const openEventEditor = (calendarEvent: CalendarEvent) => {
     setCalendarSearchOpen(false);
     setEditingEventId(calendarEvent.id);
+    setEventTemplateSuggestionsDismissed(true);
     setEventDraft({
       ...makeEventDraft(calendarEvent.date),
       ...calendarEvent,
@@ -2212,6 +2267,78 @@ export default function Home() {
     setSelectedCalendarDate(savedEvent.date);
     setEventEditorOpen(false);
     setEditingEventId(null);
+  };
+
+  const applyEventTemplate = (template: CalendarEvent) => {
+    setEventTemplateSuggestionsDismissed(true);
+    setEventDraft((current) => {
+      const templateStart = dateFromKey(template.date);
+      const templateEnd = dateFromKey(template.endDate ?? template.date);
+      const durationDays = Math.max(
+        0,
+        Math.round(
+          (templateEnd.getTime() - templateStart.getTime()) / 86_400_000,
+        ),
+      );
+      const copiedEnd = dateFromKey(current.date);
+      copiedEnd.setDate(copiedEnd.getDate() + durationDays);
+
+      return {
+        ...template,
+        title: template.title,
+        date: current.date,
+        endDate: localDateKey(copiedEnd),
+        excludedDates: [],
+        repeatUntil: undefined,
+        todos: [...(template.todos ?? [])],
+        todoStates: (template.todos ?? []).map(() => "pending" as const),
+        files: [...(template.files ?? [])],
+      };
+    });
+  };
+
+  const closeEventDelete = () => setEventDeleteRequest(null);
+
+  const deleteWholeEvent = () => {
+    if (!eventDeleteRequest) return;
+    const deletedId = eventDeleteRequest.eventId;
+    setCalendarEvents((current) =>
+      current.filter((event) => event.id !== deletedId),
+    );
+    setSelectedEventDetail((current) =>
+      current?.id === deletedId ? null : current,
+    );
+    closeEventDelete();
+  };
+
+  const deleteOnlyOccurrence = () => {
+    if (!eventDeleteRequest) return;
+    const { eventId, occurrenceDate } = eventDeleteRequest;
+    setCalendarEvents((current) =>
+      current.map((event) => {
+        if (event.id !== eventId) return event;
+        return {
+          ...event,
+          excludedDates: Array.from(
+            new Set([...(event.excludedDates ?? []), occurrenceDate]),
+          ).sort(),
+        };
+      }),
+    );
+    closeEventDelete();
+  };
+
+  const deleteThisAndFutureOccurrences = () => {
+    if (!eventDeleteRequest) return;
+    const { eventId, occurrenceDate } = eventDeleteRequest;
+    setCalendarEvents((current) =>
+      current.flatMap((event) => {
+        if (event.id !== eventId) return [event];
+        if (occurrenceDate <= event.date) return [];
+        return [{ ...event, repeatUntil: previousDateKey(occurrenceDate) }];
+      }),
+    );
+    closeEventDelete();
   };
 
   const updateEventDraft = <Key extends keyof EventDraft>(
@@ -4402,12 +4529,45 @@ export default function Home() {
                     <input
                       autoFocus
                       value={eventDraft.title}
-                      onChange={(event) =>
-                        updateEventDraft("title", event.target.value)
-                      }
+                      onChange={(event) => {
+                        setEventTemplateSuggestionsDismissed(false);
+                        updateEventDraft("title", event.target.value);
+                      }}
                       placeholder="What are you planning?"
                     />
                   </label>
+
+                  {eventTitleSuggestions.length > 0 && (
+                    <section
+                      className="event-title-suggestions"
+                      aria-label="Existing events with a similar name"
+                    >
+                      <p>USE AN EXISTING PLAN</p>
+                      {eventTitleSuggestions.map((suggestion) => (
+                        <button
+                          type="button"
+                          key={suggestion.id}
+                          onClick={() => applyEventTemplate(suggestion)}
+                          aria-label={`Copy settings from ${suggestion.title}`}
+                        >
+                          <span className="event-template-history" aria-hidden="true">
+                            ↶
+                          </span>
+                          <span>
+                            <strong>{suggestion.title}</strong>
+                            <small>
+                              {suggestion.calendar ?? "Personal"} ·{" "}
+                              {eventStartTimeLabel(suggestion)}
+                              {(suggestion.repeat ?? "Never") !== "Never"
+                                ? ` · ${eventRepeatLabel(suggestion)}`
+                                : ""}
+                            </small>
+                          </span>
+                          <em>Use</em>
+                        </button>
+                      ))}
+                    </section>
+                  )}
 
                   <section className="event-editor-card">
                     <label className="event-row">
@@ -5653,39 +5813,32 @@ export default function Home() {
                           className={`event-chip ${calendarEvent.color}`}
                           key={calendarEvent.id}
                         >
-                          <span className="event-chip-time">
-                            <strong>
-                              {calendarEvent.allDay ? "ALL" : calendarEvent.time}
-                            </strong>
-                            <small>{calendarEvent.allDay ? "DAY" : "TIME"}</small>
-                          </span>
-                          <i className="event-chip-line" aria-hidden="true" />
+                          <span>{eventCompactTimeLabel(calendarEvent)}</span>
                           <button
+                            type="button"
                             className="event-chip-main"
                             onClick={() => openEventEditor(calendarEvent)}
                             aria-label={`Edit ${calendarEvent.title}`}
                           >
-                            <small className="event-chip-category">
-                              {calendarEvent.calendar ?? "Personal"}
-                            </small>
                             <strong>{calendarEvent.title}</strong>
-                            <em>
-                              {calendarEvent.location ||
-                                calendarEvent.note ||
-                                "Saved in your calendar"}
+                            <small>
+                              {calendarEvent.calendar ?? "Personal"}
                               {(calendarEvent.repeat ?? "Never") !== "Never"
-                                ? ` · ${calendarEvent.repeat}`
+                                ? ` · ${eventRepeatLabel(calendarEvent)}`
                                 : ""}
-                            </em>
+                              {calendarEvent.location
+                                ? ` · ${calendarEvent.location}`
+                                : ""}
+                            </small>
                           </button>
                           <button
+                            type="button"
                             className="event-chip-delete"
                             onClick={() =>
-                              setCalendarEvents((current) =>
-                                current.filter(
-                                  (item) => item.id !== calendarEvent.id,
-                                ),
-                              )
+                              setEventDeleteRequest({
+                                eventId: calendarEvent.id,
+                                occurrenceDate: selectedCalendarDate,
+                              })
                             }
                             aria-label={`Delete ${calendarEvent.title}`}
                           >
@@ -5790,7 +5943,16 @@ export default function Home() {
                     <p className="event-detail-category">
                       {selectedEventDetail.calendar ?? "PERSONAL"}
                     </p>
-                    <h2>{selectedEventDetail.title}</h2>
+                    <div className="event-detail-title-row">
+                      <h2>{selectedEventDetail.title}</h2>
+                      <div className="event-detail-doodle" aria-hidden="true">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/assets/event-modal-cloud-sparkles.png"
+                          alt=""
+                        />
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => setSelectedEventDetail(null)}
@@ -5799,15 +5961,6 @@ export default function Home() {
                     ×
                   </button>
                 </header>
-
-                <div className="event-detail-doodle" aria-hidden="true">
-                  {/* Generated UI ornament is already optimized as a tiny transparent PNG. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/assets/event-modal-cloud-sparkles.png"
-                    alt=""
-                  />
-                </div>
 
                 <div className="event-detail-divider" aria-hidden="true">
                   <span>✦</span>
@@ -6011,6 +6164,89 @@ export default function Home() {
                   Edit this event
                   <i aria-hidden="true">✦</i>
                 </button>
+              </section>
+            </div>
+          );
+        })()}
+
+      {eventDeleteRequest &&
+        (() => {
+          const eventToDelete = calendarEvents.find(
+            (event) => event.id === eventDeleteRequest.eventId,
+          );
+          if (!eventToDelete) return null;
+          const isRepeating =
+            (eventToDelete.repeat ?? "Never") !== "Never";
+
+          return (
+            <div
+              className="modal-backdrop event-delete-backdrop"
+              role="presentation"
+              onPointerDown={(pointerEvent) => {
+                if (pointerEvent.target === pointerEvent.currentTarget) {
+                  closeEventDelete();
+                }
+              }}
+            >
+              <section
+                className="event-delete-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Delete ${eventToDelete.title}`}
+              >
+                {isRepeating ? (
+                  <>
+                    <p className="tiny-label">REPEATING EVENT</p>
+                    <h2>Which plans should disappear?</h2>
+                    <small>
+                      This only affects the cycle that created this event.
+                    </small>
+                    <div className="event-delete-series-actions">
+                      <button type="button" onClick={deleteOnlyOccurrence}>
+                        <strong>Delete only this event</strong>
+                        <span>Keep the rest of the cycle.</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deleteThisAndFutureOccurrences}
+                      >
+                        <strong>Delete this and future events</strong>
+                        <span>Keep earlier occurrences.</span>
+                      </button>
+                      <button type="button" onClick={deleteWholeEvent}>
+                        <strong>Delete all events</strong>
+                        <span>Remove the complete repeating cycle.</span>
+                      </button>
+                    </div>
+                    <button
+                      className="event-delete-cancel"
+                      type="button"
+                      onClick={closeEventDelete}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="tiny-label">DELETE EVENT</p>
+                    <h2>Are you sure you want to delete this event?</h2>
+                    <small>
+                      “{eventToDelete.title}” is not part of a repeating cycle.
+                    </small>
+                    <div className="event-delete-confirm-actions">
+                      <button type="button" onClick={closeEventDelete}>
+                        Cancel
+                      </button>
+                      <button
+                        className="danger"
+                        type="button"
+                        onClick={deleteWholeEvent}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
               </section>
             </div>
           );

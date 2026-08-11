@@ -19721,3 +19721,460 @@ body {
   .app-shell[data-theme] .event-detail-facts { grid-template-columns:1fr; }
   .app-shell[data-theme] .event-detail-edit { border-radius:21px; font-size:17px; min-height:60px; }
 }
+
+/* Approved compact Today note: restore the earlier card exactly, without the added edge band. */
+.app-shell[data-theme] .schedule-card {
+  align-items:center;
+  background:var(--paper);
+  border:0;
+  border-radius:23px;
+  box-shadow:var(--shadow-soft);
+  display:grid;
+  font-family:inherit;
+  gap:16px;
+  grid-template-columns:64px 4px minmax(0,1fr) auto;
+  margin-bottom:12px;
+  min-height:100px;
+  overflow:hidden;
+  padding:16px;
+  position:relative;
+}
+
+.app-shell[data-theme] .schedule-card::before {
+  background:var(--event-tint,var(--yellow-soft));
+  border-radius:50%;
+  height:110px;
+  opacity:.55;
+  right:-45px;
+  top:-45px;
+  width:110px;
+}
+
+.app-shell[data-theme] .schedule-card::after { display:none; }
+
+.app-shell[data-theme] .schedule-card .time-block {
+  background:var(--event-tint,var(--yellow-soft));
+  border:0;
+  border-radius:17px;
+  box-shadow:none;
+  height:64px;
+}
+
+.app-shell[data-theme] .schedule-card .time-block strong {
+  color:var(--ink);
+  font-size:14px;
+  font-weight:900;
+}
+
+.app-shell[data-theme] .schedule-card .time-block span {
+  color:var(--ink-soft);
+  font-size:8px;
+  letter-spacing:.13em;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-line {
+  background:var(--orange);
+  box-shadow:none;
+  height:48px;
+  width:4px;
+}
+
+.app-shell[data-theme] .schedule-card .card-tag {
+  color:var(--leaf-deep);
+  font-size:9px;
+  letter-spacing:.12em;
+  margin-bottom:3px;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-copy h4 {
+  color:var(--ink);
+  font-size:17px;
+  font-weight:850;
+  margin-bottom:3px;
+}
+
+.app-shell[data-theme] .schedule-card .schedule-copy > span {
+  color:var(--muted);
+  font-size:12px;
+}
+
+.app-shell[data-theme] .schedule-card .mini-people {
+  background:rgba(255,255,255,.72);
+  border:0;
+  box-shadow:none;
+  color:var(--ink);
+  font-size:16px;
+  height:36px;
+  width:36px;
+}
+
+/* Approved selected-day note: one calm lavender strip, as in the saved calendar version. */
+.app-shell[data-theme] .selected-day-events {
+  display:grid;
+  gap:8px;
+  margin-top:14px;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip {
+  align-items:center;
+  background:var(--chip-color,var(--lilac));
+  border:0;
+  border-radius:16px;
+  box-shadow:none;
+  display:grid;
+  font-family:inherit;
+  gap:10px;
+  grid-template-columns:64px minmax(0,1fr) 32px;
+  isolation:auto;
+  margin:0;
+  min-height:0;
+  overflow:hidden;
+  padding:10px 12px;
+  position:relative;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip::before,
+.app-shell[data-theme] .selected-day-events .event-chip::after {
+  content:none;
+  display:none;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip > span {
+  color:var(--ink);
+  font-size:11px;
+  font-weight:900;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip-main {
+  background:transparent;
+  border:0;
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  padding:3px 0;
+  text-align:left;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip-main strong {
+  color:var(--ink);
+  display:block;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:850;
+  letter-spacing:normal;
+  line-height:1.25;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:none;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip-main small {
+  color:var(--ink-soft);
+  display:block;
+  font-size:10px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme] .selected-day-events .event-chip-delete {
+  align-items:center;
+  background:rgba(255,255,255,.62);
+  border:0;
+  border-radius:50%;
+  box-shadow:none;
+  color:var(--ink);
+  display:flex;
+  font-size:16px;
+  height:29px;
+  justify-content:center;
+  padding:0;
+  width:29px;
+}
+
+/* Event title recall: matching saved plans can donate all of their settings. */
+.event-title-suggestions {
+  background:var(--paper);
+  border:1px solid var(--event-editor-line);
+  border-radius:20px;
+  box-shadow:var(--shadow-soft);
+  overflow:hidden;
+  padding:9px 12px 7px;
+}
+
+.event-title-suggestions > p {
+  color:var(--event-editor-deep);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.12em;
+  margin:3px 5px 5px;
+}
+
+.event-title-suggestions > button {
+  align-items:center;
+  background:transparent;
+  border:0;
+  border-top:1px solid var(--line);
+  color:var(--ink);
+  display:grid;
+  gap:11px;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  min-height:56px;
+  padding:8px 5px;
+  text-align:left;
+  width:100%;
+}
+
+.event-title-suggestions > button:first-of-type { border-top:0; }
+
+.event-template-history {
+  align-items:center;
+  color:var(--event-editor-deep);
+  display:flex;
+  font-size:22px;
+  justify-content:center;
+}
+
+.event-title-suggestions strong,
+.event-title-suggestions small { display:block; }
+
+.event-title-suggestions strong {
+  font-size:13px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.event-title-suggestions small {
+  color:var(--muted);
+  font-size:10px;
+  margin-top:3px;
+}
+
+.event-title-suggestions em {
+  background:var(--event-editor-wash);
+  border-radius:999px;
+  color:var(--event-editor-deep);
+  font-size:10px;
+  font-style:normal;
+  font-weight:850;
+  padding:6px 9px;
+}
+
+/* The approved detail note, scaled down with its cloud tucked beside the title. */
+.app-shell[data-theme] .event-detail-note {
+  max-height:min(86dvh,760px);
+  max-width:450px;
+  padding:30px 28px 27px;
+  width:min(86vw,450px);
+}
+
+.app-shell[data-theme] .event-detail-corner {
+  height:148px;
+  width:156px;
+}
+
+.app-shell[data-theme] .event-detail-heading-copy { flex:1; }
+
+.app-shell[data-theme] .event-detail-category {
+  font-size:10px;
+  margin-bottom:15px;
+  padding:8px 15px;
+}
+
+.app-shell[data-theme] .event-detail-title-row {
+  align-items:center;
+  display:flex;
+  gap:8px;
+  min-width:0;
+}
+
+.app-shell[data-theme] .event-detail-title-row h2 {
+  flex:1 1 auto;
+  font-size:clamp(31px,7vw,43px);
+  min-width:0;
+}
+
+.app-shell[data-theme] .event-detail-title-row .event-detail-doodle {
+  flex:0 0 112px;
+  height:48px;
+  margin:0;
+  min-width:0;
+}
+
+.app-shell[data-theme] .event-detail-header { gap:13px; }
+
+.app-shell[data-theme] .event-detail-header > button {
+  flex-basis:46px;
+  font-size:30px;
+  height:46px;
+  width:46px;
+}
+
+.app-shell[data-theme] .event-detail-divider {
+  height:18px;
+  margin:10px 2px 3px;
+}
+
+.app-shell[data-theme] .event-detail-time {
+  border-radius:21px;
+  gap:13px;
+  grid-template-columns:50px minmax(0,1fr);
+  margin-bottom:14px;
+  padding:13px 15px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon {
+  border-radius:15px;
+  height:50px;
+  width:50px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon svg { height:28px; width:28px; }
+.app-shell[data-theme] .event-detail-time strong { font-size:20px; gap:7px; }
+.app-shell[data-theme] .event-detail-time small { font-size:12px; margin-top:4px; }
+
+.app-shell[data-theme] .event-detail-reminder {
+  border-radius:20px;
+  gap:11px;
+  grid-template-columns:46px minmax(0,1fr) 22px;
+  margin-bottom:16px;
+  padding:12px 13px;
+}
+
+.app-shell[data-theme] .event-detail-reminder-icon {
+  border-radius:14px;
+  height:46px;
+  width:46px;
+}
+
+.app-shell[data-theme] .event-detail-reminder strong { font-size:14px; }
+
+.app-shell[data-theme] .event-detail-edit {
+  border-radius:20px;
+  font-size:16px;
+  margin-top:18px;
+  min-height:56px;
+}
+
+/* Unique and recurring deletion deliberately use different decision dialogs. */
+.event-delete-backdrop {
+  align-items:center;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  background:rgba(38,43,73,.54);
+  display:flex;
+  justify-content:center;
+  padding:18px;
+  z-index:410;
+}
+
+.event-delete-dialog {
+  background:#fffdf8;
+  border:2px solid rgba(255,255,255,.84);
+  border-radius:28px;
+  box-shadow:0 24px 70px rgba(24,30,57,.32);
+  color:#31386c;
+  max-width:420px;
+  padding:25px;
+  width:min(92vw,420px);
+}
+
+.event-delete-dialog h2 {
+  font-size:23px;
+  letter-spacing:-.04em;
+  line-height:1.12;
+  margin:7px 0 8px;
+}
+
+.event-delete-dialog > small {
+  color:#777694;
+  display:block;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.event-delete-series-actions {
+  display:grid;
+  gap:8px;
+  margin-top:19px;
+}
+
+.event-delete-series-actions > button {
+  background:#f3edfc;
+  border:1px solid #e5daf4;
+  border-radius:16px;
+  color:#31386c;
+  padding:13px 15px;
+  text-align:left;
+}
+
+.event-delete-series-actions > button:last-child {
+  background:#fff0ed;
+  border-color:#f6d0c9;
+  color:#a2474c;
+}
+
+.event-delete-series-actions strong,
+.event-delete-series-actions span { display:block; }
+.event-delete-series-actions strong { font-size:13px; }
+.event-delete-series-actions span { font-size:10px; margin-top:3px; opacity:.78; }
+
+.event-delete-cancel {
+  background:transparent;
+  border:0;
+  color:#666494;
+  display:block;
+  font-weight:850;
+  margin:13px auto 0;
+  padding:7px 13px;
+}
+
+.event-delete-confirm-actions {
+  display:flex;
+  gap:9px;
+  justify-content:flex-end;
+  margin-top:22px;
+}
+
+.event-delete-confirm-actions button {
+  background:#f1ebfa;
+  border:0;
+  border-radius:999px;
+  color:#554d91;
+  font-weight:850;
+  min-height:39px;
+  padding:0 17px;
+}
+
+.event-delete-confirm-actions .danger {
+  background:#ff8076;
+  color:white;
+}
+
+@media (max-width:520px) {
+  .app-shell[data-theme] .event-detail-note {
+    border-radius:28px;
+    max-height:calc(100dvh - 34px);
+    padding:23px 19px 22px;
+    width:min(86vw,450px);
+  }
+
+  .app-shell[data-theme] .event-detail-corner {
+    border-radius:0 28px 0 100%;
+    height:121px;
+    width:128px;
+  }
+
+  .app-shell[data-theme] .event-detail-title-row h2 { font-size:34px; }
+
+  .app-shell[data-theme] .event-detail-title-row .event-detail-doodle {
+    flex-basis:88px;
+    height:39px;
+  }
+
+  .event-delete-dialog { border-radius:24px; padding:21px; }
+}

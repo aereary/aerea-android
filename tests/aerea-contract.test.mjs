@@ -262,25 +262,23 @@ test("gives every Rhea theme a complete isolated interface", () => {
   assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
 });
 
-test("uses one event-note anatomy everywhere and icon-only calendar tools", () => {
+test("restores the approved Today note and simple selected-day strip", () => {
   assert.match(cssSource, /Event notes v2 — one exact card silhouette in every theme and calendar list/);
   assert.doesNotMatch(cssSource, /Event notes v3 — the marked time tile and corner are now the reference shape/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card/);
-  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) 36px/);
-  assert.match(cssSource, /background:#fffdfa/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::before[\s\S]*border-radius:50%/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after[\s\S]*background:var\(--event-tint,var\(--lilac\)\)[\s\S]*display:block[\s\S]*width:clamp\(8px,2\.4%,15px\)/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-chip::after[\s\S]*background:var\(--chip-color,var\(--lilac\)\)[\s\S]*display:block/);
+  assert.match(cssSource, /Approved compact Today note/);
+  assert.match(cssSource, /grid-template-columns:64px 4px minmax\(0,1fr\) auto/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card::after \{ display:none; \}/);
+  assert.match(cssSource, /Approved selected-day note/);
+  assert.match(cssSource, /\.selected-day-events \.event-chip[\s\S]*background:var\(--chip-color,var\(--lilac\)\)/);
+  assert.match(cssSource, /grid-template-columns:64px minmax\(0,1fr\) 32px/);
+  assert.match(cssSource, /\.selected-day-events \.event-chip::before,[\s\S]*content:none/);
   assert.match(cssSource, /height:64px/);
-  assert.match(cssSource, /color:#6b8136/);
   assert.match(cssSource, /background:#b9edf2!important/);
-  assert.match(cssSource, /background:#ec7192/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.time-block/);
   assert.match(cssSource, /\.app-shell\[data-theme\] \.schedule-card \.mini-people/);
-  assert.match(pageSource, /className="event-chip-time"/);
-  assert.match(pageSource, /className="event-chip-line"/);
-  assert.match(pageSource, /className="event-chip-category"/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-chip/);
+  assert.doesNotMatch(pageSource, /className="event-chip-time"/);
+  assert.doesNotMatch(pageSource, /className="event-chip-line"/);
+  assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
   assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
   assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger,[\s\S]*flex:0 0 30px/);
   assert.match(cssSource, /background:transparent;[\s\S]*border-radius:50%/);
@@ -301,14 +299,46 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(pageSource, /eventDetailTimeParts/);
   assert.match(pageSource, /eventDetailDate/);
   assert.match(pageSource, /event-detail-corner/);
+  assert.match(pageSource, /className="event-detail-title-row"/);
   assert.match(pageSource, /event-modal-cloud-sparkles\.png/);
   assert.match(pageSource, /className="event-detail-reminder"/);
   assert.match(pageSource, /No reminder/);
   assert.match(cssSource, /Long-press event card — shared faithfully by every theme/);
   assert.match(cssSource, /backdrop-filter:blur\(7px\)/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:520px/);
+  assert.match(cssSource, /The approved detail note, scaled down/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:450px/);
+  assert.match(cssSource, /\.event-detail-title-row \.event-detail-doodle[\s\S]*flex:0 0 112px/);
   assert.match(cssSource, /\.event-detail-corner[\s\S]*border-radius:0 38px 0 100%/);
   assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
+});
+
+test("deletes unique events safely and edits repeating cycles by occurrence", () => {
+  assert.match(pageSource, /repeatUntil\?: string/);
+  assert.match(pageSource, /excludedDates\?: string\[\]/);
+  assert.match(pageSource, /event\.repeatUntil && dateKey > event\.repeatUntil/);
+  assert.match(pageSource, /event\.excludedDates\?\.includes\(dateKey\)/);
+  assert.match(pageSource, /setEventDeleteRequest\(\{/);
+  assert.match(pageSource, /Delete only this event/);
+  assert.match(pageSource, /Delete this and future events/);
+  assert.match(pageSource, /Delete all events/);
+  assert.match(pageSource, /Are you sure you want to delete this event\?/);
+  assert.match(pageSource, /This only affects the cycle that created this event/);
+  assert.match(pageSource, /new Set\(\[\.\.\.\(event\.excludedDates \?\? \[\]\), occurrenceDate\]\)/);
+  assert.match(pageSource, /repeatUntil: previousDateKey\(occurrenceDate\)/);
+  assert.match(cssSource, /Unique and recurring deletion deliberately use different decision dialogs/);
+});
+
+test("offers saved event settings while a new title is being typed", () => {
+  assert.match(pageSource, /eventTitleSuggestions/);
+  assert.match(pageSource, /eventTemplateSuggestionsDismissed/);
+  assert.match(pageSource, /normalizeCalendarSearch\(eventDraft\.title\)/);
+  assert.match(pageSource, /Copy settings from \$\{suggestion\.title\}/);
+  assert.match(pageSource, /applyEventTemplate/);
+  assert.match(pageSource, /excludedDates: \[\]/);
+  assert.match(pageSource, /repeatUntil: undefined/);
+  assert.match(pageSource, /USE AN EXISTING PLAN/);
+  assert.match(cssSource, /Event title recall/);
+  assert.match(cssSource, /\.event-title-suggestions/);
 });
 
 test("toggles selected moods and keeps reminders editable", () => {
