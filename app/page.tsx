@@ -48,10 +48,6 @@ type AppTheme =
   | "duckmail"
   | "calicotea"
   | "moonquilt"
-  | "peachpuppy"
-  | "matchabunny"
-  | "cherryribbon"
-  | "neonheart"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -490,27 +486,6 @@ const themeOptions: {
       "/assets/openmoji/star.svg",
     ],
     charm: "tucked in softly",
-    showCharm: false,
-    decoratedScene: true,
-  },
-  {
-    id: "peachpuppy", name: "Peach puppy notes", description: "Warm peach paper, puppy cuddles, bows, and cream stationery.", colors: ["#f5c8ae", "#fffaf3", "#d9b58d"], icon: "🐶", art: "/assets/openmoji/basket.svg", accents: ["/assets/openmoji/croissant.svg", "/assets/openmoji/blossom.svg"], charm: "small steps", showCharm: false, decoratedScene: true,
-  },
-  {
-    id: "matchabunny", name: "Matcha bunny desk", description: "Milky matcha, soft green checks, notebooks, and a tiny bunny friend.", colors: ["#b8cf9e", "#fffdf5", "#ead8bc"], icon: "🐰", art: "/assets/openmoji/bunny.svg", accents: ["/assets/openmoji/tulip.svg", "/assets/openmoji/star.svg"], charm: "gently focused", showCharm: false, decoratedScene: true,
-  },
-  {
-    id: "cherryribbon", name: "Cherry ribbon journal", description: "Cherry pink ribbons, vanilla pages, and a little stationery sparkle.", colors: ["#efb3c1", "#fff8f1", "#bdcf9c"], icon: "🎀", art: "/assets/openmoji/strawberry.svg", accents: ["/assets/openmoji/blossom.svg", "/assets/openmoji/star.svg"], charm: "made with love", showCharm: false, decoratedScene: true,
-  },
-  {
-    id: "neonheart",
-    name: "Neon heartbreak",
-    description: "Ink-black edges, paper white, electric pink hearts, stars, and pretty chaos.",
-    colors: ["#ff0a9a", "#ffffff", "#09070b"],
-    icon: "🖤",
-    art: "/assets/openmoji/star.svg",
-    accents: ["/assets/openmoji/moon.svg", "/assets/openmoji/blossom.svg"],
-    charm: "pretty chaos",
     showCharm: false,
     decoratedScene: true,
   },
