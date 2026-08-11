@@ -821,7 +821,6 @@ function timeFromMinutes(value: number) {
 
 const SCHEDULE_START_MINUTE = 6 * 60;
 const SCHEDULE_END_MINUTE = 24 * 60;
-const SCHEDULE_TOTAL_MINUTES = SCHEDULE_END_MINUTE - SCHEDULE_START_MINUTE;
 
 function scheduleDatesFor(dateKey: string, count: 5 | 7) {
   const anchor = dateFromKey(dateKey);
@@ -1035,7 +1034,6 @@ export default function Home() {
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const scheduleSwipeStartRef = useRef<number | null>(null);
-  const scheduleTimelineScrollRef = useRef<HTMLDivElement | null>(null);
   const calendarLongPressRef = useRef<number | null>(null);
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -1340,13 +1338,6 @@ export default function Home() {
     () => scheduleDatesFor(selectedCalendarDate, 7),
     [selectedCalendarDate],
   );
-  const scheduleMarks = useMemo(
-    () => Array.from(
-      { length: SCHEDULE_TOTAL_MINUTES / 30 + 1 },
-      (_, index) => SCHEDULE_START_MINUTE + index * 30,
-    ),
-    [],
-  );
   const currentScheduleMinute = scheduleNow.getHours() * 60 + scheduleNow.getMinutes();
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
@@ -1356,8 +1347,27 @@ export default function Home() {
   );
   const selectedTimedScheduleEvents = layoutScheduleEvents(
     selectedDateEvents.filter((event) => !event.allDay),
-  ).filter(({ start, end }) => end > SCHEDULE_START_MINUTE && start < SCHEDULE_END_MINUTE);
-  const scheduleHasAllDayEvents = selectedScheduleAllDayEvents.length > 0;
+  );
+  const selectedScheduleAgendaEvents = [
+    ...selectedScheduleAllDayEvents,
+    ...selectedTimedScheduleEvents.map(({ event }) => event),
+  ];
+  const lastScheduledMinute = selectedTimedScheduleEvents.reduce(
+    (latest, { end }) => Math.max(latest, end),
+    0,
+  );
+  const scheduleAddMinute = Math.max(
+    SCHEDULE_START_MINUTE,
+    Math.min(
+      SCHEDULE_END_MINUTE - 120,
+      Math.max(
+        selectedCalendarDate === todayKey
+          ? Math.ceil(currentScheduleMinute / 15) * 15
+          : 9 * 60,
+        lastScheduledMinute ? lastScheduledMinute + 15 : 0,
+      ),
+    ),
+  );
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
@@ -1471,24 +1481,6 @@ export default function Home() {
     0,
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
   );
-  useEffect(() => {
-    if (!calendarOpen || !calendarExpanded) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      const timeline = scheduleTimelineScrollRef.current;
-      if (!timeline) return;
-      const firstTimedEvent = selectedTimedScheduleEvents[0]?.start;
-      const focusMinute = firstTimedEvent ?? (selectedCalendarDate === todayKey ? currentScheduleMinute : 9 * 60);
-      const scrollMinute = Math.max(
-        SCHEDULE_START_MINUTE,
-        Math.min(SCHEDULE_END_MINUTE - 120, focusMinute - 60),
-      );
-      timeline.scrollTop = ((scrollMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * timeline.scrollHeight;
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [calendarEvents, calendarExpanded, calendarOpen, selectedCalendarDate, todayKey]);
-
   useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
 
@@ -4674,161 +4666,118 @@ export default function Home() {
                     </div>
 
                     <div className="section-heading agenda-v2-section-heading">
-                      <div>
+                      <div className="agenda-v2-heading-copy">
                         <p className="tiny-label">YOUR RHYTHM</p>
                         <h3>
                           {selectedScheduleIsToday
                             ? "Today’s schedule"
                             : `${selectedScheduleWeekday}’s schedule`}
                         </h3>
+                        <span className="agenda-v2-plan-count">
+                          {selectedScheduleAgendaEvents.length === 0
+                            ? "A clear day"
+                            : `${selectedScheduleAgendaEvents.length} ${selectedScheduleAgendaEvents.length === 1 ? "plan" : "plans"}`}
+                        </span>
                       </div>
-                      <button
-                        className="text-button agenda-v2-return-today"
-                        type="button"
-                        onClick={goToScheduleToday}
-                      >
-                        Return to today
-                      </button>
+                      <div className="agenda-v2-heading-actions">
+                        {!selectedScheduleIsToday && (
+                          <button
+                            className="text-button agenda-v2-return-today"
+                            type="button"
+                            onClick={goToScheduleToday}
+                          >
+                            Return to today
+                          </button>
+                        )}
+                        <button
+                          className="agenda-v2-quick-add"
+                          type="button"
+                          onClick={() => openNewEventAtMinute(selectedCalendarDate, scheduleAddMinute)}
+                          aria-label={`Add an event to ${readableDate(selectedCalendarDate)}`}
+                        >
+                          <span aria-hidden="true">＋</span>
+                          <small>Add</small>
+                        </button>
+                      </div>
                     </div>
 
                     <div
-                      className={`agenda-v2-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`}
+                      className={`agenda-v2-board agenda-v2-list-board ${selectedScheduleAgendaEvents.length ? "has-events" : "is-empty"}`}
                     >
-                      {scheduleHasAllDayEvents && (
-                        <>
-                          <span className="agenda-v2-all-day-label">ALL DAY</span>
-                          <div className="agenda-v2-all-day-list">
-                            <div className="selected">
-                              {selectedScheduleAllDayEvents.slice(0, 2).map((event) => (
-                                <button
-                                  key={event.id}
-                                  className={`agenda-v2-all-day-event ${event.color}`}
-                                  onClick={() => setSelectedEventDetail(event)}
-                                >
-                                  {event.title}
-                                </button>
-                              ))}
-                              {selectedScheduleAllDayEvents.length > 2 && (
-                                <small>+{selectedScheduleAllDayEvents.length - 2}</small>
-                              )}
-                            </div>
+                      {selectedScheduleAgendaEvents.length === 0 ? (
+                        <div className="agenda-v2-empty-state">
+                          <div className="agenda-v2-empty-art" aria-hidden="true">
+                            <span>✦</span>
+                            <strong>♡</strong>
+                            <i>✧</i>
                           </div>
-                        </>
-                      )}
-
-                      <div className="agenda-v2-scroll" ref={scheduleTimelineScrollRef}>
-                        <div className="agenda-v2-timeline">
-                          <div className="agenda-v2-time-grid" aria-hidden="true">
-                            <span className="agenda-v2-time-axis" />
-                            {scheduleMarks.map((minute) => {
-                              const hour = Math.floor(minute / 60) % 24;
-                              const minutes = minute % 60;
-                              const isHour = minutes === 0;
-                              return (
-                                <span
-                                  key={minute}
-                                  className={isHour ? "hour" : "half-hour"}
-                                  style={{ top: `${((minute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%` }}
-                                >
-                                  <span className="agenda-v2-time-label">
-                                    <b>{String(hour % 12 || 12).padStart(2, "0")}:{String(minutes).padStart(2, "0")}</b>
-                                    {isHour && <small>{hour >= 12 ? "PM" : "AM"}</small>}
-                                  </span>
-                                  <i />
-                                </span>
-                              );
-                            })}
-                          </div>
-                          <div className="agenda-v2-day-wrap">
-                            <div
-                              className={[
-                                "agenda-v2-day",
-                                "selected",
-                                selectedCalendarDate === todayKey ? "today" : "",
-                              ].filter(Boolean).join(" ")}
-                              onClick={(event) => {
-                                const bounds = event.currentTarget.getBoundingClientRect();
-                                const ratio = (event.clientY - bounds.top) / Math.max(1, bounds.height);
-                                openNewEventAtMinute(
-                                  selectedCalendarDate,
-                                  SCHEDULE_START_MINUTE + ratio * SCHEDULE_TOTAL_MINUTES,
-                                );
-                              }}
-                              aria-label={`Schedule for ${readableDate(selectedCalendarDate)}. Tap an empty time to add an event.`}
-                            >
-                              {selectedCalendarDate === todayKey && currentScheduleMinute >= SCHEDULE_START_MINUTE && currentScheduleMinute <= SCHEDULE_END_MINUTE && (
-                                <span
-                                  className="agenda-v2-now"
-                                  style={{ top: `${((currentScheduleMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%` }}
-                                />
-                              )}
-                              {selectedTimedScheduleEvents.map(({ event, start, end, lane, laneCount }) => {
-                                const visibleStart = Math.max(SCHEDULE_START_MINUTE, start);
-                                const visibleEnd = Math.min(SCHEDULE_END_MINUTE, end);
-                                const duration = visibleEnd - visibleStart;
-                                const densityClass = duration < 30
-                                  ? "is-short"
-                                  : duration < 60
-                                    ? "is-compact"
-                                    : "";
-                                return (
-                                  <button
-                                    key={event.id}
-                                    className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""}`.trim()}
-                                    style={{
-                                      top: `${((visibleStart - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%`,
-                                      height: `${(duration / SCHEDULE_TOTAL_MINUTES) * 100}%`,
-                                      left: `calc(${(lane / laneCount) * 100}% + 6px)`,
-                                      width: `calc(${100 / laneCount}% - 12px)`,
-                                    }}
-                                    onClick={(pointerEvent) => {
-                                      pointerEvent.stopPropagation();
-                                      setSelectedEventDetail(event);
-                                    }}
-                                  >
-                                    {duration < 30 ? (
-                                      <span className="agenda-v2-event-shortline">
-                                        <time>{eventStartTimeLabel(event)}</time>
-                                        <strong>{event.title}</strong>
-                                      </span>
-                                    ) : (
-                                      <>
-                                        <span className="agenda-v2-event-icon" aria-hidden="true">{scheduleEventIcon(event)}</span>
-                                        <span className="agenda-v2-event-copy">
-                                          <strong>{event.title}</strong>
-                                          <small>
-                                            {eventStartTimeLabel(event)}
-                                            {event.endTime ? ` – ${eventEndTimeLabel(event)}` : ""}
-                                          </small>
-                                          {event.reminder && <span className="agenda-v2-event-reminder">◷ {event.reminder}</span>}
-                                          {duration >= 75 && (event.memo || event.note?.trim() || event.todos?.length || event.files?.length || event.location) && (
-                                        <span className="agenda-v2-event-extras">
-                                          {(event.memo || event.note?.trim()) && (
-                                            <span title={event.note || "Memo attached"}>
-                                              ✎ {event.note?.trim() ? notePreview(event.note, 38) : "Memo"}
-                                            </span>
-                                          )}
-                                          {event.todos?.slice(0, 2).map((todo, todoIndex) => (
-                                            <span key={`${event.id}-agenda-todo-${todoIndex}`} title={todo}>
-                                              {event.todoStates?.[todoIndex] === "done" ? "✓" : "○"} {todo}
-                                            </span>
-                                          ))}
-                                          {(event.todos?.length ?? 0) > 2 && <span>+{event.todos!.length - 2} steps</span>}
-                                          {event.location && <span title={event.location}>⌖ {event.location}</span>}
-                                          {!!event.files?.length && <span>▣ {event.files.length}</span>}
-                                        </span>
-                                          )}
-                                        </span>
-                                        {event.calendar && <span className="agenda-v2-event-category">{event.calendar}</span>}
-                                      </>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                          <p>NOTHING PLANNED YET</p>
+                          <h4>Your day is wide open.</h4>
+                          <span>Add something when you&apos;re ready, or keep this little pocket of rest.</span>
+                          <button
+                            type="button"
+                            onClick={() => openNewEventAtMinute(selectedCalendarDate, scheduleAddMinute)}
+                          >
+                            <b aria-hidden="true">＋</b>
+                            Add something
+                          </button>
                         </div>
-                      </div>
+                      ) : (
+                        <div
+                          className="agenda-v2-list"
+                          aria-label={`Plans for ${readableDate(selectedCalendarDate)}`}
+                        >
+                          <div className="agenda-v2-list-intro">
+                            <span>EARLIEST TO LATEST</span>
+                            <small>Tap a plan to see its full note</small>
+                          </div>
+                          {selectedScheduleAgendaEvents.map((event) => (
+                            <button
+                              type="button"
+                              key={event.id}
+                              className={`agenda-v2-list-event ${event.color}`}
+                              onClick={() => setSelectedEventDetail(event)}
+                              aria-label={`Open ${event.title}, ${eventStartTimeLabel(event)}`}
+                            >
+                              <span className="agenda-v2-list-time">
+                                <strong>{event.allDay ? "All day" : eventStartTimeLabel(event)}</strong>
+                                {!event.allDay && event.endTime && (
+                                  <small>to {eventEndTimeLabel(event)}</small>
+                                )}
+                              </span>
+                              <span className="agenda-v2-list-rail" aria-hidden="true">
+                                <i />
+                              </span>
+                              <span className="agenda-v2-list-copy">
+                                <small>{event.calendar || "AÉREA"}</small>
+                                <strong>{event.title}</strong>
+                                <span>
+                                  {event.location
+                                    ? `⌖ ${notePreview(event.location, 48)}`
+                                    : event.note?.trim()
+                                      ? `✎ ${notePreview(event.note, 54)}`
+                                      : event.todos?.length
+                                        ? `○ ${event.todos.length} ${event.todos.length === 1 ? "step" : "steps"}`
+                                        : event.reminder
+                                          ? `◷ ${event.reminder}`
+                                          : "Tap to see details"}
+                                </span>
+                              </span>
+                              <span className="agenda-v2-list-icon" aria-hidden="true">
+                                {scheduleEventIcon(event)}
+                              </span>
+                            </button>
+                          ))}
+                          <button
+                            className="agenda-v2-list-add"
+                            type="button"
+                            onClick={() => openNewEventAtMinute(selectedCalendarDate, scheduleAddMinute)}
+                          >
+                            <span aria-hidden="true">＋</span>
+                            Add another plan
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <nav className="bottom-nav agenda-v2-home-nav" aria-label="Primary navigation">
                       {tabs.map((tab) => (
