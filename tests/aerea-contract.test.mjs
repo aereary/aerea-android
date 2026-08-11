@@ -82,6 +82,16 @@ test("curves the Lavender rest message", () => {
   assert.match(pageSource, /Q 50 94 85 70/);
 });
 
+test("colors Saturday and Sunday across every theme and calendar surface", () => {
+  assert.match(cssSource, /--weekend-accent:/);
+  assert.match(cssSource, /\.week-strip \.day:nth-child\(6\) > span/);
+  assert.match(cssSource, /\.week-strip \.day:nth-child\(7\) > span/);
+  assert.match(cssSource, /\.agenda-v2-days button:nth-child\(6\) > small/);
+  assert.match(cssSource, /\.agenda-v2-days button:nth-child\(7\) > small/);
+  assert.match(cssSource, /\.month-grid > strong:nth-child\(6\)/);
+  assert.match(cssSource, /\.month-grid > strong:nth-child\(7\)/);
+});
+
 test("ships a clean draining focus clock and varied journal faces", () => {
   assert.doesNotMatch(pageSource, /timer-status-dot/);
   assert.doesNotMatch(pageSource, /timer-leaf/);

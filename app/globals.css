@@ -15482,3 +15482,21 @@ body {
     width:58px;
   }
 }
+
+/* Every world keeps weekends easy to spot without competing with selection. */
+.app-shell {
+  --weekend-accent:color-mix(in srgb,var(--orange) 62%,#d66f9f);
+}
+
+.app-shell[data-color-mode="dark"] {
+  --weekend-accent:color-mix(in srgb,var(--orange) 68%,#ffd4ec);
+}
+
+.app-shell[data-color-mode] .week-strip .day:nth-child(6) > span,
+.app-shell[data-color-mode] .week-strip .day:nth-child(7) > span,
+.app-shell[data-color-mode] .agenda-v2-days button:nth-child(6) > small,
+.app-shell[data-color-mode] .agenda-v2-days button:nth-child(7) > small,
+.app-shell[data-color-mode] .month-grid > strong:nth-child(6),
+.app-shell[data-color-mode] .month-grid > strong:nth-child(7) {
+  color:var(--weekend-accent);
+}
