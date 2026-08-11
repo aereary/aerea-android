@@ -16310,14 +16310,14 @@ body {
 
 @media (max-width:720px) {
   .agenda-v2 {
-    gap:5px;
+    gap:12px;
     padding:5px 12px 0;
   }
 
   .agenda-v2-greeting {
-    flex-basis:148px;
-    margin-inline:2px;
-    padding:16px 20px;
+    flex-basis:142px;
+    margin-inline:14px;
+    padding:15px 18px;
   }
 
   .agenda-v2-greeting .date-label {
@@ -16325,10 +16325,10 @@ body {
   }
 
   .agenda-v2-greeting h2 {
-    font-size:26px;
+    font-size:25px;
     line-height:1.02;
     margin:4px 0 8px;
-    max-width:215px;
+    max-width:205px;
   }
 
   .agenda-v2-greeting .soft-copy {
@@ -16339,35 +16339,35 @@ body {
 
   .agenda-v2-greeting .day-charm,
   .app-shell[data-theme="dreambear"] .agenda-v2-greeting .day-charm {
-    height:90px;
-    width:96px;
+    height:80px;
+    width:86px;
   }
 
   .agenda-v2-greeting .day-charm img,
   .app-shell[data-theme="dreambear"] .agenda-v2-greeting .day-charm img {
-    height:64px;
-    width:64px;
+    height:58px;
+    width:58px;
   }
 
   .agenda-v2-week {
-    flex-basis:64px;
-    margin-inline:-2px;
-    padding:5px 7px;
+    flex-basis:88px;
+    margin-inline:0;
+    padding:7px 8px;
   }
 
   .agenda-v2-week-content {
-    gap:3px;
-    grid-template-columns:30px minmax(0,1fr) 30px;
+    gap:4px;
+    grid-template-columns:32px minmax(0,1fr) 32px;
   }
 
   .agenda-v2-week-arrow {
-    font-size:19px;
-    height:30px;
-    width:30px;
+    font-size:21px;
+    height:32px;
+    width:32px;
   }
 
   .agenda-v2-days {
-    height:50px;
+    height:66px;
   }
 
   .agenda-v2-days small {
@@ -16375,13 +16375,13 @@ body {
   }
 
   .agenda-v2-days strong {
-    font-size:15px;
-    margin-top:3px;
+    font-size:17px;
+    margin-top:5px;
   }
 
   .agenda-v2-section-heading {
-    flex-basis:38px;
-    margin-inline:4px;
+    flex-basis:50px;
+    margin-inline:7px;
   }
 
   .agenda-v2-section-heading .tiny-label {
@@ -16407,14 +16407,14 @@ body {
   }
 
   .agenda-v2-greeting {
-    flex-basis:140px;
-    margin-inline:2px;
-    padding:14px 17px;
+    flex-basis:134px;
+    margin-inline:12px;
+    padding:13px 16px;
   }
 
   .agenda-v2-greeting h2 {
-    font-size:24px;
-    max-width:184px;
+    font-size:23px;
+    max-width:172px;
   }
 
   .agenda-v2-greeting .soft-copy {
@@ -16424,13 +16424,13 @@ body {
 
   .agenda-v2-greeting .day-charm,
   .app-shell[data-theme="dreambear"] .agenda-v2-greeting .day-charm {
-    height:80px;
-    width:84px;
+    height:74px;
+    width:78px;
   }
 
   .agenda-v2-greeting .day-charm img,
   .app-shell[data-theme="dreambear"] .agenda-v2-greeting .day-charm img {
-    height:57px;
-    width:57px;
+    height:53px;
+    width:53px;
   }
 }
