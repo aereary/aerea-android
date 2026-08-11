@@ -15501,7 +15501,7 @@ body {
   color:var(--weekend-accent);
 }
 
-/* Schedule composition v6: continuous theme, exact Home dock, compact day end. */
+/* Schedule composition v7: continuous theme, exact Home dock, compact day end. */
 .calendar-modal.calendar-expanded.agenda-v2-modal {
   background:var(--app-backdrop)!important;
   position:relative;
@@ -15523,7 +15523,15 @@ body {
 }
 
 .calendar-modal.calendar-expanded.agenda-v2-modal::after {
-  display:none;
+  background:var(--cream);
+  bottom:0;
+  content:"";
+  height:142px;
+  left:0;
+  pointer-events:none;
+  position:absolute;
+  right:0;
+  z-index:1;
 }
 
 .calendar-modal.calendar-expanded.agenda-v2-modal > .agenda-v2-homebar,
@@ -15569,23 +15577,6 @@ body {
 
 .agenda-v2-section-heading h3 {
   font-size:23px;
-}
-
-/* Preserve Home's dock exactly; only its white surface continues to the edge. */
-.agenda-v2 > .agenda-v2-home-nav {
-  isolation:isolate;
-  overflow:visible;
-}
-
-.agenda-v2 > .agenda-v2-home-nav::after {
-  background:inherit;
-  bottom:-20px;
-  content:"";
-  left:-1px;
-  position:absolute;
-  right:-1px;
-  top:48%;
-  z-index:-1;
 }
 
 .agenda-v2-scroll {
@@ -15676,8 +15667,8 @@ body {
     font-size:20px;
   }
 
-  .agenda-v2 > .agenda-v2-home-nav::after {
-    bottom:-12px;
+  .calendar-modal.calendar-expanded.agenda-v2-modal::after {
+    height:132px;
   }
 
   .agenda-v2-scroll {

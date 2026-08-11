@@ -184,9 +184,10 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.agenda-v2-greeting/);
   assert.match(cssSource, /\.agenda-v2-week-content[\s\S]*grid-template-columns:42px minmax\(0,1fr\) 42px/);
   assert.match(cssSource, /\.agenda-v2-return-today/);
-  assert.match(cssSource, /Schedule composition v6/);
+  assert.match(cssSource, /Schedule composition v7/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal \.agenda-v3-scene[\s\S]*height:100%/);
-  assert.match(cssSource, /\.agenda-v2 > \.agenda-v2-home-nav::after[\s\S]*background:inherit[\s\S]*bottom:-20px/);
+  assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal::after[\s\S]*background:var\(--cream\)[\s\S]*height:142px/);
+  assert.doesNotMatch(cssSource, /agenda-v2-home-nav::after/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav \.nav-item/);
   assert.match(cssSource, /@media \(max-width:720px\)[\s\S]*\.agenda-v2-greeting[\s\S]*flex-basis:172px/);
   assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
