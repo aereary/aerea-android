@@ -1498,6 +1498,7 @@ export default function Home() {
     );
     if (datedEvents.length === 0) return;
 
+    let retryTimer = 0;
     const frame = window.requestAnimationFrame(() => {
       const timeline = scheduleTimelineScrollRef.current;
       if (!timeline) return;
@@ -1511,10 +1512,20 @@ export default function Home() {
         SCHEDULE_START_MINUTE,
         Math.min(SCHEDULE_END_MINUTE - 180, focusMinute - 60),
       );
-      timeline.scrollTop = ((scrollMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * timeline.scrollHeight;
+      const timelineContent = timeline.querySelector<HTMLElement>(".agenda-v2-timeline");
+      const scrollTarget = ((scrollMinute - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES)
+        * (timelineContent?.offsetHeight ?? timeline.scrollHeight);
+      const applyScroll = () => {
+        timeline.scrollTop = scrollTarget;
+      };
+      applyScroll();
+      retryTimer = window.setTimeout(applyScroll, 120);
     });
 
-    return () => window.cancelAnimationFrame(frame);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(retryTimer);
+    };
   }, [calendarEvents, calendarExpanded, calendarOpen, selectedCalendarDate, todayKey]);
 
   useEffect(() => {
