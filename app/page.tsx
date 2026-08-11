@@ -189,6 +189,11 @@ type RepeatOption =
 
 type EventDraft = Omit<CalendarEvent, "id">;
 
+type CalendarSearchOccurrence = {
+  event: CalendarEvent;
+  date: string;
+};
+
 type SketchPage = {
   id: string;
   title: string;
@@ -824,6 +829,50 @@ function eventEndTimeLabel(event: CalendarEvent) {
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function normalizeCalendarSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .trim();
+}
+
+function calendarEventSearchText(event: CalendarEvent) {
+  return normalizeCalendarSearch(
+    [
+      event.title,
+      event.calendar,
+      event.note,
+      event.location,
+      event.guests,
+      event.reminder,
+      event.repeat,
+      ...(event.todos ?? []),
+      ...(event.files ?? []),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+function calendarEventAtOccurrence(event: CalendarEvent, dateKey: string) {
+  const originalStart = dateFromKey(event.date);
+  const originalEnd = dateFromKey(event.endDate ?? event.date);
+  const durationDays = Math.max(
+    0,
+    Math.round(
+      (originalEnd.getTime() - originalStart.getTime()) / 86_400_000,
+    ),
+  );
+  const occurrenceEnd = dateFromKey(dateKey);
+  occurrenceEnd.setDate(occurrenceEnd.getDate() + durationDays);
+  return {
+    ...event,
+    date: dateKey,
+    endDate: event.endDate ? localDateKey(occurrenceEnd) : undefined,
+  };
+}
+
 function scheduleEventIcon(event: CalendarEvent) {
   const searchable = `${event.calendar ?? ""} ${event.title}`.toLowerCase();
   if (searchable.includes("workout") || searchable.includes("health")) return "🏋️";
@@ -944,6 +993,8 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [calendarSearchOpen, setCalendarSearchOpen] = useState(false);
+  const [calendarSearchQuery, setCalendarSearchQuery] = useState("");
   const [scheduleFocusOpen, setScheduleFocusOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
@@ -1391,6 +1442,76 @@ export default function Home() {
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const calendarSearchResults = useMemo<CalendarSearchOccurrence[]>(() => {
+    const query = normalizeCalendarSearch(calendarSearchQuery);
+    if (!query) return [];
+
+    const today = dateFromKey(todayKey);
+    const rangeStart = new Date(today);
+    rangeStart.setDate(rangeStart.getDate() - 365);
+    const rangeEnd = new Date(today);
+    rangeEnd.setDate(rangeEnd.getDate() + 365);
+    const todayTime = today.getTime();
+    const results: CalendarSearchOccurrence[] = [];
+
+    calendarEvents
+      .filter((event) => calendarEventSearchText(event).includes(query))
+      .forEach((event) => {
+        if ((event.repeat ?? "Never") === "Never") {
+          results.push({ event, date: event.date });
+          return;
+        }
+
+        const seriesStart = dateFromKey(event.date);
+        const cursor = new Date(
+          Math.max(seriesStart.getTime(), rangeStart.getTime()),
+        );
+        const occurrences: CalendarSearchOccurrence[] = [];
+        while (cursor <= rangeEnd) {
+          const date = localDateKey(cursor);
+          if (eventOccursOn(event, date)) occurrences.push({ event, date });
+          cursor.setDate(cursor.getDate() + 1);
+        }
+
+        if (occurrences.length === 0) {
+          results.push({ event, date: event.date });
+          return;
+        }
+
+        results.push(
+          ...occurrences
+            .sort(
+              (first, second) =>
+                Math.abs(dateFromKey(first.date).getTime() - todayTime) -
+                Math.abs(dateFromKey(second.date).getTime() - todayTime),
+            )
+            .slice(0, 80),
+        );
+      });
+
+    return results
+      .sort(
+        (first, second) =>
+          first.date.localeCompare(second.date) ||
+          first.event.time.localeCompare(second.event.time),
+      )
+      .slice(0, 240);
+  }, [calendarEvents, calendarSearchQuery, todayKey]);
+  const calendarSearchGroups = useMemo(() => {
+    const groups: Array<{
+      date: string;
+      occurrences: CalendarSearchOccurrence[];
+    }> = [];
+    calendarSearchResults.forEach((occurrence) => {
+      const current = groups[groups.length - 1];
+      if (current?.date === occurrence.date) {
+        current.occurrences.push(occurrence);
+      } else {
+        groups.push({ date: occurrence.date, occurrences: [occurrence] });
+      }
+    });
+    return groups;
+  }, [calendarSearchResults]);
   const selectedScheduleAllDayEvents = selectedDateEvents.filter(
     (event) => event.allDay,
   );
@@ -1617,6 +1738,8 @@ export default function Home() {
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setEventEditorOpen(false);
     setCalendarExpanded(false);
+    setCalendarSearchOpen(false);
+    setCalendarSearchQuery("");
     setMonthPickerOpen(false);
     setCalendarOpen(true);
   };
@@ -1923,6 +2046,7 @@ export default function Home() {
   };
 
   const openNewEvent = (dateKey = selectedCalendarDate) => {
+    setCalendarSearchOpen(false);
     setEditingEventId(null);
     setEventDraft(makeEventDraft(dateKey));
     setTodoDraft("");
@@ -1943,6 +2067,7 @@ export default function Home() {
   };
 
   const openEventEditor = (calendarEvent: CalendarEvent) => {
+    setCalendarSearchOpen(false);
     setEditingEventId(calendarEvent.id);
     setEventDraft({
       ...makeEventDraft(calendarEvent.date),
@@ -4648,6 +4773,20 @@ export default function Home() {
                   <span className="swipe-source">↔ swipe months</span>
                   {!calendarExpanded && (
                     <button
+                      className="calendar-search-trigger"
+                      type="button"
+                      onClick={() => {
+                        setMonthPickerOpen(false);
+                        setCalendarSearchOpen(true);
+                      }}
+                      aria-label="Search calendar events"
+                    >
+                      <span className="calendar-search-glyph" aria-hidden="true" />
+                      Search
+                    </button>
+                  )}
+                  {!calendarExpanded && (
+                    <button
                       className="calendar-view-toggle"
                       type="button"
                       aria-pressed={false}
@@ -4664,6 +4803,160 @@ export default function Home() {
                     </button>
                   )}
                 </div>
+                {calendarSearchOpen && !calendarExpanded && (
+                  <section
+                    className="calendar-search-screen"
+                    aria-label="Search calendar events"
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        setCalendarSearchOpen(false);
+                        setCalendarSearchQuery("");
+                      }
+                    }}
+                  >
+                    <header className="calendar-search-header">
+                      <button
+                        className="calendar-search-back"
+                        type="button"
+                        onClick={() => {
+                          setCalendarSearchOpen(false);
+                          setCalendarSearchQuery("");
+                        }}
+                        aria-label="Back to compact calendar"
+                      >
+                        ←
+                      </button>
+                      <div className="calendar-search-field">
+                        <span
+                          className="calendar-search-glyph"
+                          aria-hidden="true"
+                        />
+                        <input
+                          autoFocus
+                          type="search"
+                          value={calendarSearchQuery}
+                          onChange={(event) =>
+                            setCalendarSearchQuery(event.target.value)
+                          }
+                          placeholder="Search events"
+                          aria-label="Search by event, class, place, or note"
+                        />
+                        {calendarSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setCalendarSearchQuery("")}
+                            aria-label="Clear search"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </header>
+
+                    <div className="calendar-search-summary" aria-live="polite">
+                      <span>
+                        {calendarSearchQuery.trim()
+                          ? calendarSearchResults.length === 240
+                            ? "240+ results"
+                            : `${calendarSearchResults.length} ${calendarSearchResults.length === 1 ? "result" : "results"}`
+                          : "Search your whole calendar"}
+                      </span>
+                      {calendarSearchQuery.trim() && (
+                        <small>title · calendar · notes · place</small>
+                      )}
+                    </div>
+
+                    <div className="calendar-search-results">
+                      {!calendarSearchQuery.trim() ? (
+                        <div className="calendar-search-empty">
+                          <span className="calendar-search-empty-icon" aria-hidden="true">
+                            <i className="calendar-search-glyph" />
+                          </span>
+                          <strong>Find any little plan</strong>
+                          <p>
+                            Search a title, class, place, description, checklist,
+                            or attached file.
+                          </p>
+                        </div>
+                      ) : calendarSearchGroups.length === 0 ? (
+                        <div className="calendar-search-empty no-match">
+                          <span aria-hidden="true">☁</span>
+                          <strong>No events found</strong>
+                          <p>Try another word or check the spelling.</p>
+                        </div>
+                      ) : (
+                        calendarSearchGroups.map((group) => (
+                          <section
+                            className="calendar-search-group"
+                            key={group.date}
+                            aria-label={`Events for ${readableDate(group.date)}`}
+                          >
+                            <header>
+                              <strong>
+                                {dateFromKey(group.date).toLocaleDateString("en", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </strong>
+                              <span>
+                                {group.occurrences.length}{" "}
+                                {group.occurrences.length === 1 ? "event" : "events"}
+                              </span>
+                            </header>
+                            <div>
+                              {group.occurrences.map(({ event, date }) => (
+                                <button
+                                  className="calendar-search-result"
+                                  type="button"
+                                  key={`${event.id}-${date}`}
+                                  style={
+                                    {
+                                      "--search-accent":
+                                        eventColors.find(
+                                          (color) => color.value === event.color,
+                                        )?.hex ?? "#ae96d8",
+                                    } as CSSProperties
+                                  }
+                                  onClick={() =>
+                                    setSelectedEventDetail(
+                                      calendarEventAtOccurrence(event, date),
+                                    )
+                                  }
+                                >
+                                  <i aria-hidden="true" />
+                                  <span className="calendar-search-result-copy">
+                                    <span>
+                                      <strong>{event.title}</strong>
+                                      {event.calendar && (
+                                        <small> — {event.calendar}</small>
+                                      )}
+                                    </span>
+                                    <time>
+                                      {eventStartTimeLabel(event)}
+                                      {event.endTime
+                                        ? ` – ${eventEndTimeLabel(event)}`
+                                        : ""}
+                                    </time>
+                                    {event.note?.trim() && (
+                                      <em>{notePreview(event.note, 92)}</em>
+                                    )}
+                                  </span>
+                                  <b aria-hidden="true">›</b>
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        ))
+                      )}
+                    </div>
+
+                    <footer className="calendar-search-footer">
+                      ♡ Tap a result to open its full note
+                    </footer>
+                  </section>
+                )}
                 {calendarExpanded && (
                   <div className="agenda-v2">
                     <section className="welcome-row agenda-v2-greeting">
@@ -5525,13 +5818,19 @@ export default function Home() {
             <button
               className="event-detail-edit"
               onClick={() => {
-                const event = selectedEventDetail;
+                const event =
+                  calendarEvents.find(
+                    (calendarEvent) =>
+                      calendarEvent.id === selectedEventDetail.id,
+                  ) ?? selectedEventDetail;
                 const eventDate = dateFromKey(event.date);
                 setSelectedCalendarDate(event.date);
                 setViewMonth(
                   new Date(eventDate.getFullYear(), eventDate.getMonth(), 1),
                 );
                 setSelectedEventDetail(null);
+                setCalendarSearchOpen(false);
+                setCalendarSearchQuery("");
                 setCalendarOpen(true);
                 openEventEditor(event);
               }}

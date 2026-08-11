@@ -198,6 +198,23 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
 
+test("searches every event from the compact calendar", () => {
+  assert.match(pageSource, /calendarSearchOpen/);
+  assert.match(pageSource, /calendarSearchQuery/);
+  assert.match(pageSource, /normalizeCalendarSearch/);
+  assert.match(pageSource, /calendarEventSearchText/);
+  assert.match(pageSource, /calendarSearchGroups/);
+  assert.match(pageSource, /calendarEventAtOccurrence/);
+  assert.match(pageSource, /aria-label="Search calendar events"/);
+  assert.match(pageSource, /placeholder="Search events"/);
+  assert.match(pageSource, /title · calendar · notes · place/);
+  assert.match(pageSource, /setSelectedEventDetail\([\s\S]*calendarEventAtOccurrence/);
+  assert.match(cssSource, /\.calendar-search-trigger/);
+  assert.match(cssSource, /\.calendar-search-screen/);
+  assert.match(cssSource, /\.calendar-search-result/);
+  assert.match(cssSource, /\.calendar-modal:has\(\.calendar-search-screen\)/);
+});
+
 test("removes the secret area and all of its entry points", () => {
   assert.doesNotMatch(pageSource, /SafePlace/);
   assert.doesNotMatch(pageSource, /safePlace/);
