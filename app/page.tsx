@@ -4595,12 +4595,7 @@ export default function Home() {
                   )}
                 </div>
                 {calendarExpanded && (
-                  <div
-                    className={`agenda-v2${scheduleFocusOpen ? " is-focus-open" : ""}`}
-                    role={scheduleFocusOpen ? "dialog" : undefined}
-                    aria-modal={scheduleFocusOpen ? true : undefined}
-                    aria-label={scheduleFocusOpen ? `${selectedScheduleWeekday} schedule` : undefined}
-                  >
+                  <div className="agenda-v2">
                     <section className="welcome-row agenda-v2-greeting">
                       <div>
                         <p className="date-label">
@@ -4733,14 +4728,9 @@ export default function Home() {
                             aria-expanded={scheduleFocusOpen}
                             aria-label={`Open ${selectedScheduleIsToday ? "today’s" : `${selectedScheduleWeekday}’s`} schedule full screen`}
                           >
-                            <span>
-                              {selectedScheduleIsToday
-                                ? "Today’s schedule"
-                                : `${selectedScheduleWeekday}’s schedule`}
-                            </span>
-                            {!scheduleFocusOpen && (
-                              <span className="agenda-v2-heading-expand" aria-hidden="true">↗</span>
-                            )}
+                            {selectedScheduleIsToday
+                              ? "Today’s schedule"
+                              : `${selectedScheduleWeekday}’s schedule`}
                           </button>
                         </h3>
                         <span className="agenda-v2-plan-count">
@@ -4768,7 +4758,37 @@ export default function Home() {
                           <span aria-hidden="true">＋</span>
                           <small>Add</small>
                         </button>
-                        {scheduleFocusOpen && (
+                      </div>
+                    </div>
+
+                    {scheduleFocusOpen && (
+                      <div
+                        className="agenda-v2-focus-backdrop"
+                        onClick={() => setScheduleFocusOpen(false)}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div
+                      className={[
+                        selectedScheduleAgendaEvents.length
+                          ? `agenda-v2-board agenda-v2-timeline-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`
+                          : "agenda-v2-board agenda-v2-list-board is-empty",
+                        scheduleFocusOpen ? "is-focus-open" : "",
+                      ].filter(Boolean).join(" ")}
+                      role={scheduleFocusOpen ? "dialog" : undefined}
+                      aria-modal={scheduleFocusOpen ? true : undefined}
+                      aria-label={scheduleFocusOpen ? `${selectedScheduleWeekday} schedule` : undefined}
+                    >
+                      {scheduleFocusOpen && (
+                        <div className="agenda-v2-focus-card-header">
+                          <div>
+                            <small>YOUR RHYTHM</small>
+                            <strong>
+                              {selectedScheduleIsToday
+                                ? "Today’s schedule"
+                                : `${selectedScheduleWeekday}’s schedule`}
+                            </strong>
+                          </div>
                           <button
                             className="agenda-v2-focus-close"
                             type="button"
@@ -4777,15 +4797,8 @@ export default function Home() {
                           >
                             ×
                           </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      className={selectedScheduleAgendaEvents.length
-                        ? `agenda-v2-board agenda-v2-timeline-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`
-                        : "agenda-v2-board agenda-v2-list-board is-empty"}
-                    >
+                        </div>
+                      )}
                       {selectedScheduleAgendaEvents.length === 0 ? (
                         <div className="agenda-v2-empty-state">
                           <div className="agenda-v2-empty-art" aria-hidden="true">
