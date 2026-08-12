@@ -19578,7 +19578,7 @@ body {
 
 .day-summary-card .day-summary-orbs {
   height:188px;
-  overflow:hidden;
+  overflow:visible;
   pointer-events:none;
   position:absolute;
   right:0;
@@ -19744,9 +19744,10 @@ body {
   gap:13px;
   margin:0 -3px;
   min-height:0;
+  overflow-x:visible;
   overflow-y:auto;
   overscroll-behavior:contain;
-  padding:2px 3px 9px;
+  padding:2px 3px 14px;
   scrollbar-color:#d7c4f3 transparent;
   scrollbar-width:thin;
 }
@@ -19757,12 +19758,22 @@ body {
   background:linear-gradient(118deg,color-mix(in srgb,var(--pocket-color) 90%,#fff),color-mix(in srgb,var(--pocket-color) 72%,#fff));
   border:1px solid rgba(255,255,255,.88);
   border-radius:25px;
+  box-sizing:border-box;
   box-shadow:0 4px 12px rgba(91,70,137,.08),inset 0 1px 0 rgba(255,255,255,.72);
   color:#30336e;
+  cursor:pointer;
   display:block;
+  height:max-content;
+  overflow:visible;
   padding:16px 18px;
+  position:relative;
   text-align:left;
   width:100%;
+}
+
+.day-summary-card .day-summary-event:focus-visible {
+  outline:3px solid rgba(167,120,239,.45);
+  outline-offset:2px;
 }
 
 .day-summary-card .day-summary-event.lilac { --pocket-color:#e5daf9; }
@@ -19850,6 +19861,8 @@ body {
   display:grid;
   gap:4px;
   list-style:none;
+  margin-bottom:2px;
+  overflow:visible;
 }
 
 .day-summary-card .day-summary-event li {
@@ -19959,7 +19972,7 @@ body {
     width:min(89vw,430px);
   }
 
-  .day-summary-card .day-summary-orbs { height:146px; width:142px; }
+  .day-summary-card .day-summary-orbs { height:208px; overflow:visible; width:142px; }
   .day-summary-card > header { padding-bottom:13px; }
   .day-summary-card > header .tiny-label { font-size:9px; margin-bottom:9px; padding:5px 13px; }
   .day-summary-card > header h2 { border-radius:16px; font-size:clamp(21px,6.2vw,27px); padding:9px 13px 10px; }
@@ -19969,8 +19982,8 @@ body {
   .day-summary-card .day-summary-cloud { height:36px; left:18px; top:8px; width:65px; }
   .day-summary-card .day-summary-sparkles { font-size:14px; }
   .day-summary-card > header .day-summary-close { border-width:4px; font-size:27px; height:48px; right:-2px; top:0; width:48px; }
-  .day-summary-card .day-summary-events { gap:9px; padding-bottom:7px; }
-  .day-summary-card .day-summary-event { border-radius:20px; min-height:75px; padding:14px 14px; }
+  .day-summary-card .day-summary-events { gap:9px; padding-bottom:12px; }
+  .day-summary-card .day-summary-event { border-radius:20px; height:max-content; min-height:75px; overflow:visible; padding:14px 14px 17px; }
   .day-summary-card .day-summary-event-heading { gap:10px; grid-template-columns:42px minmax(0,1fr) 19px; }
   .day-summary-card .day-summary-event-heading .day-summary-event-heart { font-size:27px; height:42px; width:42px; }
   .day-summary-card .day-summary-event-heading strong { font-size:17px; }

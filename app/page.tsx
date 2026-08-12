@@ -5893,7 +5893,20 @@ export default function Home() {
                   {summaryEvents.map((event, index) => {
                     const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
                     return (
-                      <button className={`day-summary-event ${event.color} pocket-tone-${index % 4} ${hasDetails ? "expanded" : "compact"}`} key={event.id} onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}>
+                      <article
+                        className={`day-summary-event ${event.color} pocket-tone-${index % 4} ${hasDetails ? "expanded" : "compact"}`}
+                        key={event.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}
+                        onKeyDown={(keyboardEvent) => {
+                          if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+                            keyboardEvent.preventDefault();
+                            setDaySummaryDate(null);
+                            setSelectedEventDetail(event);
+                          }
+                        }}
+                      >
                         <div className="day-summary-event-heading">
                           <span className="day-summary-event-heart" aria-hidden="true">♡</span>
                           <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
@@ -5903,7 +5916,7 @@ export default function Home() {
                         {!!event.todos?.length && (
                           <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
                         )}
-                      </button>
+                      </article>
                     );
                   })}
                 </div>
