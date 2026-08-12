@@ -19578,9 +19578,7 @@ body {
 }
 
 .day-summary-backdrop .day-summary-card {
-  background:
-    linear-gradient(145deg,rgba(255,255,255,.25),transparent 36%),
-    #fffaf2;
+  background:#fffdf8;
   border:2px solid rgba(255,255,255,.92);
   border-radius:32px;
   box-shadow:
@@ -19942,7 +19940,7 @@ body {
 }
 
 .day-summary-card .day-summary-divider > span {
-  background:#fffaf2;
+  background:#fffdf8;
   color:#a875ef;
   font-size:32px;
   line-height:1;
