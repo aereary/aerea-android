@@ -6033,7 +6033,11 @@ export default function Home() {
                       {selectedEventDetail.reminder || "No reminder"}
                     </strong>
                   </div>
-                  <b aria-hidden="true">♥</b>
+                  <b aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 21C10.7 19.9 4.2 15.3 2.6 11.6C1 7.9 3 4.2 6.7 4.2C9 4.2 10.5 5.6 12 7.4C13.5 5.6 15 4.2 17.3 4.2C21 4.2 23 7.9 21.4 11.6C19.8 15.3 13.3 19.9 12 21Z" />
+                    </svg>
+                  </b>
                 </div>
 
                 <div className="event-detail-facts">

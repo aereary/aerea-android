@@ -18920,8 +18920,14 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-corner::after {
-  content:none;
-  display:none;
+  background:rgba(246,213,232,.42);
+  border-radius:58% 0 0 100%;
+  bottom:-22px;
+  content:"";
+  height:92px;
+  position:absolute;
+  right:0;
+  width:118px;
 }
 
 .app-shell[data-theme] .event-detail-header {
@@ -19138,13 +19144,19 @@ body {
   align-items:center;
   color:#c8b3ef;
   display:flex;
-  font-size:20px;
-  font-weight:400;
   height:22px;
   justify-content:center;
   justify-self:center;
   line-height:1;
   text-align:center;
+  width:22px;
+}
+
+.app-shell[data-theme] .event-detail-reminder b svg {
+  display:block;
+  fill:currentColor;
+  height:22px;
+  overflow:visible;
   width:22px;
 }
 
