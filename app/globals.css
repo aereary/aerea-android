@@ -18920,14 +18920,8 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-corner::after {
-  background:rgba(246,213,232,.42);
-  border-radius:58% 0 0 100%;
-  bottom:-22px;
-  content:"";
-  height:92px;
-  position:absolute;
-  right:0;
-  width:118px;
+  content:none;
+  display:none;
 }
 
 .app-shell[data-theme] .event-detail-header {
@@ -19010,21 +19004,30 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-divider {
-  border-top:2px dashed #d9cbed;
+  border-top:0;
   height:24px;
   margin:0 2px 5px;
   position:relative;
 }
 
+.app-shell[data-theme] .event-detail-divider::before {
+  border-top:2px dashed #d9cbed;
+  content:"";
+  left:0;
+  position:absolute;
+  right:29px;
+  top:0;
+}
+
 .app-shell[data-theme] .event-detail-divider span {
   background:transparent;
   color:#c6abe9;
-  font-size:20px;
+  font-size:17px;
   line-height:1;
   padding:0;
   position:absolute;
-  right:-2px;
-  top:-14px;
+  right:0;
+  top:-9px;
 }
 
 .app-shell[data-theme] .event-detail-time {
@@ -19132,10 +19135,17 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-reminder b {
+  align-items:center;
   color:#c8b3ef;
-  font-size:25px;
+  display:flex;
+  font-size:20px;
   font-weight:400;
+  height:22px;
+  justify-content:center;
+  justify-self:center;
+  line-height:1;
   text-align:center;
+  width:22px;
 }
 
 .app-shell[data-theme] .event-detail-facts {

@@ -307,6 +307,9 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:450px/);
   assert.match(cssSource, /\.event-detail-title-row \.event-detail-doodle[\s\S]*flex:0 0 78px/);
   assert.match(cssSource, /\.event-detail-divider span[\s\S]*background:transparent/);
+  assert.match(cssSource, /\.event-detail-divider::before[\s\S]*right:29px/);
+  assert.match(cssSource, /\.event-detail-corner::after[\s\S]*content:none/);
+  assert.match(cssSource, /\.event-detail-reminder b[\s\S]*font-size:20px/);
   assert.match(cssSource, /\.event-detail-corner[\s\S]*border-radius:0 38px 0 100%/);
   assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
 });
