@@ -5884,7 +5884,11 @@ export default function Home() {
                     </span>
                   </div>
                 </div>
-                <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">×</button>
+                <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M7 7 17 17M17 7 7 17" />
+                  </svg>
+                </button>
               </header>
               {summaryEvents.length === 0 ? (
                 <div className="day-summary-empty"><span>☁</span><strong>Nothing written here yet</strong><p>This little page is completely yours.</p></div>
@@ -5908,7 +5912,11 @@ export default function Home() {
                         }}
                       >
                         <div className="day-summary-event-heading">
-                          <span className="day-summary-event-heart" aria-hidden="true">♡</span>
+                          <span className="day-summary-event-heart" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                              <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
+                            </svg>
+                          </span>
                           <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
                           <i aria-hidden="true">›</i>
                         </div>

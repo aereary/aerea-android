@@ -316,6 +316,17 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
 });
 
+test("keeps the Day Pocket decorations faithful and stable across devices", () => {
+  assert.match(pageSource, /className="day-summary-orbs"/);
+  assert.match(pageSource, /className="day-summary-doodle"/);
+  assert.match(pageSource, /className="day-summary-close"[\s\S]*M7 7 17 17M17 7 7 17/);
+  assert.match(pageSource, /className="day-summary-event-heart"[\s\S]*M12 20\.5C/);
+  assert.match(cssSource, /\.day-summary-orbs i:nth-child\(1\)[\s\S]*border-radius:0 0 0 100%/);
+  assert.match(cssSource, /\.day-summary-cloud[\s\S]*fill:none/);
+  assert.match(cssSource, /\.day-summary-sparkles i[\s\S]*clip-path:polygon/);
+  assert.match(cssSource, /\.day-summary-event-heart svg[\s\S]*stroke-linejoin:round/);
+});
+
 test("deletes unique events safely and edits repeating cycles by occurrence", () => {
   assert.match(pageSource, /repeatUntil\?: string/);
   assert.match(pageSource, /excludedDates\?: string\[\]/);
