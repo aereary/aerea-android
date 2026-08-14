@@ -5527,17 +5527,27 @@ export default function Home() {
                       <div className="extended-calendar-tools">
                         <button
                           type="button"
-                          onClick={goToScheduleToday}
-                          aria-label="Go to today"
-                          title="Today"
+                          className="extended-search-button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                            setCalendarSearchOpen(true);
+                          }}
+                          aria-label="Search calendar events"
+                          title="Search events"
                         >
-                          ☆
+                          <span className="calendar-search-glyph" aria-hidden="true" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => setHiddenCalendarSources([])}
-                          aria-label="Show every calendar"
-                          title="Show every calendar"
+                          className="extended-schedule-button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                            setCalendarScheduleOpen(true);
+                          }}
+                          aria-label="Open daily schedule"
+                          title="Daily schedule"
                         >
                           <span aria-hidden="true">☷</span>
                         </button>
@@ -8188,14 +8198,8 @@ function TodayScreen({
                 title="Hold to preview event"
               >
                 <div className="time-block">
-                  <strong>
-                    {event.allDay ? "ALL" : eventDetailTimeParts(event).range}
-                  </strong>
-                  <span>
-                    {event.allDay
-                      ? "DAY"
-                      : eventDetailTimeParts(event).period}
-                  </span>
+                  <strong>{event.allDay ? "ALL" : event.time}</strong>
+                  <span>{event.allDay ? "DAY" : "TIME"}</span>
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">
