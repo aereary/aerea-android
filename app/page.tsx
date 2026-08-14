@@ -30,16 +30,6 @@ type Space = "menu" | "classes" | "sketchbook";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type MetricsPeriod = "week" | "month" | "year" | "all";
 type AppTheme =
-  | "piggyparcel"
-  | "rainywindow"
-  | "scrapbookdesk"
-  | "tinyliner"
-  | "pocketcomputer"
-  | "piggygelato"
-  | "calicocafe"
-  | "pawcloud"
-  | "midnightracing"
-  | "pixelpenguin"
   | "storybook"
   | "otter"
   | "dreambear"
@@ -212,12 +202,21 @@ type EventDeleteRequest = {
 
 type PostItColor = "lavender" | "butter" | "blush" | "sky";
 type PostItDoodle = "heart" | "star" | "smile" | "pin";
+type PostItPage =
+  | "today"
+  | "habits"
+  | "focus"
+  | "journal"
+  | "spaces:menu"
+  | "spaces:classes"
+  | "spaces:sketchbook";
 
 type PostItNote = {
   id: string;
   text: string;
   color: PostItColor;
   doodle: PostItDoodle;
+  page: PostItPage;
   x: number;
   y: number;
   rotation: number;
@@ -262,6 +261,12 @@ type SketchStroke = {
 
 type SketchTool = SketchStroke["tool"] | "eyedropper";
 
+type CalendarCategory = {
+  id: string;
+  name: string;
+  color: EventColor;
+};
+
 const themeOptions: {
   id: Exclude<AppTheme, "custom">;
   name: string;
@@ -276,166 +281,6 @@ const themeOptions: {
   featured?: boolean;
   interfaceIdea?: string;
 }[] = [
-  {
-    id: "piggyparcel",
-    name: "Piggy parcel post",
-    description: "Postage-stamp tabs, little envelopes, coral ink, and a piglet sorting happy mail.",
-    colors: ["#ef879f", "#fffaf0", "#71b9c7"],
-    icon: "💌",
-    art: "/assets/openmoji/love-letter.svg",
-    accents: [
-      "/assets/openmoji/pig-face.svg",
-      "/assets/openmoji/blossom.svg",
-    ],
-    charm: "special delivery",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "postage tabs",
-  },
-  {
-    id: "rainywindow",
-    name: "Rainy window room",
-    description: "Dusky glass panes, quiet rain, aqua glimmers, and controls that float like window droplets.",
-    colors: ["#365b78", "#e9f4f3", "#8fd6d0"],
-    icon: "☔",
-    art: "/assets/openmoji/umbrella.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/moon.svg",
-    ],
-    charm: "listen to rain",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "frosted panes",
-  },
-  {
-    id: "scrapbookdesk",
-    name: "Pocket scrapbook",
-    description: "Torn paper, washi tape, pencil marks, and layered notes scattered across a warm desk.",
-    colors: ["#d99f74", "#fffaf0", "#88aa78"],
-    icon: "📔",
-    art: "/assets/openmoji/notebook.svg",
-    accents: [
-      "/assets/openmoji/blossom.svg",
-      "/assets/openmoji/love-letter.svg",
-    ],
-    charm: "keep this page",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "paper collage",
-  },
-  {
-    id: "tinyliner",
-    name: "Tiny liner station",
-    description: "A miniature rail timetable, platform tickets, warm signal red, and a train ready for the day.",
-    colors: ["#173b57", "#fff4d7", "#e6645a"],
-    icon: "🚂",
-    art: "/assets/openmoji/locomotive.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "next little stop",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "station board",
-  },
-  {
-    id: "pocketcomputer",
-    name: "Pocket computer 2000",
-    description: "Tiny desktop windows, beveled buttons, lilac title bars, and a playful little taskbar.",
-    colors: ["#7774c9", "#f2f1e9", "#62cad3"],
-    icon: "💾",
-    art: "/assets/openmoji/floppy-disk.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cat-face.svg",
-    ],
-    charm: "saved for today",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "desktop windows",
-  },
-  {
-    id: "piggygelato",
-    name: "Piggy gelato club",
-    description: "Ice-cream piggies, candy clouds, glossy stickers, and a tiny treat-cart mood.",
-    colors: ["#f6a9bf", "#fff8ed", "#8ed8e8"],
-    icon: "🐷",
-    art: "/assets/openmoji/pig-face.svg",
-    accents: [
-      "/assets/openmoji/strawberry.svg",
-      "/assets/openmoji/blossom.svg",
-    ],
-    charm: "tiny treat",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "sticker wallpaper",
-  },
-  {
-    id: "calicocafe",
-    name: "Calico corner café",
-    description: "A warm calico host, buttered pastries, receipt-paper cards, and cocoa checks.",
-    colors: ["#d98b55", "#fff7e8", "#394a56"],
-    icon: "🐈",
-    art: "/assets/openmoji/cat-face.svg",
-    accents: [
-      "/assets/openmoji/croissant.svg",
-      "/assets/openmoji/blossom.svg",
-    ],
-    charm: "café pause",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "menu tickets",
-  },
-  {
-    id: "pawcloud",
-    name: "Paw-print cloud club",
-    description: "Powder-blue air, soft puppy paws, floating bubbles, and friendly rounded controls.",
-    colors: ["#a9def0", "#fffdf7", "#f4c98b"],
-    icon: "🐾",
-    art: "/assets/openmoji/paw-prints.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "good steps",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "floating controls",
-  },
-  {
-    id: "midnightracing",
-    name: "Midnight paddock",
-    description: "Graphite panels, signal red, checkered details, and a compact race-day dashboard.",
-    colors: ["#17191d", "#f3f0e8", "#ef3f4f"],
-    icon: "🏎️",
-    art: "/assets/openmoji/racing-car.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "green light",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "telemetry panels",
-  },
-  {
-    id: "pixelpenguin",
-    name: "Pixel penguin plaza",
-    description: "Icy tiles, arcade-blue blocks, tiny quests, and a playful inventory-style dock.",
-    colors: ["#76c9ec", "#f6fcff", "#164d80"],
-    icon: "🐧",
-    art: "/assets/openmoji/penguin.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "tiny quest",
-    decoratedScene: true,
-    featured: true,
-    interfaceIdea: "pixel inventory",
-  },
   {
     id: "storybook",
     name: "Cloudberry meadow",
@@ -874,6 +719,17 @@ const eventColors: { value: EventColor; label: string; hex: string }[] = [
   { value: "pink", label: "Powder pink", hex: "#eab7c9" },
 ];
 
+const starterCalendarCategories: CalendarCategory[] = [
+  { id: "personal", name: "Personal", color: "pink" },
+  { id: "classes", name: "Classes", color: "emerald" },
+  { id: "study", name: "Study", color: "lilac" },
+  { id: "assignments", name: "Assignments", color: "yellow" },
+  { id: "exams", name: "Exams", color: "coral" },
+  { id: "appointments", name: "Appointments", color: "blue" },
+  { id: "health", name: "Health", color: "cyan" },
+  { id: "birthdays", name: "Birthdays", color: "rose" },
+];
+
 function makeEventDraft(date: string): EventDraft {
   return {
     date,
@@ -1286,6 +1142,16 @@ export default function Home() {
   const [calendarSearchOpen, setCalendarSearchOpen] = useState(false);
   const [calendarSearchQuery, setCalendarSearchQuery] = useState("");
   const [hiddenCalendarSources, setHiddenCalendarSources] = useState<string[]>([]);
+  const [calendarCategories, setCalendarCategories] = useState<CalendarCategory[]>(
+    starterCalendarCategories,
+  );
+  const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [categoryDraft, setCategoryDraft] = useState<Pick<CalendarCategory, "name" | "color">>({
+    name: "",
+    color: "lilac",
+  });
+  const [categoryEditorError, setCategoryEditorError] = useState("");
   const [scheduleFocusOpen, setScheduleFocusOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
@@ -1486,6 +1352,7 @@ export default function Home() {
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
             postIts?: PostItNote[];
+            calendarCategories?: CalendarCategory[];
             focusSessions?: number;
             appTheme?: AppTheme;
             colorMode?: ColorMode;
@@ -1509,7 +1376,35 @@ export default function Home() {
             if (state.moodHistory) setMoodHistory(state.moodHistory);
             if (state.completedDays) setCompletedDays(state.completedDays);
             if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
-            if (Array.isArray(state.postIts)) setPostIts(state.postIts);
+            if (Array.isArray(state.postIts)) {
+              setPostIts(
+                state.postIts.map((note) => ({
+                  ...note,
+                  page: note.page || "today",
+                })),
+              );
+            }
+            if (Array.isArray(state.calendarCategories) && state.calendarCategories.length) {
+              setCalendarCategories(state.calendarCategories);
+            } else if (state.calendarEvents?.length) {
+              const restoredCategories = [...starterCalendarCategories];
+              state.calendarEvents.forEach((event) => {
+                const name = event.calendar?.trim();
+                if (
+                  name &&
+                  !restoredCategories.some(
+                    (category) => category.name.toLowerCase() === name.toLowerCase(),
+                  )
+                ) {
+                  restoredCategories.push({
+                    id: `restored-${restoredCategories.length}`,
+                    name,
+                    color: event.color,
+                  });
+                }
+              });
+              setCalendarCategories(restoredCategories);
+            }
             if (typeof state.focusSessions === "number") {
               setFocusSessions(state.focusSessions);
             }
@@ -1522,6 +1417,7 @@ export default function Home() {
             setCompletedDays({});
             setCalendarEvents([]);
             setPostIts([]);
+            setCalendarCategories(starterCalendarCategories);
             setFocusSessions(0);
             setRecordings([]);
             window.localStorage.removeItem("aerea-reminders");
@@ -1620,6 +1516,7 @@ export default function Home() {
               completedDays,
               calendarEvents,
               postIts,
+              calendarCategories,
               focusSessions,
               appTheme,
               colorMode,
@@ -1647,6 +1544,7 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [
     calendarEvents,
+    calendarCategories,
     classItems,
     appTheme,
     colorMode,
@@ -1721,6 +1619,11 @@ export default function Home() {
   const classRecordings = recordings.filter(
     (recording) => recording.className === selectedClass,
   );
+  const currentPostItPage: PostItPage =
+    activeTab === "spaces" ? `spaces:${space}` : activeTab;
+  const visiblePostIts = postIts.filter(
+    (note) => (note.page || "today") === currentPostItPage,
+  );
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
   const daysInViewMonth = new Date(
@@ -1740,24 +1643,35 @@ export default function Home() {
     );
   }, [calendarMonth, calendarYear, daysInViewMonth]);
   const extendedCalendarDays = useMemo(() => {
-    const sundayLeadingDays = new Date(calendarYear, calendarMonth, 1).getDay();
+    const mondayLeadingDays =
+      (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
     return Array.from({ length: 42 }, (_, index) => {
+      if (index < mondayLeadingDays) {
+        return {
+          date: null,
+          currentMonth: false,
+          nextMonth: false,
+        };
+      }
       const date = new Date(
         calendarYear,
         calendarMonth,
-        index - sundayLeadingDays + 1,
+        index - mondayLeadingDays + 1,
       );
       return {
         date,
         currentMonth: date.getMonth() === calendarMonth,
+        nextMonth: date.getMonth() !== calendarMonth,
       };
     });
   }, [calendarMonth, calendarYear]);
   const extendedCalendarSources = useMemo(() => {
-    const sources = new Set<string>(["Personal", "Classes", "Study"]);
+    const sources = new Set<string>(
+      calendarCategories.map((category) => category.name),
+    );
     calendarEvents.forEach((event) => sources.add(event.calendar || "Personal"));
-    return Array.from(sources).slice(0, 4);
-  }, [calendarEvents]);
+    return Array.from(sources);
+  }, [calendarCategories, calendarEvents]);
   const scheduleDays = useMemo(
     () => scheduleDatesFor(selectedCalendarDate, 7),
     [selectedCalendarDate],
@@ -2033,7 +1947,7 @@ export default function Home() {
           moodMetricValues.length,
       )
     : 0;
-  const metricGoal = Math.max(1, metricTrackedKeys.length);
+  const metricGoal = Math.max(1, metricDateKeys.length);
   const metricProgress = {
     hydration: Math.round((hydratedDays / metricGoal) * 100),
     classes: Math.round((classDays / metricGoal) * 100),
@@ -2242,6 +2156,116 @@ export default function Home() {
     });
   };
 
+  const startNewCalendarCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryDraft({ name: "", color: "lilac" });
+    setCategoryEditorError("");
+  };
+
+  const openCalendarCategoryEditor = (category?: CalendarCategory) => {
+    if (category) {
+      setEditingCategoryId(category.id);
+      setCategoryDraft({ name: category.name, color: category.color });
+    } else {
+      startNewCalendarCategory();
+    }
+    setCategoryEditorError("");
+    setCategoryEditorOpen(true);
+  };
+
+  const saveCalendarCategory = () => {
+    const name = categoryDraft.name.trim();
+    if (!name) {
+      setCategoryEditorError("Give this event type a name.");
+      return;
+    }
+    const duplicate = calendarCategories.some(
+      (category) =>
+        category.id !== editingCategoryId &&
+        category.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (duplicate) {
+      setCategoryEditorError("That event type already exists.");
+      return;
+    }
+
+    if (editingCategoryId) {
+      const previous = calendarCategories.find(
+        (category) => category.id === editingCategoryId,
+      );
+      if (!previous) return;
+      setCalendarCategories((current) =>
+        current.map((category) =>
+          category.id === editingCategoryId
+            ? { ...category, name, color: categoryDraft.color }
+            : category,
+        ),
+      );
+      setCalendarEvents((current) =>
+        current.map((event) =>
+          event.calendar === previous.name
+            ? { ...event, calendar: name, color: categoryDraft.color }
+            : event,
+        ),
+      );
+      setHiddenCalendarSources((current) =>
+        current.map((source) => (source === previous.name ? name : source)),
+      );
+      setEventDraft((current) =>
+        current.calendar === previous.name
+          ? { ...current, calendar: name, color: categoryDraft.color }
+          : current,
+      );
+    } else {
+      setCalendarCategories((current) => [
+        ...current,
+        {
+          id: `category-${crypto.randomUUID()}`,
+          name,
+          color: categoryDraft.color,
+        },
+      ]);
+    }
+    startNewCalendarCategory();
+  };
+
+  const deleteCalendarCategory = (categoryId: string) => {
+    if (calendarCategories.length <= 1) {
+      setCategoryEditorError("Keep at least one event type.");
+      return;
+    }
+    const category = calendarCategories.find((item) => item.id === categoryId);
+    const replacement = calendarCategories.find((item) => item.id !== categoryId);
+    if (!category || !replacement) return;
+    setCalendarCategories((current) =>
+      current.filter((item) => item.id !== categoryId),
+    );
+    setCalendarEvents((current) =>
+      current.map((event) =>
+        event.calendar === category.name
+          ? {
+              ...event,
+              calendar: replacement.name,
+              color: replacement.color,
+            }
+          : event,
+      ),
+    );
+    setHiddenCalendarSources((current) =>
+      current.filter((source) => source !== category.name),
+    );
+    setEventDraft((current) =>
+      current.calendar === category.name
+        ? {
+            ...current,
+            calendar: replacement.name,
+            color: replacement.color,
+          }
+        : current,
+    );
+    if (editingCategoryId === categoryId) startNewCalendarCategory();
+  };
+
   const openPostItEditor = (postIt?: PostItNote) => {
     if (postIt) {
       setEditingPostItId(postIt.id);
@@ -2254,8 +2278,8 @@ export default function Home() {
       setEditingPostItId(null);
       setPostItDraft({
         text: "",
-        color: postItColors[postIts.length % postItColors.length].value,
-        doodle: postItDoodles[postIts.length % postItDoodles.length].value,
+        color: postItColors[visiblePostIts.length % postItColors.length].value,
+        doodle: postItDoodles[visiblePostIts.length % postItDoodles.length].value,
       });
     }
     setPostItEditorOpen(true);
@@ -2274,12 +2298,13 @@ export default function Home() {
       setSelectedPostItId(editingPostItId);
     } else {
       const id = crypto.randomUUID();
-      const slot = postIts.length % 4;
+      const slot = visiblePostIts.length % 4;
       const newPostIt: PostItNote = {
         id,
         text,
         color: postItDraft.color,
         doodle: postItDraft.doodle,
+        page: currentPostItPage,
         x: [24, 73, 68, 31][slot],
         y: [16, 26, 58, 77][slot],
         rotation: [-5, 5, 3, -4][slot],
@@ -2432,7 +2457,7 @@ export default function Home() {
 
   const beginCalendarLongPress = (
     dayKey: string,
-    event: ReactPointerEvent<HTMLButtonElement>,
+    event: ReactPointerEvent<HTMLElement>,
   ) => {
     calendarLongPressedRef.current = false;
     calendarPressStartRef.current = { x: event.clientX, y: event.clientY };
@@ -2445,7 +2470,7 @@ export default function Home() {
     }, 560);
   };
 
-  const moveCalendarLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const moveCalendarLongPress = (event: ReactPointerEvent<HTMLElement>) => {
     const start = calendarPressStartRef.current;
     if (!start) return;
     if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) {
@@ -2661,21 +2686,29 @@ export default function Home() {
   };
 
   const openNewEvent = (dateKey = selectedCalendarDate) => {
+    const defaultCategory = calendarCategories[0] ?? starterCalendarCategories[0];
     setCalendarSearchOpen(false);
     setEditingEventId(null);
     setEventTemplateSuggestionsDismissed(false);
-    setEventDraft(makeEventDraft(dateKey));
+    setEventDraft({
+      ...makeEventDraft(dateKey),
+      calendar: defaultCategory.name,
+      color: defaultCategory.color,
+    });
     setTodoDraft("");
     setEventEditorOpen(true);
   };
 
   const openNewEventAtMinute = (dateKey: string, minute: number) => {
     const start = Math.max(0, Math.min(23 * 60 + 30, Math.round(minute / 15) * 15));
+    const defaultCategory = calendarCategories[0] ?? starterCalendarCategories[0];
     setSelectedCalendarDate(dateKey);
     setEditingEventId(null);
     setEventTemplateSuggestionsDismissed(false);
     setEventDraft({
       ...makeEventDraft(dateKey),
+      calendar: defaultCategory.name,
+      color: defaultCategory.color,
       time: timeFromMinutes(start),
       endTime: timeFromMinutes(Math.min(23 * 60 + 45, start + 60)),
     });
@@ -4905,9 +4938,12 @@ export default function Home() {
           )}
         </div>
 
-        {!sketchFullscreen && postIts.length > 0 && (
-          <div className="post-it-layer" aria-label="Your movable post-its">
-            {postIts.map((postIt) => (
+        {!sketchFullscreen && visiblePostIts.length > 0 && (
+          <div
+            className="post-it-layer"
+            aria-label={`Your movable post-its on ${currentPostItPage}`}
+          >
+            {visiblePostIts.map((postIt) => (
               <article
                 className={`movable-post-it ${postIt.color} ${selectedPostItId === postIt.id ? "selected" : ""}`}
                 key={postIt.id}
@@ -5081,17 +5117,33 @@ export default function Home() {
                         <small>Calendar</small>
                         <select
                           value={eventDraft.calendar}
-                          onChange={(event) =>
-                            updateEventDraft("calendar", event.target.value)
-                          }
+                          onChange={(event) => {
+                            const category = calendarCategories.find(
+                              (item) => item.name === event.target.value,
+                            );
+                            setEventDraft((current) => ({
+                              ...current,
+                              calendar: event.target.value,
+                              color: category?.color ?? current.color,
+                            }));
+                          }}
                         >
-                          <option>Personal</option>
-                          <option>Classes</option>
-                          <option>Study</option>
-                          <option>Health</option>
+                          {calendarCategories.map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name}
+                            </option>
+                          ))}
                         </select>
                       </span>
                     </label>
+
+                    <button
+                      className="event-category-manage-button"
+                      type="button"
+                      onClick={() => openCalendarCategoryEditor()}
+                    >
+                      Edit event types
+                    </button>
 
                     <label className="event-row switch-row">
                       <span className="event-row-icon">24</span>
@@ -5496,74 +5548,85 @@ export default function Home() {
                     aria-label="Extended monthly calendar"
                   >
                     <header className="extended-calendar-header">
-                      <div className="extended-calendar-month">
-                        <button
-                          type="button"
-                          onClick={() => shiftCalendarMonth(-1)}
-                          aria-label="Previous month"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          className="extended-calendar-title"
-                          type="button"
-                          onClick={() => setMonthPickerOpen((open) => !open)}
-                          aria-expanded={monthPickerOpen}
-                        >
-                          {viewMonth.toLocaleDateString("en", {
-                            month: "long",
-                            year: "numeric",
-                          })}
-                          <span aria-hidden="true">⌄</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => shiftCalendarMonth(1)}
-                          aria-label="Next month"
-                        >
-                          ›
-                        </button>
+                      <div className="extended-calendar-heading-copy">
+                        <p>YOUR WHOLE RHYTHM</p>
+                        <div className="extended-calendar-month">
+                          <button
+                            type="button"
+                            onClick={() => shiftCalendarMonth(-1)}
+                            aria-label="Previous month"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            className="extended-calendar-title"
+                            type="button"
+                            onClick={() => setMonthPickerOpen((open) => !open)}
+                            aria-expanded={monthPickerOpen}
+                          >
+                            {viewMonth.toLocaleDateString("en", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                            <span aria-hidden="true">⌄</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => shiftCalendarMonth(1)}
+                            aria-label="Next month"
+                          >
+                            ›
+                          </button>
+                        </div>
                       </div>
-                      <div className="extended-calendar-tools">
-                        <button
-                          type="button"
-                          className="extended-search-button"
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setMonthPickerOpen(false);
-                            setCalendarSearchOpen(true);
-                          }}
-                          aria-label="Search calendar events"
-                          title="Search events"
-                        >
-                          <span className="calendar-search-glyph" aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="extended-schedule-button"
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setMonthPickerOpen(false);
-                            setCalendarScheduleOpen(true);
-                          }}
-                          aria-label="Open daily schedule"
-                          title="Daily schedule"
-                        >
-                          <span aria-hidden="true">☷</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setMonthPickerOpen(false);
-                          }}
-                          aria-label="Back to compact calendar"
-                          title="Compact calendar"
-                        >
-                          ×
-                        </button>
-                      </div>
+                      <button
+                        className="extended-compact-button"
+                        type="button"
+                        onClick={() => {
+                          setCalendarExpanded(false);
+                          setMonthPickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">▦</span>
+                        Compact month
+                      </button>
                     </header>
+
+                    <nav className="extended-calendar-actions" aria-label="Calendar tools">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalendarExpanded(false);
+                          setMonthPickerOpen(false);
+                          setCalendarSearchOpen(true);
+                        }}
+                      >
+                        <span className="calendar-search-glyph" aria-hidden="true" />
+                        <span><small>FIND</small><strong>Search events</strong></span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalendarExpanded(false);
+                          setMonthPickerOpen(false);
+                          setCalendarScheduleOpen(true);
+                        }}
+                      >
+                        <span aria-hidden="true">☷</span>
+                        <span><small>PLAN</small><strong>Day schedule</strong></span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = dateFromKey(todayKey);
+                          setSelectedCalendarDate(todayKey);
+                          setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                        }}
+                      >
+                        <span aria-hidden="true">⌂</span>
+                        <span><small>JUMP TO</small><strong>Today</strong></span>
+                      </button>
+                    </nav>
 
                     {monthPickerOpen && (
                       <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
@@ -5585,47 +5648,72 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="extended-calendar-filters" aria-label="Visible calendars">
-                      {extendedCalendarSources.map((source, index) => {
-                        const hidden = hiddenCalendarSources.includes(source);
-                        return (
+                    <section className="extended-calendar-filters" aria-label="Visible event types">
+                      <header className="extended-filter-heading">
+                        <span>
+                          <small>EVENT TYPES</small>
+                          <strong>Show what you need</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openCalendarCategoryEditor()}
+                        >
+                          ＋ Edit types
+                        </button>
+                      </header>
+                      <div className="extended-filter-list">
+                        {extendedCalendarSources.map((source, index) => {
+                          const hidden = hiddenCalendarSources.includes(source);
+                          return (
+                            <button
+                              type="button"
+                              key={source}
+                              className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
+                              onClick={() =>
+                                setHiddenCalendarSources((current) =>
+                                  current.includes(source)
+                                    ? current.filter((item) => item !== source)
+                                    : [...current, source],
+                                )
+                              }
+                              aria-pressed={!hidden}
+                            >
+                              <span>{hidden ? "" : "✓"}</span>
+                              {source}
+                            </button>
+                          );
+                        })}
+                        {hiddenCalendarSources.length > 0 && (
                           <button
+                            className="extended-filter-show-all"
                             type="button"
-                            key={source}
-                            className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
-                            onClick={() =>
-                              setHiddenCalendarSources((current) =>
-                                current.includes(source)
-                                  ? current.filter((item) => item !== source)
-                                  : [...current, source],
-                              )
-                            }
-                            aria-pressed={!hidden}
+                            onClick={() => setHiddenCalendarSources([])}
                           >
-                            <span>{hidden ? "" : "✓"}</span>
-                            {source}
+                            Show all
                           </button>
-                        );
-                      })}
-                      <button
-                        className="extended-filter-menu"
-                        type="button"
-                        onClick={() => setHiddenCalendarSources([])}
-                        aria-label="Show all calendars"
-                      >
-                       ⌄
-                      </button>
-                    </div>
+                        )}
+                      </div>
+                    </section>
 
                     <div
                       className="extended-month-grid"
                       onTouchStart={startCalendarSwipe}
                       onTouchEnd={finishCalendarSwipe}
                     >
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((weekday) => (
                         <strong key={weekday}>{weekday}</strong>
                       ))}
-                      {extendedCalendarDays.map(({ date, currentMonth }) => {
+                      {extendedCalendarDays.map((calendarDay, index) => {
+                        if (!calendarDay.date) {
+                          return (
+                            <div
+                              className="extended-calendar-cell calendar-blank"
+                              key={`blank-${index}`}
+                              aria-hidden="true"
+                            />
+                          );
+                        }
+                        const { date, currentMonth, nextMonth } = calendarDay;
                         const dayKey = localDateKey(date);
                         const dayEvents = calendarEvents
                           .filter(
@@ -5640,7 +5728,8 @@ export default function Home() {
                           <div
                             className={[
                               "extended-calendar-cell",
-                              currentMonth ? "" : "outside-month",
+                              currentMonth ? "" : "outside-month next-month",
+                              nextMonth ? "month-spillover" : "",
                               selectedCalendarDate === dayKey ? "selected" : "",
                               date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
                               dayKey === todayKey ? "today" : "",
@@ -5651,6 +5740,11 @@ export default function Home() {
                             role="button"
                             tabIndex={0}
                             aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
+                            onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
+                            onPointerMove={moveCalendarLongPress}
+                            onPointerUp={cancelCalendarLongPress}
+                            onPointerCancel={cancelCalendarLongPress}
+                            onContextMenu={(event) => event.preventDefault()}
                             onClick={() => setSelectedCalendarDate(dayKey)}
                             onKeyDown={(event) => {
                               if (event.key === "Enter" || event.key === " ") {
@@ -6616,6 +6710,132 @@ export default function Home() {
         </div>
       )}
 
+      {categoryEditorOpen && (
+        <div
+          className="modal-backdrop category-editor-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setCategoryEditorOpen(false);
+          }}
+        >
+          <section
+            className="category-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit calendar event types"
+          >
+            <header>
+              <div>
+                <p className="tiny-label">YOUR EVENT TYPES</p>
+                <h2>Make the calendar yours</h2>
+                <p>Add as many types as you need, then rename or recolor them anytime.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryEditorOpen(false)}
+                aria-label="Close event type editor"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="category-editor-list">
+              {calendarCategories.map((category) => (
+                <article
+                  className={editingCategoryId === category.id ? "editing" : ""}
+                  key={category.id}
+                >
+                  <i
+                    style={
+                      {
+                        "--category-color":
+                          eventColors.find((color) => color.value === category.color)
+                            ?.hex ?? "#ae96d8",
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  />
+                  <strong>{category.name}</strong>
+                  <small>{eventColors.find((color) => color.value === category.color)?.label}</small>
+                  <button
+                    type="button"
+                    onClick={() => openCalendarCategoryEditor(category)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="category-delete"
+                    onClick={() => deleteCalendarCategory(category.id)}
+                    aria-label={`Delete ${category.name}`}
+                  >
+                    ×
+                  </button>
+                </article>
+              ))}
+            </div>
+
+            <form
+              className="category-editor-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                saveCalendarCategory();
+              }}
+            >
+              <div className="category-editor-form-heading">
+                <strong>{editingCategoryId ? "Edit this type" : "Add another type"}</strong>
+                {editingCategoryId && (
+                  <button type="button" onClick={startNewCalendarCategory}>
+                    ＋ New instead
+                  </button>
+                )}
+              </div>
+              <label>
+                Name
+                <input
+                  value={categoryDraft.name}
+                  onChange={(event) => {
+                    setCategoryDraft((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }));
+                    setCategoryEditorError("");
+                  }}
+                  placeholder="Work, birthdays, appointments…"
+                />
+              </label>
+              <fieldset>
+                <legend>Color</legend>
+                {eventColors.map((color) => (
+                  <button
+                    type="button"
+                    key={color.value}
+                    className={categoryDraft.color === color.value ? "active" : ""}
+                    style={{ "--category-color": color.hex } as CSSProperties}
+                    onClick={() =>
+                      setCategoryDraft((current) => ({
+                        ...current,
+                        color: color.value,
+                      }))
+                    }
+                    aria-label={color.label}
+                    aria-pressed={categoryDraft.color === color.value}
+                  />
+                ))}
+              </fieldset>
+              {categoryEditorError && (
+                <p className="category-editor-error" role="alert">
+                  {categoryEditorError}
+                </p>
+              )}
+              <button className="category-save" type="submit">
+                {editingCategoryId ? "Save changes" : "Add event type"}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+
       {daySummaryDate && (() => {
         const summaryEvents = calendarEvents.filter((event) =>
           eventOccursOn(event, daySummaryDate),
@@ -7051,65 +7271,59 @@ export default function Home() {
         })()}
 
       {metricsOpen && (
-        <div className="metrics-backdrop" role="presentation">
+        <div className="metrics-backdrop metrics-v2-backdrop" role="presentation">
           <section
-            className="metrics-screen"
+            className="metrics-screen metrics-screen-v2"
             role="dialog"
             aria-modal="true"
             aria-label="aérea metrics"
           >
-            <header className="metrics-topbar">
+            <header className="metrics-v2-topbar">
               <button
-                className="metrics-mini-brand"
+                className="metrics-v2-back"
                 type="button"
                 onClick={() => setMetricsOpen(false)}
                 aria-label="Back to My Little Day"
               >
-                <span aria-hidden="true">☁</span>
-                My Little Day
+                <span aria-hidden="true">←</span>
+                <span>
+                  <small>MY LITTLE DAY</small>
+                  <strong>Your rhythm</strong>
+                </span>
               </button>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMetricsOpen(false);
-                    openCalendarAtToday();
-                    setCalendarSearchOpen(true);
-                  }}
-                  aria-label="Search calendar"
-                >
-                  <span className="metrics-search-glyph" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMetricsOpen(false)}
-                  aria-label="Close metrics"
-                >
-                  ×
-                </button>
-              </div>
+              <button
+                className="metrics-v2-close"
+                type="button"
+                onClick={() => setMetricsOpen(false)}
+                aria-label="Close metrics"
+              >
+                ×
+              </button>
             </header>
 
-            <section className="metrics-hero">
+            <section className="metrics-v2-hero">
               <div>
-                <p>aérea</p>
-                <h1>metrics <span aria-hidden="true">☆</span></h1>
-                <small>little habits,<br />big changes. ♡</small>
+                <p>A SOFT LOOK AT YOUR DAYS</p>
+                <h1>
+                  Little progress,
+                  <span>gathered gently.</span>
+                </h1>
+                <small>No pressure, no perfect streaks—just the shape of your days.</small>
               </div>
-              <div className="metrics-cloud-friend" aria-hidden="true">
-                <span>✦</span>
-                <strong>☁</strong>
-                <i>☆</i>
+              <div className="metrics-v2-keepsake" aria-hidden="true">
+                <span>☁</span>
+                <strong>♡</strong>
+                <small>{metricsPeriod === "all" ? "all your days" : metricsPeriod}</small>
               </div>
             </section>
 
-            <div className="metrics-controls">
+            <div className="metrics-controls metrics-v2-controls">
               <div className="metrics-period-tabs" role="group" aria-label="Metrics period">
                 {([
-                  ["week", "week"],
-                  ["month", "month"],
-                  ["year", "year"],
-                  ["all", "all time"],
+                  ["week", "Week"],
+                  ["month", "Month"],
+                  ["year", "Year"],
+                  ["all", "All time"],
                 ] as Array<[MetricsPeriod, string]>).map(([period, label]) => (
                   <button
                     key={period}
@@ -7146,67 +7360,78 @@ export default function Home() {
               </div>
             </div>
 
-            <section className="metrics-summary-grid" aria-label="Period summary">
+            <section className="metrics-summary-grid metrics-v2-summary" aria-label="Period summary">
               {[
-                { icon: "💧", value: hydratedDays, goal: metricGoal, label: "hydrated", progress: metricProgress.hydration, tint: "blue" },
-                { icon: "🎓", value: classDays, goal: metricGoal, label: "went to class", progress: metricProgress.classes, tint: "lilac" },
-                { icon: "⭐", value: completedMetricDays, goal: metricGoal, label: "completed your day", progress: metricProgress.completed, tint: "yellow" },
-                { icon: "♥", value: averageMood, goal: 100, label: "avg mood this period", progress: averageMood, tint: "pink", percent: true },
+                { icon: "💧", value: hydratedDays, goal: metricGoal, label: "Hydrated days", progress: metricProgress.hydration, tint: "blue" },
+                { icon: "🎓", value: classDays, goal: metricGoal, label: "Class days", progress: metricProgress.classes, tint: "lilac" },
+                { icon: "⭐", value: completedMetricDays, goal: metricGoal, label: "Days completed", progress: metricProgress.completed, tint: "yellow" },
+                { icon: "♥", value: averageMood, goal: 100, label: "Average mood", progress: averageMood, tint: "pink", percent: true },
               ].map((metric) => (
                 <article className={`metrics-summary-card ${metric.tint}`} key={metric.label}>
                   <span aria-hidden="true">{metric.icon}</span>
                   <div>
-                    <p><strong>{metric.value}</strong>{metric.percent ? "%" : <small>/{metric.goal} days</small>}</p>
+                    <p>
+                      <strong>{metric.value}</strong>
+                      {metric.percent ? "%" : <small>/{metric.goal} days</small>}
+                    </p>
                     <h2>{metric.label}</h2>
-                    <em>{metric.progress > 0 ? `↑ ${metric.progress}% of this period` : "your next check-in starts here"}</em>
+                    <div className="metrics-v2-progress" aria-hidden="true">
+                      <i style={{ width: `${metric.progress}%` }} />
+                    </div>
+                    <em>{metric.progress > 0 ? `${metric.progress}% of this ${metricsPeriod === "all" ? "journey" : metricsPeriod}` : "Ready for your first check-in"}</em>
                   </div>
                 </article>
               ))}
             </section>
 
-            <section className="metrics-overview-card">
+            <section className="metrics-overview-card metrics-v2-week">
               <header>
                 <span aria-hidden="true">☁</span>
-                <strong>weekly overview</strong>
+                <div>
+                  <small>weekly overview</small>
+                  <strong>A tiny week at a glance</strong>
+                </div>
               </header>
-              <div className="metrics-overview-grid">
-                <span />
-                {metricsWeekKeys.map((dateKey) => (
-                  <strong key={`heading-${dateKey}`}>
-                    {dateFromKey(dateKey).toLocaleDateString("en", { weekday: "short" }).toUpperCase()}
-                  </strong>
-                ))}
-                {[
-                  { icon: "💧", label: "drink water", detail: "daily", done: dayHasHydration },
-                  { icon: "🎓", label: "go to class", detail: "calendar", done: dayHasClass },
-                  { icon: "▤", label: "study / focus", detail: "plans", done: dayHasStudy },
-                  { icon: "⭐", label: "complete my day", detail: "daily", done: (dateKey: string) => completedDays[dateKey] === true },
-                ].map((row) => (
-                  <div className="metrics-overview-row" key={row.label}>
-                    <div className="metrics-overview-label">
-                      <span aria-hidden="true">{row.icon}</span>
-                      <span><strong>{row.label}</strong><small>{row.detail}</small></span>
-                    </div>
-                    {metricsWeekKeys.map((dateKey) => (
-                      <i
-                        key={`${row.label}-${dateKey}`}
-                        className={[
-                          row.done(dateKey) ? "done" : "",
-                          dateKey > todayKey ? "future" : "",
-                        ].filter(Boolean).join(" ")}
-                        aria-label={`${row.label} ${row.done(dateKey) ? "completed" : "not completed"} on ${readableDate(dateKey)}`}
-                      >
-                        {row.done(dateKey) ? "✓" : ""}
-                      </i>
-                    ))}
-                  </div>
-                ))}
+              <div className="metrics-overview-grid metrics-v2-week-grid">
+                {metricsWeekKeys.map((dateKey) => {
+                  const future = dateKey > todayKey;
+                  const statuses = [
+                    { icon: "💧", label: "Water", done: dayHasHydration(dateKey) },
+                    { icon: "🎓", label: "Class", done: dayHasClass(dateKey) },
+                    { icon: "▤", label: "Study", done: dayHasStudy(dateKey) },
+                    { icon: "⭐", label: "Day", done: completedDays[dateKey] === true },
+                  ];
+                  return (
+                    <article className={future ? "future" : ""} key={dateKey}>
+                      <header>
+                        <span>{dateFromKey(dateKey).toLocaleDateString("en", { weekday: "short" })}</span>
+                        <strong>{dateFromKey(dateKey).getDate()}</strong>
+                      </header>
+                      <div>
+                        {statuses.map((status) => (
+                          <span
+                            className={status.done ? "done" : ""}
+                            key={status.label}
+                            title={`${status.label}: ${status.done ? "done" : "not checked"}`}
+                          >
+                            {status.icon}
+                          </span>
+                        ))}
+                      </div>
+                      <small>
+                        {future
+                          ? "ahead"
+                          : `${statuses.filter((status) => status.done).length}/4 little marks`}
+                      </small>
+                    </article>
+                  );
+                })}
               </div>
             </section>
 
-            <section className="metrics-chart-grid">
-              <article className="metrics-chart-card">
-                <header><span>💧</span><strong>water intake</strong></header>
+            <section className="metrics-v2-detail-grid">
+              <article className="metrics-chart-card metrics-v2-progress-card">
+                <header><span>💧</span><strong>Water rhythm</strong></header>
                 <div className="metrics-donut-row">
                   <div
                     className="metrics-donut blue"
@@ -7215,13 +7440,26 @@ export default function Home() {
                     <strong>{hydratedDays}<small>/{metricGoal}</small></strong>
                     <span>days</span>
                   </div>
-                  <p>best streak<br /><strong>{metricStreaks.hydration} days</strong><br /><small>goal · {metricGoal} days</small></p>
+                  <p>Current gentle streak<br /><strong>{metricStreaks.hydration} days</strong><br /><small>One glass still counts.</small></p>
                 </div>
-                <footer>keep going! ☆</footer>
               </article>
 
-              <article className="metrics-chart-card mood-chart-card">
-                <header><span>♥</span><strong>mood tracker</strong></header>
+              <article className="metrics-chart-card metrics-v2-progress-card">
+                <header><span>🎓</span><strong>Class rhythm</strong></header>
+                <div className="metrics-donut-row">
+                  <div
+                    className="metrics-donut lilac"
+                    style={{ "--metric-progress": `${metricProgress.classes}%` } as CSSProperties}
+                  >
+                    <strong>{classDays}<small>/{metricGoal}</small></strong>
+                    <span>days</span>
+                  </div>
+                  <p>Current class streak<br /><strong>{metricStreaks.classes} days</strong><br /><small>Based on calendar plans.</small></p>
+                </div>
+              </article>
+
+              <article className="metrics-chart-card mood-chart-card metrics-v2-mood-card">
+                <header><span>♥</span><strong>Mood ribbon</strong></header>
                 <div className="metrics-mood-chart">
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Mood trend this week">
                     <line x1="7" y1="87" x2="94" y2="87" />
@@ -7234,48 +7472,19 @@ export default function Home() {
                   </svg>
                   <div>{metricsWeekKeys.map((dateKey) => <span key={dateKey}>{dateFromKey(dateKey).toLocaleDateString("en", { weekday: "narrow" })}</span>)}</div>
                 </div>
-                <footer>avg mood <b>{averageMood}%</b> <em>↑ be gentle with yourself</em></footer>
+                <footer>{averageMood > 0 ? `Your recorded average is ${averageMood}%.` : "Mood stickers will draw this ribbon."}</footer>
               </article>
 
-              <article className="metrics-chart-card">
-                <header><span>🎓</span><strong>class consistency</strong></header>
-                <div className="metrics-donut-row">
-                  <div
-                    className="metrics-donut lilac"
-                    style={{ "--metric-progress": `${metricProgress.classes}%` } as CSSProperties}
-                  >
-                    <strong>{classDays}<small>/{metricGoal}</small></strong>
-                    <span>days</span>
-                  </div>
-                  <p>current streak<br /><strong>{metricStreaks.classes} days ☆</strong><br /><small>{classDays} class days</small></p>
-                </div>
-                <footer>you’re doing great! ♡</footer>
+              <article className="metrics-insights-card metrics-v2-insight-card">
+                <header><span>✦</span><strong>A small note</strong></header>
+                {hydratedDays + classDays + completedMetricDays + moodMetricValues.length > 0 ? (
+                  <p>Your fullest rhythm has appeared on <strong>{consistentWeekday}</strong>. Keep what helps and leave the rest.</p>
+                ) : (
+                  <p>Your first check-in will begin the pattern. Nothing here needs to be perfect.</p>
+                )}
+                <div aria-hidden="true">☁<br />softly,<br />one day at a time ♡</div>
               </article>
             </section>
-
-            <section className="metrics-bottom-grid">
-              <article className="metrics-streak-card">
-                <header><span>☆</span><strong>current streaks</strong></header>
-                <p><span>💧 drink water</span><b>{metricStreaks.hydration} days</b></p>
-                <p><span>🎓 go to class</span><b>{metricStreaks.classes} days</b></p>
-                <p><span>⭐ complete my day</span><b>{metricStreaks.completed} days</b></p>
-              </article>
-              <article className="metrics-insights-card">
-                <header><span>☁</span><strong>this period’s insights</strong></header>
-                <p><span>☆</span> you’re most consistent on <strong>{consistentWeekday}! ✨</strong></p>
-                <p><span>💧</span> {metricStreaks.hydration > 0 ? `keep your ${metricStreaks.hydration}-day water streak going.` : "one glass can begin your next water streak."}</p>
-                <p><span>♥</span> {averageMood > 0 ? `your recorded mood averaged ${averageMood}%.` : "add a mood sticker to see your gentle trend."}</p>
-                <div aria-hidden="true">☆<br />take care<br />of you ♡</div>
-              </article>
-            </section>
-
-            <nav className="metrics-nav" aria-label="Metrics navigation">
-              <button type="button" onClick={() => { setMetricsOpen(false); openCalendarAtToday(); }}><span>▣</span><small>calendar</small></button>
-              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("habits"); }}><span>☑</span><small>habits</small></button>
-              <button className="active" type="button" aria-current="page"><span>☁</span><small>aérea</small></button>
-              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("journal"); }}><span>▤</span><small>journal</small></button>
-              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("spaces"); }}><span>•••</span><small>more</small></button>
-            </nav>
           </section>
         </div>
       )}
@@ -7290,9 +7499,9 @@ export default function Home() {
           >
             <header>
               <div>
-                <p className="tiny-label">A NOTE FOR ANYWHERE</p>
+                <p className="tiny-label">A NOTE FOR THIS PAGE</p>
                 <h2>{editingPostItId ? "Edit your post-it" : "Make a post-it"}</h2>
-                <p>Write it, decorate it, then drag it anywhere in aérea.</p>
+                <p>Write it, decorate it, then place it anywhere on this page.</p>
               </div>
               <button
                 type="button"

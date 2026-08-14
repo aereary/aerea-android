@@ -27,18 +27,10 @@ const syncSource = await readFile(
   "utf8",
 );
 
-test("keeps the approved theme collection and both Rhea theme drops", () => {
+test("keeps the approved worlds and removes the ten rejected themes", () => {
   for (const theme of [
-    "piggyparcel",
-    "rainywindow",
-    "scrapbookdesk",
-    "tinyliner",
-    "pocketcomputer",
-    "piggygelato",
-    "calicocafe",
-    "pawcloud",
-    "midnightracing",
-    "pixelpenguin",
+    "storybook",
+    "otter",
     "peachparlor",
     "mintletter",
     "blueberrynight",
@@ -55,10 +47,20 @@ test("keeps the approved theme collection and both Rhea theme drops", () => {
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    13,
-    "the thirteen approved decorated themes should decorate the sky",
+    3,
+    "only the three remaining full-scene themes should decorate the sky",
   );
   for (const removedTheme of [
+    "piggyparcel",
+    "rainywindow",
+    "scrapbookdesk",
+    "tinyliner",
+    "pocketcomputer",
+    "piggygelato",
+    "calicocafe",
+    "pawcloud",
+    "midnightracing",
+    "pixelpenguin",
     "moonpond",
     "forestfriends",
     "cloudroad",
@@ -231,7 +233,7 @@ test("removes the secret area and all of its entry points", () => {
   assert.doesNotMatch(cssSource, /\.secret-moon-button/);
 });
 
-test("gives every Rhea theme a complete isolated interface", () => {
+test("does not expose any of the rejected interface themes", () => {
   for (const theme of [
     "piggyparcel",
     "rainywindow",
@@ -244,22 +246,10 @@ test("gives every Rhea theme a complete isolated interface", () => {
     "midnightracing",
     "pixelpenguin",
   ]) {
-    assert.match(pageSource, new RegExp(`id: "${theme}"`));
-    assert.match(cssSource, new RegExp(`data-theme="${theme}"`));
-    assert.match(cssSource, new RegExp(`data-visual="${theme}"`));
-    assert.match(cssSource, new RegExp(`data-theme-option="${theme}"`));
+    assert.doesNotMatch(pageSource, new RegExp(`id: "${theme}"`));
   }
-  assert.match(pageSource, /interfaceIdea: "sticker wallpaper"/);
-  assert.match(pageSource, /interfaceIdea: "menu tickets"/);
-  assert.match(pageSource, /interfaceIdea: "floating controls"/);
-  assert.match(pageSource, /interfaceIdea: "telemetry panels"/);
-  assert.match(pageSource, /interfaceIdea: "pixel inventory"/);
-  assert.match(pageSource, /interfaceIdea: "postage tabs"/);
-  assert.match(pageSource, /interfaceIdea: "frosted panes"/);
-  assert.match(pageSource, /interfaceIdea: "paper collage"/);
-  assert.match(pageSource, /interfaceIdea: "station board"/);
-  assert.match(pageSource, /interfaceIdea: "desktop windows"/);
-  assert.match(cssSource, /piggy-wallpaper-theme\.jpg/);
+  assert.match(pageSource, /name: "Cloudberry meadow"/);
+  assert.match(pageSource, /name: "Lavender otter"/);
 });
 
 test("keeps the original event cards without later styling layers", () => {
@@ -407,6 +397,9 @@ test("keeps cross-device sync private and local-first", () => {
 
 test("ships movable post-its, the extended month, and Lovely Lavender Evening", () => {
   assert.match(pageSource, /type PostItNote/);
+  assert.match(pageSource, /page: PostItPage/);
+  assert.match(pageSource, /currentPostItPage/);
+  assert.match(pageSource, /visiblePostIts\.map/);
   assert.match(pageSource, /className="post-it-layer"/);
   assert.match(pageSource, /startPostItDrag/);
   assert.match(pageSource, /postIts,/);
@@ -420,6 +413,20 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(cssSource, /data-theme="lovelyevening"/);
 });
 
+test("uses full period goals and editable calendar event types", () => {
+  assert.match(pageSource, /const metricGoal = Math\.max\(1, metricDateKeys\.length\)/);
+  assert.match(pageSource, /starterCalendarCategories/);
+  assert.match(pageSource, /calendarCategories,/);
+  assert.match(pageSource, /openCalendarCategoryEditor/);
+  assert.match(pageSource, /className="category-editor-modal"/);
+  assert.match(pageSource, /className="extended-filter-list"/);
+  assert.match(pageSource, /date: null/);
+  assert.match(pageSource, /\['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'\]/);
+  assert.match(cssSource, /August 14 review: page notes, rhythm metrics, and journal calendar/);
+  assert.match(cssSource, /\.metrics-screen\.metrics-screen-v2/);
+  assert.match(cssSource, /\.extended-calendar-cell\.calendar-blank/);
+});
+
 test("keeps the schedule separate from the extended month and opens real aérea metrics", () => {
   assert.match(pageSource, /calendarScheduleOpen/);
   assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
@@ -427,7 +434,7 @@ test("keeps the schedule separate from the extended month and opens real aérea 
   assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /calendar-extended-month/);
   assert.match(pageSource, /onClick=\{openMetrics\}/);
-  assert.match(pageSource, /className="metrics-screen"/);
+  assert.match(pageSource, /className="metrics-screen metrics-screen-v2"/);
   assert.match(pageSource, /aérea metrics/);
   assert.match(pageSource, /metricsDateRange/);
   assert.match(pageSource, /dayHasHydration/);
