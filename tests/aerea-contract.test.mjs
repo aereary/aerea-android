@@ -155,7 +155,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /scheduleTimelineScrollRef/);
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
-  assert.match(pageSource, /className=\{`agenda-v2-event[\s\S]*setSelectedEventDetail\(event\)/);
+  assert.match(pageSource, /className=\{`agenda-v2-event[\s\S]*openEventDetail\(event\)/);
   assert.match(pageSource, /className="event-detail-edit"[\s\S]*openEventEditor\(event\)/);
   assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /scheduleMarks/);
@@ -354,6 +354,21 @@ test("toggles selected moods and keeps reminders editable", () => {
   assert.match(pageSource, /deleteReminder/);
   assert.match(pageSource, /delete-reminder-button/);
   assert.doesNotMatch(pageSource, /Day not marked complete/);
+});
+
+test("returns an event note to the same Day Pocket", () => {
+  assert.match(pageSource, /eventDetailReturnDayPocket/);
+  assert.match(pageSource, /const returnToDayPocket = \(\) =>/);
+  assert.match(pageSource, /setDaySummaryDate\(returnDate\)/);
+  assert.match(
+    pageSource,
+    /openEventDetail\([\s\S]*calendarEventAtOccurrence\(event, returnDate\)[\s\S]*returnDate/,
+  );
+  assert.match(pageSource, /className="event-detail-back"/);
+  assert.match(pageSource, /aria-label=\{`Back to Day Pocket for/);
+  assert.match(pageSource, /onClick=\{closeEventDetail\}[\s\S]*aria-label="Close event details"/);
+  assert.match(cssSource, /Contextual return from an event note to its Day Pocket/);
+  assert.match(cssSource, /\.event-detail-back svg/);
 });
 
 test("keeps pinch zoom on the compositor until the gesture ends", () => {

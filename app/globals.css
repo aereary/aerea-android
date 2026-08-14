@@ -22530,3 +22530,53 @@ body {
   .metrics-v2-summary .metrics-summary-card p strong { font-size:23px; }
   .metrics-v2-summary .metrics-summary-card h2 { font-size:9px; }
 }
+
+/* Contextual return from an event note to its Day Pocket ---------------- */
+.app-shell[data-theme] .event-detail-category-row {
+  align-items:center;
+  display:flex;
+  gap:9px;
+  margin-bottom:15px;
+  min-width:0;
+}
+
+.app-shell[data-theme] .event-detail-category-row .event-detail-category {
+  margin:0;
+  min-width:0;
+}
+
+.app-shell[data-theme] .event-detail-back {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 54%,var(--paper));
+  border:2px solid color-mix(in srgb,var(--paper) 88%,transparent);
+  border-radius:50%;
+  box-shadow:0 3px 9px color-mix(in srgb,var(--ink) 9%,transparent);
+  color:#5e6197;
+  display:flex;
+  flex:0 0 35px;
+  height:35px;
+  justify-content:center;
+  padding:0;
+  width:35px;
+}
+
+.app-shell[data-theme] .event-detail-back svg {
+  fill:none;
+  height:19px;
+  stroke:currentColor;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:2.4;
+  width:19px;
+}
+
+.app-shell[data-theme] .event-detail-back:focus-visible {
+  outline:3px solid color-mix(in srgb,var(--blue) 70%,transparent);
+  outline-offset:2px;
+}
+
+@media (max-width:520px) {
+  .app-shell[data-theme] .event-detail-category-row { gap:7px; margin-bottom:13px; }
+  .app-shell[data-theme] .event-detail-back { flex-basis:32px; height:32px; width:32px; }
+  .app-shell[data-theme] .event-detail-back svg { height:17px; width:17px; }
+}

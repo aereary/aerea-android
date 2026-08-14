@@ -1172,6 +1172,8 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [eventDetailReturnDayPocket, setEventDetailReturnDayPocket] =
+    useState<string | null>(null);
   const [eventDeleteRequest, setEventDeleteRequest] =
     useState<EventDeleteRequest | null>(null);
   const [
@@ -2728,6 +2730,28 @@ export default function Home() {
     setEventEditorOpen(true);
   };
 
+  const openEventDetail = (
+    calendarEvent: CalendarEvent,
+    returnDayPocket: string | null = null,
+  ) => {
+    setEventDetailReturnDayPocket(returnDayPocket);
+    setSelectedEventDetail(calendarEvent);
+  };
+
+  const closeEventDetail = () => {
+    setSelectedEventDetail(null);
+    setEventDetailReturnDayPocket(null);
+  };
+
+  const returnToDayPocket = () => {
+    if (!eventDetailReturnDayPocket) return;
+    const returnDate = eventDetailReturnDayPocket;
+    setSelectedEventDetail(null);
+    setEventDetailReturnDayPocket(null);
+    setSelectedCalendarDate(returnDate);
+    setDaySummaryDate(returnDate);
+  };
+
   const saveCalendarEvent = () => {
     if (!eventDraft.title.trim()) return;
     const savedEvent: CalendarEvent = {
@@ -4015,7 +4039,7 @@ export default function Home() {
               todayKey={todayKey}
               weekDays={homeWeek}
               selectedDateEvents={selectedHomeEvents}
-              openEventDetail={setSelectedEventDetail}
+              openEventDetail={openEventDetail}
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
@@ -5762,7 +5786,7 @@ export default function Home() {
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     setSelectedCalendarDate(dayKey);
-                                    setSelectedEventDetail(
+                                    openEventDetail(
                                       calendarEventAtOccurrence(calendarEvent, dayKey),
                                     );
                                   }}
@@ -6046,7 +6070,7 @@ export default function Home() {
                                     } as CSSProperties
                                   }
                                   onClick={() =>
-                                    setSelectedEventDetail(
+                                    openEventDetail(
                                       calendarEventAtOccurrence(event, date),
                                     )
                                   }
@@ -6290,7 +6314,7 @@ export default function Home() {
                                     <button
                                       key={event.id}
                                       className={`agenda-v2-all-day-event ${event.color}`}
-                                      onClick={() => setSelectedEventDetail(event)}
+                                      onClick={() => openEventDetail(event)}
                                     >
                                       {event.title}
                                     </button>
@@ -6376,7 +6400,7 @@ export default function Home() {
                                         }}
                                         onClick={(pointerEvent) => {
                                           pointerEvent.stopPropagation();
-                                          setSelectedEventDetail(event);
+                                          openEventDetail(event);
                                         }}
                                       >
                                         {duration < 30 ? (
@@ -6876,12 +6900,23 @@ export default function Home() {
                         key={event.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => { setDaySummaryDate(null); setSelectedEventDetail(event); }}
+                        onClick={() => {
+                          const returnDate = daySummaryDate;
+                          setDaySummaryDate(null);
+                          openEventDetail(
+                            calendarEventAtOccurrence(event, returnDate),
+                            returnDate,
+                          );
+                        }}
                         onKeyDown={(keyboardEvent) => {
                           if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
                             keyboardEvent.preventDefault();
+                            const returnDate = daySummaryDate;
                             setDaySummaryDate(null);
-                            setSelectedEventDetail(event);
+                            openEventDetail(
+                              calendarEventAtOccurrence(event, returnDate),
+                              returnDate,
+                            );
                           }
                         }}
                       >
@@ -6941,7 +6976,7 @@ export default function Home() {
               role="presentation"
               onPointerDown={(event) => {
                 if (event.target === event.currentTarget) {
-                  setSelectedEventDetail(null);
+                  closeEventDetail();
                 }
               }}
             >
@@ -6954,9 +6989,23 @@ export default function Home() {
                 <span className="event-detail-corner" aria-hidden="true" />
                 <header className="event-detail-header">
                   <div className="event-detail-heading-copy">
-                    <p className="event-detail-category">
-                      {selectedEventDetail.calendar ?? "PERSONAL"}
-                    </p>
+                    <div className="event-detail-category-row">
+                      {eventDetailReturnDayPocket && (
+                        <button
+                          className="event-detail-back"
+                          type="button"
+                          onClick={returnToDayPocket}
+                          aria-label={`Back to Day Pocket for ${readableDate(eventDetailReturnDayPocket)}`}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12H19" />
+                          </svg>
+                        </button>
+                      )}
+                      <p className="event-detail-category">
+                        {selectedEventDetail.calendar ?? "PERSONAL"}
+                      </p>
+                    </div>
                     <div className="event-detail-title-row">
                       <h2>{selectedEventDetail.title}</h2>
                       <div className="event-detail-doodle" aria-hidden="true">
@@ -6969,7 +7018,7 @@ export default function Home() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setSelectedEventDetail(null)}
+                    onClick={closeEventDetail}
                     aria-label="Close event details"
                   >
                     ×
@@ -7171,7 +7220,7 @@ export default function Home() {
                         1,
                       ),
                     );
-                    setSelectedEventDetail(null);
+                    closeEventDetail();
                     setCalendarSearchOpen(false);
                     setCalendarSearchQuery("");
                     setCalendarOpen(true);
