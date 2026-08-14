@@ -404,3 +404,18 @@ test("keeps cross-device sync private and local-first", () => {
   assert.match(syncSource, /aerea-private-state-v1/);
   assert.doesNotMatch(syncSource, /service_role/i);
 });
+
+test("ships movable post-its, the extended month, and Lovely Lavender Evening", () => {
+  assert.match(pageSource, /type PostItNote/);
+  assert.match(pageSource, /className="post-it-layer"/);
+  assert.match(pageSource, /startPostItDrag/);
+  assert.match(pageSource, /postIts,/);
+  assert.match(pageSource, /className="extended-calendar-view"/);
+  assert.match(pageSource, /extendedCalendarDays/);
+  assert.match(pageSource, /hiddenCalendarSources/);
+  assert.match(pageSource, /id: "lovelyevening"/);
+  assert.match(cssSource, /Movable paper notes/);
+  assert.match(cssSource, /Full monthly calendar/);
+  assert.match(cssSource, /Lovely lavender evening theme/);
+  assert.match(cssSource, /data-theme="lovelyevening"/);
+});

@@ -51,6 +51,7 @@ type AppTheme =
   | "gentlekitten"
   | "softguidance"
   | "velvetrest"
+  | "lovelyevening"
   | "peachparlor"
   | "mintletter"
   | "blueberrynight"
@@ -205,6 +206,21 @@ type EventDeleteRequest = {
   eventId: string;
   occurrenceDate: string;
 };
+
+type PostItColor = "lavender" | "butter" | "blush" | "sky";
+type PostItDoodle = "heart" | "star" | "smile" | "pin";
+
+type PostItNote = {
+  id: string;
+  text: string;
+  color: PostItColor;
+  doodle: PostItDoodle;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+type PostItDraft = Pick<PostItNote, "text" | "color" | "doodle">;
 
 type SketchPage = {
   id: string;
@@ -575,6 +591,21 @@ const themeOptions: {
     charm: "you may rest",
   },
   {
+    id: "lovelyevening",
+    name: "Lovely lavender evening",
+    description: "A luminous lavender sky, cloud-glass cards, elegant type, and a little otter giving you permission to rest.",
+    colors: ["#a99af7", "#fbf9ff", "#f4d6ff"],
+    icon: "✦",
+    art: "/assets/openmoji/otter.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "you may rest",
+    featured: true,
+    interfaceIdea: "cloud glass",
+  },
+  {
     id: "peachparlor",
     name: "Peach ribbon parlor",
     description: "Peach cream, satin bows, tiny berries, and warm golden details.",
@@ -731,6 +762,32 @@ const moods = [
   { face: "✦‿✦", label: "proud", color: "mood-peach" },
   { face: "•O•", label: "surprised", color: "mood-coral" },
 ];
+
+const postItColors: Array<{
+  value: PostItColor;
+  label: string;
+  hex: string;
+}> = [
+  { value: "lavender", label: "Lavender", hex: "#dfd0f3" },
+  { value: "butter", label: "Butter", hex: "#ffe3a0" },
+  { value: "blush", label: "Blush", hex: "#f5c6de" },
+  { value: "sky", label: "Sky", hex: "#c9ddf4" },
+];
+
+const postItDoodles: Array<{
+  value: PostItDoodle;
+  label: string;
+  glyph: string;
+}> = [
+  { value: "heart", label: "Heart", glyph: "♡" },
+  { value: "star", label: "Star", glyph: "☆" },
+  { value: "smile", label: "Smile", glyph: "☺" },
+  { value: "pin", label: "Pin", glyph: "⚑" },
+];
+
+function postItDoodleGlyph(doodle: PostItDoodle) {
+  return postItDoodles.find((item) => item.value === doodle)?.glyph ?? "♡";
+}
 
 const journalFaces = [
   "(˶ᵔ ᵕ ᵔ˶)",
@@ -1132,6 +1189,7 @@ export default function Home() {
   const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [calendarSearchOpen, setCalendarSearchOpen] = useState(false);
   const [calendarSearchQuery, setCalendarSearchQuery] = useState("");
+  const [hiddenCalendarSources, setHiddenCalendarSources] = useState<string[]>([]);
   const [scheduleFocusOpen, setScheduleFocusOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
@@ -1161,6 +1219,15 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [postIts, setPostIts] = useState<PostItNote[]>([]);
+  const [postItEditorOpen, setPostItEditorOpen] = useState(false);
+  const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
+  const [selectedPostItId, setSelectedPostItId] = useState<string | null>(null);
+  const [postItDraft, setPostItDraft] = useState<PostItDraft>({
+    text: "",
+    color: "lavender",
+    doodle: "heart",
+  });
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -1273,6 +1340,15 @@ export default function Home() {
   const calendarLongPressRef = useRef<number | null>(null);
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const phoneCanvasRef = useRef<HTMLElement | null>(null);
+  const postItDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1310,6 +1386,7 @@ export default function Home() {
             moodHistory?: Record<string, string>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
+            postIts?: PostItNote[];
             focusSessions?: number;
             appTheme?: AppTheme;
             colorMode?: ColorMode;
@@ -1333,6 +1410,7 @@ export default function Home() {
             if (state.moodHistory) setMoodHistory(state.moodHistory);
             if (state.completedDays) setCompletedDays(state.completedDays);
             if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
+            if (Array.isArray(state.postIts)) setPostIts(state.postIts);
             if (typeof state.focusSessions === "number") {
               setFocusSessions(state.focusSessions);
             }
@@ -1344,6 +1422,7 @@ export default function Home() {
             setMoodHistory({});
             setCompletedDays({});
             setCalendarEvents([]);
+            setPostIts([]);
             setFocusSessions(0);
             setRecordings([]);
             window.localStorage.removeItem("aerea-reminders");
@@ -1441,6 +1520,7 @@ export default function Home() {
               moodHistory,
               completedDays,
               calendarEvents,
+              postIts,
               focusSessions,
               appTheme,
               colorMode,
@@ -1477,6 +1557,7 @@ export default function Home() {
     focusSessions,
     habits,
     moodHistory,
+    postIts,
     profilePhoto,
     reminderHistory,
     reminders,
@@ -1570,6 +1651,25 @@ export default function Home() {
       })),
     ];
   }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
+  const extendedCalendarDays = useMemo(() => {
+    const sundayLeadingDays = new Date(calendarYear, calendarMonth, 1).getDay();
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(
+        calendarYear,
+        calendarMonth,
+        index - sundayLeadingDays + 1,
+      );
+      return {
+        date,
+        currentMonth: date.getMonth() === calendarMonth,
+      };
+    });
+  }, [calendarMonth, calendarYear]);
+  const extendedCalendarSources = useMemo(() => {
+    const sources = new Set<string>(["Personal", "Classes", "Study"]);
+    calendarEvents.forEach((event) => sources.add(event.calendar || "Personal"));
+    return Array.from(sources).slice(0, 4);
+  }, [calendarEvents]);
   const scheduleDays = useMemo(
     () => scheduleDatesFor(selectedCalendarDate, 7),
     [selectedCalendarDate],
@@ -1898,6 +1998,109 @@ export default function Home() {
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
+  };
+
+  const openPostItEditor = (postIt?: PostItNote) => {
+    if (postIt) {
+      setEditingPostItId(postIt.id);
+      setPostItDraft({
+        text: postIt.text,
+        color: postIt.color,
+        doodle: postIt.doodle,
+      });
+    } else {
+      setEditingPostItId(null);
+      setPostItDraft({
+        text: "",
+        color: postItColors[postIts.length % postItColors.length].value,
+        doodle: postItDoodles[postIts.length % postItDoodles.length].value,
+      });
+    }
+    setPostItEditorOpen(true);
+  };
+
+  const savePostIt = () => {
+    const text = postItDraft.text.trim();
+    if (!text) return;
+
+    if (editingPostItId) {
+      setPostIts((current) =>
+        current.map((note) =>
+          note.id === editingPostItId ? { ...note, ...postItDraft, text } : note,
+        ),
+      );
+      setSelectedPostItId(editingPostItId);
+    } else {
+      const id = crypto.randomUUID();
+      const slot = postIts.length % 4;
+      const newPostIt: PostItNote = {
+        id,
+        text,
+        color: postItDraft.color,
+        doodle: postItDraft.doodle,
+        x: [24, 73, 68, 31][slot],
+        y: [16, 26, 58, 77][slot],
+        rotation: [-5, 5, 3, -4][slot],
+      };
+      setPostIts((current) => [...current, newPostIt]);
+      setSelectedPostItId(id);
+    }
+    setPostItEditorOpen(false);
+  };
+
+  const deletePostIt = (id: string) => {
+    setPostIts((current) => current.filter((note) => note.id !== id));
+    setSelectedPostItId((current) => (current === id ? null : current));
+    setPostItEditorOpen(false);
+  };
+
+  const startPostItDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    postIt: PostItNote,
+  ) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const canvas = phoneCanvasRef.current;
+    if (!canvas) return;
+    const bounds = canvas.getBoundingClientRect();
+    const centerX = bounds.left + (postIt.x / 100) * bounds.width;
+    const centerY = bounds.top + (postIt.y / 100) * bounds.height;
+    postItDragRef.current = {
+      id: postIt.id,
+      pointerId: event.pointerId,
+      offsetX: event.clientX - centerX,
+      offsetY: event.clientY - centerY,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSelectedPostItId(postIt.id);
+  };
+
+  const movePostIt = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = postItDragRef.current;
+    const canvas = phoneCanvasRef.current;
+    if (!drag || !canvas || drag.pointerId !== event.pointerId) return;
+    const bounds = canvas.getBoundingClientRect();
+    const x = Math.max(
+      9,
+      Math.min(91, ((event.clientX - bounds.left - drag.offsetX) / bounds.width) * 100),
+    );
+    const y = Math.max(
+      3,
+      Math.min(97, ((event.clientY - bounds.top - drag.offsetY) / bounds.height) * 100),
+    );
+    setPostIts((current) =>
+      current.map((note) => (note.id === drag.id ? { ...note, x, y } : note)),
+    );
+  };
+
+  const finishPostItDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = postItDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    postItDragRef.current = null;
   };
 
   const openCalendarAtToday = () => {
@@ -3406,6 +3609,7 @@ export default function Home() {
     >
       <div className="paper-grain" aria-hidden="true" />
       <section
+        ref={phoneCanvasRef}
         className={
           sketchFullscreen
             ? "phone-canvas sketchbook-fullscreen-active"
@@ -3461,6 +3665,15 @@ export default function Home() {
             </span>
           </div>
           <div className="header-actions">
+            <button
+              className="post-it-create-button"
+              type="button"
+              onClick={() => openPostItEditor()}
+              aria-label="Create a movable post-it"
+              title="New post-it"
+            >
+              <span aria-hidden="true" />
+            </button>
             <button
               className="calendar-button"
               onClick={openCalendarAtToday}
@@ -4445,6 +4658,46 @@ export default function Home() {
           )}
         </div>
 
+        {!sketchFullscreen && postIts.length > 0 && (
+          <div className="post-it-layer" aria-label="Your movable post-its">
+            {postIts.map((postIt) => (
+              <article
+                className={`movable-post-it ${postIt.color} ${selectedPostItId === postIt.id ? "selected" : ""}`}
+                key={postIt.id}
+                style={
+                  {
+                    "--post-it-x": `${postIt.x}%`,
+                    "--post-it-y": `${postIt.y}%`,
+                    "--post-it-rotation": `${postIt.rotation}deg`,
+                  } as CSSProperties
+                }
+                onPointerDown={(event) => startPostItDrag(event, postIt)}
+                onPointerMove={movePostIt}
+                onPointerUp={finishPostItDrag}
+                onPointerCancel={finishPostItDrag}
+                onDoubleClick={() => openPostItEditor(postIt)}
+              >
+                <span className="post-it-tape" aria-hidden="true" />
+                <p>{postIt.text}</p>
+                <span className="post-it-doodle" aria-hidden="true">
+                  {postItDoodleGlyph(postIt.doodle)}
+                </span>
+                <button
+                  className="post-it-edit"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openPostItEditor(postIt);
+                  }}
+                  aria-label="Edit this post-it"
+                >
+                  ✎
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+
         {!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">
           {tabs.map((tab) => (
             <button
@@ -4975,6 +5228,220 @@ export default function Home() {
                       </div>
                     </header>
                   </>
+                )}
+                {calendarExpanded && (
+                  <section
+                    className="extended-calendar-view"
+                    aria-label="Extended monthly calendar"
+                  >
+                    <header className="extended-calendar-header">
+                      <div className="extended-calendar-month">
+                        <button
+                          type="button"
+                          onClick={() => shiftCalendarMonth(-1)}
+                          aria-label="Previous month"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          className="extended-calendar-title"
+                          type="button"
+                          onClick={() => setMonthPickerOpen((open) => !open)}
+                          aria-expanded={monthPickerOpen}
+                        >
+                          {viewMonth.toLocaleDateString("en", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                          <span aria-hidden="true">⌄</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => shiftCalendarMonth(1)}
+                          aria-label="Next month"
+                        >
+                          ›
+                        </button>
+                      </div>
+                      <div className="extended-calendar-tools">
+                        <button
+                          type="button"
+                          onClick={goToScheduleToday}
+                          aria-label="Go to today"
+                          title="Today"
+                        >
+                          ☆
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHiddenCalendarSources([])}
+                          aria-label="Show every calendar"
+                          title="Show every calendar"
+                        >
+                          <span aria-hidden="true">☷</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                          }}
+                          aria-label="Back to compact calendar"
+                          title="Compact calendar"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </header>
+
+                    {monthPickerOpen && (
+                      <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
+                        {Array.from({ length: 12 }, (_, month) => (
+                          <button
+                            type="button"
+                            key={month}
+                            className={month === calendarMonth ? "active" : ""}
+                            onClick={() => {
+                              setViewMonth(new Date(calendarYear, month, 1));
+                              setMonthPickerOpen(false);
+                            }}
+                          >
+                            {new Date(calendarYear, month, 1).toLocaleDateString("en", {
+                              month: "short",
+                            })}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="extended-calendar-filters" aria-label="Visible calendars">
+                      {extendedCalendarSources.map((source, index) => {
+                        const hidden = hiddenCalendarSources.includes(source);
+                        return (
+                          <button
+                            type="button"
+                            key={source}
+                            className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
+                            onClick={() =>
+                              setHiddenCalendarSources((current) =>
+                                current.includes(source)
+                                  ? current.filter((item) => item !== source)
+                                  : [...current, source],
+                              )
+                            }
+                            aria-pressed={!hidden}
+                          >
+                            <span>{hidden ? "" : "✓"}</span>
+                            {source}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="extended-filter-menu"
+                        type="button"
+                        onClick={() => setHiddenCalendarSources([])}
+                        aria-label="Show all calendars"
+                      >
+                       ⌄
+                      </button>
+                    </div>
+
+                    <div
+                      className="extended-month-grid"
+                      onTouchStart={startCalendarSwipe}
+                      onTouchEnd={finishCalendarSwipe}
+                    >
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
+                        <strong key={weekday}>{weekday}</strong>
+                      ))}
+                      {extendedCalendarDays.map(({ date, currentMonth }) => {
+                        const dayKey = localDateKey(date);
+                        const dayEvents = calendarEvents
+                          .filter(
+                            (calendarEvent) =>
+                              eventOccursOn(calendarEvent, dayKey) &&
+                              !hiddenCalendarSources.includes(
+                                calendarEvent.calendar || "Personal",
+                              ),
+                          )
+                          .sort((first, second) => first.time.localeCompare(second.time));
+                        return (
+                          <div
+                            className={[
+                              "extended-calendar-cell",
+                              currentMonth ? "" : "outside-month",
+                              selectedCalendarDate === dayKey ? "selected" : "",
+                              date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
+                              dayKey === todayKey ? "today" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={dayKey}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
+                            onClick={() => setSelectedCalendarDate(dayKey)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                setSelectedCalendarDate(dayKey);
+                              }
+                            }}
+                          >
+                            <span className="extended-calendar-date">{date.getDate()}</span>
+                            <div className="extended-calendar-events">
+                              {dayEvents.slice(0, 3).map((calendarEvent) => (
+                                <button
+                                  type="button"
+                                  className={`extended-event-pill ${calendarEvent.color}`}
+                                  key={`${calendarEvent.id}-${dayKey}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setSelectedCalendarDate(dayKey);
+                                    setSelectedEventDetail(
+                                      calendarEventAtOccurrence(calendarEvent, dayKey),
+                                    );
+                                  }}
+                                  title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
+                                >
+                                  {calendarEvent.title}
+                                </button>
+                              ))}
+                              {dayEvents.length > 3 && (
+                                <small>+{dayEvents.length - 3}</small>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      className="extended-calendar-add"
+                      type="button"
+                      onClick={() => openNewEvent(selectedCalendarDate)}
+                      aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
+                    >
+                      +
+                    </button>
+
+                    <nav className="extended-calendar-nav" aria-label="Primary navigation">
+                      {tabs.slice(0, 4).map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={tab.id === activeTab ? "active" : ""}
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setCalendarOpen(false);
+                            changeTab(tab.id);
+                          }}
+                        >
+                          <span aria-hidden="true">{tab.icon}</span>
+                          <small>{tab.label}</small>
+                        </button>
+                      ))}
+                    </nav>
+                  </section>
                 )}
                 {!calendarExpanded && (
                   <div className="modal-top">
@@ -6296,6 +6763,125 @@ export default function Home() {
           );
         })()}
 
+      {postItEditorOpen && (
+        <div className="modal-backdrop post-it-editor-backdrop" role="presentation">
+          <section
+            className="post-it-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingPostItId ? "Edit post-it" : "Create a post-it"}
+          >
+            <header>
+              <div>
+                <p className="tiny-label">A NOTE FOR ANYWHERE</p>
+                <h2>{editingPostItId ? "Edit your post-it" : "Make a post-it"}</h2>
+                <p>Write it, decorate it, then drag it anywhere in aérea.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPostItEditorOpen(false)}
+                aria-label="Close post-it editor"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className={`post-it-editor-preview ${postItDraft.color}`}>
+              <span className="post-it-tape" aria-hidden="true" />
+              <textarea
+                autoFocus
+                value={postItDraft.text}
+                onChange={(event) =>
+                  setPostItDraft((current) => ({
+                    ...current,
+                    text: event.target.value,
+                  }))
+                }
+                placeholder={"Tomorrow:\n• Class at 8:00\n• Hand in report"}
+                maxLength={220}
+                aria-label="Post-it text"
+              />
+              <span className="post-it-doodle" aria-hidden="true">
+                {postItDoodleGlyph(postItDraft.doodle)}
+              </span>
+            </div>
+
+            <div className="post-it-editor-options">
+              <fieldset>
+                <legend>Paper color</legend>
+                {postItColors.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    className={postItDraft.color === color.value ? "active" : ""}
+                    style={{ "--post-it-swatch": color.hex } as CSSProperties}
+                    onClick={() =>
+                      setPostItDraft((current) => ({
+                        ...current,
+                        color: color.value,
+                      }))
+                    }
+                    aria-label={color.label}
+                    aria-pressed={postItDraft.color === color.value}
+                  >
+                    <span />
+                  </button>
+                ))}
+              </fieldset>
+              <fieldset>
+                <legend>Little doodle</legend>
+                {postItDoodles.map((doodle) => (
+                  <button
+                    key={doodle.value}
+                    type="button"
+                    className={postItDraft.doodle === doodle.value ? "active" : ""}
+                    onClick={() =>
+                      setPostItDraft((current) => ({
+                        ...current,
+                        doodle: doodle.value,
+                      }))
+                    }
+                    aria-label={doodle.label}
+                    aria-pressed={postItDraft.doodle === doodle.value}
+                  >
+                    {doodle.glyph}
+                  </button>
+                ))}
+              </fieldset>
+            </div>
+
+            <footer>
+              {editingPostItId ? (
+                <button
+                  className="post-it-delete"
+                  type="button"
+                  onClick={() => deletePostIt(editingPostItId)}
+                >
+                  Delete
+                </button>
+              ) : (
+                <span />
+              )}
+              <button
+                className="post-it-cancel"
+                type="button"
+                onClick={() => setPostItEditorOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="post-it-save"
+                type="button"
+                onClick={savePostIt}
+                disabled={!postItDraft.text.trim()}
+              >
+                {editingPostItId ? "Save changes" : "Stick it here"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
       {settingsOpen && (
         <div className="modal-backdrop settings-backdrop" role="presentation">
           <section
@@ -6913,12 +7499,23 @@ function TodayScreen({
               })
               .toUpperCase()}
           </p>
-          <h2>
-            {selectedIsToday
-              ? isNight
-                ? "Good evening, lovely."
-                : "Good morning, lovely."
-              : `A little look at ${selectedWeekday}.`}
+          <h2
+            aria-label={
+              selectedIsToday
+                ? isNight
+                  ? "Good evening, lovely."
+                  : "Good morning, lovely."
+                : `A little look at ${selectedWeekday}.`
+            }
+          >
+            {selectedIsToday ? (
+              <>
+                <span>{isNight ? "Good evening," : "Good morning,"}</span>{" "}
+                <span className="greeting-lovely">lovely.</span>
+              </>
+            ) : (
+              `A little look at ${selectedWeekday}.`
+            )}
           </h2>
           <p className="soft-copy">
             {selectedIsToday
