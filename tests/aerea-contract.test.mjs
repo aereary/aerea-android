@@ -439,3 +439,19 @@ test("keeps the schedule separate from the extended month and opens real aérea 
   assert.match(cssSource, /\.metrics-overview-grid/);
   assert.match(cssSource, /\.metrics-donut/);
 });
+
+test("ships the rose editorial and noir quiet-hours interfaces", () => {
+  for (const theme of ["rosegrid", "noirrest"]) {
+    assert.match(pageSource, new RegExp(`id: "${theme}"`));
+    assert.match(cssSource, new RegExp(`data-theme="${theme}"`));
+    assert.match(cssSource, new RegExp(`data-theme-option="${theme}"`));
+  }
+  assert.match(pageSource, /themeId=\{appTheme\}/);
+  assert.match(pageSource, /className="noir-coming-up"/);
+  assert.match(pageSource, /className="noir-greeting-name"/);
+  assert.match(pageSource, /Rhea <i aria-hidden="true">✦<\/i>/);
+  assert.match(cssSource, /Rose paper editorial/);
+  assert.match(cssSource, /Noir quiet hours/);
+  assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
+  assert.match(cssSource, /\.noir-coming-up-card/);
+});

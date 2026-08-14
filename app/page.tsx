@@ -53,6 +53,8 @@ type AppTheme =
   | "softguidance"
   | "velvetrest"
   | "lovelyevening"
+  | "rosegrid"
+  | "noirrest"
   | "peachparlor"
   | "mintletter"
   | "blueberrynight"
@@ -605,6 +607,36 @@ const themeOptions: {
     charm: "you may rest",
     featured: true,
     interfaceIdea: "cloud glass",
+  },
+  {
+    id: "rosegrid",
+    name: "Rose paper editorial",
+    description: "Warm ivory graph paper, blush ink, fine serif headlines, and airy stationery cards.",
+    colors: ["#f3a8ba", "#fffdf9", "#272522"],
+    icon: "♡",
+    art: "/assets/openmoji/otter.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "you may rest",
+    featured: true,
+    interfaceIdea: "editorial grid",
+  },
+  {
+    id: "noirrest",
+    name: "Noir quiet hours",
+    description: "Ink-black glass, silver outlines, spacious typography, and a calm after-dark timeline.",
+    colors: ["#0c0d10", "#24262b", "#f1f1f3"],
+    icon: "✦",
+    art: "/assets/openmoji/cat.svg",
+    accents: [
+      "/assets/openmoji/moon.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "you may rest",
+    featured: true,
+    interfaceIdea: "monochrome glass",
   },
   {
     id: "peachparlor",
@@ -3909,6 +3941,7 @@ export default function Home() {
         <div className="main-content">
           {activeTab === "today" && (
             <TodayScreen
+              themeId={appTheme}
               pending={pending}
               completed={completed}
               reminders={reminders}
@@ -7850,6 +7883,7 @@ export default function Home() {
 }
 
 function TodayScreen({
+  themeId,
   pending,
   completed,
   reminders,
@@ -7871,6 +7905,7 @@ function TodayScreen({
   showDayCharm,
   isNight,
 }: {
+  themeId: AppTheme;
   pending: Reminder[];
   completed: Reminder[];
   reminders: Reminder[];
@@ -7898,6 +7933,8 @@ function TodayScreen({
   const schedulePressStartRef = useRef<{ x: number; y: number } | null>(null);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
+  const isNoirRest = themeId === "noirrest";
+  const comingUpEvent = selectedDateEvents[0] ?? null;
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
@@ -7976,13 +8013,24 @@ function TodayScreen({
           <h2
             aria-label={
               selectedIsToday
-                ? isNight
-                  ? "Good evening, lovely."
-                  : "Good morning, lovely."
+                ? isNoirRest
+                  ? `${isNight ? "Good evening" : "Good morning"}, Rhea.`
+                  : isNight
+                    ? "Good evening, lovely."
+                    : "Good morning, lovely."
                 : `A little look at ${selectedWeekday}.`
             }
           >
-            {selectedIsToday ? (
+            {selectedIsToday && isNoirRest ? (
+              <>
+                <span className="noir-greeting-kicker">
+                  {isNight ? "Good evening," : "Good morning,"}
+                </span>
+                <span className="noir-greeting-name">
+                  Rhea <i aria-hidden="true">✦</i>
+                </span>
+              </>
+            ) : selectedIsToday ? (
               <>
                 <span>{isNight ? "Good evening," : "Good morning,"}</span>{" "}
                 <span className="greeting-lovely">lovely.</span>
@@ -8040,6 +8088,16 @@ function TodayScreen({
       </section>
 
       <section className="week-strip" aria-label="Current week">
+        {isNoirRest && (
+          <div className="noir-week-header">
+            <span>
+              {selectedDateObject
+                .toLocaleDateString("en", { month: "long", year: "numeric" })
+                .toUpperCase()}
+            </span>
+            <button type="button" onClick={openCalendar}>See calendar</button>
+          </div>
+        )}
         {weekDays.map((day) => (
           <button
             key={day.key}
@@ -8059,6 +8117,38 @@ function TodayScreen({
           </button>
         ))}
       </section>
+
+      {isNoirRest && (
+        <section className="noir-coming-up" aria-label="Coming up next">
+          <p className="noir-section-label">COMING UP NEXT</p>
+          {comingUpEvent ? (
+            <button
+              type="button"
+              className="noir-coming-up-card"
+              onClick={() => openEventDetail(comingUpEvent)}
+            >
+              <span className="noir-coming-time">
+                <strong>{eventDetailTimeParts(comingUpEvent).range}</strong>
+                <small>{eventDetailTimeParts(comingUpEvent).period}</small>
+              </span>
+              <span className="noir-coming-copy">
+                <small>{comingUpEvent.calendar ?? "AÉREA"}</small>
+                <strong>{comingUpEvent.title}</strong>
+                <span>
+                  {comingUpEvent.location ||
+                    comingUpEvent.note ||
+                    "Saved in your calendar"}
+                </span>
+              </span>
+              <span className="noir-coming-arrow" aria-hidden="true">›</span>
+            </button>
+          ) : (
+            <div className="noir-coming-up-empty">
+              Nothing else is waiting for you today.
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="day-grid">
         <div className="column">
@@ -8098,8 +8188,14 @@ function TodayScreen({
                 title="Hold to preview event"
               >
                 <div className="time-block">
-                  <strong>{event.allDay ? "ALL" : event.time}</strong>
-                  <span>{event.allDay ? "DAY" : "TIME"}</span>
+                  <strong>
+                    {event.allDay ? "ALL" : eventDetailTimeParts(event).range}
+                  </strong>
+                  <span>
+                    {event.allDay
+                      ? "DAY"
+                      : eventDetailTimeParts(event).period}
+                  </span>
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">
@@ -8110,7 +8206,7 @@ function TodayScreen({
                   </span>
                 </div>
                 <div className="mini-people">
-                  ✦
+                  {isNoirRest ? "•••" : "✦"}
                 </div>
               </button>
             ))
