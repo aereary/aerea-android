@@ -28,6 +28,7 @@ import {
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
+type MetricsPeriod = "week" | "month" | "year" | "all";
 type AppTheme =
   | "piggyparcel"
   | "rainywindow"
@@ -974,6 +975,68 @@ function previousDateKey(dateKey: string) {
   return localDateKey(date);
 }
 
+function datesBetween(start: Date, end: Date) {
+  const dates: string[] = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  while (cursor <= last) {
+    dates.push(localDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+function metricsDateRange(period: MetricsPeriod, anchor: Date, firstKnownDate: Date) {
+  const normalized = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  if (period === "week") {
+    const start = new Date(normalized);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+  if (period === "month") {
+    return {
+      start: new Date(normalized.getFullYear(), normalized.getMonth(), 1),
+      end: new Date(normalized.getFullYear(), normalized.getMonth() + 1, 0),
+    };
+  }
+  if (period === "year") {
+    return {
+      start: new Date(normalized.getFullYear(), 0, 1),
+      end: new Date(normalized.getFullYear(), 11, 31),
+    };
+  }
+  return {
+    start: new Date(
+      firstKnownDate.getFullYear(),
+      firstKnownDate.getMonth(),
+      firstKnownDate.getDate(),
+    ),
+    end: new Date(),
+  };
+}
+
+function currentStreak(keys: string[], completed: (dateKey: string) => boolean) {
+  let streak = 0;
+  for (let index = keys.length - 1; index >= 0; index -= 1) {
+    if (!completed(keys[index])) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+const moodScores: Record<string, number> = {
+  sad: 20,
+  anxious: 30,
+  tired: 38,
+  okay: 58,
+  surprised: 70,
+  peaceful: 82,
+  happy: 92,
+  proud: 96,
+};
+
 function eventCompactTimeLabel(event: CalendarEvent) {
   if (event.allDay) return "All day";
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
@@ -1187,11 +1250,15 @@ export default function Home() {
   const [focusSessions, setFocusSessions] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [calendarScheduleOpen, setCalendarScheduleOpen] = useState(false);
   const [calendarSearchOpen, setCalendarSearchOpen] = useState(false);
   const [calendarSearchQuery, setCalendarSearchQuery] = useState("");
   const [hiddenCalendarSources, setHiddenCalendarSources] = useState<string[]>([]);
   const [scheduleFocusOpen, setScheduleFocusOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
+  const [metricsPeriod, setMetricsPeriod] = useState<MetricsPeriod>("week");
+  const [metricsAnchorDate, setMetricsAnchorDate] = useState(() => new Date());
   const [selectedHomeDate, setSelectedHomeDate] = useState(todayKey);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1632,25 +1699,14 @@ export default function Home() {
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
   const calendarDays = useMemo(() => {
-    const currentMonthDays = Array.from(
+    return Array.from(
       { length: daysInViewMonth },
       (_, index) => ({
         date: new Date(calendarYear, calendarMonth, index + 1),
         currentMonth: true,
       }),
     );
-
-    if (!calendarExpanded) return currentMonthDays;
-
-    const trailingDays = 42 - leadingDays - daysInViewMonth;
-    return [
-      ...currentMonthDays,
-      ...Array.from({ length: trailingDays }, (_, index) => ({
-        date: new Date(calendarYear, calendarMonth + 1, index + 1),
-        currentMonth: false,
-      })),
-    ];
-  }, [calendarExpanded, calendarMonth, calendarYear, daysInViewMonth, leadingDays]);
+  }, [calendarMonth, calendarYear, daysInViewMonth]);
   const extendedCalendarDays = useMemo(() => {
     const sundayLeadingDays = new Date(calendarYear, calendarMonth, 1).getDay();
     return Array.from({ length: 42 }, (_, index) => {
@@ -1859,6 +1915,144 @@ export default function Home() {
       }),
     );
   }, [calendarEvents, completedDays, moodHistory, todayKey]);
+  const hydrationReminderIds = useMemo(
+    () =>
+      reminders
+        .filter((reminder) => {
+          const name = normalizeCalendarSearch(reminder.title);
+          return (
+            reminder.icon.includes("💧") ||
+            name.includes("water") ||
+            name.includes("drink") ||
+            name.includes("hydrat") ||
+            name.includes("agua")
+          );
+        })
+        .map((reminder) => reminder.id),
+    [reminders],
+  );
+  const firstMetricsDate = useMemo(() => {
+    const knownDates = [
+      ...Object.keys(reminderHistory),
+      ...Object.keys(moodHistory),
+      ...Object.keys(completedDays),
+      ...calendarEvents.map((event) => event.date),
+    ].filter(Boolean).sort();
+    if (knownDates[0]) return dateFromKey(knownDates[0]);
+    const fallback = dateFromKey(todayKey);
+    fallback.setDate(fallback.getDate() - 6);
+    return fallback;
+  }, [calendarEvents, completedDays, moodHistory, reminderHistory, todayKey]);
+  const metricsRange = useMemo(
+    () => metricsDateRange(metricsPeriod, metricsAnchorDate, firstMetricsDate),
+    [firstMetricsDate, metricsAnchorDate, metricsPeriod],
+  );
+  const metricDateKeys = useMemo(
+    () => datesBetween(metricsRange.start, metricsRange.end),
+    [metricsRange.end, metricsRange.start],
+  );
+  const metricsWeekKeys = useMemo(() => {
+    const week = metricsDateRange("week", metricsAnchorDate, firstMetricsDate);
+    return datesBetween(week.start, week.end);
+  }, [firstMetricsDate, metricsAnchorDate]);
+  const dayHasHydration = (dateKey: string) => {
+    const checked = reminderHistory[dateKey] ?? [];
+    return hydrationReminderIds.some((id) => checked.includes(id));
+  };
+  const dayHasClass = (dateKey: string) =>
+    calendarEvents.some((event) => {
+      if (!eventOccursOn(event, dateKey)) return false;
+      const category = normalizeCalendarSearch(event.calendar ?? "");
+      const title = normalizeCalendarSearch(event.title);
+      return (
+        category.includes("class") ||
+        title.includes("class") ||
+        title.includes("course") ||
+        title.includes("lecture") ||
+        title.includes("clase")
+      );
+    });
+  const dayHasStudy = (dateKey: string) =>
+    calendarEvents.some((event) => {
+      if (!eventOccursOn(event, dateKey)) return false;
+      const text = normalizeCalendarSearch(
+        `${event.calendar ?? ""} ${event.title} ${event.note ?? ""}`,
+      );
+      return (
+        text.includes("study") ||
+        text.includes("focus") ||
+        text.includes("exam") ||
+        text.includes("estudi") ||
+        text.includes("repas")
+      );
+    });
+  const metricTrackedKeys = metricDateKeys.filter((dateKey) => dateKey <= todayKey);
+  const hydratedDays = metricTrackedKeys.filter(dayHasHydration).length;
+  const classDays = metricTrackedKeys.filter(dayHasClass).length;
+  const completedMetricDays = metricTrackedKeys.filter(
+    (dateKey) => completedDays[dateKey] === true,
+  ).length;
+  const moodMetricValues = metricTrackedKeys
+    .map((dateKey) => moodScores[moodHistory[dateKey]])
+    .filter((value): value is number => Number.isFinite(value));
+  const averageMood = moodMetricValues.length
+    ? Math.round(
+        moodMetricValues.reduce((total, value) => total + value, 0) /
+          moodMetricValues.length,
+      )
+    : 0;
+  const metricGoal = Math.max(1, metricTrackedKeys.length);
+  const metricProgress = {
+    hydration: Math.round((hydratedDays / metricGoal) * 100),
+    classes: Math.round((classDays / metricGoal) * 100),
+    completed: Math.round((completedMetricDays / metricGoal) * 100),
+  };
+  const metricStreaks = {
+    hydration: currentStreak(metricTrackedKeys, dayHasHydration),
+    classes: currentStreak(metricTrackedKeys, dayHasClass),
+    completed: currentStreak(
+      metricTrackedKeys,
+      (dateKey) => completedDays[dateKey] === true,
+    ),
+  };
+  const moodWeekValues = metricsWeekKeys.map(
+    (dateKey) => moodScores[moodHistory[dateKey]] ?? 50,
+  );
+  const moodLinePoints = moodWeekValues
+    .map((value, index) => `${8 + index * 14},${86 - value * 0.64}`)
+    .join(" ");
+  const consistentWeekday = useMemo(() => {
+    const totals = Array.from({ length: 7 }, () => 0);
+    metricTrackedKeys.forEach((dateKey) => {
+      const score =
+        Number(dayHasHydration(dateKey)) +
+        Number(dayHasClass(dateKey)) +
+        Number(dayHasStudy(dateKey)) +
+        Number(completedDays[dateKey] === true);
+      totals[(dateFromKey(dateKey).getDay() + 6) % 7] += score;
+    });
+    const best = totals.indexOf(Math.max(...totals));
+    return ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"][best];
+  }, [calendarEvents, completedDays, hydrationReminderIds, metricTrackedKeys, reminderHistory]);
+  const metricsRangeLabel = (() => {
+    if (metricsPeriod === "all") return "All your little days";
+    if (metricsPeriod === "year") return String(metricsRange.start.getFullYear());
+    if (metricsPeriod === "month") {
+      return metricsRange.start.toLocaleDateString("en", {
+        month: "long",
+        year: "numeric",
+      });
+    }
+    const start = metricsRange.start.toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+    });
+    const end = metricsRange.end.toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+    });
+    return `${start} – ${end}`;
+  })();
   const customArtTheme =
     themeOptions.find((theme) => theme.art === customTheme.art) ??
     themeOptions[0]!;
@@ -1922,10 +2116,10 @@ export default function Home() {
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
   );
   useEffect(() => {
-    if (!calendarOpen || !calendarExpanded) {
+    if (!calendarOpen || !calendarScheduleOpen) {
       setScheduleFocusOpen(false);
     }
-  }, [calendarExpanded, calendarOpen]);
+  }, [calendarScheduleOpen, calendarOpen]);
 
   useEffect(() => {
     if (!scheduleFocusOpen) return;
@@ -1937,7 +2131,7 @@ export default function Home() {
   }, [scheduleFocusOpen]);
 
   useEffect(() => {
-    if (!calendarOpen || !calendarExpanded) return;
+    if (!calendarOpen || !calendarScheduleOpen) return;
     const datedEvents = calendarEvents.filter((event) =>
       eventOccursOn(event, selectedCalendarDate),
     );
@@ -1960,7 +2154,7 @@ export default function Home() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [calendarEvents, calendarExpanded, calendarOpen, selectedCalendarDate, todayKey]);
+  }, [calendarEvents, calendarOpen, calendarScheduleOpen, selectedCalendarDate, todayKey]);
 
   useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
@@ -1998,6 +2192,22 @@ export default function Home() {
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
+  };
+
+  const openMetrics = () => {
+    setMetricsAnchorDate(new Date());
+    setMetricsOpen(true);
+  };
+
+  const shiftMetricsRange = (direction: number) => {
+    if (metricsPeriod === "all") return;
+    setMetricsAnchorDate((current) => {
+      const next = new Date(current);
+      if (metricsPeriod === "week") next.setDate(next.getDate() + direction * 7);
+      if (metricsPeriod === "month") next.setMonth(next.getMonth() + direction);
+      if (metricsPeriod === "year") next.setFullYear(next.getFullYear() + direction);
+      return next;
+    });
   };
 
   const openPostItEditor = (postIt?: PostItNote) => {
@@ -2110,6 +2320,7 @@ export default function Home() {
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setEventEditorOpen(false);
     setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
     setCalendarSearchOpen(false);
     setCalendarSearchQuery("");
     setMonthPickerOpen(false);
@@ -3649,8 +3860,11 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
-          <div
+          <button
             className="brand-wrap"
+            type="button"
+            onClick={openMetrics}
+            aria-label="Open aérea metrics"
           >
             <span className="brand-mark profile-mark">
               {profilePhoto ? (
@@ -3663,7 +3877,7 @@ export default function Home() {
               <span className="eyebrow">MY LITTLE DAY</span>
               <strong className="wordmark">aérea</strong>
             </span>
-          </div>
+          </button>
           <div className="header-actions">
             <button
               className="post-it-create-button"
@@ -4714,7 +4928,11 @@ export default function Home() {
 
       {calendarOpen && (
         <div
-          className={`modal-backdrop ${calendarExpanded && !eventEditorOpen ? "agenda-overlay-backdrop" : ""}`}
+          className={[
+            "modal-backdrop",
+            calendarScheduleOpen && !eventEditorOpen ? "agenda-overlay-backdrop" : "",
+            calendarExpanded && !eventEditorOpen ? "extended-month-backdrop" : "",
+          ].filter(Boolean).join(" ")}
           role="presentation"
         >
           <section
@@ -4722,8 +4940,9 @@ export default function Home() {
               "calendar-modal",
               eventEditorOpen ? "calendar-event-mode" : "",
               eventEditorOpen ? "event-editor-themed" : "",
-              calendarExpanded && !eventEditorOpen ? "calendar-expanded" : "",
-              calendarExpanded && !eventEditorOpen ? "agenda-v2-modal" : "",
+              calendarScheduleOpen && !eventEditorOpen ? "calendar-expanded" : "",
+              calendarScheduleOpen && !eventEditorOpen ? "agenda-v2-modal" : "",
+              calendarExpanded && !eventEditorOpen ? "calendar-extended-month" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -5170,7 +5389,7 @@ export default function Home() {
               </>
             ) : (
               <>
-                {calendarExpanded && (
+                {calendarScheduleOpen && (
                   <>
                     <div className="storybook-scene agenda-v3-scene" data-visual={activeTheme.id} aria-hidden="true">
                       <span className="storybook-cloud cloud-one" />
@@ -5191,7 +5410,16 @@ export default function Home() {
                       )}
                     </div>
                     <header className="topbar agenda-v2-homebar">
-                      <div className="brand-wrap">
+                      <button
+                        className="brand-wrap"
+                        type="button"
+                        onClick={() => {
+                          setCalendarScheduleOpen(false);
+                          setCalendarOpen(false);
+                          openMetrics();
+                        }}
+                        aria-label="Open aérea metrics"
+                      >
                         <span className="brand-mark profile-mark">
                           {profilePhoto ? (
                             <img src={profilePhoto} alt="" />
@@ -5203,14 +5431,14 @@ export default function Home() {
                           <span className="eyebrow">MY LITTLE DAY</span>
                           <strong className="wordmark">aérea</strong>
                         </span>
-                      </div>
+                      </button>
                       <div className="header-actions">
                         <button
                           className="calendar-button"
                           type="button"
                           onClick={() => {
                             setMonthPickerOpen(false);
-                            setCalendarExpanded(false);
+                            setCalendarScheduleOpen(false);
                           }}
                           aria-label="Back to compact calendar"
                         >
@@ -5443,7 +5671,7 @@ export default function Home() {
                     </nav>
                   </section>
                 )}
-                {!calendarExpanded && (
+                {!calendarExpanded && !calendarScheduleOpen && (
                   <div className="modal-top">
                     <div className="calendar-month-heading">
                       <button onClick={() => shiftCalendarMonth(-1)} aria-label="Previous month">←</button>
@@ -5475,7 +5703,7 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-                {monthPickerOpen && !calendarExpanded && (
+                {monthPickerOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <div className="calendar-date-menu" role="dialog" aria-label="Choose month and year">
                     <div className="calendar-date-menu-columns">
                       <div className="calendar-date-menu-list" aria-label="Months">
@@ -5515,7 +5743,7 @@ export default function Home() {
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
-                  {!calendarExpanded && (
+                  {!calendarExpanded && !calendarScheduleOpen && (
                     <button
                       className="calendar-search-trigger"
                       type="button"
@@ -5529,7 +5757,7 @@ export default function Home() {
                       <span className="calendar-search-glyph" aria-hidden="true" />
                     </button>
                   )}
-                  {!calendarExpanded && (
+                  {!calendarExpanded && !calendarScheduleOpen && (
                     <button
                       className="calendar-view-toggle"
                       type="button"
@@ -5541,6 +5769,22 @@ export default function Home() {
                         if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) {
                           setSelectedCalendarDate(localDateKey(visibleDates[0]));
                         }
+                        setCalendarExpanded(false);
+                        setCalendarScheduleOpen(true);
+                      }}
+                    >
+                      <span aria-hidden="true">☷</span>
+                    </button>
+                  )}
+                  {!calendarExpanded && !calendarScheduleOpen && (
+                    <button
+                      className="calendar-view-toggle calendar-month-view-toggle"
+                      type="button"
+                      aria-pressed={false}
+                      aria-label="Open extended monthly calendar"
+                      title="Extended calendar"
+                      onClick={() => {
+                        setCalendarScheduleOpen(false);
                         setCalendarExpanded(true);
                       }}
                     >
@@ -5548,7 +5792,7 @@ export default function Home() {
                     </button>
                   )}
                 </div>
-                {calendarSearchOpen && !calendarExpanded && (
+                {calendarSearchOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <section
                     className="calendar-search-screen"
                     aria-label="Search calendar events"
@@ -5702,7 +5946,7 @@ export default function Home() {
                     </footer>
                   </section>
                 )}
-                {calendarExpanded && (
+                {calendarScheduleOpen && (
                   <div className="agenda-v2">
                     <section className="welcome-row agenda-v2-greeting">
                       <div>
@@ -6051,7 +6295,7 @@ export default function Home() {
                           className={tab.id === activeTab ? "nav-item active" : "nav-item"}
                           type="button"
                           onClick={() => {
-                            setCalendarExpanded(false);
+                            setCalendarScheduleOpen(false);
                             setCalendarOpen(false);
                             changeTab(tab.id);
                           }}
@@ -6762,6 +7006,236 @@ export default function Home() {
             </div>
           );
         })()}
+
+      {metricsOpen && (
+        <div className="metrics-backdrop" role="presentation">
+          <section
+            className="metrics-screen"
+            role="dialog"
+            aria-modal="true"
+            aria-label="aérea metrics"
+          >
+            <header className="metrics-topbar">
+              <button
+                className="metrics-mini-brand"
+                type="button"
+                onClick={() => setMetricsOpen(false)}
+                aria-label="Back to My Little Day"
+              >
+                <span aria-hidden="true">☁</span>
+                My Little Day
+              </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMetricsOpen(false);
+                    openCalendarAtToday();
+                    setCalendarSearchOpen(true);
+                  }}
+                  aria-label="Search calendar"
+                >
+                  <span className="metrics-search-glyph" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMetricsOpen(false)}
+                  aria-label="Close metrics"
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+
+            <section className="metrics-hero">
+              <div>
+                <p>aérea</p>
+                <h1>metrics <span aria-hidden="true">☆</span></h1>
+                <small>little habits,<br />big changes. ♡</small>
+              </div>
+              <div className="metrics-cloud-friend" aria-hidden="true">
+                <span>✦</span>
+                <strong>☁</strong>
+                <i>☆</i>
+              </div>
+            </section>
+
+            <div className="metrics-controls">
+              <div className="metrics-period-tabs" role="group" aria-label="Metrics period">
+                {([
+                  ["week", "week"],
+                  ["month", "month"],
+                  ["year", "year"],
+                  ["all", "all time"],
+                ] as Array<[MetricsPeriod, string]>).map(([period, label]) => (
+                  <button
+                    key={period}
+                    type="button"
+                    className={metricsPeriod === period ? "active" : ""}
+                    onClick={() => {
+                      setMetricsPeriod(period);
+                      setMetricsAnchorDate(new Date());
+                    }}
+                    aria-pressed={metricsPeriod === period}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="metrics-date-nav">
+                <button
+                  type="button"
+                  onClick={() => shiftMetricsRange(-1)}
+                  disabled={metricsPeriod === "all"}
+                  aria-label="Previous metrics period"
+                >
+                  ‹
+                </button>
+                <strong>{metricsRangeLabel}</strong>
+                <button
+                  type="button"
+                  onClick={() => shiftMetricsRange(1)}
+                  disabled={metricsPeriod === "all"}
+                  aria-label="Next metrics period"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+
+            <section className="metrics-summary-grid" aria-label="Period summary">
+              {[
+                { icon: "💧", value: hydratedDays, goal: metricGoal, label: "hydrated", progress: metricProgress.hydration, tint: "blue" },
+                { icon: "🎓", value: classDays, goal: metricGoal, label: "went to class", progress: metricProgress.classes, tint: "lilac" },
+                { icon: "⭐", value: completedMetricDays, goal: metricGoal, label: "completed your day", progress: metricProgress.completed, tint: "yellow" },
+                { icon: "♥", value: averageMood, goal: 100, label: "avg mood this period", progress: averageMood, tint: "pink", percent: true },
+              ].map((metric) => (
+                <article className={`metrics-summary-card ${metric.tint}`} key={metric.label}>
+                  <span aria-hidden="true">{metric.icon}</span>
+                  <div>
+                    <p><strong>{metric.value}</strong>{metric.percent ? "%" : <small>/{metric.goal} days</small>}</p>
+                    <h2>{metric.label}</h2>
+                    <em>{metric.progress > 0 ? `↑ ${metric.progress}% of this period` : "your next check-in starts here"}</em>
+                  </div>
+                </article>
+              ))}
+            </section>
+
+            <section className="metrics-overview-card">
+              <header>
+                <span aria-hidden="true">☁</span>
+                <strong>weekly overview</strong>
+              </header>
+              <div className="metrics-overview-grid">
+                <span />
+                {metricsWeekKeys.map((dateKey) => (
+                  <strong key={`heading-${dateKey}`}>
+                    {dateFromKey(dateKey).toLocaleDateString("en", { weekday: "short" }).toUpperCase()}
+                  </strong>
+                ))}
+                {[
+                  { icon: "💧", label: "drink water", detail: "daily", done: dayHasHydration },
+                  { icon: "🎓", label: "go to class", detail: "calendar", done: dayHasClass },
+                  { icon: "▤", label: "study / focus", detail: "plans", done: dayHasStudy },
+                  { icon: "⭐", label: "complete my day", detail: "daily", done: (dateKey: string) => completedDays[dateKey] === true },
+                ].map((row) => (
+                  <div className="metrics-overview-row" key={row.label}>
+                    <div className="metrics-overview-label">
+                      <span aria-hidden="true">{row.icon}</span>
+                      <span><strong>{row.label}</strong><small>{row.detail}</small></span>
+                    </div>
+                    {metricsWeekKeys.map((dateKey) => (
+                      <i
+                        key={`${row.label}-${dateKey}`}
+                        className={[
+                          row.done(dateKey) ? "done" : "",
+                          dateKey > todayKey ? "future" : "",
+                        ].filter(Boolean).join(" ")}
+                        aria-label={`${row.label} ${row.done(dateKey) ? "completed" : "not completed"} on ${readableDate(dateKey)}`}
+                      >
+                        {row.done(dateKey) ? "✓" : ""}
+                      </i>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="metrics-chart-grid">
+              <article className="metrics-chart-card">
+                <header><span>💧</span><strong>water intake</strong></header>
+                <div className="metrics-donut-row">
+                  <div
+                    className="metrics-donut blue"
+                    style={{ "--metric-progress": `${metricProgress.hydration}%` } as CSSProperties}
+                  >
+                    <strong>{hydratedDays}<small>/{metricGoal}</small></strong>
+                    <span>days</span>
+                  </div>
+                  <p>best streak<br /><strong>{metricStreaks.hydration} days</strong><br /><small>goal · {metricGoal} days</small></p>
+                </div>
+                <footer>keep going! ☆</footer>
+              </article>
+
+              <article className="metrics-chart-card mood-chart-card">
+                <header><span>♥</span><strong>mood tracker</strong></header>
+                <div className="metrics-mood-chart">
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Mood trend this week">
+                    <line x1="7" y1="87" x2="94" y2="87" />
+                    <line x1="7" y1="58" x2="94" y2="58" />
+                    <line x1="7" y1="29" x2="94" y2="29" />
+                    <polyline points={moodLinePoints} />
+                    {moodWeekValues.map((value, index) => (
+                      <circle key={metricsWeekKeys[index]} cx={8 + index * 14} cy={86 - value * .64} r="2.3" />
+                    ))}
+                  </svg>
+                  <div>{metricsWeekKeys.map((dateKey) => <span key={dateKey}>{dateFromKey(dateKey).toLocaleDateString("en", { weekday: "narrow" })}</span>)}</div>
+                </div>
+                <footer>avg mood <b>{averageMood}%</b> <em>↑ be gentle with yourself</em></footer>
+              </article>
+
+              <article className="metrics-chart-card">
+                <header><span>🎓</span><strong>class consistency</strong></header>
+                <div className="metrics-donut-row">
+                  <div
+                    className="metrics-donut lilac"
+                    style={{ "--metric-progress": `${metricProgress.classes}%` } as CSSProperties}
+                  >
+                    <strong>{classDays}<small>/{metricGoal}</small></strong>
+                    <span>days</span>
+                  </div>
+                  <p>current streak<br /><strong>{metricStreaks.classes} days ☆</strong><br /><small>{classDays} class days</small></p>
+                </div>
+                <footer>you’re doing great! ♡</footer>
+              </article>
+            </section>
+
+            <section className="metrics-bottom-grid">
+              <article className="metrics-streak-card">
+                <header><span>☆</span><strong>current streaks</strong></header>
+                <p><span>💧 drink water</span><b>{metricStreaks.hydration} days</b></p>
+                <p><span>🎓 go to class</span><b>{metricStreaks.classes} days</b></p>
+                <p><span>⭐ complete my day</span><b>{metricStreaks.completed} days</b></p>
+              </article>
+              <article className="metrics-insights-card">
+                <header><span>☁</span><strong>this period’s insights</strong></header>
+                <p><span>☆</span> you’re most consistent on <strong>{consistentWeekday}! ✨</strong></p>
+                <p><span>💧</span> {metricStreaks.hydration > 0 ? `keep your ${metricStreaks.hydration}-day water streak going.` : "one glass can begin your next water streak."}</p>
+                <p><span>♥</span> {averageMood > 0 ? `your recorded mood averaged ${averageMood}%.` : "add a mood sticker to see your gentle trend."}</p>
+                <div aria-hidden="true">☆<br />take care<br />of you ♡</div>
+              </article>
+            </section>
+
+            <nav className="metrics-nav" aria-label="Metrics navigation">
+              <button type="button" onClick={() => { setMetricsOpen(false); openCalendarAtToday(); }}><span>▣</span><small>calendar</small></button>
+              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("habits"); }}><span>☑</span><small>habits</small></button>
+              <button className="active" type="button" aria-current="page"><span>☁</span><small>aérea</small></button>
+              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("journal"); }}><span>▤</span><small>journal</small></button>
+              <button type="button" onClick={() => { setMetricsOpen(false); changeTab("spaces"); }}><span>•••</span><small>more</small></button>
+            </nav>
+          </section>
+        </div>
+      )}
 
       {postItEditorOpen && (
         <div className="modal-backdrop post-it-editor-backdrop" role="presentation">

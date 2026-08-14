@@ -419,3 +419,23 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(cssSource, /Lovely lavender evening theme/);
   assert.match(cssSource, /data-theme="lovelyevening"/);
 });
+
+test("keeps the schedule separate from the extended month and opens real aérea metrics", () => {
+  assert.match(pageSource, /calendarScheduleOpen/);
+  assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
+  assert.match(pageSource, /setCalendarExpanded\(true\)/);
+  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.match(pageSource, /calendar-extended-month/);
+  assert.match(pageSource, /onClick=\{openMetrics\}/);
+  assert.match(pageSource, /className="metrics-screen"/);
+  assert.match(pageSource, /aérea metrics/);
+  assert.match(pageSource, /metricsDateRange/);
+  assert.match(pageSource, /dayHasHydration/);
+  assert.match(pageSource, /dayHasClass/);
+  assert.match(pageSource, /moodScores/);
+  assert.match(pageSource, /weekly overview/);
+  assert.match(cssSource, /aérea metrics/);
+  assert.match(cssSource, /\.metrics-summary-grid/);
+  assert.match(cssSource, /\.metrics-overview-grid/);
+  assert.match(cssSource, /\.metrics-donut/);
+});
