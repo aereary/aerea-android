@@ -581,11 +581,11 @@ const starterReminders: Reminder[] = [
 ];
 
 const tabs: { id: Tab; icon: string; label: string }[] = [
-  { id: "today", icon: "⌂", label: "Today" },
-  { id: "habits", icon: "✓", label: "Habits" },
+  { id: "today", icon: "⌂", label: "Day" },
+  { id: "habits", icon: "✓", label: "Rituals" },
   { id: "focus", icon: "◷", label: "Focus" },
-  { id: "journal", icon: "✎", label: "Journal" },
-  { id: "spaces", icon: "✦", label: "Spaces" },
+  { id: "journal", icon: "✎", label: "Notes" },
+  { id: "spaces", icon: "◇", label: "Studio" },
 ];
 
 const starterHabits: Habit[] = [
@@ -1195,6 +1195,7 @@ export default function Home() {
     color: "lavender",
     doodle: "heart",
   });
+  const [workspaceLauncherOpen, setWorkspaceLauncherOpen] = useState(false);
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -1336,6 +1337,20 @@ export default function Home() {
     const interval = window.setInterval(updateClock, 30_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!workspaceLauncherOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeLauncher = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setWorkspaceLauncherOpen(false);
+    };
+    window.addEventListener("keydown", closeLauncher);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeLauncher);
+    };
+  }, [workspaceLauncherOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2384,6 +2399,26 @@ export default function Home() {
     setCalendarSearchQuery("");
     setMonthPickerOpen(false);
     setCalendarOpen(true);
+  };
+
+  const openScheduleAtToday = () => {
+    openCalendarAtToday();
+    setCalendarScheduleOpen(true);
+  };
+
+  const openExtendedMonthAtToday = () => {
+    openCalendarAtToday();
+    setCalendarExpanded(true);
+  };
+
+  const openStudioSpace = (nextSpace: Exclude<Space, "menu">) => {
+    changeTab("spaces");
+    setSpace(nextSpace);
+  };
+
+  const runLauncherAction = (action: () => void) => {
+    setWorkspaceLauncherOpen(false);
+    action();
   };
 
   const shiftCalendarMonth = (offset: number) => {
@@ -3900,11 +3935,36 @@ export default function Home() {
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
 
+  const workspaceLabel =
+    activeTab === "today"
+      ? "Dayboard"
+      : activeTab === "habits"
+        ? "Rituals"
+        : activeTab === "focus"
+          ? "Focus room"
+          : activeTab === "journal"
+            ? "Notes"
+            : space === "classes"
+              ? "Class library"
+              : space === "sketchbook"
+                ? "Sketchbook"
+                : "Studio";
+  const panelDate = scheduleNow.toLocaleDateString("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const panelTime = scheduleNow.toLocaleTimeString("en", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
   return (
     <main
-      className="app-shell"
+      className="app-shell workstation-shell"
       data-theme={appTheme}
       data-color-mode={colorMode}
+      data-workspace={activeTab}
       style={customThemeStyle}
     >
       <div className="paper-grain" aria-hidden="true" />
@@ -3949,24 +4009,43 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
-          <button
-            className="brand-wrap"
-            type="button"
-            onClick={openMetrics}
-            aria-label="Open aérea metrics"
-          >
-            <span className="brand-mark profile-mark">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="" />
-              ) : (
-                <span aria-hidden="true">♡</span>
-              )}
-            </span>
-            <span>
-              <span className="eyebrow">MY LITTLE DAY</span>
-              <strong className="wordmark">aérea</strong>
-            </span>
-          </button>
+          <div className="system-panel-start">
+            <button
+              className="workspace-launcher-button"
+              type="button"
+              onClick={() => setWorkspaceLauncherOpen(true)}
+              aria-label="Open workspace launcher"
+              aria-expanded={workspaceLauncherOpen}
+            >
+              <span className="launcher-grid-glyph" aria-hidden="true">
+                <i /><i /><i /><i />
+              </span>
+              <small>Launch</small>
+            </button>
+            <button
+              className="brand-wrap"
+              type="button"
+              onClick={openMetrics}
+              aria-label="Open aérea metrics"
+            >
+              <span className="brand-mark profile-mark">
+                {profilePhoto ? (
+                  <img src={profilePhoto} alt="" />
+                ) : (
+                  <span aria-hidden="true">♡</span>
+                )}
+              </span>
+              <span>
+                <span className="eyebrow">LITTLE DAY</span>
+                <strong className="wordmark">aérea</strong>
+              </span>
+            </button>
+          </div>
+          <div className="workspace-indicator" aria-live="polite">
+            <span aria-hidden="true" />
+            <small>WORKSPACE</small>
+            <strong>{workspaceLabel}</strong>
+          </div>
           <div className="header-actions">
             <button
               className="post-it-create-button"
@@ -3985,6 +4064,10 @@ export default function Home() {
               <span className="calendar-glyph" aria-hidden="true" />
               Calendar
             </button>
+            <time className="system-clock" dateTime={scheduleNow.toISOString()}>
+              <span>{panelDate}</span>
+              <strong>{panelTime}</strong>
+            </time>
             <button
               className="avatar-button"
               aria-label="Open appearance settings"
@@ -4033,6 +4116,14 @@ export default function Home() {
                 )
               }
               openCalendar={openCalendarAtToday}
+              openSchedule={openScheduleAtToday}
+              openHabits={() => changeTab("habits")}
+              openFocus={() => changeTab("focus")}
+              openJournal={() => changeTab("journal")}
+              openClasses={() => openStudioSpace("classes")}
+              openSketchbook={() => openStudioSpace("sketchbook")}
+              openMetrics={openMetrics}
+              openPostIt={() => openPostItEditor()}
               yesterdayDoneCount={yesterdayDoneCount}
               selectedDate={selectedHomeDate}
               selectDate={setSelectedHomeDate}
@@ -5006,6 +5097,15 @@ export default function Home() {
         )}
 
         {!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">
+          <button
+            className={workspaceLauncherOpen ? "nav-item launcher-item active" : "nav-item launcher-item"}
+            type="button"
+            onClick={() => setWorkspaceLauncherOpen(true)}
+            aria-label="Open all workspaces"
+          >
+            <span className="dock-launcher-glyph" aria-hidden="true">⌘</span>
+            <small>Launch</small>
+          </button>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -5018,6 +5118,152 @@ export default function Home() {
           ))}
         </nav>}
       </section>
+
+      {workspaceLauncherOpen && !sketchFullscreen && (
+        <div
+          className="workspace-launcher-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setWorkspaceLauncherOpen(false);
+            }
+          }}
+        >
+          <section
+            className="workspace-launcher"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Little Day workspace launcher"
+          >
+            <header className="workspace-launcher-header">
+              <div className="window-controls" aria-hidden="true">
+                <i /><i /><i />
+              </div>
+              <div>
+                <p className="tiny-label">LITTLE DAY / ALL WORKSPACES</p>
+                <h2>Where would you like to go?</h2>
+                <span>Every part of aérea, arranged like your own quiet desktop.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWorkspaceLauncherOpen(false)}
+                aria-label="Close workspace launcher"
+              >
+                ×
+              </button>
+            </header>
+            <div className="workspace-launcher-grid">
+              <button
+                className="launcher-app app-day"
+                type="button"
+                onClick={() => runLauncherAction(() => changeTab("today"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">⌂</span>
+                <span><strong>Dayboard</strong><small>Today at a glance</small></span>
+              </button>
+              <button
+                className="launcher-app app-calendar"
+                type="button"
+                onClick={() => runLauncherAction(openCalendarAtToday)}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">▦</span>
+                <span><strong>Calendar</strong><small>Compact planner</small></span>
+              </button>
+              <button
+                className="launcher-app app-schedule"
+                type="button"
+                onClick={() => runLauncherAction(openScheduleAtToday)}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">≡</span>
+                <span><strong>Day schedule</strong><small>24-hour timeline</small></span>
+              </button>
+              <button
+                className="launcher-app app-month"
+                type="button"
+                onClick={() => runLauncherAction(openExtendedMonthAtToday)}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">⊞</span>
+                <span><strong>Month</strong><small>Full calendar view</small></span>
+              </button>
+              <button
+                className="launcher-app app-habits"
+                type="button"
+                onClick={() => runLauncherAction(() => changeTab("habits"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">✓</span>
+                <span><strong>Rituals</strong><small>Habits & progress</small></span>
+              </button>
+              <button
+                className="launcher-app app-focus"
+                type="button"
+                onClick={() => runLauncherAction(() => changeTab("focus"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">◷</span>
+                <span><strong>Focus room</strong><small>Timer & sessions</small></span>
+              </button>
+              <button
+                className="launcher-app app-notes"
+                type="button"
+                onClick={() => runLauncherAction(() => changeTab("journal"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">✎</span>
+                <span><strong>Quick notes</strong><small>Journal moments</small></span>
+              </button>
+              <button
+                className="launcher-app app-classes"
+                type="button"
+                onClick={() => runLauncherAction(() => openStudioSpace("classes"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">♫</span>
+                <span><strong>Class library</strong><small>Recordings & notes</small></span>
+              </button>
+              <button
+                className="launcher-app app-sketch"
+                type="button"
+                onClick={() => runLauncherAction(() => openStudioSpace("sketchbook"))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">⌁</span>
+                <span><strong>Sketchbook</strong><small>Draw & handwrite</small></span>
+              </button>
+              <button
+                className="launcher-app app-metrics"
+                type="button"
+                onClick={() => runLauncherAction(openMetrics)}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">⌁</span>
+                <span><strong>aérea metrics</strong><small>Rhythms & insights</small></span>
+              </button>
+              <button
+                className="launcher-app app-sticky"
+                type="button"
+                onClick={() => runLauncherAction(() => openPostItEditor())}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">□</span>
+                <span><strong>New post-it</strong><small>Pin a thought</small></span>
+              </button>
+              <button
+                className="launcher-app app-settings"
+                type="button"
+                onClick={() => runLauncherAction(() => setSettingsOpen(true))}
+              >
+                <span className="launcher-app-icon" aria-hidden="true">⚙</span>
+                <span><strong>Appearance</strong><small>Themes, sync & profile</small></span>
+              </button>
+            </div>
+            <footer className="workspace-launcher-footer">
+              <span className="launcher-theme-swatch" aria-hidden="true" />
+              <span>
+                <small>CURRENT WORLD</small>
+                <strong>{activeTheme.name}</strong>
+              </span>
+              <i />
+              <span className="launcher-sync-state">
+                {syncEmail ? "Private sync on" : "Local-first"}
+              </span>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {calendarOpen && (
         <div
@@ -8160,6 +8406,14 @@ function TodayScreen({
   completeReminder,
   restoreReminder,
   openCalendar,
+  openSchedule,
+  openHabits,
+  openFocus,
+  openJournal,
+  openClasses,
+  openSketchbook,
+  openMetrics,
+  openPostIt,
   selectedDate,
   selectDate,
   selectedDateEvents,
@@ -8182,6 +8436,14 @@ function TodayScreen({
   completeReminder: (id: number) => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
+  openSchedule: () => void;
+  openHabits: () => void;
+  openFocus: () => void;
+  openJournal: () => void;
+  openClasses: () => void;
+  openSketchbook: () => void;
+  openMetrics: () => void;
+  openPostIt: () => void;
   selectedDate: string;
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
@@ -8384,6 +8646,42 @@ function TodayScreen({
             {todayKey === day.key && <i />}
           </button>
         ))}
+      </section>
+
+      <section className="dayboard-command-strip" aria-label="Quick launch">
+        <header>
+          <span className="command-prompt" aria-hidden="true">›_</span>
+          <span>
+            <small>QUICK LAUNCH</small>
+            <strong>Your tools, one tap away</strong>
+          </span>
+        </header>
+        <div>
+          <button type="button" onClick={openSchedule}>
+            <span aria-hidden="true">≡</span><strong>Schedule</strong><small>Timeline</small>
+          </button>
+          <button type="button" onClick={openHabits}>
+            <span aria-hidden="true">✓</span><strong>Rituals</strong><small>Habits</small>
+          </button>
+          <button type="button" onClick={openFocus}>
+            <span aria-hidden="true">◷</span><strong>Focus</strong><small>Timer</small>
+          </button>
+          <button type="button" onClick={openJournal}>
+            <span aria-hidden="true">✎</span><strong>Note</strong><small>Journal</small>
+          </button>
+          <button type="button" onClick={openSketchbook}>
+            <span aria-hidden="true">⌁</span><strong>Sketch</strong><small>Canvas</small>
+          </button>
+          <button type="button" onClick={openClasses}>
+            <span aria-hidden="true">♫</span><strong>Classes</strong><small>Audio</small>
+          </button>
+          <button type="button" onClick={openMetrics}>
+            <span aria-hidden="true">◒</span><strong>Metrics</strong><small>Insights</small>
+          </button>
+          <button type="button" onClick={openPostIt}>
+            <span aria-hidden="true">□</span><strong>Post-it</strong><small>Pin note</small>
+          </button>
+        </div>
       </section>
 
       {isNoirRest && (

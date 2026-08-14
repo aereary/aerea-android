@@ -477,3 +477,33 @@ test("ships the rose editorial and noir quiet-hours interfaces", () => {
   assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
   assert.match(cssSource, /\.noir-coming-up-card/);
 });
+
+test("ships the Little Day workstation and keeps every tool one launch away", () => {
+  assert.match(pageSource, /className="app-shell workstation-shell"/);
+  assert.match(pageSource, /workspaceLauncherOpen/);
+  assert.match(pageSource, /className="workspace-launcher"/);
+  assert.match(pageSource, /Little Day workspace launcher/);
+  for (const destination of [
+    "Dayboard",
+    "Calendar",
+    "Day schedule",
+    "Month",
+    "Rituals",
+    "Focus room",
+    "Quick notes",
+    "Class library",
+    "Sketchbook",
+    "aérea metrics",
+    "New post-it",
+    "Appearance",
+  ]) {
+    assert.match(pageSource, new RegExp(`>${destination}<`));
+  }
+  assert.match(pageSource, /className="dayboard-command-strip"/);
+  assert.match(cssSource, /Little Day workstation/);
+  assert.match(cssSource, /grid-template-areas:[\s\S]*"welcome week"/);
+  assert.match(cssSource, /\.workstation-shell \.[\s\S]*bottom-nav/);
+  assert.match(cssSource, /data-theme="lovelyevening"/);
+  assert.match(cssSource, /data-theme="rosegrid"/);
+  assert.match(cssSource, /data-theme="noirrest"/);
+});
