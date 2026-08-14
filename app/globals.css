@@ -22603,12 +22603,12 @@ body {
   padding: 14px;
 }
 
-.workstation-shell > .paper-grain {
+.app-shell.workstation-shell > .paper-grain {
   opacity: .18;
   mix-blend-mode: soft-light;
 }
 
-.workstation-shell .phone-canvas {
+.app-shell.workstation-shell .phone-canvas {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--cream) 74%, transparent), transparent 48%),
     color-mix(in srgb, var(--cream) 68%, transparent);
@@ -22623,23 +22623,23 @@ body {
   width: 100%;
 }
 
-.workstation-shell .phone-canvas::before,
-.workstation-shell .phone-canvas::after {
+.app-shell.workstation-shell .phone-canvas::before,
+.app-shell.workstation-shell .phone-canvas::after {
   display: none;
 }
 
-.workstation-shell .storybook-scene {
+.app-shell.workstation-shell .storybook-scene {
   filter: saturate(.82) blur(.2px);
   inset: 0;
   opacity: .26;
   position: fixed;
 }
 
-.workstation-shell .storybook-scene :is(.storybook-cloud, .storybook-hill) {
+.app-shell.workstation-shell .storybook-scene :is(.storybook-cloud, .storybook-hill) {
   opacity: .32;
 }
 
-.workstation-shell .topbar {
+.app-shell.workstation-shell .topbar {
   align-items: center;
   backdrop-filter: blur(24px) saturate(1.25);
   background: var(--desktop-panel);
@@ -22657,14 +22657,14 @@ body {
   z-index: 140;
 }
 
-.workstation-shell .system-panel-start {
+.app-shell.workstation-shell .system-panel-start {
   align-items: center;
   display: flex;
   gap: 10px;
   min-width: 0;
 }
 
-.workstation-shell .workspace-launcher-button {
+.app-shell.workstation-shell .workspace-launcher-button {
   align-items: center;
   background: color-mix(in srgb, var(--ink) 7%, transparent);
   border: 1px solid var(--desktop-border);
@@ -22678,14 +22678,14 @@ body {
   padding: 0 12px;
 }
 
-.workstation-shell .workspace-launcher-button:hover,
-.workstation-shell .workspace-launcher-button:focus-visible {
+.app-shell.workstation-shell .workspace-launcher-button:hover,
+.app-shell.workstation-shell .workspace-launcher-button:focus-visible {
   background: color-mix(in srgb, var(--hero) 16%, var(--paper));
   border-color: color-mix(in srgb, var(--hero) 45%, transparent);
   transform: translateY(-1px);
 }
 
-.workstation-shell .workspace-launcher-button small {
+.app-shell.workstation-shell .workspace-launcher-button small {
   color: var(--ink-soft);
   font-size: 9px;
   font-weight: 850;
@@ -22707,7 +22707,7 @@ body {
   width: 5px;
 }
 
-.workstation-shell .brand-wrap {
+.app-shell.workstation-shell .brand-wrap {
   align-items: center;
   background: transparent;
   border: 0;
@@ -22717,7 +22717,7 @@ body {
   padding: 0;
 }
 
-.workstation-shell .brand-mark {
+.app-shell.workstation-shell .brand-mark {
   background: color-mix(in srgb, var(--paper) 72%, transparent);
   border: 1px solid var(--desktop-border);
   box-shadow: 0 5px 14px color-mix(in srgb, var(--ink) 9%, transparent);
@@ -22725,19 +22725,19 @@ body {
   width: 42px;
 }
 
-.workstation-shell .brand-wrap .eyebrow {
+.app-shell.workstation-shell .brand-wrap .eyebrow {
   color: var(--muted);
   font-size: 8px;
   letter-spacing: .16em;
 }
 
-.workstation-shell .brand-wrap .wordmark {
+.app-shell.workstation-shell .brand-wrap .wordmark {
   color: var(--ink);
   font-size: 19px;
   letter-spacing: -.03em;
 }
 
-.workstation-shell .workspace-indicator {
+.app-shell.workstation-shell .workspace-indicator {
   align-items: center;
   color: var(--ink);
   display: grid;
@@ -22747,7 +22747,7 @@ body {
   min-width: 145px;
 }
 
-.workstation-shell .workspace-indicator > span {
+.app-shell.workstation-shell .workspace-indicator > span {
   background: var(--desktop-active);
   border: 2px solid color-mix(in srgb, var(--paper) 80%, transparent);
   border-radius: 50%;
@@ -22757,26 +22757,26 @@ body {
   width: 8px;
 }
 
-.workstation-shell .workspace-indicator small {
+.app-shell.workstation-shell .workspace-indicator small {
   color: var(--muted);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: .17em;
 }
 
-.workstation-shell .workspace-indicator strong {
+.app-shell.workstation-shell .workspace-indicator strong {
   font-size: 12px;
   font-weight: 780;
 }
 
-.workstation-shell .header-actions {
+.app-shell.workstation-shell .header-actions {
   align-items: center;
   display: flex;
   gap: 7px;
   justify-content: flex-end;
 }
 
-.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button) {
+.app-shell.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button) {
   background: color-mix(in srgb, var(--paper) 60%, transparent);
   border: 1px solid var(--desktop-border);
   box-shadow: none;
@@ -22784,12 +22784,12 @@ body {
   height: 42px;
 }
 
-.workstation-shell .header-actions > :is(.post-it-create-button, .avatar-button) {
+.app-shell.workstation-shell .header-actions > :is(.post-it-create-button, .avatar-button) {
   border-radius: 13px;
   width: 42px;
 }
 
-.workstation-shell .header-actions .calendar-button {
+.app-shell.workstation-shell .header-actions .calendar-button {
   border-radius: 13px;
   font-size: 9px;
   font-weight: 850;
@@ -22798,13 +22798,13 @@ body {
   text-transform: uppercase;
 }
 
-.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button):hover,
-.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button):focus-visible {
+.app-shell.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button):hover,
+.app-shell.workstation-shell .header-actions > :is(.post-it-create-button, .calendar-button, .avatar-button):focus-visible {
   background: color-mix(in srgb, var(--hero) 14%, var(--paper));
   border-color: color-mix(in srgb, var(--hero) 42%, transparent);
 }
 
-.workstation-shell .system-clock {
+.app-shell.workstation-shell .system-clock {
   border-left: 1px solid var(--desktop-border);
   color: var(--ink);
   display: grid;
@@ -22814,7 +22814,7 @@ body {
   text-align: right;
 }
 
-.workstation-shell .system-clock span {
+.app-shell.workstation-shell .system-clock span {
   color: var(--muted);
   font-size: 8px;
   font-weight: 750;
@@ -22822,12 +22822,12 @@ body {
   text-transform: uppercase;
 }
 
-.workstation-shell .system-clock strong {
+.app-shell.workstation-shell .system-clock strong {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.workstation-shell .main-content {
+.app-shell.workstation-shell .main-content {
   margin: 0;
   max-width: none;
   min-height: calc(100dvh - 116px);
@@ -22837,7 +22837,7 @@ body {
   z-index: 3;
 }
 
-.workstation-shell .main-content:has(> .dayboard-command-strip) {
+.app-shell.workstation-shell .main-content:has(> .dayboard-command-strip) {
   display: grid;
   gap: 16px;
   grid-template-areas:
@@ -22848,29 +22848,29 @@ body {
   grid-template-columns: minmax(0, 1.45fr) minmax(330px, .55fr);
 }
 
-.workstation-shell .welcome-row,
-.workstation-shell .week-strip,
-.workstation-shell .day-grid > .column,
-.workstation-shell .dayboard-command-strip,
-.workstation-shell .screen-intro,
-.workstation-shell .habit-summary,
-.workstation-shell .timer-card,
-.workstation-shell .focus-side,
-.workstation-shell .journal-compose,
-.workstation-shell .recent-entries,
-.workstation-shell .space-card,
-.workstation-shell .class-list,
-.workstation-shell .record-card,
-.workstation-shell .drawing-tools,
-.workstation-shell .notebook-wrap,
-.workstation-shell .saved-sketches {
+.app-shell.workstation-shell .welcome-row,
+.app-shell.workstation-shell .week-strip,
+.app-shell.workstation-shell .day-grid > .column,
+.app-shell.workstation-shell .dayboard-command-strip,
+.app-shell.workstation-shell .screen-intro,
+.app-shell.workstation-shell .habit-summary,
+.app-shell.workstation-shell .timer-card,
+.app-shell.workstation-shell .focus-side,
+.app-shell.workstation-shell .journal-compose,
+.app-shell.workstation-shell .recent-entries,
+.app-shell.workstation-shell .space-card,
+.app-shell.workstation-shell .class-list,
+.app-shell.workstation-shell .record-card,
+.app-shell.workstation-shell .drawing-tools,
+.app-shell.workstation-shell .notebook-wrap,
+.app-shell.workstation-shell .saved-sketches {
   backdrop-filter: blur(22px) saturate(1.12);
   background: var(--desktop-window);
   border: 1px solid var(--desktop-border);
   box-shadow: var(--desktop-window-shadow);
 }
 
-.workstation-shell .welcome-row {
+.app-shell.workstation-shell .welcome-row {
   align-items: center;
   border-radius: var(--desktop-radius);
   grid-area: welcome;
@@ -22881,7 +22881,7 @@ body {
   position: relative;
 }
 
-.workstation-shell .welcome-row::before {
+.app-shell.workstation-shell .welcome-row::before {
   align-items: center;
   background: color-mix(in srgb, var(--ink) 4%, transparent);
   border-bottom: 1px solid var(--desktop-hairline);
@@ -22898,11 +22898,11 @@ body {
   width: auto;
 }
 
-.workstation-shell .welcome-row::after {
+.app-shell.workstation-shell .welcome-row::after {
   display: none;
 }
 
-.workstation-shell .welcome-row h2 {
+.app-shell.workstation-shell .welcome-row h2 {
   color: var(--ink);
   font-size: clamp(32px, 4vw, 58px);
   letter-spacing: -.055em;
@@ -22910,24 +22910,24 @@ body {
   margin-top: 4px;
 }
 
-.workstation-shell .welcome-row .date-label {
+.app-shell.workstation-shell .welcome-row .date-label {
   color: var(--desktop-active);
   font-size: 9px;
   letter-spacing: .17em;
 }
 
-.workstation-shell .welcome-row .soft-copy {
+.app-shell.workstation-shell .welcome-row .soft-copy {
   color: var(--ink-soft);
   max-width: 540px;
 }
 
-.workstation-shell .day-charm {
+.app-shell.workstation-shell .day-charm {
   background: color-mix(in srgb, var(--paper) 56%, transparent);
   border: 1px solid var(--desktop-border);
   box-shadow: 0 14px 28px color-mix(in srgb, var(--ink) 10%, transparent);
 }
 
-.workstation-shell .week-strip {
+.app-shell.workstation-shell .week-strip {
   align-content: end;
   border-radius: var(--desktop-radius);
   display: grid;
@@ -22941,7 +22941,7 @@ body {
   position: relative;
 }
 
-.workstation-shell .week-strip::before {
+.app-shell.workstation-shell .week-strip::before {
   background: color-mix(in srgb, var(--ink) 4%, transparent);
   border-bottom: 1px solid var(--desktop-hairline);
   color: var(--muted);
@@ -22955,7 +22955,7 @@ body {
   position: absolute;
 }
 
-.workstation-shell .week-strip .day {
+.app-shell.workstation-shell .week-strip .day {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
@@ -22968,27 +22968,27 @@ body {
   padding: 5px 2px;
 }
 
-.workstation-shell .week-strip .day:hover {
+.app-shell.workstation-shell .week-strip .day:hover {
   background: color-mix(in srgb, var(--hero) 8%, transparent);
 }
 
-.workstation-shell .week-strip .day.active {
+.app-shell.workstation-shell .week-strip .day.active {
   background: var(--desktop-active);
   border-color: color-mix(in srgb, white 30%, transparent);
   box-shadow: 0 9px 20px var(--desktop-glow);
   color: white;
 }
 
-.workstation-shell .week-strip .day.active :is(span, strong) {
+.app-shell.workstation-shell .week-strip .day.active :is(span, strong) {
   color: inherit;
 }
 
-.workstation-shell .week-strip .day.today:not(.active) {
+.app-shell.workstation-shell .week-strip .day.today:not(.active) {
   background: color-mix(in srgb, var(--hero) 12%, transparent);
   border-color: color-mix(in srgb, var(--hero) 32%, transparent);
 }
 
-.workstation-shell .dayboard-command-strip {
+.app-shell.workstation-shell .dayboard-command-strip {
   align-items: stretch;
   border-radius: 18px;
   display: grid;
@@ -22998,7 +22998,7 @@ body {
   padding: 10px;
 }
 
-.workstation-shell .dayboard-command-strip > header {
+.app-shell.workstation-shell .dayboard-command-strip > header {
   align-items: center;
   border-right: 1px solid var(--desktop-hairline);
   display: flex;
@@ -23006,7 +23006,7 @@ body {
   padding: 5px 12px 5px 7px;
 }
 
-.workstation-shell .command-prompt {
+.app-shell.workstation-shell .command-prompt {
   align-items: center;
   background: var(--desktop-dock);
   border-radius: 11px;
@@ -23019,31 +23019,31 @@ body {
   width: 38px;
 }
 
-.workstation-shell .dayboard-command-strip > header > span:last-child {
+.app-shell.workstation-shell .dayboard-command-strip > header > span:last-child {
   display: grid;
   gap: 2px;
 }
 
-.workstation-shell .dayboard-command-strip header small {
+.app-shell.workstation-shell .dayboard-command-strip header small {
   color: var(--muted);
   font-size: 7px;
   font-weight: 900;
   letter-spacing: .15em;
 }
 
-.workstation-shell .dayboard-command-strip header strong {
+.app-shell.workstation-shell .dayboard-command-strip header strong {
   color: var(--ink);
   font-size: 11px;
 }
 
-.workstation-shell .dayboard-command-strip > div {
+.app-shell.workstation-shell .dayboard-command-strip > div {
   display: grid;
   gap: 6px;
   grid-template-columns: repeat(8, minmax(74px, 1fr));
   min-width: 0;
 }
 
-.workstation-shell .dayboard-command-strip > div > button {
+.app-shell.workstation-shell .dayboard-command-strip > div > button {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
@@ -23056,13 +23056,13 @@ body {
   text-align: left;
 }
 
-.workstation-shell .dayboard-command-strip > div > button:hover,
-.workstation-shell .dayboard-command-strip > div > button:focus-visible {
+.app-shell.workstation-shell .dayboard-command-strip > div > button:hover,
+.app-shell.workstation-shell .dayboard-command-strip > div > button:focus-visible {
   background: color-mix(in srgb, var(--hero) 10%, var(--paper));
   border-color: color-mix(in srgb, var(--hero) 24%, transparent);
 }
 
-.workstation-shell .dayboard-command-strip > div > button > span {
+.app-shell.workstation-shell .dayboard-command-strip > div > button > span {
   align-items: center;
   background: color-mix(in srgb, var(--hero) 13%, var(--paper));
   border: 1px solid var(--desktop-border);
@@ -23075,19 +23075,19 @@ body {
   width: 28px;
 }
 
-.workstation-shell .dayboard-command-strip button strong {
+.app-shell.workstation-shell .dayboard-command-strip button strong {
   font-size: 9px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.workstation-shell .dayboard-command-strip button small {
+.app-shell.workstation-shell .dayboard-command-strip button small {
   color: var(--muted);
   font-size: 7px;
 }
 
-.workstation-shell .day-grid {
+.app-shell.workstation-shell .day-grid {
   display: grid;
   gap: 16px;
   grid-area: day;
@@ -23095,59 +23095,59 @@ body {
   margin: 0;
 }
 
-.workstation-shell .day-grid > .column {
+.app-shell.workstation-shell .day-grid > .column {
   border-radius: var(--desktop-radius);
   min-width: 0;
   padding: 20px;
 }
 
-.workstation-shell .section-heading {
+.app-shell.workstation-shell .section-heading {
   border-bottom: 1px solid var(--desktop-hairline);
   margin-bottom: 15px;
   padding-bottom: 13px;
 }
 
-.workstation-shell .section-heading h3 {
+.app-shell.workstation-shell .section-heading h3 {
   color: var(--ink);
   letter-spacing: -.025em;
 }
 
-.workstation-shell .schedule-card,
-.workstation-shell .reminder-card,
-.workstation-shell .completed-wrap {
+.app-shell.workstation-shell .schedule-card,
+.app-shell.workstation-shell .reminder-card,
+.app-shell.workstation-shell .completed-wrap {
   box-shadow: none;
 }
 
-.workstation-shell .schedule-card {
+.app-shell.workstation-shell .schedule-card {
   background: color-mix(in srgb, var(--paper) 72%, transparent);
   border: 1px solid var(--desktop-hairline);
   border-radius: 16px;
 }
 
-.workstation-shell .schedule-card:hover,
-.workstation-shell .schedule-card:focus-visible {
+.app-shell.workstation-shell .schedule-card:hover,
+.app-shell.workstation-shell .schedule-card:focus-visible {
   border-color: color-mix(in srgb, var(--hero) 35%, transparent);
   transform: translateY(-2px);
 }
 
-.workstation-shell .reminder-card {
+.app-shell.workstation-shell .reminder-card {
   background: color-mix(in srgb, var(--paper) 58%, transparent);
   border: 1px solid var(--desktop-hairline);
   border-radius: 16px;
   padding: 6px;
 }
 
-.workstation-shell .reminder-row {
+.app-shell.workstation-shell .reminder-row {
   background: transparent;
   border-bottom: 1px solid var(--desktop-hairline);
   border-radius: 10px;
 }
 
-.workstation-shell .reminder-row:last-child {
+.app-shell.workstation-shell .reminder-row:last-child {
   border-bottom: 0;
 }
 
-.workstation-shell .calendar-mood-note {
+.app-shell.workstation-shell .calendar-mood-note {
   background: var(--desktop-window);
   border: 1px solid var(--desktop-border);
   border-radius: 16px;
@@ -23156,13 +23156,13 @@ body {
   margin: 0;
 }
 
-.workstation-shell .screen-section {
+.app-shell.workstation-shell .screen-section {
   display: grid;
   gap: 16px;
   margin: 0;
 }
 
-.workstation-shell .screen-intro {
+.app-shell.workstation-shell .screen-intro {
   border-radius: var(--desktop-radius);
   margin: 0;
   min-height: 176px;
@@ -23171,7 +23171,7 @@ body {
   position: relative;
 }
 
-.workstation-shell .screen-intro::before {
+.app-shell.workstation-shell .screen-intro::before {
   background: color-mix(in srgb, var(--ink) 4%, transparent);
   border-bottom: 1px solid var(--desktop-hairline);
   color: var(--muted);
@@ -23185,67 +23185,67 @@ body {
   position: absolute;
 }
 
-.workstation-shell .screen-intro::after {
+.app-shell.workstation-shell .screen-intro::after {
   opacity: .55;
 }
 
-.workstation-shell .screen-intro h2,
-.workstation-shell .inner-header h2 {
+.app-shell.workstation-shell .screen-intro h2,
+.app-shell.workstation-shell .inner-header h2 {
   color: var(--ink);
   font-size: clamp(31px, 4vw, 50px);
   letter-spacing: -.045em;
 }
 
-.workstation-shell .habit-summary,
-.workstation-shell .timer-card,
-.workstation-shell .focus-side,
-.workstation-shell .journal-compose,
-.workstation-shell .recent-entries,
-.workstation-shell .class-list,
-.workstation-shell .record-card,
-.workstation-shell .drawing-tools,
-.workstation-shell .notebook-wrap,
-.workstation-shell .saved-sketches {
+.app-shell.workstation-shell .habit-summary,
+.app-shell.workstation-shell .timer-card,
+.app-shell.workstation-shell .focus-side,
+.app-shell.workstation-shell .journal-compose,
+.app-shell.workstation-shell .recent-entries,
+.app-shell.workstation-shell .class-list,
+.app-shell.workstation-shell .record-card,
+.app-shell.workstation-shell .drawing-tools,
+.app-shell.workstation-shell .notebook-wrap,
+.app-shell.workstation-shell .saved-sketches {
   border-radius: var(--desktop-radius);
 }
 
-.workstation-shell .habit-list {
+.app-shell.workstation-shell .habit-list {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.workstation-shell .habit-row {
+.app-shell.workstation-shell .habit-row {
   background: var(--desktop-window);
   border: 1px solid var(--desktop-border);
   border-radius: 18px;
   box-shadow: var(--desktop-window-shadow);
 }
 
-.workstation-shell .focus-layout,
-.workstation-shell .journal-layout {
+.app-shell.workstation-shell .focus-layout,
+.app-shell.workstation-shell .journal-layout {
   gap: 16px;
 }
 
-.workstation-shell .recent-entries {
+.app-shell.workstation-shell .recent-entries {
   padding: 20px;
 }
 
-.workstation-shell .entry-card {
+.app-shell.workstation-shell .entry-card {
   background: color-mix(in srgb, var(--paper) 65%, transparent);
   border: 1px solid var(--desktop-hairline);
 }
 
-.workstation-shell .spaces-grid {
+.app-shell.workstation-shell .spaces-grid {
   gap: 14px;
 }
 
-.workstation-shell .space-card {
+.app-shell.workstation-shell .space-card {
   border-radius: var(--desktop-radius);
   min-height: 210px;
 }
 
-.workstation-shell .bottom-nav {
+.app-shell.workstation-shell .bottom-nav {
   align-items: center;
   backdrop-filter: blur(26px) saturate(1.2);
   background: var(--desktop-dock);
@@ -23266,12 +23266,12 @@ body {
   z-index: 135;
 }
 
-.workstation-shell .bottom-nav::before,
-.workstation-shell .bottom-nav::after {
+.app-shell.workstation-shell .bottom-nav::before,
+.app-shell.workstation-shell .bottom-nav::after {
   display: none;
 }
 
-.workstation-shell .nav-item {
+.app-shell.workstation-shell .nav-item {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
@@ -23286,12 +23286,12 @@ body {
   width: 42px;
 }
 
-.workstation-shell .nav-item > span {
+.app-shell.workstation-shell .nav-item > span {
   font-size: 16px;
   line-height: 1;
 }
 
-.workstation-shell .nav-item > small {
+.app-shell.workstation-shell .nav-item > small {
   background: color-mix(in srgb, var(--ink) 92%, transparent);
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 8px;
@@ -23309,32 +23309,32 @@ body {
   white-space: nowrap;
 }
 
-.workstation-shell .nav-item:hover > small,
-.workstation-shell .nav-item:focus-visible > small {
+.app-shell.workstation-shell .nav-item:hover > small,
+.app-shell.workstation-shell .nav-item:focus-visible > small {
   opacity: 1;
   transform: translateX(0);
   visibility: visible;
 }
 
-.workstation-shell .nav-item:hover {
+.app-shell.workstation-shell .nav-item:hover {
   background: rgba(255,255,255,.09);
   color: white;
 }
 
-.workstation-shell .nav-item.active {
+.app-shell.workstation-shell .nav-item.active {
   background: color-mix(in srgb, var(--hero) 78%, white 8%);
   border-color: rgba(255,255,255,.2);
   box-shadow: 0 8px 18px color-mix(in srgb, var(--hero) 36%, transparent);
   color: white;
 }
 
-.workstation-shell .nav-item.launcher-item {
+.app-shell.workstation-shell .nav-item.launcher-item {
   border-bottom: 1px solid rgba(255,255,255,.18);
   border-radius: 12px 12px 7px 7px;
   margin-bottom: 5px;
 }
 
-.workstation-shell .dock-launcher-glyph {
+.app-shell.workstation-shell .dock-launcher-glyph {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -23529,7 +23529,7 @@ body {
   font-weight: 750;
 }
 
-.workstation-shell[data-color-mode="dark"] {
+.app-shell.workstation-shell[data-color-mode="dark"] {
   --desktop-panel: color-mix(in srgb, #13151a 88%, transparent);
   --desktop-window: color-mix(in srgb, var(--paper) 86%, transparent);
   --desktop-window-strong: color-mix(in srgb, var(--paper) 96%, #111318);
@@ -23540,17 +23540,17 @@ body {
   --desktop-window-shadow: 0 16px 44px rgba(0,0,0,.24);
 }
 
-.workstation-shell[data-color-mode="dark"] .phone-canvas {
+.app-shell.workstation-shell[data-color-mode="dark"] .phone-canvas {
   border-color: rgba(255,255,255,.12);
 }
 
-.workstation-shell[data-color-mode="dark"] .workspace-launcher {
+.app-shell.workstation-shell[data-color-mode="dark"] .workspace-launcher {
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   border-color: rgba(255,255,255,.14);
 }
 
 /* The three editorial worlds use genuinely different window-manager languages. */
-.workstation-shell[data-theme="lovelyevening"] {
+.app-shell.workstation-shell[data-theme="lovelyevening"] {
   --desktop-panel: rgba(252,249,255,.68);
   --desktop-window: rgba(253,250,255,.66);
   --desktop-border: rgba(112,88,183,.18);
@@ -23559,13 +23559,13 @@ body {
   --desktop-radius: 28px;
 }
 
-.workstation-shell[data-theme="lovelyevening"] .phone-canvas {
+.app-shell.workstation-shell[data-theme="lovelyevening"] .phone-canvas {
   background:
     radial-gradient(circle at 78% 8%, rgba(255,255,255,.64), transparent 23rem),
     linear-gradient(145deg, rgba(235,229,255,.7), rgba(253,249,255,.46));
 }
 
-.workstation-shell[data-theme="rosegrid"] {
+.app-shell.workstation-shell[data-theme="rosegrid"] {
   --desktop-panel: rgba(255,253,249,.94);
   --desktop-window: rgba(255,253,249,.92);
   --desktop-border: rgba(53,44,44,.2);
@@ -23575,7 +23575,7 @@ body {
   --desktop-radius: 7px;
 }
 
-.workstation-shell[data-theme="rosegrid"] .phone-canvas {
+.app-shell.workstation-shell[data-theme="rosegrid"] .phone-canvas {
   background-color: #fffdf9;
   background-image:
     linear-gradient(rgba(231,148,166,.075) 1px, transparent 1px),
@@ -23584,23 +23584,23 @@ body {
   border-color: rgba(45,40,40,.28);
 }
 
-.workstation-shell[data-theme="rosegrid"] :is(.topbar, .welcome-row, .week-strip, .day-grid > .column, .screen-intro, .workspace-launcher, .launcher-app) {
+.app-shell.workstation-shell[data-theme="rosegrid"] :is(.topbar, .welcome-row, .week-strip, .day-grid > .column, .screen-intro, .workspace-launcher, .launcher-app) {
   backdrop-filter: none;
 }
 
-.workstation-shell[data-theme="rosegrid"] .bottom-nav {
+.app-shell.workstation-shell[data-theme="rosegrid"] .bottom-nav {
   border-radius: 4px;
 }
 
-.workstation-shell[data-theme="rosegrid"] .nav-item {
+.app-shell.workstation-shell[data-theme="rosegrid"] .nav-item {
   border-radius: 3px;
 }
 
-.workstation-shell[data-theme="rosegrid"] .nav-item.active {
+.app-shell.workstation-shell[data-theme="rosegrid"] .nav-item.active {
   box-shadow: 3px 3px 0 rgba(231,148,166,.35);
 }
 
-.workstation-shell[data-theme="noirrest"] {
+.app-shell.workstation-shell[data-theme="noirrest"] {
   --desktop-panel: rgba(11,12,15,.88);
   --desktop-window: rgba(19,20,24,.82);
   --desktop-window-strong: rgba(26,27,32,.96);
@@ -23614,50 +23614,50 @@ body {
   --desktop-radius: 18px;
 }
 
-.workstation-shell[data-theme="noirrest"] .phone-canvas {
+.app-shell.workstation-shell[data-theme="noirrest"] .phone-canvas {
   background:
     radial-gradient(circle at 82% 2%, rgba(255,255,255,.06), transparent 28rem),
     linear-gradient(150deg, #0a0b0e, #17191e 58%, #0d0e11);
 }
 
-.workstation-shell[data-theme="noirrest"] .nav-item.active {
+.app-shell.workstation-shell[data-theme="noirrest"] .nav-item.active {
   background: #f0f0f2;
   box-shadow: 0 0 0 1px rgba(255,255,255,.28), 0 10px 28px rgba(255,255,255,.08);
   color: #0b0c0f;
 }
 
-.workstation-shell[data-theme="noirrest"] .workspace-indicator > span {
+.app-shell.workstation-shell[data-theme="noirrest"] .workspace-indicator > span {
   background: #f1f1f3;
 }
 
-.workstation-shell[data-theme="noirrest"] .week-strip .day.active {
+.app-shell.workstation-shell[data-theme="noirrest"] .week-strip .day.active {
   background: #f0f0f2;
   color: #0b0c0f;
 }
 
-.workstation-shell[data-theme="noirrest"] .launcher-app-icon {
+.app-shell.workstation-shell[data-theme="noirrest"] .launcher-app-icon {
   background: linear-gradient(145deg, #4b4e56, #23252a);
   border-color: rgba(255,255,255,.19);
 }
 
 @media (max-width: 1120px) {
-  .workstation-shell .topbar {
+  .app-shell.workstation-shell .topbar {
     grid-template-columns: minmax(220px, auto) 1fr auto;
   }
 
-  .workstation-shell .system-clock span {
+  .app-shell.workstation-shell .system-clock span {
     display: none;
   }
 
-  .workstation-shell .system-clock {
+  .app-shell.workstation-shell .system-clock {
     min-width: 58px;
   }
 
-  .workstation-shell .dayboard-command-strip > div {
+  .app-shell.workstation-shell .dayboard-command-strip > div {
     grid-template-columns: repeat(4, minmax(92px, 1fr));
   }
 
-  .workstation-shell .dayboard-command-strip {
+  .app-shell.workstation-shell .dayboard-command-strip {
     grid-template-columns: 170px minmax(0, 1fr);
   }
 }
@@ -23667,14 +23667,14 @@ body {
     padding: 0;
   }
 
-  .workstation-shell .phone-canvas {
+  .app-shell.workstation-shell .phone-canvas {
     border: 0;
     border-radius: 0;
     min-height: 100dvh;
     padding: 0 0 92px;
   }
 
-  .workstation-shell .topbar {
+  .app-shell.workstation-shell .topbar {
     gap: 8px;
     grid-template-columns: auto minmax(90px, 1fr) auto;
     margin-left: 0;
@@ -23683,57 +23683,57 @@ body {
     width: 100%;
   }
 
-  .workstation-shell .workspace-launcher-button {
+  .app-shell.workstation-shell .workspace-launcher-button {
     height: 42px;
     padding: 0;
     width: 42px;
   }
 
-  .workstation-shell .workspace-launcher-button small,
-  .workstation-shell .brand-mark,
-  .workstation-shell .workspace-indicator small,
-  .workstation-shell .system-clock,
-  .workstation-shell .header-actions .post-it-create-button {
+  .app-shell.workstation-shell .workspace-launcher-button small,
+  .app-shell.workstation-shell .brand-mark,
+  .app-shell.workstation-shell .workspace-indicator small,
+  .app-shell.workstation-shell .system-clock,
+  .app-shell.workstation-shell .header-actions .post-it-create-button {
     display: none;
   }
 
-  .workstation-shell .brand-wrap {
+  .app-shell.workstation-shell .brand-wrap {
     gap: 0;
   }
 
-  .workstation-shell .brand-wrap .eyebrow {
+  .app-shell.workstation-shell .brand-wrap .eyebrow {
     font-size: 6px;
   }
 
-  .workstation-shell .brand-wrap .wordmark {
+  .app-shell.workstation-shell .brand-wrap .wordmark {
     font-size: 17px;
   }
 
-  .workstation-shell .workspace-indicator {
+  .app-shell.workstation-shell .workspace-indicator {
     justify-self: center;
     min-width: 0;
   }
 
-  .workstation-shell .workspace-indicator strong {
+  .app-shell.workstation-shell .workspace-indicator strong {
     font-size: 10px;
   }
 
-  .workstation-shell .header-actions .calendar-button {
+  .app-shell.workstation-shell .header-actions .calendar-button {
     font-size: 0;
     padding: 0;
     width: 42px;
   }
 
-  .workstation-shell .header-actions .calendar-button .calendar-glyph {
+  .app-shell.workstation-shell .header-actions .calendar-button .calendar-glyph {
     margin: 0;
   }
 
-  .workstation-shell .main-content {
+  .app-shell.workstation-shell .main-content {
     min-height: calc(100dvh - 154px);
     padding: 14px 12px 28px;
   }
 
-  .workstation-shell .main-content:has(> .dayboard-command-strip) {
+  .app-shell.workstation-shell .main-content:has(> .dayboard-command-strip) {
     grid-template-areas:
       "welcome"
       "week"
@@ -23743,42 +23743,42 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .workstation-shell .welcome-row {
+  .app-shell.workstation-shell .welcome-row {
     min-height: 206px;
     padding: 51px 20px 21px;
   }
 
-  .workstation-shell .welcome-row h2 {
+  .app-shell.workstation-shell .welcome-row h2 {
     font-size: clamp(34px, 10vw, 47px);
   }
 
-  .workstation-shell .day-charm {
+  .app-shell.workstation-shell .day-charm {
     height: 92px;
     width: 92px;
   }
 
-  .workstation-shell .week-strip {
+  .app-shell.workstation-shell .week-strip {
     min-height: 138px;
     padding: 48px 8px 10px;
   }
 
-  .workstation-shell .week-strip .day {
+  .app-shell.workstation-shell .week-strip .day {
     height: 74px;
   }
 
-  .workstation-shell .dayboard-command-strip {
+  .app-shell.workstation-shell .dayboard-command-strip {
     display: block;
     padding: 9px;
   }
 
-  .workstation-shell .dayboard-command-strip > header {
+  .app-shell.workstation-shell .dayboard-command-strip > header {
     border-bottom: 1px solid var(--desktop-hairline);
     border-right: 0;
     margin-bottom: 7px;
     padding: 3px 4px 8px;
   }
 
-  .workstation-shell .dayboard-command-strip > div {
+  .app-shell.workstation-shell .dayboard-command-strip > div {
     display: flex;
     gap: 6px;
     overflow-x: auto;
@@ -23786,21 +23786,21 @@ body {
     scroll-snap-type: x proximity;
   }
 
-  .workstation-shell .dayboard-command-strip > div > button {
+  .app-shell.workstation-shell .dayboard-command-strip > div > button {
     flex: 0 0 116px;
     scroll-snap-align: start;
   }
 
-  .workstation-shell .day-grid,
-  .workstation-shell .habit-list {
+  .app-shell.workstation-shell .day-grid,
+  .app-shell.workstation-shell .habit-list {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .workstation-shell .day-grid > .column {
+  .app-shell.workstation-shell .day-grid > .column {
     padding: 15px;
   }
 
-  .workstation-shell .bottom-nav {
+  .app-shell.workstation-shell .bottom-nav {
     bottom: max(9px, env(safe-area-inset-bottom));
     display: grid;
     gap: 3px;
@@ -23813,26 +23813,26 @@ body {
     width: auto;
   }
 
-  .workstation-shell .nav-item,
-  .workstation-shell .nav-item.launcher-item {
+  .app-shell.workstation-shell .nav-item,
+  .app-shell.workstation-shell .nav-item.launcher-item {
     border-radius: 12px;
     height: 50px;
     margin: 0;
     width: 100%;
   }
 
-  .workstation-shell .nav-item {
+  .app-shell.workstation-shell .nav-item {
     flex-direction: column;
     gap: 3px;
   }
 
-  .workstation-shell .nav-item > span {
+  .app-shell.workstation-shell .nav-item > span {
     font-size: 15px;
   }
 
-  .workstation-shell .nav-item > small,
-  .workstation-shell .nav-item:hover > small,
-  .workstation-shell .nav-item:focus-visible > small {
+  .app-shell.workstation-shell .nav-item > small,
+  .app-shell.workstation-shell .nav-item:hover > small,
+  .app-shell.workstation-shell .nav-item:focus-visible > small {
     background: transparent;
     border: 0;
     color: inherit;
@@ -23900,46 +23900,42 @@ body {
 }
 
 @media (max-width: 430px) {
-  .workstation-shell .workspace-indicator > span {
+  .app-shell.workstation-shell .workspace-indicator > span {
     display: none;
   }
 
-  .workstation-shell .workspace-indicator {
+  .app-shell.workstation-shell .workspace-indicator {
     display: block;
     text-align: center;
   }
 
-  .workstation-shell .welcome-row {
+  .app-shell.workstation-shell .welcome-row {
     min-height: 190px;
   }
 
-  .workstation-shell .welcome-row .soft-copy {
+  .app-shell.workstation-shell .welcome-row .soft-copy {
     font-size: 11px;
     max-width: 69%;
   }
 
-  .workstation-shell .day-charm {
+  .app-shell.workstation-shell .day-charm {
     right: 11px;
   }
 
-  .workstation-shell .week-strip {
+  .app-shell.workstation-shell .week-strip {
     gap: 2px;
   }
 
-  .workstation-shell .week-strip .day {
+  .app-shell.workstation-shell .week-strip .day {
     border-radius: 10px;
   }
 
-  .workstation-shell .week-strip .day span {
+  .app-shell.workstation-shell .week-strip .day span {
     font-size: 7px;
   }
 
-  .workstation-shell .week-strip .day strong {
+  .app-shell.workstation-shell .week-strip .day strong {
     font-size: 14px;
-  }
-
-  .workspace-launcher-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .workspace-launcher-header h2 {
@@ -23953,7 +23949,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workstation-shell *,
+  .app-shell.workstation-shell *,
   .workspace-launcher * {
     scroll-behavior: auto !important;
     transition-duration: .01ms !important;
