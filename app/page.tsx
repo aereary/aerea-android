@@ -24,6 +24,22 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  CalendarMemo,
+  CampEvent,
+  CampStudyShell,
+  StudyFileItem,
+  StudyNotebook,
+  StudyNote,
+  StudyTask,
+} from "./camp-study-shell";
+import { EpubBook, readEpub } from "./epub-reader";
+import {
+  EpubReadingState,
+  EpubStudyReader,
+  PdfInkStroke,
+  PdfStudyReader,
+} from "./study-reader";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
@@ -50,6 +66,7 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
+  | "campstudy"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -77,6 +94,15 @@ type AereaStoragePlugin = {
     dataUrl: string;
   }): Promise<void>;
   deleteSketch(options: { id: string }): Promise<void>;
+  listDocuments(): Promise<{ files: StudyFileItem[] }>;
+  saveDocument(options: {
+    name: string;
+    mediaType: string;
+    kind: StudyFileItem["kind"];
+    dataUrl: string;
+  }): Promise<{ file: StudyFileItem }>;
+  getDocument(options: { id: string }): Promise<{ dataUrl: string }>;
+  deleteDocument(options: { id: string }): Promise<void>;
 };
 
 const AereaStorage = registerPlugin<AereaStoragePlugin>("AereaStorage");
@@ -551,6 +577,21 @@ const themeOptions: {
     charm: "tucked in softly",
     showCharm: false,
     decoratedScene: true,
+  },
+  {
+    id: "campstudy",
+    name: "Camp study desk",
+    description: "A completely separate study workspace with an illustrated campsite, planner, notebooks, files, tasks, and a full reading desk.",
+    colors: ["#ef9d79", "#fffaf2", "#779b5b"],
+    icon: "🏕️",
+    art: "/assets/openmoji/notebook.svg",
+    accents: [
+      "/assets/openmoji/locomotive.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "study softly",
+    featured: true,
+    interfaceIdea: "A distinct TimeTree-meets-FreeNotes workspace with its own illustrated home, dock, library, planner, and study readers.",
   },
 ];
 
@@ -1187,6 +1228,18 @@ export default function Home() {
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [postIts, setPostIts] = useState<PostItNote[]>([]);
+  const [studyNotebooks, setStudyNotebooks] = useState<StudyNotebook[]>([]);
+  const [studyNotes, setStudyNotes] = useState<StudyNote[]>([]);
+  const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
+  const [calendarMemos, setCalendarMemos] = useState<CalendarMemo[]>([]);
+  const [studyFiles, setStudyFiles] = useState<StudyFileItem[]>([]);
+  const [pdfAnnotations, setPdfAnnotations] = useState<Record<string, PdfInkStroke[]>>({});
+  const [epubReadingStates, setEpubReadingStates] = useState<Record<string, EpubReadingState>>({});
+  const [activeStudyFile, setActiveStudyFile] = useState<StudyFileItem | null>(null);
+  const [activeEpubBook, setActiveEpubBook] = useState<EpubBook | null>(null);
+  const [studyReaderMessage, setStudyReaderMessage] = useState("");
+  const [activeStudyNotebookId, setActiveStudyNotebookId] = useState<string | null>(null);
+  const [campLegacyMode, setCampLegacyMode] = useState(false);
   const [postItEditorOpen, setPostItEditorOpen] = useState(false);
   const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
   const [selectedPostItId, setSelectedPostItId] = useState<string | null>(null);
@@ -1362,6 +1415,12 @@ export default function Home() {
             profilePhoto?: string | null;
             classes?: ClassItem[];
             recordings?: Recording[];
+            studyNotebooks?: StudyNotebook[];
+            studyNotes?: StudyNote[];
+            studyTasks?: StudyTask[];
+            calendarMemos?: CalendarMemo[];
+            pdfAnnotations?: Record<string, PdfInkStroke[]>;
+            epubReadingStates?: Record<string, EpubReadingState>;
             cleanStartVersion?: string;
           } | null;
         };
@@ -1410,6 +1469,24 @@ export default function Home() {
             if (typeof state.focusSessions === "number") {
               setFocusSessions(state.focusSessions);
             }
+            if (Array.isArray(state.studyNotebooks)) {
+              setStudyNotebooks(state.studyNotebooks);
+            }
+            if (Array.isArray(state.studyNotes)) {
+              setStudyNotes(state.studyNotes);
+            }
+            if (Array.isArray(state.studyTasks)) {
+              setStudyTasks(state.studyTasks);
+            }
+            if (Array.isArray(state.calendarMemos)) {
+              setCalendarMemos(state.calendarMemos);
+            }
+            if (state.pdfAnnotations && typeof state.pdfAnnotations === "object") {
+              setPdfAnnotations(state.pdfAnnotations);
+            }
+            if (state.epubReadingStates && typeof state.epubReadingStates === "object") {
+              setEpubReadingStates(state.epubReadingStates);
+            }
           } else {
             setReminderHistory({});
             setReminders(starterReminders);
@@ -1422,6 +1499,12 @@ export default function Home() {
             setCalendarCategories(starterCalendarCategories);
             setFocusSessions(0);
             setRecordings([]);
+            setStudyNotebooks([]);
+            setStudyNotes([]);
+            setStudyTasks([]);
+            setCalendarMemos([]);
+            setPdfAnnotations({});
+            setEpubReadingStates({});
             window.localStorage.removeItem("aerea-reminders");
             window.localStorage.removeItem("aerea-habits");
             window.localStorage.removeItem("aerea-journal");
@@ -1478,8 +1561,25 @@ export default function Home() {
       }
     }
 
+    async function loadStudyFiles() {
+      try {
+        const payload = isNative()
+          ? await AereaStorage.listDocuments()
+          : await fetch("/api/files", { cache: "no-store" }).then(async (response) => {
+              if (!response.ok) throw new Error("Study files are unavailable.");
+              return (await response.json()) as { files?: StudyFileItem[] };
+            });
+        if (!cancelled && Array.isArray(payload.files)) {
+          setStudyFiles(payload.files);
+        }
+      } catch {
+        // The library remains available for notes and notebooks while files reconnect.
+      }
+    }
+
     void loadState();
     void loadSketches();
+    void loadStudyFiles();
     return () => {
       cancelled = true;
     };
@@ -1526,6 +1626,12 @@ export default function Home() {
               profilePhoto,
               classes: classItems,
               recordings,
+              studyNotebooks,
+              studyNotes,
+              studyTasks,
+              calendarMemos,
+              pdfAnnotations,
+              epubReadingStates,
               cleanStartVersion: CLEAN_START_VERSION,
             };
         if (isNative()) {
@@ -1561,6 +1667,12 @@ export default function Home() {
     reminderHistory,
     reminders,
     recordings,
+    studyNotebooks,
+    studyNotes,
+    studyTasks,
+    calendarMemos,
+    pdfAnnotations,
+    epubReadingStates,
     stateReady,
     syncEmail,
   ]);
@@ -2662,6 +2774,10 @@ export default function Home() {
     setSketchZoom(1);
     setSketchToolbarOpen(false);
     setSketchFullscreen(false);
+    if (appTheme === "campstudy") {
+      setCampLegacyMode(false);
+      setActiveStudyNotebookId(null);
+    }
   };
 
   const updateDoneIds = (
@@ -3592,6 +3708,7 @@ export default function Home() {
         ? [event.nativeEvent]
         : event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
     const stroke = activeStrokeRef.current;
+    if (!stroke) return;
     const firstNewIndex = stroke.points.length;
     const smoothing = Math.max(0.18, 1 - strokeStabilization * 0.82);
 
@@ -3824,6 +3941,19 @@ export default function Home() {
       }
 
       await refreshSketches();
+      if (activeStudyNotebookId) {
+        setStudyNotebooks((current) =>
+          current.map((notebook) =>
+            notebook.id === activeStudyNotebookId
+              ? {
+                  ...notebook,
+                  pageCount: notebook.pageCount + 1,
+                  updatedAt: new Date().toISOString(),
+                }
+              : notebook,
+          ),
+        );
+      }
       setSketchMessage("Saved safely inside aérea ♡");
     } catch (error) {
       setSketchMessage(
@@ -3862,6 +3992,225 @@ export default function Home() {
       await refreshSketches();
       setSketchMessage("Page moved out of your sketchbook.");
     }
+  };
+
+  const refreshStudyFiles = async () => {
+    const payload = isNative()
+      ? await AereaStorage.listDocuments()
+      : await fetch("/api/files", { cache: "no-store" }).then(async (response) => {
+          if (!response.ok) throw new Error("Could not refresh your study files.");
+          return (await response.json()) as { files: StudyFileItem[] };
+        });
+    setStudyFiles(payload.files || []);
+  };
+
+  const importStudyFiles = async (files: File[]) => {
+    for (const file of files) {
+      if (file.size === 0) continue;
+      if (file.size > 40 * 1024 * 1024) {
+        throw new Error(`${file.name} is larger than 40 MB.`);
+      }
+      const lowerName = file.name.toLowerCase();
+      const kind: StudyFileItem["kind"] =
+        file.type === "application/pdf" || lowerName.endsWith(".pdf")
+          ? "pdf"
+          : file.type === "application/epub+zip" || lowerName.endsWith(".epub")
+            ? "epub"
+            : "file";
+      const mediaType =
+        file.type ||
+        (kind === "pdf"
+          ? "application/pdf"
+          : kind === "epub"
+            ? "application/epub+zip"
+            : "application/octet-stream");
+
+      if (isNative()) {
+        await AereaStorage.saveDocument({
+          name: file.name,
+          mediaType,
+          kind,
+          dataUrl: await blobAsDataUrl(file),
+        });
+      } else {
+        const form = new FormData();
+        form.set("file", file);
+        const response = await fetch("/api/files", { method: "POST", body: form });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(payload.error || `Could not import ${file.name}.`);
+        }
+      }
+    }
+    await refreshStudyFiles();
+  };
+
+  const deleteStudyFile = async (file: StudyFileItem) => {
+    if (!window.confirm(`Delete “${file.name}” and its stored file?`)) return;
+    if (isNative()) {
+      await AereaStorage.deleteDocument({ id: file.id });
+    } else {
+      const response = await fetch(`/api/files/${file.id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Could not delete this file.");
+    }
+    setStudyFiles((current) => current.filter((item) => item.id !== file.id));
+    setPdfAnnotations((current) => {
+      const next = { ...current };
+      delete next[file.id];
+      return next;
+    });
+    setEpubReadingStates((current) => {
+      const next = { ...current };
+      delete next[file.id];
+      return next;
+    });
+  };
+
+  const studyFileSource = (file: StudyFileItem) =>
+    file.dataUrl || `/api/files/${file.id}`;
+
+  const openStudyFile = async (file: StudyFileItem) => {
+    setStudyReaderMessage("");
+    setActiveEpubBook(null);
+    let readableFile = file;
+    if (isNative() && !file.dataUrl) {
+      setStudyReaderMessage("Opening your private file…");
+      const payload = await AereaStorage.getDocument({ id: file.id });
+      readableFile = { ...file, dataUrl: payload.dataUrl };
+      setStudyReaderMessage("");
+    }
+    if (readableFile.kind === "pdf") {
+      setActiveStudyFile(readableFile);
+      return;
+    }
+    if (readableFile.kind === "epub") {
+      setStudyReaderMessage("Opening your EPUB…");
+      try {
+        const response = await fetch(studyFileSource(readableFile));
+        if (!response.ok) throw new Error("This EPUB could not be read.");
+        const book = await readEpub(await response.blob());
+        setActiveStudyFile(readableFile);
+        setActiveEpubBook(book);
+        setStudyReaderMessage("");
+      } catch (error) {
+        setStudyReaderMessage(
+          error instanceof Error ? error.message : "This EPUB could not be opened.",
+        );
+      }
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = studyFileSource(readableFile);
+    link.download = readableFile.name;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.click();
+  };
+
+  const openStudyNotebook = (notebook: StudyNotebook) => {
+    setActiveStudyNotebookId(notebook.id);
+    setPageStyle(notebook.paper);
+    clearCanvas(false);
+    resetSketchHistory();
+    setSketchTitle(`${notebook.title} · Page ${notebook.pageCount + 1}`);
+    setSketchMessage("");
+    setActiveTab("spaces");
+    setSpace("sketchbook");
+    setCampLegacyMode(true);
+    setSketchToolbarOpen(false);
+    setSketchFullscreen(true);
+  };
+
+  const openCampLegacy = (
+    module: "focus" | "journal" | "classes" | "sketchbook" | "habits",
+  ) => {
+    setCampLegacyMode(true);
+    if (module === "classes" || module === "sketchbook") {
+      setActiveTab("spaces");
+      setSpace(module);
+      return;
+    }
+    setActiveTab(module);
+    setSpace("menu");
+  };
+
+  const openCampEventEditor = (dateKey = todayKey) => {
+    const date = dateFromKey(dateKey);
+    setSelectedCalendarDate(dateKey);
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setCalendarOpen(true);
+    openNewEvent(dateKey);
+  };
+
+  const importIcsCalendar = async (file: File) => {
+    const text = (await file.text()).replace(/\r?\n[ \t]/g, "");
+    const blocks = text.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/g) || [];
+    if (!blocks.length) throw new Error("No events were found in that .ics file.");
+
+    const importedCategory =
+      calendarCategories.find((category) => category.name === "Imported") || {
+        id: "imported-calendar",
+        name: "Imported",
+        color: "cyan" as EventColor,
+      };
+    if (!calendarCategories.some((category) => category.name === "Imported")) {
+      setCalendarCategories((current) => [...current, importedCategory]);
+    }
+
+    const unescapeIcs = (value: string) =>
+      value
+        .replace(/\\n/gi, "\n")
+        .replace(/\\,/g, ",")
+        .replace(/\\;/g, ";")
+        .replace(/\\\\/g, "\\");
+    const property = (block: string, name: string) => {
+      const line = block.split(/\r?\n/).find((item) => item.startsWith(name));
+      if (!line) return { value: "", options: "" };
+      const colon = line.indexOf(":");
+      return {
+        options: colon >= 0 ? line.slice(name.length, colon) : "",
+        value: colon >= 0 ? unescapeIcs(line.slice(colon + 1)) : "",
+      };
+    };
+    const parsedDate = (raw: string) => {
+      const digits = raw.replace(/[^0-9]/g, "");
+      if (digits.length < 8) return { date: todayKey, time: "09:00" };
+      return {
+        date: `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`,
+        time: digits.length >= 12 ? `${digits.slice(8, 10)}:${digits.slice(10, 12)}` : "09:00",
+      };
+    };
+
+    const importedEvents: CalendarEvent[] = blocks.map((block) => {
+      const startProperty = property(block, "DTSTART");
+      const endProperty = property(block, "DTEND");
+      const start = parsedDate(startProperty.value);
+      const end = parsedDate(endProperty.value || startProperty.value);
+      const allDay = startProperty.options.includes("VALUE=DATE") || !startProperty.value.includes("T");
+      return {
+        id: crypto.randomUUID(),
+        date: start.date,
+        endDate: end.date,
+        title: property(block, "SUMMARY").value || "Imported event",
+        time: start.time,
+        endTime: end.time,
+        allDay,
+        calendar: importedCategory.name,
+        color: importedCategory.color,
+        reminder: "No reminder",
+        repeat: "Never",
+        location: property(block, "LOCATION").value,
+        note: property(block, "DESCRIPTION").value,
+        todos: [],
+        todoStates: [],
+        files: [],
+      };
+    });
+    setCalendarEvents((current) => [...current, ...importedEvents]);
+    return importedEvents.length;
   };
 
   const sendSyncCode = async () => {
@@ -3905,6 +4254,7 @@ export default function Home() {
       className="app-shell"
       data-theme={appTheme}
       data-color-mode={colorMode}
+      data-camp-mode={campLegacyMode ? "module" : "workspace"}
       style={customThemeStyle}
     >
       <div className="paper-grain" aria-hidden="true" />
@@ -3916,6 +4266,62 @@ export default function Home() {
             : "phone-canvas"
         }
       >
+        {appTheme === "campstudy" && !sketchFullscreen && !campLegacyMode && (
+          <CampStudyShell
+            todayKey={todayKey}
+            isNight={isNight}
+            notebooks={studyNotebooks}
+            notes={studyNotes}
+            tasks={studyTasks}
+            memos={calendarMemos}
+            files={studyFiles}
+            events={calendarEvents}
+            calendarNames={calendarCategories.map((category) => category.name)}
+            habits={habits.map((habit) => ({
+              id: habit.id,
+              title: habit.title,
+              icon: habit.icon,
+              done: habit.days[(new Date().getDay() + 6) % 7] || false,
+            }))}
+            reminders={reminders}
+            doneReminderIds={doneIds}
+            onNotebooksChange={setStudyNotebooks}
+            onNotesChange={setStudyNotes}
+            onTasksChange={setStudyTasks}
+            onMemosChange={setCalendarMemos}
+            onOpenNotebook={openStudyNotebook}
+            onOpenFile={(file) => void openStudyFile(file)}
+            onDeleteFile={(file) => void deleteStudyFile(file)}
+            onImportFiles={importStudyFiles}
+            onImportIcs={importIcsCalendar}
+            onOpenCalendar={openCalendarAtToday}
+            onOpenEvent={(event) => {
+              const fullEvent = calendarEvents.find((item) => item.id === event.id);
+              if (fullEvent) openEventDetail(fullEvent);
+            }}
+            onNewEvent={openCampEventEditor}
+            onCompleteReminder={(id) => updateDoneIds((current) => [...current, id])}
+            onRestoreReminder={(id) => updateDoneIds((current) => current.filter((item) => item !== id))}
+            onToggleHabit={(id) => toggleHabit(id, (new Date().getDay() + 6) % 7)}
+            onOpenLegacy={openCampLegacy}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenMetrics={openMetrics}
+          />
+        )}
+        {appTheme === "campstudy" && campLegacyMode && !sketchFullscreen && (
+          <button
+            type="button"
+            className="camp-return-workspace"
+            onClick={() => {
+              setCampLegacyMode(false);
+              setActiveTab("today");
+              setSpace("menu");
+              setActiveStudyNotebookId(null);
+            }}
+          >
+            <span>←</span> Back to Camp Study
+          </button>
+        )}
         {!sketchFullscreen && (
           <div
             className="storybook-scene"
@@ -5018,6 +5424,58 @@ export default function Home() {
           ))}
         </nav>}
       </section>
+
+      {activeStudyFile?.kind === "pdf" && (
+        <PdfStudyReader
+          fileId={activeStudyFile.id}
+          fileName={activeStudyFile.name}
+          source={studyFileSource(activeStudyFile)}
+          annotations={pdfAnnotations[activeStudyFile.id] || []}
+          onAnnotationsChange={(strokes) =>
+            setPdfAnnotations((current) => ({
+              ...current,
+              [activeStudyFile.id]: strokes,
+            }))
+          }
+          onClose={() => setActiveStudyFile(null)}
+        />
+      )}
+
+      {activeStudyFile?.kind === "epub" && activeEpubBook && (
+        <EpubStudyReader
+          fileName={activeStudyFile.name}
+          book={activeEpubBook}
+          readingState={
+            epubReadingStates[activeStudyFile.id] || {
+              chapter: 0,
+              fontSize: 19,
+              lineHeight: 1.7,
+              bookmarks: [],
+              chapterNotes: {},
+            }
+          }
+          onReadingStateChange={(readingState) =>
+            setEpubReadingStates((current) => ({
+              ...current,
+              [activeStudyFile.id]: readingState,
+            }))
+          }
+          onClose={() => {
+            setActiveStudyFile(null);
+            setActiveEpubBook(null);
+          }}
+        />
+      )}
+
+      {studyReaderMessage && (
+        <button
+          type="button"
+          className="study-reader-message"
+          onClick={() => setStudyReaderMessage("")}
+        >
+          <span>{studyReaderMessage}</span><b>×</b>
+        </button>
+      )}
 
       {calendarOpen && (
         <div
