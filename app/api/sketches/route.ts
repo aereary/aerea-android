@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { getRuntimeEnv } from "../../../db/runtime";
 import { sketchPages } from "../../../db/schema";
+import { isValidSketchPaperDescriptor } from "../../sketch-paper";
 import { authenticatedUserId, unauthorized } from "../user";
 
 export async function GET(request: Request) {
@@ -33,7 +34,6 @@ export async function POST(request: Request) {
   const file = form.get("file");
   const title = String(form.get("title") || "Untitled page").trim();
   const pageStyle = String(form.get("pageStyle") || "plain");
-  const allowedStyles = new Set(["grid", "lined", "dotted", "plain"]);
 
   if (!(file instanceof File) || file.size === 0) {
     return Response.json({ error: "A drawing is required." }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   if (file.size > 8 * 1024 * 1024) {
     return Response.json({ error: "This page is too large." }, { status: 413 });
   }
-  if (!allowedStyles.has(pageStyle)) {
+  if (!isValidSketchPaperDescriptor(pageStyle)) {
     return Response.json({ error: "Invalid page style." }, { status: 400 });
   }
 

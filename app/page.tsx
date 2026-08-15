@@ -39,10 +39,23 @@ import {
   PdfInkStroke,
   PdfStudyReader,
 } from "./study-reader";
+import {
+  decodeSketchPaper,
+  DEFAULT_SKETCH_PAPER,
+  drawSketchPaper,
+  encodeSketchPaper,
+  getSketchPageDimensions,
+  getSketchPageSize,
+  PageStyle,
+  SKETCH_PAGE_COLORS,
+  SKETCH_PAGE_SIZES,
+  SketchPageOrientation,
+  SketchPageSizeId,
+  sketchPaperInkColors,
+} from "./sketch-paper";
 
 type Tab = "today" | "habits" | "library" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
-type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type MetricsPeriod = "week" | "month" | "year" | "all";
 type AppTheme =
   | "storybook"
@@ -88,7 +101,7 @@ type AereaStoragePlugin = {
   listSketches(): Promise<{ pages: SketchPage[] }>;
   saveSketch(options: {
     title: string;
-    pageStyle: PageStyle;
+    pageStyle: string;
     dataUrl: string;
   }): Promise<void>;
   deleteSketch(options: { id: string }): Promise<void>;
@@ -113,6 +126,93 @@ async function blobAsDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+function joinBytes(parts: Uint8Array[]) {
+  const length = parts.reduce((total, part) => total + part.length, 0);
+  const result = new Uint8Array(length);
+  let offset = 0;
+  parts.forEach((part) => {
+    result.set(part, offset);
+    offset += part.length;
+  });
+  return result;
+}
+
+async function canvasAsPdfBlob(
+  canvas: HTMLCanvasElement,
+  pageWidthPoints: number,
+  pageHeightPoints: number,
+) {
+  const jpeg = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.96),
+  );
+  if (!jpeg) throw new Error("Could not prepare the PDF page.");
+
+  const imageBytes = new Uint8Array(await jpeg.arrayBuffer());
+  const encoder = new TextEncoder();
+  const textBytes = (value: string) => encoder.encode(value);
+  const pageWidth = Number(pageWidthPoints.toFixed(3));
+  const pageHeight = Number(pageHeightPoints.toFixed(3));
+  const drawing = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\n`;
+  const drawingBytes = textBytes(drawing);
+  const objects = [
+    textBytes("<< /Type /Catalog /Pages 2 0 R >>"),
+    textBytes("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+    textBytes(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`,
+    ),
+    joinBytes([
+      textBytes(`<< /Length ${drawingBytes.length} >>\nstream\n`),
+      drawingBytes,
+      textBytes("endstream"),
+    ]),
+    joinBytes([
+      textBytes(
+        `<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
+      ),
+      imageBytes,
+      textBytes("\nendstream"),
+    ]),
+  ];
+
+  const parts: Uint8Array[] = [textBytes("%PDF-1.4\n%âãÏÓ\n")];
+  const offsets = [0];
+  let byteOffset = parts[0].length;
+  objects.forEach((body, index) => {
+    offsets.push(byteOffset);
+    const object = joinBytes([
+      textBytes(`${index + 1} 0 obj\n`),
+      body,
+      textBytes("\nendobj\n"),
+    ]);
+    parts.push(object);
+    byteOffset += object.length;
+  });
+  const xrefOffset = byteOffset;
+  const xref = [
+    "xref",
+    "0 6",
+    "0000000000 65535 f ",
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
+    "trailer",
+    "<< /Size 6 /Root 1 0 R >>",
+    "startxref",
+    String(xrefOffset),
+    "%%EOF",
+    "",
+  ].join("\n");
+  parts.push(textBytes(xref));
+  return new Blob([joinBytes(parts)], { type: "application/pdf" });
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.href = url;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 type CustomTheme = {
@@ -252,7 +352,7 @@ type PostItDraft = Pick<PostItNote, "text" | "color" | "doodle">;
 type SketchPage = {
   id: string;
   title: string;
-  pageStyle: PageStyle;
+  pageStyle: string;
   createdAt: string;
   updatedAt: string;
   dataUrl?: string;
@@ -1281,7 +1381,11 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
+  const [pageStyle, setPageStyle] = useState<PageStyle>(DEFAULT_SKETCH_PAPER.style);
+  const [sketchPageColor, setSketchPageColor] = useState(DEFAULT_SKETCH_PAPER.color);
+  const [sketchPageSize, setSketchPageSize] = useState<SketchPageSizeId>(DEFAULT_SKETCH_PAPER.size);
+  const [sketchPageOrientation, setSketchPageOrientation] =
+    useState<SketchPageOrientation>(DEFAULT_SKETCH_PAPER.orientation);
   const [penColor, setPenColor] = useState("#1f241b");
   const [penSize, setPenSize] = useState(4);
   const [penTool, setPenTool] = useState<SketchTool>("pen");
@@ -2154,6 +2258,25 @@ export default function Home() {
       : undefined;
   const canUndo = historyDepth.undo > 0;
   const canRedo = historyDepth.redo > 0;
+  const sketchPaperSettings = {
+    style: pageStyle,
+    color: sketchPageColor,
+    size: sketchPageSize,
+    orientation: sketchPageOrientation,
+  };
+  const sketchPaperDimensions = getSketchPageDimensions(
+    sketchPageSize,
+    sketchPageOrientation,
+  );
+  const sketchPageDefinition = getSketchPageSize(sketchPageSize);
+  const sketchPaperColors = sketchPaperInkColors(sketchPageColor);
+  const sketchPaperStyle = {
+    "--sketch-page-aspect": `${sketchPaperDimensions.widthIn} / ${sketchPaperDimensions.heightIn}`,
+    "--sketch-page-aspect-number": sketchPaperDimensions.widthIn / sketchPaperDimensions.heightIn,
+    "--sketch-paper-color": sketchPageColor,
+    "--sketch-rule-color": sketchPaperColors.rule,
+    "--sketch-margin-color": sketchPaperColors.margin,
+  } as CSSProperties;
   const focusProgress = Math.max(
     0,
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
@@ -3870,13 +3993,67 @@ export default function Home() {
     [],
   );
 
-  const downloadDrawing = () => {
+  const renderSketchExportCanvas = (dpi = 150) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = "aerea-note.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    if (!canvas) return null;
+    const dimensions = getSketchPageDimensions(
+      sketchPageSize,
+      sketchPageOrientation,
+    );
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = Math.max(1, Math.round(dimensions.widthIn * dpi));
+    exportCanvas.height = Math.max(1, Math.round(dimensions.heightIn * dpi));
+    const context = exportCanvas.getContext("2d");
+    if (!context) return null;
+
+    drawSketchPaper(context, exportCanvas.width, exportCanvas.height, sketchPaperSettings);
+    const selection = sketchSelectionBoxRef.current;
+    sketchSelectionBoxRef.current = null;
+    redrawSketch();
+    try {
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+    } finally {
+      sketchSelectionBoxRef.current = selection;
+      redrawSketch();
+    }
+    return exportCanvas;
+  };
+
+  const downloadDrawing = async (format: "png" | "pdf") => {
+    const exportCanvas = renderSketchExportCanvas();
+    if (!exportCanvas) return;
+    const cleanTitle = (sketchTitle.trim() || "aerea-note")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "aerea-note";
+    try {
+      if (format === "pdf") {
+        const dimensions = getSketchPageDimensions(
+          sketchPageSize,
+          sketchPageOrientation,
+        );
+        const pdf = await canvasAsPdfBlob(
+          exportCanvas,
+          dimensions.widthIn * 72,
+          dimensions.heightIn * 72,
+        );
+        downloadBlob(pdf, `${cleanTitle}-${sketchPageSize}.pdf`);
+      } else {
+        const png = await new Promise<Blob | null>((resolve) =>
+          exportCanvas.toBlob(resolve, "image/png"),
+        );
+        if (!png) throw new Error("Could not prepare the PNG page.");
+        downloadBlob(png, `${cleanTitle}-${sketchPageSize}.png`);
+      }
+      setSketchMessage(
+        `Downloaded the complete ${sketchPageDefinition.label} page as ${format.toUpperCase()}.`,
+      );
+    } catch (error) {
+      setSketchMessage(error instanceof Error ? error.message : "Could not download this page.");
+    }
   };
 
   const refreshSketches = async () => {
@@ -3901,7 +4078,7 @@ export default function Home() {
       if (isNative()) {
         await AereaStorage.saveSketch({
           title: sketchTitle.trim() || "Untitled page",
-          pageStyle,
+          pageStyle: encodeSketchPaper(sketchPaperSettings),
           dataUrl: await blobAsDataUrl(blob),
         });
       } else {
@@ -3910,7 +4087,7 @@ export default function Home() {
           {
             id: crypto.randomUUID(),
             title: sketchTitle.trim() || "Untitled page",
-            pageStyle,
+            pageStyle: encodeSketchPaper(sketchPaperSettings),
             createdAt: now,
             updatedAt: now,
             dataUrl: await blobAsDataUrl(blob),
@@ -3953,7 +4130,11 @@ export default function Home() {
       resetSketchHistory();
       redrawSketch();
       setSketchTitle(page.title);
-      setPageStyle(page.pageStyle);
+      const paper = decodeSketchPaper(page.pageStyle);
+      setPageStyle(paper.style);
+      setSketchPageColor(paper.color);
+      setSketchPageSize(paper.size);
+      setSketchPageOrientation(paper.orientation);
       setSketchMessage(`Opened “${page.title}”`);
     };
     image.src = page.dataUrl || `/api/sketches/${page.id}`;
@@ -4989,6 +5170,7 @@ export default function Home() {
                             ["grid", "▦", "Grid"],
                             ["lined", "☰", "Lined"],
                             ["dotted", "⠿", "Dotted"],
+                            ["cornell", "▥", "Cornell"],
                             ["plain", "□", "Blank"],
                           ] as [PageStyle, string, string][]).map(
                             ([id, icon, label]) => (
@@ -5005,9 +5187,92 @@ export default function Home() {
                         </div>
                       </div>
                       <div>
+                        <p className="tiny-label">PAGE COLOR</p>
+                        <div className="page-color-grid">
+                          {SKETCH_PAGE_COLORS.map((color) => (
+                            <button
+                              key={color.value}
+                              className={sketchPageColor === color.value ? "active" : ""}
+                              style={{ backgroundColor: color.value }}
+                              onClick={() => setSketchPageColor(color.value)}
+                              aria-label={`Use ${color.label} paper`}
+                              title={color.label}
+                            />
+                          ))}
+                          <label
+                            className={
+                              SKETCH_PAGE_COLORS.some((color) => color.value === sketchPageColor)
+                                ? "page-color-custom"
+                                : "page-color-custom active"
+                            }
+                            title="Custom paper color"
+                          >
+                            <input
+                              type="color"
+                              value={sketchPageColor}
+                              onChange={(event) => setSketchPageColor(event.target.value)}
+                              aria-label="Choose a custom paper color"
+                            />
+                            <span>＋</span>
+                          </label>
+                        </div>
+                      </div>
+                      <label className="sketch-page-size">
+                        <span className="tiny-label">PAGE SIZE</span>
+                        <select
+                          value={sketchPageSize}
+                          onChange={(event) =>
+                            setSketchPageSize(event.target.value as SketchPageSizeId)
+                          }
+                        >
+                          {SKETCH_PAGE_SIZES.map((page) => (
+                            <option key={page.id} value={page.id}>
+                              {page.label} · {page.measurement}
+                            </option>
+                          ))}
+                        </select>
+                        <small>
+                          {sketchPageDefinition.measurement} · preserved in PNG and PDF
+                        </small>
+                      </label>
+                      <div>
+                        <p className="tiny-label">ORIENTATION</p>
+                        <div className="page-orientation-toggle">
+                          {([
+                            ["portrait", "▯", "Portrait"],
+                            ["landscape", "▭", "Landscape"],
+                          ] as [SketchPageOrientation, string, string][]).map(
+                            ([orientation, icon, label]) => (
+                              <button
+                                key={orientation}
+                                className={
+                                  sketchPageOrientation === orientation ? "active" : ""
+                                }
+                                onClick={() => setSketchPageOrientation(orientation)}
+                                aria-pressed={sketchPageOrientation === orientation}
+                              >
+                                <span>{icon}</span>
+                                {label}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                      <div>
                         <p className="tiny-label">PEN COLOR</p>
                         <div className="pen-colors">
-                          {["#23384b", "#3c87c7", "#ff8b57", "#65a84e", "#9b7bc7"].map(
+                          {[
+                            "#23384b",
+                            "#3c87c7",
+                            "#6fc9e8",
+                            "#65a84e",
+                            "#a9d59c",
+                            "#f4c74f",
+                            "#ff9b7a",
+                            "#ef86ad",
+                            "#9b7bc7",
+                            "#777b82",
+                          ].map(
                             (color) => (
                               <button
                                 key={color}
@@ -5018,6 +5283,15 @@ export default function Home() {
                               />
                             ),
                           )}
+                          <label className="pen-color-custom" title="Custom ink color">
+                            <input
+                              type="color"
+                              value={penColor}
+                              onChange={(event) => setPenColor(event.target.value)}
+                              aria-label="Choose a custom ink color"
+                            />
+                            <span>＋</span>
+                          </label>
                         </div>
                       </div>
                       <label className="pen-size">
@@ -5078,9 +5352,24 @@ export default function Home() {
                       >
                         {sketchSaving ? "Saving…" : "Save inside aérea"}
                       </button>
-                      <button className="download-page" onClick={downloadDrawing}>
-                        Download a copy
-                      </button>
+                      <div className="sketch-export-card">
+                        <p className="tiny-label">DOWNLOAD COMPLETE PAGE</p>
+                        <div>
+                          <button
+                            className="download-page"
+                            onClick={() => void downloadDrawing("png")}
+                          >
+                            <span>▧</span> PNG
+                          </button>
+                          <button
+                            className="download-page"
+                            onClick={() => void downloadDrawing("pdf")}
+                          >
+                            <span>▤</span> PDF
+                          </button>
+                        </div>
+                        <small>Paper color, pattern, proportions, and every mark are included.</small>
+                      </div>
                     </aside>
                     {sketchFullscreen && (
                       <div className="sketch-fullscreen-topbar">
@@ -5139,7 +5428,9 @@ export default function Home() {
                           aria-label="Page title"
                         />
                         <div>
-                          <span>{readableDate(todayKey)}</span>
+                          <span className="sketch-page-meta">
+                            {sketchPageDefinition.label} · {sketchPageDefinition.measurement}
+                          </span>
                           <button
                             className="fullscreen-page-button"
                             onClick={() => {
@@ -5198,13 +5489,19 @@ export default function Home() {
                           ref={sketchStageRef}
                           style={
                             {
+                              ...sketchPaperStyle,
                               "--sketch-zoom": sketchZoom,
                               "--sketch-stage-size": `${sketchZoom * 100}%`,
                               "--sketch-inverse-zoom": 1 / sketchZoom,
                             } as CSSProperties
                           }
                         >
-                          <div className={`drawing-page ${pageStyle}`}>
+                          <div
+                            className={`drawing-page ${pageStyle}`}
+                            style={sketchPaperStyle}
+                            data-page-size={sketchPageSize}
+                            data-orientation={sketchPageOrientation}
+                          >
                             <span className="tape tape-one" />
                             <span className="tape tape-two" />
                             <canvas
@@ -5286,32 +5583,48 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="sketch-gallery">
-                        {savedPages.map((page) => (
-                          <article key={page.id}>
-                            <button
-                              className={`sketch-thumb ${page.pageStyle}`}
-                              onClick={() => loadSketchPage(page)}
-                            >
-                              <img
-                                src={page.dataUrl || `/api/sketches/${page.id}`}
-                                alt={`Preview of ${page.title}`}
-                              />
-                            </button>
-                            <div>
-                              <button onClick={() => loadSketchPage(page)}>
-                                <strong>{page.title}</strong>
-                                <small>{page.pageStyle} page</small>
-                              </button>
+                        {savedPages.map((page) => {
+                          const paper = decodeSketchPaper(page.pageStyle);
+                          const size = getSketchPageSize(paper.size);
+                          const dimensions = getSketchPageDimensions(
+                            paper.size,
+                            paper.orientation,
+                          );
+                          const ink = sketchPaperInkColors(paper.color);
+                          const paperStyle = {
+                            "--sketch-page-aspect": `${dimensions.widthIn} / ${dimensions.heightIn}`,
+                            "--sketch-paper-color": paper.color,
+                            "--sketch-rule-color": ink.rule,
+                            "--sketch-margin-color": ink.margin,
+                          } as CSSProperties;
+                          return (
+                            <article key={page.id}>
                               <button
-                                className="delete-sketch"
-                                onClick={() => deleteSketchPage(page.id)}
-                                aria-label={`Delete ${page.title}`}
+                                className={`sketch-thumb ${paper.style}`}
+                                style={paperStyle}
+                                onClick={() => loadSketchPage(page)}
                               >
-                                ×
+                                <img
+                                  src={page.dataUrl || `/api/sketches/${page.id}`}
+                                  alt={`Preview of ${page.title}`}
+                                />
                               </button>
-                            </div>
-                          </article>
-                        ))}
+                              <div>
+                                <button onClick={() => loadSketchPage(page)}>
+                                  <strong>{page.title}</strong>
+                                  <small>{size.label} · {paper.style} · {paper.orientation}</small>
+                                </button>
+                                <button
+                                  className="delete-sketch"
+                                  onClick={() => deleteSketchPage(page.id)}
+                                  aria-label={`Delete ${page.title}`}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        })}
                       </div>
                     )}
                   </section>

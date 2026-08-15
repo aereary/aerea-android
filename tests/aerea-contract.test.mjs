@@ -34,6 +34,14 @@ const readerSource = await readFile(
   new URL("../app/study-reader.tsx", import.meta.url),
   "utf8",
 );
+const sketchPaperSource = await readFile(
+  new URL("../app/sketch-paper.ts", import.meta.url),
+  "utf8",
+);
+const sketchApiSource = await readFile(
+  new URL("../app/api/sketches/route.ts", import.meta.url),
+  "utf8",
+);
 const fileApiSource = await readFile(
   new URL("../app/api/files/route.ts", import.meta.url),
   "utf8",
@@ -161,6 +169,25 @@ test("keeps notebooks, notes, PDF annotation, EPUB reading, and private files in
   assert.match(nativeStorageSource, /saveDocument/);
   assert.match(nativeStorageSource, /getDocument/);
   assert.match(nativeStorageSource, /deleteDocument/);
+});
+
+test("gives Sketchbook classic paper sizes, colored pages, and complete exports", () => {
+  for (const size of ["letter", "legal", "oficio", "a4", "a5", "tabloid", "executive"]) {
+    assert.match(sketchPaperSource, new RegExp(`id: "${size}"`));
+  }
+  assert.match(sketchPaperSource, /8½ × 14 in/);
+  assert.match(pageSource, /PAGE COLOR/);
+  assert.match(pageSource, /PAGE SIZE/);
+  assert.match(pageSource, /ORIENTATION/);
+  assert.match(pageSource, /"cornell", "▥", "Cornell"/);
+  assert.match(pageSource, /renderSketchExportCanvas/);
+  assert.match(pageSource, /drawSketchPaper\(context/);
+  assert.match(pageSource, /canvasAsPdfBlob/);
+  assert.match(pageSource, /downloadDrawing\("png"\)/);
+  assert.match(pageSource, /downloadDrawing\("pdf"\)/);
+  assert.match(cssSource, /aspect-ratio:var\(--sketch-page-aspect/);
+  assert.match(cssSource, /\.drawing-page\.cornell/);
+  assert.match(sketchApiSource, /isValidSketchPaperDescriptor/);
 });
 
 test("opens saved notes fully and edits calendar rows directly", () => {

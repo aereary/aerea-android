@@ -22900,3 +22900,198 @@ body {
   .study-library-new strong { font-size:11px; }
   .study-library-new small { font-size:7px; }
 }
+
+/* Sketchbook paper studio: physical page ratios, paper colors, and faithful export. */
+.sketch-tools { gap:16px; }
+.page-style-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.page-style-grid button { min-height:52px; }
+
+.page-color-grid {
+  display:grid;
+  gap:8px;
+  grid-template-columns:repeat(5,30px);
+}
+.page-color-grid > button,
+.page-color-custom {
+  border:3px solid var(--paper);
+  border-radius:50%;
+  box-shadow:0 0 0 1px var(--line);
+  cursor:pointer;
+  display:block;
+  height:30px;
+  padding:0;
+  position:relative;
+  width:30px;
+}
+.page-color-grid > button.active,
+.page-color-custom.active { box-shadow:0 0 0 3px var(--blue); }
+.page-color-custom {
+  align-items:center;
+  background:conic-gradient(#fd8da7,#ffd66e,#9edc9f,#8bcfed,#bda8ef,#fd8da7);
+  display:flex;
+  justify-content:center;
+  overflow:hidden;
+}
+.page-color-custom input,
+.pen-color-custom input { height:100%; inset:0; opacity:0; position:absolute; width:100%; }
+.page-color-custom span,
+.pen-color-custom span {
+  align-items:center;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);
+  border-radius:50%;
+  color:var(--ink);
+  display:flex;
+  font-size:16px;
+  height:18px;
+  justify-content:center;
+  pointer-events:none;
+  width:18px;
+}
+
+.sketch-page-size { display:grid; gap:7px; }
+.sketch-page-size select {
+  appearance:none;
+  background:
+    linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%) calc(100% - 16px) calc(50% - 2px)/5px 5px no-repeat,
+    linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%) calc(100% - 11px) calc(50% - 2px)/5px 5px no-repeat,
+    var(--cream-deep);
+  border:2px solid var(--line);
+  border-radius:14px;
+  color:var(--ink);
+  font-family:inherit;
+  font-size:11px;
+  font-weight:800;
+  min-height:46px;
+  padding:0 34px 0 12px;
+  width:100%;
+}
+.sketch-page-size > small { color:var(--muted); font-size:9px; line-height:1.35; }
+.page-orientation-toggle { display:grid; gap:7px; grid-template-columns:repeat(2,1fr); }
+.page-orientation-toggle button {
+  align-items:center;
+  background:var(--cream-deep);
+  border:2px solid transparent;
+  border-radius:14px;
+  color:var(--ink-soft);
+  display:flex;
+  font-size:9px;
+  font-weight:850;
+  gap:7px;
+  justify-content:center;
+  min-height:46px;
+}
+.page-orientation-toggle button span { font-size:20px; }
+.page-orientation-toggle button.active {
+  background:var(--blue);
+  border-color:color-mix(in srgb,var(--blue) 64%,var(--ink));
+  color:var(--ink);
+}
+
+.pen-colors { flex-wrap:wrap; }
+.pen-color-custom {
+  align-items:center;
+  background:conic-gradient(#ef86ad,#f4c74f,#65a84e,#6fc9e8,#9b7bc7,#ef86ad);
+  border:3px solid var(--paper);
+  border-radius:50%;
+  box-shadow:0 0 0 1px var(--line);
+  cursor:pointer;
+  display:flex;
+  height:29px;
+  justify-content:center;
+  overflow:hidden;
+  position:relative;
+  width:29px;
+}
+
+.sketch-export-card {
+  background:linear-gradient(145deg,color-mix(in srgb,var(--blue) 38%,var(--paper)),var(--paper));
+  border:1px solid var(--line);
+  border-radius:18px;
+  display:grid;
+  gap:8px;
+  padding:11px;
+}
+.sketch-export-card > div { display:grid; gap:7px; grid-template-columns:repeat(2,1fr); }
+.sketch-export-card .download-page {
+  align-items:center;
+  background:var(--paper);
+  border:1px solid var(--line);
+  display:flex;
+  gap:7px;
+  justify-content:center;
+  padding:0 9px;
+}
+.sketch-export-card .download-page span { font-size:17px; }
+.sketch-export-card > small { color:var(--muted); font-size:8px; line-height:1.4; }
+.notebook-top > div { align-items:center; display:flex; gap:10px; }
+.sketch-page-meta { color:var(--muted); font-size:10px; font-weight:750; }
+
+.sketch-zoom-stage {
+  aspect-ratio:var(--sketch-page-aspect,8.5 / 11);
+  margin-inline:auto;
+  width:100%;
+}
+.drawing-page {
+  aspect-ratio:var(--sketch-page-aspect,8.5 / 11);
+  background-color:var(--sketch-paper-color,#fffefa);
+  height:auto;
+  min-height:0;
+  width:100%;
+}
+.drawing-page.grid,
+.sketch-thumb.grid {
+  background-color:var(--sketch-paper-color,#fffefa);
+  background-image:
+    linear-gradient(var(--sketch-rule-color,rgba(83,126,157,.19)) 1px,transparent 1px),
+    linear-gradient(90deg,var(--sketch-rule-color,rgba(83,126,157,.19)) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+.drawing-page.lined,
+.sketch-thumb.lined {
+  background-color:var(--sketch-paper-color,#fffefa);
+  background-image:repeating-linear-gradient(
+    transparent 0 29px,
+    var(--sketch-rule-color,rgba(83,126,157,.19)) 29px 30px
+  );
+}
+.drawing-page.dotted,
+.sketch-thumb.dotted {
+  background-color:var(--sketch-paper-color,#fffefa);
+  background-image:radial-gradient(var(--sketch-rule-color,rgba(83,126,157,.23)) 1px,transparent 1.5px);
+  background-size:22px 22px;
+}
+.drawing-page.cornell,
+.sketch-thumb.cornell {
+  background-color:var(--sketch-paper-color,#fffefa);
+  background-image:
+    linear-gradient(90deg,transparent 0 29%,var(--sketch-margin-color,rgba(224,116,139,.34)) 29% calc(29% + 1px),transparent calc(29% + 1px)),
+    linear-gradient(transparent 0 12%,var(--sketch-margin-color,rgba(224,116,139,.34)) 12% calc(12% + 1px),transparent calc(12% + 1px)),
+    repeating-linear-gradient(transparent 0 29px,var(--sketch-rule-color,rgba(83,126,157,.19)) 29px 30px);
+}
+.drawing-page.plain,
+.sketch-thumb.plain { background-color:var(--sketch-paper-color,#fffefa); background-image:none; }
+
+.sketch-fullscreen .sketch-zoom-stage {
+  aspect-ratio:var(--sketch-page-aspect,8.5 / 11);
+  height:auto;
+  min-height:0;
+  min-width:100%;
+  width:var(--sketch-stage-size);
+}
+.sketch-fullscreen .sketch-zoom-stage .drawing-page {
+  aspect-ratio:var(--sketch-page-aspect,8.5 / 11);
+}
+.sketch-thumb {
+  aspect-ratio:var(--sketch-page-aspect,8.5 / 11);
+  background-color:var(--sketch-paper-color,#fffefa);
+}
+.sketch-thumb img { object-fit:contain; }
+
+@media (max-width:720px) {
+  .page-color-grid { grid-template-columns:repeat(5,28px); }
+  .page-color-grid > button,
+  .page-color-custom { height:28px; width:28px; }
+  .drawing-page { height:auto; min-height:0; }
+  .sketch-fullscreen .sketch-viewport { padding:10px; }
+  .sketch-fullscreen .sketch-zoom-stage { min-width:100%; }
+}
