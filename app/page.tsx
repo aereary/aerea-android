@@ -26,13 +26,12 @@ import {
 } from "react";
 import {
   CalendarMemo,
-  CampEvent,
-  CampStudyShell,
   StudyFileItem,
+  StudyLibrary,
   StudyNotebook,
   StudyNote,
   StudyTask,
-} from "./camp-study-shell";
+} from "./study-library";
 import { EpubBook, readEpub } from "./epub-reader";
 import {
   EpubReadingState,
@@ -41,7 +40,7 @@ import {
   PdfStudyReader,
 } from "./study-reader";
 
-type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
+type Tab = "today" | "habits" | "library" | "focus" | "journal" | "spaces";
 type Space = "menu" | "classes" | "sketchbook";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type MetricsPeriod = "week" | "month" | "year" | "all";
@@ -66,7 +65,6 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | "campstudy"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -231,6 +229,7 @@ type PostItDoodle = "heart" | "star" | "smile" | "pin";
 type PostItPage =
   | "today"
   | "habits"
+  | "library"
   | "focus"
   | "journal"
   | "spaces:menu"
@@ -578,21 +577,6 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
-  {
-    id: "campstudy",
-    name: "Camp study desk",
-    description: "A completely separate study workspace with an illustrated campsite, planner, notebooks, files, tasks, and a full reading desk.",
-    colors: ["#ef9d79", "#fffaf2", "#779b5b"],
-    icon: "🏕️",
-    art: "/assets/openmoji/notebook.svg",
-    accents: [
-      "/assets/openmoji/locomotive.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "study softly",
-    featured: true,
-    interfaceIdea: "A distinct TimeTree-meets-FreeNotes workspace with its own illustrated home, dock, library, planner, and study readers.",
-  },
 ];
 
 const CLEAN_START_VERSION = "android-release-1";
@@ -624,7 +608,7 @@ const starterReminders: Reminder[] = [
 const tabs: { id: Tab; icon: string; label: string }[] = [
   { id: "today", icon: "⌂", label: "Today" },
   { id: "habits", icon: "✓", label: "Habits" },
-  { id: "focus", icon: "◷", label: "Focus" },
+  { id: "library", icon: "▥", label: "Library" },
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
@@ -1239,7 +1223,6 @@ export default function Home() {
   const [activeEpubBook, setActiveEpubBook] = useState<EpubBook | null>(null);
   const [studyReaderMessage, setStudyReaderMessage] = useState("");
   const [activeStudyNotebookId, setActiveStudyNotebookId] = useState<string | null>(null);
-  const [campLegacyMode, setCampLegacyMode] = useState(false);
   const [postItEditorOpen, setPostItEditorOpen] = useState(false);
   const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
   const [selectedPostItId, setSelectedPostItId] = useState<string | null>(null);
@@ -2774,10 +2757,6 @@ export default function Home() {
     setSketchZoom(1);
     setSketchToolbarOpen(false);
     setSketchFullscreen(false);
-    if (appTheme === "campstudy") {
-      setCampLegacyMode(false);
-      setActiveStudyNotebookId(null);
-    }
   };
 
   const updateDoneIds = (
@@ -4074,10 +4053,17 @@ export default function Home() {
     setActiveEpubBook(null);
     let readableFile = file;
     if (isNative() && !file.dataUrl) {
-      setStudyReaderMessage("Opening your private file…");
-      const payload = await AereaStorage.getDocument({ id: file.id });
-      readableFile = { ...file, dataUrl: payload.dataUrl };
-      setStudyReaderMessage("");
+      try {
+        setStudyReaderMessage("Opening your private file…");
+        const payload = await AereaStorage.getDocument({ id: file.id });
+        readableFile = { ...file, dataUrl: payload.dataUrl };
+        setStudyReaderMessage("");
+      } catch (error) {
+        setStudyReaderMessage(
+          error instanceof Error ? error.message : "This file could not be opened.",
+        );
+        return;
+      }
     }
     if (readableFile.kind === "pdf") {
       setActiveStudyFile(readableFile);
@@ -4116,33 +4102,8 @@ export default function Home() {
     setSketchMessage("");
     setActiveTab("spaces");
     setSpace("sketchbook");
-    setCampLegacyMode(true);
     setSketchToolbarOpen(false);
     setSketchFullscreen(true);
-  };
-
-  const openCampLegacy = (
-    module: "focus" | "journal" | "classes" | "sketchbook" | "habits",
-  ) => {
-    setCampLegacyMode(true);
-    if (module === "classes" || module === "sketchbook") {
-      setActiveTab("spaces");
-      setSpace(module);
-      return;
-    }
-    setActiveTab(module);
-    setSpace("menu");
-  };
-
-  const openCampEventEditor = (dateKey = todayKey) => {
-    const date = dateFromKey(dateKey);
-    setSelectedCalendarDate(dateKey);
-    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    setCalendarExpanded(false);
-    setCalendarScheduleOpen(false);
-    setCalendarSearchOpen(false);
-    setCalendarOpen(true);
-    openNewEvent(dateKey);
   };
 
   const importIcsCalendar = async (file: File) => {
@@ -4254,7 +4215,6 @@ export default function Home() {
       className="app-shell"
       data-theme={appTheme}
       data-color-mode={colorMode}
-      data-camp-mode={campLegacyMode ? "module" : "workspace"}
       style={customThemeStyle}
     >
       <div className="paper-grain" aria-hidden="true" />
@@ -4266,62 +4226,6 @@ export default function Home() {
             : "phone-canvas"
         }
       >
-        {appTheme === "campstudy" && !sketchFullscreen && !campLegacyMode && (
-          <CampStudyShell
-            todayKey={todayKey}
-            isNight={isNight}
-            notebooks={studyNotebooks}
-            notes={studyNotes}
-            tasks={studyTasks}
-            memos={calendarMemos}
-            files={studyFiles}
-            events={calendarEvents}
-            calendarNames={calendarCategories.map((category) => category.name)}
-            habits={habits.map((habit) => ({
-              id: habit.id,
-              title: habit.title,
-              icon: habit.icon,
-              done: habit.days[(new Date().getDay() + 6) % 7] || false,
-            }))}
-            reminders={reminders}
-            doneReminderIds={doneIds}
-            onNotebooksChange={setStudyNotebooks}
-            onNotesChange={setStudyNotes}
-            onTasksChange={setStudyTasks}
-            onMemosChange={setCalendarMemos}
-            onOpenNotebook={openStudyNotebook}
-            onOpenFile={(file) => void openStudyFile(file)}
-            onDeleteFile={(file) => void deleteStudyFile(file)}
-            onImportFiles={importStudyFiles}
-            onImportIcs={importIcsCalendar}
-            onOpenCalendar={openCalendarAtToday}
-            onOpenEvent={(event) => {
-              const fullEvent = calendarEvents.find((item) => item.id === event.id);
-              if (fullEvent) openEventDetail(fullEvent);
-            }}
-            onNewEvent={openCampEventEditor}
-            onCompleteReminder={(id) => updateDoneIds((current) => [...current, id])}
-            onRestoreReminder={(id) => updateDoneIds((current) => current.filter((item) => item !== id))}
-            onToggleHabit={(id) => toggleHabit(id, (new Date().getDay() + 6) % 7)}
-            onOpenLegacy={openCampLegacy}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenMetrics={openMetrics}
-          />
-        )}
-        {appTheme === "campstudy" && campLegacyMode && !sketchFullscreen && (
-          <button
-            type="button"
-            className="camp-return-workspace"
-            onClick={() => {
-              setCampLegacyMode(false);
-              setActiveTab("today");
-              setSpace("menu");
-              setActiveStudyNotebookId(null);
-            }}
-          >
-            <span>←</span> Back to Camp Study
-          </button>
-        )}
         {!sketchFullscreen && (
           <div
             className="storybook-scene"
@@ -4518,8 +4422,37 @@ export default function Home() {
             </section>
           )}
 
+          {activeTab === "library" && (
+            <StudyLibrary
+              notebooks={studyNotebooks}
+              notes={studyNotes}
+              files={studyFiles}
+              onNotebooksChange={setStudyNotebooks}
+              onNotesChange={setStudyNotes}
+              onOpenNotebook={openStudyNotebook}
+              onOpenFile={(file) => void openStudyFile(file)}
+              onDeleteFile={(file) => void deleteStudyFile(file)}
+              onImportFiles={importStudyFiles}
+              onOpenSketchbook={() => {
+                setActiveStudyNotebookId(null);
+                setActiveTab("spaces");
+                setSpace("sketchbook");
+              }}
+            />
+          )}
+
           {activeTab === "focus" && (
             <section className="screen-section focus-screen">
+              <button
+                type="button"
+                className="focus-sketchbook-back"
+                onClick={() => {
+                  setActiveTab("spaces");
+                  setSpace("sketchbook");
+                }}
+              >
+                <span>←</span> Back to Sketchbook
+              </button>
               <ScreenIntro
                 label="A QUIET POCKET OF TIME"
                 title="Let’s focus together"
@@ -5028,6 +4961,26 @@ export default function Home() {
                           <input ref={sketchImageInputRef} type="file" accept="image/*" onChange={importSketchImage} hidden />
                         </div>
                         <small className="smart-paper-note">Hold any pen stroke to straighten it. Scribble quickly over ink to erase it. Use Select to circle, move, duplicate, or delete strokes. Tap Tape to reveal it.</small>
+                      </div>
+                      <div>
+                        <p className="tiny-label">SKETCHBOOK EXTRAS</p>
+                        <div className="sketch-smart-tools">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSketchFullscreen(false);
+                              setSketchToolbarOpen(false);
+                              setActiveTab("focus");
+                              setSpace("menu");
+                            }}
+                          >
+                            <span>◷</span>
+                            <span className="sketch-extra-copy">
+                              <strong>Focus clock</strong>
+                              <small>Start a quiet study session</small>
+                            </span>
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <p className="tiny-label">PAGE STYLE</p>

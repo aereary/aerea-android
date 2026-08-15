@@ -111,6 +111,10 @@ function xml(text: string) {
   return document;
 }
 
+function xmlElements(document: Document | Element, localName: string) {
+  return Array.from(document.getElementsByTagNameNS("*", localName));
+}
+
 function chapterText(markup: string) {
   let document = new DOMParser().parseFromString(markup, "application/xhtml+xml");
   if (document.querySelector("parsererror")) {
@@ -134,18 +138,21 @@ function chapterText(markup: string) {
 export async function readEpub(file: Blob): Promise<EpubBook> {
   const archive = readZipEntries(await file.arrayBuffer());
   const container = xml(await entryText(archive, "META-INF/container.xml"));
-  const packagePath = container.querySelector("rootfile")?.getAttribute("full-path");
+  const packagePath = xmlElements(container, "rootfile")[0]?.getAttribute("full-path");
   if (!packagePath) throw new Error("This EPUB does not declare its book package.");
 
   const packageDocument = xml(await entryText(archive, packagePath));
   const manifest = new Map<string, string>();
-  packageDocument.querySelectorAll("manifest > item").forEach((item) => {
+  xmlElements(packageDocument, "item")
+    .filter((item) => item.parentElement?.localName === "manifest")
+    .forEach((item) => {
     const id = item.getAttribute("id");
     const href = item.getAttribute("href");
     if (id && href) manifest.set(id, joinZipPath(packagePath, href.split("#")[0]));
   });
 
-  const spineIds = Array.from(packageDocument.querySelectorAll("spine > itemref"))
+  const spineIds = xmlElements(packageDocument, "itemref")
+    .filter((item) => item.parentElement?.localName === "spine")
     .map((item) => item.getAttribute("idref"))
     .filter((value): value is string => Boolean(value));
   const chapters: EpubChapter[] = [];
@@ -162,10 +169,10 @@ export async function readEpub(file: Blob): Promise<EpubBook> {
   }
 
   if (!chapters.length) throw new Error("No readable chapters were found in this EPUB.");
-  const metadata = packageDocument.querySelector("metadata");
+  const metadata = xmlElements(packageDocument, "metadata")[0];
   const title =
-    metadata?.querySelector("title")?.textContent?.trim() || "Imported book";
+    (metadata && xmlElements(metadata, "title")[0]?.textContent?.trim()) || "Imported book";
   const author =
-    metadata?.querySelector("creator")?.textContent?.trim() || "Unknown author";
+    (metadata && xmlElements(metadata, "creator")[0]?.textContent?.trim()) || "Unknown author";
   return { title, author, chapters };
 }

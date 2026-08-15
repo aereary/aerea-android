@@ -26,6 +26,22 @@ const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
 );
+const librarySource = await readFile(
+  new URL("../app/study-library.tsx", import.meta.url),
+  "utf8",
+);
+const readerSource = await readFile(
+  new URL("../app/study-reader.tsx", import.meta.url),
+  "utf8",
+);
+const fileApiSource = await readFile(
+  new URL("../app/api/files/route.ts", import.meta.url),
+  "utf8",
+);
+const nativeStorageSource = await readFile(
+  new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url),
+  "utf8",
+);
 
 test("keeps the approved worlds and removes the ten rejected themes", () => {
   for (const theme of [
@@ -118,6 +134,33 @@ test("ships a clean draining focus clock and varied journal faces", () => {
       .filter((line) => line.trim().startsWith('"')).length >= 20,
     "journal moments should cycle through at least twenty cute faces",
   );
+});
+
+test("puts Library in every existing theme and moves the clock into Sketchbook", () => {
+  assert.match(pageSource, /\{ id: "library", icon: "▥", label: "Library" \}/);
+  assert.doesNotMatch(pageSource, /id: "campstudy"/);
+  assert.doesNotMatch(pageSource, /CampStudyShell/);
+  assert.doesNotMatch(cssSource, /data-theme="campstudy"/);
+  assert.match(pageSource, /<StudyLibrary/);
+  assert.match(pageSource, /SKETCHBOOK EXTRAS/);
+  assert.match(pageSource, /Focus clock/);
+  assert.match(pageSource, /Back to Sketchbook/);
+  assert.match(cssSource, /Library — one shared study shelf for every existing theme/);
+});
+
+test("keeps notebooks, notes, PDF annotation, EPUB reading, and private files in Library", () => {
+  assert.match(librarySource, /Your Library/);
+  assert.match(librarySource, /HANDWRITING/);
+  assert.match(librarySource, /READ & ANNOTATE/);
+  assert.match(librarySource, /application\/epub\+zip/);
+  assert.match(readerSource, /PDF annotation tools/);
+  assert.match(readerSource, /EPUB reading tools/);
+  assert.match(fileApiSource, /const \{ BUCKET \} = getRuntimeEnv\(\)/);
+  assert.match(fileApiSource, /BUCKET\.put/);
+  assert.match(nativeStorageSource, /listDocuments/);
+  assert.match(nativeStorageSource, /saveDocument/);
+  assert.match(nativeStorageSource, /getDocument/);
+  assert.match(nativeStorageSource, /deleteDocument/);
 });
 
 test("opens saved notes fully and edits calendar rows directly", () => {
