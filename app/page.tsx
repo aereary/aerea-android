@@ -1187,6 +1187,28 @@ function minutesFromTime(time = "09:00") {
   return Math.max(0, Math.min(24 * 60, (hours || 0) * 60 + (minutes || 0)));
 }
 
+function findComingUpEvent(events: CalendarEvent[], now: Date) {
+  const currentMinute = now.getHours() * 60 + now.getMinutes();
+
+  return (
+    events
+      .filter((event) => !event.allDay)
+      .map((event) => {
+        const start = minutesFromTime(event.time);
+        const requestedEnd = event.endTime
+          ? minutesFromTime(event.endTime)
+          : start + 60;
+        const end = Math.min(24 * 60, Math.max(start + 15, requestedEnd));
+        return { event, start, end };
+      })
+      .filter(({ end }) => end > currentMinute)
+      .sort(
+        (first, second) =>
+          first.start - second.start || first.end - second.end,
+      )[0]?.event ?? null
+  );
+}
+
 function timeFromMinutes(value: number) {
   const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(value / 15) * 15));
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -1858,6 +1880,11 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+  const extendedLeadingDays = new Date(
+    calendarYear,
+    calendarMonth,
+    1,
+  ).getDay();
   const calendarDays = useMemo(() => {
     return Array.from(
       { length: daysInViewMonth },
@@ -1868,30 +1895,26 @@ export default function Home() {
     );
   }, [calendarMonth, calendarYear, daysInViewMonth]);
   const extendedCalendarWeekCount = Math.max(
-    5,
-    Math.ceil((leadingDays + daysInViewMonth) / 7),
+    6,
+    Math.ceil((extendedLeadingDays + daysInViewMonth) / 7),
   );
   const extendedCalendarDays = useMemo(() => {
     return Array.from({ length: extendedCalendarWeekCount * 7 }, (_, index) => {
-      if (index < leadingDays) {
-        return {
-          date: null,
-          currentMonth: false,
-          nextMonth: false,
-        };
-      }
       const date = new Date(
         calendarYear,
         calendarMonth,
-        index - leadingDays + 1,
+        index - extendedLeadingDays + 1,
       );
+      const firstOfMonth = new Date(calendarYear, calendarMonth, 1);
+      const firstOfNextMonth = new Date(calendarYear, calendarMonth + 1, 1);
       return {
         date,
         currentMonth: date.getMonth() === calendarMonth,
-        nextMonth: date.getMonth() !== calendarMonth,
+        previousMonth: date < firstOfMonth,
+        nextMonth: date >= firstOfNextMonth,
       };
     });
-  }, [calendarMonth, calendarYear, extendedCalendarWeekCount, leadingDays]);
+  }, [calendarMonth, calendarYear, extendedCalendarWeekCount, extendedLeadingDays]);
   const extendedCalendarSources = useMemo(() => {
     const sources = new Set<string>(
       calendarCategories.map((category) => category.name),
@@ -4584,6 +4607,7 @@ export default function Home() {
               weekDays={homeWeek}
               selectedDateEvents={selectedHomeEvents}
               openEventDetail={openEventDetail}
+              now={scheduleNow}
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
@@ -6505,20 +6529,11 @@ export default function Home() {
                       onTouchEnd={finishCalendarSwipe}
                       aria-label="Extended calendar month. Swipe left or right to change month."
                     >
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((weekday) => (
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
                         <strong key={weekday}>{weekday}</strong>
                       ))}
-                      {extendedCalendarDays.map((calendarDay, index) => {
-                        if (!calendarDay.date) {
-                          return (
-                            <div
-                              className="extended-calendar-cell calendar-blank"
-                              key={`blank-${index}`}
-                              aria-hidden="true"
-                            />
-                          );
-                        }
-                        const { date, currentMonth, nextMonth } = calendarDay;
+                      {extendedCalendarDays.map((calendarDay) => {
+                        const { date, currentMonth, previousMonth, nextMonth } = calendarDay;
                         const dayKey = localDateKey(date);
                         const dayEvents = calendarEvents
                           .filter(
@@ -6533,10 +6548,13 @@ export default function Home() {
                           <div
                             className={[
                               "extended-calendar-cell",
-                              currentMonth ? "" : "outside-month next-month",
+                              currentMonth ? "" : "outside-month",
+                              previousMonth ? "previous-month month-spillover" : "",
                               nextMonth ? "month-spillover" : "",
                               selectedCalendarDate === dayKey ? "selected" : "",
                               date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
+                              date.getDay() === 0 ? "sunday" : "",
+                              date.getDay() === 6 ? "saturday" : "",
                               dayKey === todayKey ? "today" : "",
                             ]
                               .filter(Boolean)
@@ -6573,10 +6591,8 @@ export default function Home() {
                                   }}
                                   title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
                                 >
-                                  <i aria-hidden="true" />
                                   <span>
                                     <strong>{calendarEvent.title}</strong>
-                                    <small>{eventStartTimeLabel(calendarEvent)}</small>
                                   </span>
                                 </button>
                               ))}
@@ -8885,6 +8901,7 @@ function TodayScreen({
   selectDate,
   selectedDateEvents,
   openEventDetail,
+  now,
   todayKey,
   weekDays,
   yesterdayDoneCount,
@@ -8907,6 +8924,7 @@ function TodayScreen({
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
   openEventDetail: (event: CalendarEvent) => void;
+  now: Date;
   todayKey: string;
   weekDays: { key: string; day: string; date: string }[];
   yesterdayDoneCount: number;
@@ -8923,7 +8941,9 @@ function TodayScreen({
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
-  const comingUpEvent = selectedDateEvents[0] ?? null;
+  const comingUpEvent = selectedIsToday
+    ? findComingUpEvent(selectedDateEvents, now)
+    : null;
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
@@ -9107,35 +9127,33 @@ function TodayScreen({
         ))}
       </section>
 
-      {isNoirRest && (
-        <section className="noir-coming-up" aria-label="Coming up next">
-          <p className="noir-section-label">COMING UP NEXT</p>
-          {comingUpEvent ? (
-            <button
-              type="button"
-              className="noir-coming-up-card"
-              onClick={() => openEventDetail(comingUpEvent)}
-            >
-              <span className="noir-coming-time">
-                <strong>{eventDetailTimeParts(comingUpEvent).range}</strong>
-                <small>{eventDetailTimeParts(comingUpEvent).period}</small>
+      {selectedIsToday && comingUpEvent && (
+        <section
+          className="coming-up noir-coming-up"
+          aria-label="Coming up next"
+          aria-live="polite"
+        >
+          <p className="coming-up-label noir-section-label">COMING UP NEXT</p>
+          <button
+            type="button"
+            className={`coming-up-card noir-coming-up-card ${comingUpEvent.color}-card`}
+            onClick={() => openEventDetail(comingUpEvent)}
+          >
+            <span className="coming-up-time noir-coming-time">
+              <strong>{eventDetailTimeParts(comingUpEvent).range}</strong>
+              <small>{eventDetailTimeParts(comingUpEvent).period}</small>
+            </span>
+            <span className="coming-up-copy noir-coming-copy">
+              <small>{comingUpEvent.calendar ?? "AÉREA"}</small>
+              <strong>{comingUpEvent.title}</strong>
+              <span>
+                {comingUpEvent.location ||
+                  comingUpEvent.note ||
+                  "Saved in your calendar"}
               </span>
-              <span className="noir-coming-copy">
-                <small>{comingUpEvent.calendar ?? "AÉREA"}</small>
-                <strong>{comingUpEvent.title}</strong>
-                <span>
-                  {comingUpEvent.location ||
-                    comingUpEvent.note ||
-                    "Saved in your calendar"}
-                </span>
-              </span>
-              <span className="noir-coming-arrow" aria-hidden="true">›</span>
-            </button>
-          ) : (
-            <div className="noir-coming-up-empty">
-              Nothing else is waiting for you today.
-            </div>
-          )}
+            </span>
+            <span className="coming-up-arrow noir-coming-arrow" aria-hidden="true">›</span>
+          </button>
         </section>
       )}
 

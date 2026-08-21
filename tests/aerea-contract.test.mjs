@@ -505,9 +505,12 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /className="category-editor-modal"/);
   assert.match(pageSource, /className="extended-filter-list"/);
   assert.match(pageSource, /className=\{`extended-event-pill/);
-  assert.match(pageSource, /date: null/);
-  assert.match(pageSource, /\['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'\]/);
-  assert.match(cssSource, /\.extended-calendar-cell\.calendar-blank/);
+  assert.doesNotMatch(pageSource, /date: null/);
+  assert.match(pageSource, /extendedLeadingDays/);
+  assert.match(pageSource, /const extendedCalendarWeekCount = Math\.max\(\s*6,/);
+  assert.match(pageSource, /\['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'\]/);
+  assert.match(pageSource, /previous-month month-spillover/);
+  assert.match(pageSource, /date\.getDay\(\) === 0 \? "sunday"/);
   assert.match(cssSource, /Event-type editing must sit over every calendar surface/);
   assert.match(cssSource, /\.category-editor-backdrop \{[\s\S]*z-index:520/);
 });
@@ -536,6 +539,9 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /\.extended-month-grid\.calendar-slide-next/);
   assert.match(cssSource, /\.extended-calendar-cell\.selected,[\s\S]*background:color-mix\(in srgb,var\(--paper\) 74%,transparent\);[\s\S]*box-shadow:none/);
   assert.match(cssSource, /breathing room, quiet selection, and motion for the extended month/);
+  assert.match(cssSource, /Reference month: Sunday-first, open week rows, and compact event labels/);
+  assert.match(cssSource, /\.extended-calendar-cell\.sunday \.extended-calendar-date/);
+  assert.match(cssSource, /\.extended-event-pill > i,[\s\S]*display:none/);
   assert.match(cssSource, /Edit types stays deliberately compact, including on Android/);
   assert.match(cssSource, /max-height:min\(76dvh,620px\)/);
   assert.match(cssSource, /max-width:560px/);
@@ -548,13 +554,25 @@ test("ships the rose editorial and noir quiet-hours interfaces", () => {
     assert.match(cssSource, new RegExp(`data-theme-option="${theme}"`));
   }
   assert.match(pageSource, /themeId=\{appTheme\}/);
-  assert.match(pageSource, /className="noir-coming-up"/);
+  assert.match(pageSource, /noir-coming-up/);
   assert.match(pageSource, /className="noir-greeting-name"/);
   assert.match(pageSource, /Rhea <i aria-hidden="true">✦<\/i>/);
   assert.match(cssSource, /Rose paper editorial/);
   assert.match(cssSource, /Noir quiet hours/);
   assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
   assert.match(cssSource, /\.noir-coming-up-card/);
+});
+
+test("shows Coming up next dynamically on today across every theme", () => {
+  assert.match(pageSource, /function findComingUpEvent/);
+  assert.match(pageSource, /\.filter\(\(event\) => !event\.allDay\)/);
+  assert.match(pageSource, /\.filter\(\(\{ end \}\) => end > currentMinute\)/);
+  assert.match(pageSource, /now=\{scheduleNow\}/);
+  assert.match(pageSource, /selectedIsToday\s*\?\s*findComingUpEvent/);
+  assert.match(pageSource, /selectedIsToday && comingUpEvent &&/);
+  assert.doesNotMatch(pageSource, /Nothing else is waiting for you today/);
+  assert.match(cssSource, /Coming up is a time-aware part of Today in every wardrobe theme/);
+  assert.match(cssSource, /\.coming-up-card/);
 });
 
 test("ships an AO3-inspired dark theme with pastel ink", () => {

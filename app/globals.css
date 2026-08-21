@@ -1017,18 +1017,153 @@ p {
   width: 110px;
 }
 
-.schedule-card.emerald-card { --event-tint: #d9edc7; }
-.schedule-card.cyan-card { --event-tint: var(--blue); }
-.schedule-card.blue-card { --event-tint: #d4e0f3; }
-.schedule-card.brown-card { --event-tint: #eadccf; }
-.schedule-card.black-card { --event-tint: #d8d9d2; }
-.schedule-card.red-card { --event-tint: #f4c4bf; }
-.schedule-card.rose-card { --event-tint: #f5d2df; }
-.schedule-card.coral-card { --event-tint: var(--orange-soft); }
-.schedule-card.orange-card { --event-tint: #f8d79c; }
-.schedule-card.lilac-card { --event-tint: var(--lilac); }
-.schedule-card.yellow-card { --event-tint: var(--yellow-soft); }
-.schedule-card.pink-card { --event-tint: var(--pink); }
+.schedule-card.emerald-card,
+.coming-up-card.emerald-card { --event-tint: #d9edc7; }
+.schedule-card.cyan-card,
+.coming-up-card.cyan-card { --event-tint: var(--blue); }
+.schedule-card.blue-card,
+.coming-up-card.blue-card { --event-tint: #d4e0f3; }
+.schedule-card.brown-card,
+.coming-up-card.brown-card { --event-tint: #eadccf; }
+.schedule-card.black-card,
+.coming-up-card.black-card { --event-tint: #d8d9d2; }
+.schedule-card.red-card,
+.coming-up-card.red-card { --event-tint: #f4c4bf; }
+.schedule-card.rose-card,
+.coming-up-card.rose-card { --event-tint: #f5d2df; }
+.schedule-card.coral-card,
+.coming-up-card.coral-card { --event-tint: var(--orange-soft); }
+.schedule-card.orange-card,
+.coming-up-card.orange-card { --event-tint: #f8d79c; }
+.schedule-card.lilac-card,
+.coming-up-card.lilac-card { --event-tint: var(--lilac); }
+.schedule-card.yellow-card,
+.coming-up-card.yellow-card { --event-tint: var(--yellow-soft); }
+.schedule-card.pink-card,
+.coming-up-card.pink-card { --event-tint: var(--pink); }
+
+/* Coming up is a time-aware part of Today in every wardrobe theme. */
+.coming-up {
+  margin: 0 0 30px;
+}
+
+.coming-up-label {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  margin: 0 0 10px 5px;
+}
+
+.coming-up-card {
+  align-items: center;
+  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 14%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--event-tint, var(--lilac)) 44%, var(--line));
+  border-radius: 23px;
+  box-shadow: var(--shadow-soft);
+  color: var(--ink);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(80px, 108px) 3px minmax(0, 1fr) 44px;
+  min-height: 108px;
+  padding: 16px 18px;
+  text-align: left;
+  width: 100%;
+}
+
+.coming-up-card::before {
+  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 74%, var(--ink-soft));
+  border-radius: 99px;
+  content: "";
+  grid-column: 2;
+  grid-row: 1;
+  height: 58px;
+  width: 3px;
+}
+
+.coming-up-time {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.coming-up-time strong {
+  font-size: 19px;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.coming-up-time small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  margin-top: 5px;
+}
+
+.coming-up-copy {
+  display: grid;
+  gap: 4px;
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.coming-up-copy small {
+  color: var(--leaf-deep);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.coming-up-copy strong {
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.coming-up-copy > span {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coming-up-arrow {
+  align-items: center;
+  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 42%, var(--paper));
+  border-radius: 50%;
+  display: flex;
+  font-size: 27px;
+  grid-column: 4;
+  grid-row: 1;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+@media (max-width: 520px) {
+  .coming-up { margin-bottom: 25px; }
+  .coming-up-card {
+    gap: 10px;
+    grid-template-columns: 70px 2px minmax(0, 1fr) 36px;
+    min-height: 96px;
+    padding: 13px 12px;
+  }
+  .coming-up-card::before { height: 52px; width: 2px; }
+  .coming-up-time strong { font-size: 15px; }
+  .coming-up-copy strong { font-size: 15px; }
+  .coming-up-copy > span { font-size: 10px; }
+  .coming-up-arrow { font-size: 23px; height: 36px; width: 36px; }
+}
 
 .time-block {
   align-items: center;
@@ -21509,6 +21644,7 @@ body {
   background:rgba(18,19,23,.74);
   border:1px solid rgba(255,255,255,.12);
   border-radius:27px;
+  box-shadow:none;
   color:#f3f3f4;
   display:grid;
   gap:23px;
@@ -21526,7 +21662,7 @@ body {
 .app-shell[data-theme="noirrest"] .noir-coming-copy small { color:#b7b9bf; font-size:11px; letter-spacing:.15em; }
 .app-shell[data-theme="noirrest"] .noir-coming-copy strong { font-size:19px; font-weight:500; }
 .app-shell[data-theme="noirrest"] .noir-coming-copy span { color:#9699a0; }
-.app-shell[data-theme="noirrest"] .noir-coming-arrow { align-items:center; border:1px solid rgba(255,255,255,.21); border-radius:50%; display:flex; font-size:34px; grid-column:4; grid-row:1; height:54px; justify-content:center; width:54px; }
+.app-shell[data-theme="noirrest"] .noir-coming-arrow { align-items:center; background:transparent; border:1px solid rgba(255,255,255,.21); border-radius:50%; display:flex; font-size:34px; grid-column:4; grid-row:1; height:54px; justify-content:center; width:54px; }
 .app-shell[data-theme="noirrest"] .noir-coming-up-empty { background:#111217; border:1px solid rgba(255,255,255,.1); border-radius:24px; color:#93969d; padding:28px; }
 
 .app-shell[data-theme="noirrest"] .day-grid { display:grid; gap:42px; grid-template-columns:1fr; }
@@ -23739,4 +23875,167 @@ body {
     width:min(92vw,520px);
   }
   .category-editor-modal > header h2 { font-size:22px; }
+}
+
+/* Reference month: Sunday-first, open week rows, and compact event labels. */
+.extended-month-grid {
+  background:color-mix(in srgb,var(--paper) 94%,transparent);
+  border:1px solid color-mix(in srgb,var(--paper) 78%,var(--line));
+  border-radius:29px;
+  box-shadow:0 10px 26px color-mix(in srgb,var(--ink) 8%,transparent);
+  column-gap:0;
+  grid-template-rows:34px repeat(var(--extended-calendar-weeks,6),minmax(0,1fr));
+  overflow:hidden;
+  padding:0;
+  row-gap:0;
+}
+.extended-month-grid > strong,
+.extended-month-grid > strong:first-child,
+.extended-month-grid > strong:nth-child(6),
+.extended-month-grid > strong:nth-child(7),
+.extended-month-grid > strong:last-of-type {
+  border:0;
+  color:var(--ink-soft);
+  font-size:11px;
+  font-weight:650;
+  letter-spacing:0;
+}
+.extended-calendar-cell,
+.extended-calendar-cell:not(:nth-child(7n + 1)),
+.extended-calendar-cell:nth-child(7n + 1) {
+  background:transparent;
+  border:0!important;
+  border-radius:0;
+  border-top:1px solid color-mix(in srgb,var(--line) 58%,transparent)!important;
+  box-shadow:none;
+  min-width:0;
+  padding:10px 5px 5px;
+}
+.extended-calendar-cell.outside-month,
+.extended-calendar-cell.calendar-blank {
+  background:transparent;
+  opacity:1;
+}
+.extended-calendar-cell.selected,
+.extended-calendar-cell.selected.weekend {
+  background:transparent;
+  box-shadow:none;
+}
+.extended-calendar-date {
+  color:var(--ink);
+  font-size:12px;
+  font-weight:650;
+  height:28px;
+  justify-content:center;
+  margin:0 auto 7px;
+  padding:0;
+  width:28px;
+}
+.extended-calendar-cell.weekend .extended-calendar-date,
+.extended-calendar-cell.saturday .extended-calendar-date {
+  color:var(--ink);
+}
+.extended-calendar-cell.sunday .extended-calendar-date {
+  color:color-mix(in srgb,var(--orange) 74%,#ed5f8a);
+}
+.extended-calendar-cell.outside-month .extended-calendar-date {
+  color:var(--muted);
+  opacity:.78;
+}
+.extended-calendar-cell.outside-month.sunday .extended-calendar-date {
+  color:color-mix(in srgb,var(--orange) 64%,#ed6c91);
+}
+.extended-calendar-cell.selected .extended-calendar-date,
+.extended-calendar-cell.selected.weekend .extended-calendar-date,
+.extended-calendar-cell.selected.sunday .extended-calendar-date {
+  background:color-mix(in srgb,var(--lilac) 82%,var(--paper));
+  box-shadow:0 4px 10px color-mix(in srgb,var(--lilac) 31%,transparent);
+  color:#fff;
+  font-weight:850;
+  opacity:1;
+}
+.extended-calendar-cell.today:not(.selected) .extended-calendar-date {
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--lilac) 72%,var(--ink));
+  color:var(--ink-soft);
+}
+.extended-calendar-events {
+  gap:4px;
+  min-width:0;
+}
+.extended-event-pill {
+  --extended-event-accent:#a998dd;
+  background:color-mix(in srgb,var(--extended-event-accent) 27%,var(--paper));
+  border:0;
+  border-radius:4px;
+  box-shadow:none;
+  color:color-mix(in srgb,var(--ink) 84%,var(--extended-event-accent));
+  display:block;
+  min-height:0;
+  padding:4px 3px;
+  text-align:center;
+  width:100%;
+}
+.extended-event-pill > i,
+.extended-event-pill > span > small {
+  display:none;
+}
+.extended-event-pill > span {
+  display:block;
+  min-width:0;
+}
+.extended-event-pill > span > strong {
+  display:block;
+  font-size:9px;
+  font-weight:720;
+  line-height:1.1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.extended-calendar-events > small {
+  display:block;
+  font-size:8px;
+  padding:0;
+  text-align:center;
+}
+
+@media (max-width:720px) {
+  .extended-month-grid {
+    grid-template-rows:27px repeat(var(--extended-calendar-weeks,6),minmax(0,1fr));
+  }
+  .extended-month-grid > strong,
+  .extended-month-grid > strong:first-child,
+  .extended-month-grid > strong:nth-child(6),
+  .extended-month-grid > strong:nth-child(7),
+  .extended-month-grid > strong:last-of-type {
+    font-size:9px;
+  }
+  .extended-calendar-cell,
+  .extended-calendar-cell:not(:nth-child(7n + 1)),
+  .extended-calendar-cell:nth-child(7n + 1) {
+    min-height:0;
+    padding:7px 3px 4px;
+  }
+  .extended-calendar-date {
+    font-size:9px;
+    height:23px;
+    margin-bottom:5px;
+    width:23px;
+  }
+  .extended-calendar-events { gap:3px; }
+  .extended-event-pill {
+    border-radius:3px;
+    min-height:0;
+    padding:3px 2px;
+  }
+  .extended-event-pill > span > strong { font-size:7px; }
+}
+
+@media (max-width:390px) {
+  .extended-calendar-cell,
+  .extended-calendar-cell:not(:nth-child(7n + 1)),
+  .extended-calendar-cell:nth-child(7n + 1) {
+    padding-inline:2px;
+  }
+  .extended-event-pill > span > strong { font-size:6.5px; }
 }
