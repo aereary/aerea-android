@@ -24424,7 +24424,7 @@ body {
   .extended-event-pill > span > strong { font-size:7.8px; }
 }
 
-/* Little aérea simplified: a flat, calendar-only month in the active theme. */
+/* Little aérea simplified: the reference calendar, recolored by the active theme. */
 .simplified-mode-card {
   background:
     radial-gradient(circle at 92% 15%,color-mix(in srgb,var(--lilac) 45%,transparent),transparent 120px),
@@ -24442,19 +24442,28 @@ body {
   overflow:hidden;
   padding:0;
 }
+.app-shell[data-simplified-calendar="true"] > .paper-grain,
+.app-shell[data-simplified-calendar="true"] > .phone-canvas {
+  display:none;
+}
 .app-shell[data-simplified-calendar="true"] .settings-backdrop { z-index:640; }
 
 .simplified-calendar-screen {
-  --simplified-surface:color-mix(in srgb,var(--cream) 96%,var(--app-backdrop));
+  --simplified-surface:color-mix(in srgb,var(--cream) 88%,var(--blue));
+  --simplified-card:color-mix(in srgb,var(--paper) 94%,var(--cream));
   background:var(--simplified-surface);
   color:var(--ink);
   display:grid;
+  gap:10px;
   grid-template-rows:auto auto minmax(0,1fr) 58px;
   height:100dvh;
   inset:0;
   isolation:isolate;
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  padding-top:env(safe-area-inset-top,0px);
+  padding:
+    calc(10px + env(safe-area-inset-top,0px))
+    calc(10px + env(safe-area-inset-right,0px))
+    calc(10px + env(safe-area-inset-bottom,0px))
+    calc(10px + env(safe-area-inset-left,0px));
   position:fixed;
   width:100vw;
   z-index:180;
@@ -24462,10 +24471,16 @@ body {
 
 .simplified-calendar-header {
   align-items:center;
+  background:var(--simplified-card);
+  border:1px solid color-mix(in srgb,var(--paper) 78%,var(--line));
+  border-radius:34px;
+  box-shadow:
+    0 10px 28px color-mix(in srgb,var(--ink) 8%,transparent),
+    inset 0 1px color-mix(in srgb,var(--paper) 92%,transparent);
   display:flex;
   justify-content:space-between;
-  min-height:78px;
-  padding:15px 16px 8px 19px;
+  min-height:84px;
+  padding:12px 18px 12px 28px;
 }
 .simplified-calendar-title {
   align-items:center;
@@ -24473,7 +24488,7 @@ body {
   border:0;
   color:var(--ink);
   display:flex;
-  font-size:clamp(20px,3.2vw,28px);
+  font-size:clamp(27px,3vw,38px);
   font-weight:850;
   gap:8px;
   letter-spacing:-.025em;
@@ -24490,27 +24505,30 @@ body {
 .simplified-calendar-header > nav {
   align-items:center;
   display:flex;
-  gap:4px;
+  gap:16px;
 }
 .simplified-calendar-header > nav > button {
   align-items:center;
-  background:transparent;
-  border:0;
-  color:var(--ink);
+  background:color-mix(in srgb,var(--paper) 94%,var(--lilac));
+  border:1px solid color-mix(in srgb,var(--line) 56%,transparent);
+  border-radius:50%;
+  box-shadow:0 7px 17px color-mix(in srgb,var(--ink) 10%,transparent);
+  color:var(--ink-soft);
   display:flex;
-  height:43px;
+  flex:0 0 56px;
+  height:56px;
   justify-content:center;
   padding:0;
-  width:43px;
+  width:56px;
 }
 .simplified-calendar-header > nav svg {
   fill:none;
-  height:29px;
+  height:34px;
   stroke:currentColor;
   stroke-linecap:round;
   stroke-linejoin:round;
-  stroke-width:1.8;
-  width:29px;
+  stroke-width:2;
+  width:34px;
 }
 .simplified-controls-glyph {
   display:grid;
@@ -24527,7 +24545,7 @@ body {
 }
 .simplified-controls-glyph > i:first-child::after,
 .simplified-controls-glyph > i:last-child::before {
-  background:var(--simplified-surface);
+  background:color-mix(in srgb,var(--paper) 94%,var(--lilac));
   border:2px solid currentColor;
   border-radius:50%;
   content:"";
@@ -24587,15 +24605,23 @@ body {
 
 .simplified-calendar-filters {
   align-items:center;
+  background:var(--simplified-card);
+  border:1px solid color-mix(in srgb,var(--paper) 78%,var(--line));
+  border-radius:31px;
+  box-shadow:
+    0 8px 22px color-mix(in srgb,var(--ink) 6%,transparent),
+    inset 0 1px color-mix(in srgb,var(--paper) 92%,transparent);
   display:flex;
-  gap:6px;
-  min-height:50px;
-  padding:3px 9px 8px;
+  gap:12px;
+  min-height:70px;
+  overflow:hidden;
+  padding:11px 15px;
 }
 .simplified-calendar-filters > div {
+  align-items:center;
   display:flex;
-  flex:1 1 auto;
-  gap:6px;
+  flex:1 1 0;
+  gap:12px;
   min-width:0;
   overflow-x:auto;
   scrollbar-width:none;
@@ -24606,31 +24632,31 @@ body {
   align-items:center;
   background:color-mix(in srgb,var(--simplified-source-color) 17%,var(--paper));
   border:0;
-  border-radius:8px;
+  border-radius:999px;
   color:var(--ink);
   display:flex;
-  flex:0 0 auto;
-  font-size:11px;
+  flex:0 0 clamp(104px,13vw,160px);
+  font-size:13px;
   font-weight:800;
   gap:7px;
-  height:35px;
-  max-width:150px;
+  height:42px;
+  max-width:none;
   overflow:hidden;
-  padding:4px 11px 4px 5px;
+  padding:6px 13px 6px 7px;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 .simplified-calendar-filters > div > button > span {
   align-items:center;
   background:color-mix(in srgb,var(--simplified-source-color) 72%,var(--paper));
-  border-radius:6px;
+  border-radius:50%;
   color:color-mix(in srgb,var(--ink) 85%,var(--simplified-source-color));
   display:flex;
   flex:0 0 auto;
-  font-size:14px;
-  height:27px;
+  font-size:15px;
+  height:30px;
   justify-content:center;
-  width:27px;
+  width:30px;
 }
 .simplified-calendar-filters > div > button.muted { opacity:.36; }
 .simplified-filter-menu {
@@ -24639,25 +24665,29 @@ body {
   border:0;
   color:var(--muted);
   display:flex;
-  flex:0 0 35px;
-  height:35px;
+  flex:0 0 42px;
+  height:42px;
   justify-content:center;
   padding:0;
 }
 .simplified-filter-menu svg {
   fill:none;
-  height:23px;
+  height:25px;
   stroke:currentColor;
   stroke-linecap:round;
   stroke-linejoin:round;
-  stroke-width:1.6;
-  width:23px;
+  stroke-width:2;
+  width:25px;
 }
 
 .simplified-month-grid {
+  background:var(--simplified-card);
+  border:1px solid color-mix(in srgb,var(--paper) 78%,var(--line));
+  border-radius:30px;
+  box-shadow:0 10px 26px color-mix(in srgb,var(--ink) 7%,transparent);
   display:grid;
   grid-template-columns:repeat(7,minmax(0,1fr));
-  grid-template-rows:29px repeat(var(--simplified-calendar-weeks,6),minmax(0,1fr));
+  grid-template-rows:42px repeat(var(--simplified-calendar-weeks,6),minmax(0,1fr));
   min-height:0;
   overflow:hidden;
   touch-action:pan-y;
@@ -24667,8 +24697,8 @@ body {
   border-bottom:1px solid color-mix(in srgb,var(--line) 52%,transparent);
   color:var(--muted);
   display:flex;
-  font-size:10px;
-  font-weight:500;
+  font-size:13px;
+  font-weight:560;
   justify-content:center;
   min-width:0;
 }
@@ -24680,56 +24710,62 @@ body {
   min-height:0;
   min-width:0;
   overflow:hidden;
-  padding:5px 2px 3px;
+  padding:12px 7px 7px;
   position:relative;
 }
 .simplified-calendar-cell:focus-visible {
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--leaf-deep) 55%,transparent);
   outline:0;
 }
-.simplified-calendar-cell.today {
-  background:color-mix(in srgb,var(--ink) 11%,transparent);
-}
-.simplified-calendar-cell.outside-month { opacity:.34; }
+.simplified-calendar-cell.today,
+.simplified-calendar-cell.selected { background:transparent; }
+.simplified-calendar-cell.outside-month { opacity:1; }
 .simplified-calendar-date {
   align-items:center;
   color:var(--ink);
   display:flex;
-  font-size:10px;
+  font-size:14px;
   font-weight:600;
-  height:21px;
+  height:30px;
   justify-content:center;
-  margin:0 auto 3px;
-  width:21px;
+  margin:0 auto 8px;
+  width:30px;
 }
 .simplified-calendar-cell.sunday .simplified-calendar-date {
   color:color-mix(in srgb,var(--coral) 78%,var(--ink));
 }
+.simplified-calendar-cell.outside-month .simplified-calendar-date {
+  color:var(--muted);
+  opacity:.68;
+}
+.simplified-calendar-cell.selected .simplified-calendar-date,
 .simplified-calendar-cell.today .simplified-calendar-date {
-  background:var(--ink);
+  background:color-mix(in srgb,var(--lilac) 84%,var(--paper));
   border-radius:50%;
-  color:var(--simplified-surface);
+  box-shadow:0 4px 10px color-mix(in srgb,var(--lilac) 29%,transparent);
+  color:#fff;
   font-weight:900;
+  opacity:1;
 }
 .simplified-calendar-events {
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:5px;
   min-width:0;
 }
 .simplified-event-strip,
 .simplified-more-events {
   border:0;
-  border-radius:2px;
+  border-radius:5px;
   display:block;
-  font-size:clamp(7px,1.2vw,10px);
+  font-size:clamp(8.5px,1.2vw,10.5px);
   font-weight:800;
-  height:18px;
-  line-height:18px;
+  height:21px;
+  line-height:21px;
   min-width:0;
   overflow:hidden;
   padding:0 3px;
-  text-align:left;
+  text-align:center;
   text-overflow:ellipsis;
   white-space:nowrap;
   width:100%;
@@ -24780,8 +24816,10 @@ body {
 
 .simplified-calendar-nav {
   align-items:stretch;
-  background:var(--simplified-surface);
-  border-top:1px solid color-mix(in srgb,var(--line) 52%,transparent);
+  background:var(--simplified-card);
+  border:1px solid color-mix(in srgb,var(--paper) 78%,var(--line));
+  border-radius:28px;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--ink) 6%,transparent);
   display:grid;
   grid-template-columns:repeat(4,1fr);
   min-height:58px;
@@ -24814,34 +24852,73 @@ body {
 }
 
 @media (max-width:430px) {
-  .simplified-calendar-header {
-    min-height:69px;
-    padding:11px 10px 5px 14px;
+  .simplified-calendar-screen {
+    gap:9px;
+    padding:
+      calc(8px + env(safe-area-inset-top,0px))
+      calc(7px + env(safe-area-inset-right,0px))
+      calc(8px + env(safe-area-inset-bottom,0px))
+      calc(7px + env(safe-area-inset-left,0px));
   }
-  .simplified-calendar-header > nav > button { height:39px; width:39px; }
-  .simplified-calendar-title { font-size:20px; }
-  .simplified-calendar-filters { min-height:46px; padding-inline:7px; }
+  .simplified-calendar-header {
+    border-radius:27px;
+    min-height:68px;
+    padding:8px 10px 8px 20px;
+  }
+  .simplified-calendar-header > nav { gap:10px; }
+  .simplified-calendar-header > nav > button {
+    flex-basis:38px;
+    height:38px;
+    width:38px;
+  }
+  .simplified-calendar-header > nav svg { height:28px; width:28px; }
+  .simplified-calendar-title { font-size:22px; }
+  .simplified-calendar-filters {
+    border-radius:25px;
+    gap:8px;
+    min-height:56px;
+    padding:7px 10px;
+  }
+  .simplified-calendar-filters > div { gap:8px; }
   .simplified-calendar-filters > div > button {
     font-size:10px;
-    height:33px;
-    max-width:126px;
+    flex-basis:86px;
+    height:34px;
+    max-width:none;
+    padding:5px 9px 5px 5px;
   }
-  .simplified-calendar-filters > div > button > span { height:25px; width:25px; }
-  .simplified-calendar-cell { padding-inline:1px; }
-  .simplified-calendar-date { margin-bottom:2px; }
+  .simplified-calendar-filters > div > button > span {
+    font-size:12px;
+    height:24px;
+    width:24px;
+  }
+  .simplified-filter-menu { flex-basis:30px; height:34px; }
+  .simplified-month-grid {
+    border-radius:25px;
+    grid-template-rows:31px repeat(var(--simplified-calendar-weeks,6),minmax(0,1fr));
+  }
+  .simplified-month-grid > strong { font-size:10.5px; }
+  .simplified-calendar-cell { padding:8px 3px 4px; }
+  .simplified-calendar-date {
+    font-size:10.5px;
+    height:24px;
+    margin-bottom:6px;
+    width:24px;
+  }
+  .simplified-calendar-events { gap:3px; }
   .simplified-event-strip,
   .simplified-more-events {
-    font-size:7.2px;
-    height:17px;
-    line-height:17px;
-    padding-inline:2px;
+    font-size:8px;
+    height:16px;
+    line-height:16px;
+    padding-inline:3px;
   }
   .simplified-calendar-add { height:56px; right:15px; width:56px; }
 }
 
 @media (max-height:650px) {
   .simplified-calendar-header { min-height:61px; padding-block:7px 3px; }
-  .simplified-calendar-filters { min-height:42px; padding-bottom:5px; }
+  .simplified-calendar-filters { min-height:44px; padding-block:5px; }
   .simplified-calendar-filters > div > button { height:31px; }
   .simplified-calendar-filters > div > button > span { height:23px; width:23px; }
   .simplified-month-grid { grid-template-rows:25px repeat(var(--simplified-calendar-weeks,6),minmax(0,1fr)); }

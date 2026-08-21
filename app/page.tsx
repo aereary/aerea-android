@@ -4553,7 +4553,6 @@ export default function Home() {
                 title="Today"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="8.5" />
                   <path d="m12 7.4 1.35 2.73 3.02.44-2.18 2.13.51 3-2.7-1.42-2.7 1.42.51-3-2.18-2.13 3.02-.44L12 7.4Z" />
                 </svg>
               </button>
@@ -4753,7 +4752,7 @@ export default function Home() {
                     {date.getDate()}
                   </span>
                   <div className="simplified-calendar-events">
-                    {dayEvents.slice(0, 4).map((calendarEvent) => {
+                    {dayEvents.slice(0, 3).map((calendarEvent) => {
                       const eventColor = eventColors.find(
                         (color) => color.value === calendarEvent.color,
                       )?.hex ?? "#ae96d8";
@@ -4778,7 +4777,7 @@ export default function Home() {
                         </button>
                       );
                     })}
-                    {dayEvents.length > 4 && (
+                    {dayEvents.length > 3 && (
                       <button
                         type="button"
                         className="simplified-more-events"
@@ -4788,7 +4787,7 @@ export default function Home() {
                           setDaySummaryDate(dayKey);
                         }}
                       >
-                        +{dayEvents.length - 4}
+                        +{dayEvents.length - 3}
                       </button>
                     )}
                   </div>
