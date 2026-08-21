@@ -560,7 +560,7 @@ test("ships the rose editorial and noir quiet-hours interfaces", () => {
   assert.match(cssSource, /Rose paper editorial/);
   assert.match(cssSource, /Noir quiet hours/);
   assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
-  assert.match(cssSource, /\.noir-coming-up-card/);
+  assert.doesNotMatch(cssSource, /\.noir-coming-up-card/);
 });
 
 test("shows Coming up next dynamically on today across every theme", () => {
@@ -571,8 +571,12 @@ test("shows Coming up next dynamically on today across every theme", () => {
   assert.match(pageSource, /selectedIsToday\s*\?\s*findComingUpEvent/);
   assert.match(pageSource, /selectedIsToday && comingUpEvent &&/);
   assert.doesNotMatch(pageSource, /Nothing else is waiting for you today/);
-  assert.match(cssSource, /Coming up is a time-aware part of Today in every wardrobe theme/);
-  assert.match(cssSource, /\.coming-up-card/);
+  assert.match(pageSource, /className=\{`schedule-card \$\{comingUpEvent\.color\}-card`\}/);
+  assert.match(pageSource, /<strong>\{comingUpEvent\.time\}<\/strong>/);
+  assert.match(pageSource, /<div className="schedule-line" \/>/);
+  assert.match(pageSource, /<div className="mini-people">/);
+  assert.match(cssSource, /Coming up reuses the exact schedule-card anatomy/);
+  assert.doesNotMatch(pageSource, /coming-up-card/);
 });
 
 test("ships an AO3-inspired dark theme with pastel ink", () => {

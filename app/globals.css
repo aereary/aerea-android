@@ -1017,32 +1017,20 @@ p {
   width: 110px;
 }
 
-.schedule-card.emerald-card,
-.coming-up-card.emerald-card { --event-tint: #d9edc7; }
-.schedule-card.cyan-card,
-.coming-up-card.cyan-card { --event-tint: var(--blue); }
-.schedule-card.blue-card,
-.coming-up-card.blue-card { --event-tint: #d4e0f3; }
-.schedule-card.brown-card,
-.coming-up-card.brown-card { --event-tint: #eadccf; }
-.schedule-card.black-card,
-.coming-up-card.black-card { --event-tint: #d8d9d2; }
-.schedule-card.red-card,
-.coming-up-card.red-card { --event-tint: #f4c4bf; }
-.schedule-card.rose-card,
-.coming-up-card.rose-card { --event-tint: #f5d2df; }
-.schedule-card.coral-card,
-.coming-up-card.coral-card { --event-tint: var(--orange-soft); }
-.schedule-card.orange-card,
-.coming-up-card.orange-card { --event-tint: #f8d79c; }
-.schedule-card.lilac-card,
-.coming-up-card.lilac-card { --event-tint: var(--lilac); }
-.schedule-card.yellow-card,
-.coming-up-card.yellow-card { --event-tint: var(--yellow-soft); }
-.schedule-card.pink-card,
-.coming-up-card.pink-card { --event-tint: var(--pink); }
+.schedule-card.emerald-card { --event-tint: #d9edc7; }
+.schedule-card.cyan-card { --event-tint: var(--blue); }
+.schedule-card.blue-card { --event-tint: #d4e0f3; }
+.schedule-card.brown-card { --event-tint: #eadccf; }
+.schedule-card.black-card { --event-tint: #d8d9d2; }
+.schedule-card.red-card { --event-tint: #f4c4bf; }
+.schedule-card.rose-card { --event-tint: #f5d2df; }
+.schedule-card.coral-card { --event-tint: var(--orange-soft); }
+.schedule-card.orange-card { --event-tint: #f8d79c; }
+.schedule-card.lilac-card { --event-tint: var(--lilac); }
+.schedule-card.yellow-card { --event-tint: var(--yellow-soft); }
+.schedule-card.pink-card { --event-tint: var(--pink); }
 
-/* Coming up is a time-aware part of Today in every wardrobe theme. */
+/* Coming up reuses the exact schedule-card anatomy in every wardrobe theme. */
 .coming-up {
   margin: 0 0 30px;
 }
@@ -1055,114 +1043,8 @@ p {
   margin: 0 0 10px 5px;
 }
 
-.coming-up-card {
-  align-items: center;
-  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 14%, var(--paper));
-  border: 1px solid color-mix(in srgb, var(--event-tint, var(--lilac)) 44%, var(--line));
-  border-radius: 23px;
-  box-shadow: var(--shadow-soft);
-  color: var(--ink);
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(80px, 108px) 3px minmax(0, 1fr) 44px;
-  min-height: 108px;
-  padding: 16px 18px;
-  text-align: left;
-  width: 100%;
-}
-
-.coming-up-card::before {
-  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 74%, var(--ink-soft));
-  border-radius: 99px;
-  content: "";
-  grid-column: 2;
-  grid-row: 1;
-  height: 58px;
-  width: 3px;
-}
-
-.coming-up-time {
-  display: grid;
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.coming-up-time strong {
-  font-size: 19px;
-  font-weight: 760;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.coming-up-time small {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: 0.12em;
-  margin-top: 5px;
-}
-
-.coming-up-copy {
-  display: grid;
-  gap: 4px;
-  grid-column: 3;
-  grid-row: 1;
-  min-width: 0;
-}
-
-.coming-up-copy small {
-  color: var(--leaf-deep);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.coming-up-copy strong {
-  font-size: 18px;
-  font-weight: 850;
-  line-height: 1.18;
-  overflow-wrap: anywhere;
-}
-
-.coming-up-copy > span {
-  color: var(--muted);
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.coming-up-arrow {
-  align-items: center;
-  background: color-mix(in srgb, var(--event-tint, var(--lilac)) 42%, var(--paper));
-  border-radius: 50%;
-  display: flex;
-  font-size: 27px;
-  grid-column: 4;
-  grid-row: 1;
-  height: 42px;
-  justify-content: center;
-  width: 42px;
-}
-
 @media (max-width: 520px) {
   .coming-up { margin-bottom: 25px; }
-  .coming-up-card {
-    gap: 10px;
-    grid-template-columns: 70px 2px minmax(0, 1fr) 36px;
-    min-height: 96px;
-    padding: 13px 12px;
-  }
-  .coming-up-card::before { height: 52px; width: 2px; }
-  .coming-up-time strong { font-size: 15px; }
-  .coming-up-copy strong { font-size: 15px; }
-  .coming-up-copy > span { font-size: 10px; }
-  .coming-up-arrow { font-size: 23px; height: 36px; width: 36px; }
 }
 
 .time-block {
@@ -21639,31 +21521,6 @@ body {
 
 .app-shell[data-theme="noirrest"] .noir-coming-up { margin:0 0 35px; }
 .app-shell[data-theme="noirrest"] .noir-section-label { color:#aeb0b5; font-size:14px; letter-spacing:.22em; margin:0 0 14px 25px; }
-.app-shell[data-theme="noirrest"] .noir-coming-up-card {
-  align-items:center;
-  background:rgba(18,19,23,.74);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:27px;
-  box-shadow:none;
-  color:#f3f3f4;
-  display:grid;
-  gap:23px;
-  grid-template-columns:115px 1px minmax(0,1fr) 58px;
-  min-height:122px;
-  padding:19px 23px;
-  text-align:left;
-  width:100%;
-}
-.app-shell[data-theme="noirrest"] .noir-coming-up-card::before { background:rgba(255,255,255,.14); content:""; grid-column:2; height:66px; width:1px; }
-.app-shell[data-theme="noirrest"] .noir-coming-time { display:grid; grid-column:1; grid-row:1; }
-.app-shell[data-theme="noirrest"] .noir-coming-time strong { font-size:25px; font-weight:300; white-space:nowrap; }
-.app-shell[data-theme="noirrest"] .noir-coming-time small { color:#999ca3; margin-top:4px; }
-.app-shell[data-theme="noirrest"] .noir-coming-copy { display:grid; gap:4px; grid-column:3; grid-row:1; }
-.app-shell[data-theme="noirrest"] .noir-coming-copy small { color:#b7b9bf; font-size:11px; letter-spacing:.15em; }
-.app-shell[data-theme="noirrest"] .noir-coming-copy strong { font-size:19px; font-weight:500; }
-.app-shell[data-theme="noirrest"] .noir-coming-copy span { color:#9699a0; }
-.app-shell[data-theme="noirrest"] .noir-coming-arrow { align-items:center; background:transparent; border:1px solid rgba(255,255,255,.21); border-radius:50%; display:flex; font-size:34px; grid-column:4; grid-row:1; height:54px; justify-content:center; width:54px; }
-.app-shell[data-theme="noirrest"] .noir-coming-up-empty { background:#111217; border:1px solid rgba(255,255,255,.1); border-radius:24px; color:#93969d; padding:28px; }
 
 .app-shell[data-theme="noirrest"] .day-grid { display:grid; gap:42px; grid-template-columns:1fr; }
 .app-shell[data-theme="noirrest"] .day-grid > .column { max-width:none; }
@@ -21772,11 +21629,6 @@ body {
   .app-shell[data-theme="noirrest"] .week-strip .day span { font-size:9px; }
   .app-shell[data-theme="noirrest"] .week-strip .day strong { font-size:18px; }
   .app-shell[data-theme="noirrest"] .noir-section-label { font-size:11px; margin-left:8px; }
-  .app-shell[data-theme="noirrest"] .noir-coming-up-card { gap:12px; grid-template-columns:72px 1px minmax(0,1fr) 42px; min-height:102px; padding:13px; }
-  .app-shell[data-theme="noirrest"] .noir-coming-time strong { font-size:16px; }
-  .app-shell[data-theme="noirrest"] .noir-coming-copy strong { font-size:15px; }
-  .app-shell[data-theme="noirrest"] .noir-coming-copy span { font-size:11px; }
-  .app-shell[data-theme="noirrest"] .noir-coming-arrow { font-size:26px; height:40px; width:40px; }
   .app-shell[data-theme="noirrest"] .schedule-card { grid-template-columns:3px minmax(0,1fr) 44px; margin-left:102px; min-height:104px; padding:15px 13px; }
   .app-shell[data-theme="noirrest"] .time-block { left:-99px; top:26px; width:74px; }
   .app-shell[data-theme="noirrest"] .time-block::after { right:-27px; top:15px; }

@@ -9136,23 +9136,35 @@ function TodayScreen({
           <p className="coming-up-label noir-section-label">COMING UP NEXT</p>
           <button
             type="button"
-            className={`coming-up-card noir-coming-up-card ${comingUpEvent.color}-card`}
-            onClick={() => openEventDetail(comingUpEvent)}
+            className={`schedule-card ${comingUpEvent.color}-card`}
+            onPointerDown={(pointerEvent) =>
+              beginScheduleLongPress(pointerEvent, comingUpEvent)
+            }
+            onPointerMove={moveScheduleLongPress}
+            onPointerUp={cancelScheduleLongPress}
+            onPointerCancel={cancelScheduleLongPress}
+            onContextMenu={(contextEvent) => contextEvent.preventDefault()}
+            onClick={() => openScheduleEvent(comingUpEvent)}
+            aria-label={`Open details for ${comingUpEvent.title}`}
+            title="Hold to preview event"
           >
-            <span className="coming-up-time noir-coming-time">
-              <strong>{eventDetailTimeParts(comingUpEvent).range}</strong>
-              <small>{eventDetailTimeParts(comingUpEvent).period}</small>
-            </span>
-            <span className="coming-up-copy noir-coming-copy">
-              <small>{comingUpEvent.calendar ?? "AÉREA"}</small>
-              <strong>{comingUpEvent.title}</strong>
+            <div className="time-block">
+              <strong>{comingUpEvent.time}</strong>
+              <span>TIME</span>
+            </div>
+            <div className="schedule-line" />
+            <div className="schedule-copy">
+              <p className="card-tag">{comingUpEvent.calendar ?? "AÉREA"}</p>
+              <h4>{comingUpEvent.title}</h4>
               <span>
                 {comingUpEvent.location ||
                   comingUpEvent.note ||
                   "Saved in your calendar"}
               </span>
-            </span>
-            <span className="coming-up-arrow noir-coming-arrow" aria-hidden="true">›</span>
+            </div>
+            <div className="mini-people">
+              {isNoirRest ? "•••" : "✦"}
+            </div>
           </button>
         </section>
       )}
