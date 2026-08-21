@@ -1864,11 +1864,13 @@ export default function Home() {
       }),
     );
   }, [calendarMonth, calendarYear, daysInViewMonth]);
+  const extendedCalendarWeekCount = Math.max(
+    5,
+    Math.ceil((leadingDays + daysInViewMonth) / 7),
+  );
   const extendedCalendarDays = useMemo(() => {
-    const mondayLeadingDays =
-      (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
-    return Array.from({ length: 42 }, (_, index) => {
-      if (index < mondayLeadingDays) {
+    return Array.from({ length: extendedCalendarWeekCount * 7 }, (_, index) => {
+      if (index < leadingDays) {
         return {
           date: null,
           currentMonth: false,
@@ -1878,7 +1880,7 @@ export default function Home() {
       const date = new Date(
         calendarYear,
         calendarMonth,
-        index - mondayLeadingDays + 1,
+        index - leadingDays + 1,
       );
       return {
         date,
@@ -1886,7 +1888,7 @@ export default function Home() {
         nextMonth: date.getMonth() !== calendarMonth,
       };
     });
-  }, [calendarMonth, calendarYear]);
+  }, [calendarMonth, calendarYear, extendedCalendarWeekCount, leadingDays]);
   const extendedCalendarSources = useMemo(() => {
     const sources = new Set<string>(
       calendarCategories.map((category) => category.name),
@@ -6476,6 +6478,11 @@ export default function Home() {
 
                     <div
                       className="extended-month-grid"
+                      style={
+                        {
+                          "--extended-calendar-weeks": extendedCalendarWeekCount,
+                        } as CSSProperties
+                      }
                       onTouchStart={startCalendarSwipe}
                       onTouchEnd={finishCalendarSwipe}
                     >
