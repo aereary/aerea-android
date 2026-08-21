@@ -326,7 +326,15 @@ type EventDeleteRequest = {
   occurrenceDate: string;
 };
 
-type PostItColor = "lavender" | "butter" | "blush" | "sky";
+type PostItColor =
+  | "lavender"
+  | "butter"
+  | "blush"
+  | "sky"
+  | "mint"
+  | "peach"
+  | "coral"
+  | "cream";
 type PostItPage =
   | "today"
   | "habits"
@@ -432,20 +440,6 @@ const themeOptions: {
       "/assets/openmoji/blossom.svg",
     ],
     charm: "you may rest",
-  },
-  {
-    id: "dreambear",
-    name: "Starlit teddy sky",
-    description: "Glowing lavender skies, cloud-soft cards, tiny stars, and a teddy who says you may rest.",
-    colors: ["#8f86ea", "#fffaff", "#ff929f"],
-    icon: "🧸",
-    art: "/assets/openmoji/teddy.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "you may rest",
-    decoratedScene: true,
   },
   {
     id: "strawberry",
@@ -565,21 +559,6 @@ const themeOptions: {
     charm: "you may rest",
   },
   {
-    id: "lovelyevening",
-    name: "Lovely lavender evening",
-    description: "A luminous lavender sky, cloud-glass cards, elegant type, and a little otter giving you permission to rest.",
-    colors: ["#a99af7", "#fbf9ff", "#f4d6ff"],
-    icon: "✦",
-    art: "/assets/openmoji/otter.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "you may rest",
-    featured: true,
-    interfaceIdea: "cloud glass",
-  },
-  {
     id: "rosegrid",
     name: "Rose paper editorial",
     description: "Warm ivory graph paper, blush ink, fine serif headlines, and airy stationery cards.",
@@ -593,37 +572,6 @@ const themeOptions: {
     charm: "you may rest",
     featured: true,
     interfaceIdea: "editorial grid",
-  },
-  {
-    id: "noirrest",
-    name: "Noir quiet hours",
-    description: "Ink-black glass, silver outlines, spacious typography, and a calm after-dark timeline.",
-    colors: ["#0c0d10", "#24262b", "#f1f1f3"],
-    icon: "✦",
-    art: "/assets/openmoji/cat.svg",
-    accents: [
-      "/assets/openmoji/moon.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "you may rest",
-    featured: true,
-    interfaceIdea: "monochrome glass",
-  },
-  {
-    id: "ao3night",
-    name: "Rose Pine night letters",
-    description: "Deep green-black AO3 ink with pastel rose, lilac, sky, and sage details.",
-    colors: ["#14201c", "#f8c8dc", "#c4a7e7"],
-    icon: "♡",
-    art: "/assets/openmoji/love-letter.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/blossom.svg",
-    ],
-    charm: "little night letters",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "dark AO3 pastels",
   },
   {
     id: "peachparlor",
@@ -795,7 +743,34 @@ const postItColors: Array<{
   { value: "butter", label: "Butter", hex: "#ffe3a0" },
   { value: "blush", label: "Blush", hex: "#f5c6de" },
   { value: "sky", label: "Sky", hex: "#c9ddf4" },
+  { value: "mint", label: "Mint", hex: "#cce8d4" },
+  { value: "peach", label: "Peach", hex: "#f7c9a9" },
+  { value: "coral", label: "Coral", hex: "#f2aaa7" },
+  { value: "cream", label: "Cream", hex: "#f3edc7" },
 ];
+
+function postItTextSize(text: string) {
+  const compactNoteWidth = 109;
+  const compactNoteHeight = 92;
+
+  for (const fontSize of [18, 16, 14, 12, 10, 8]) {
+    const charactersPerLine = Math.max(
+      1,
+      Math.floor(compactNoteWidth / (fontSize * 0.54)),
+    );
+    const visualLines = text.split("\n").reduce(
+      (total, line) =>
+        total + Math.max(1, Math.ceil(Math.max(line.length, 1) / charactersPerLine)),
+      0,
+    );
+
+    if (visualLines * fontSize * 1.22 <= compactNoteHeight) {
+      return `${fontSize}px`;
+    }
+  }
+
+  return "8px";
+}
 
 const journalFaces = [
   "(˶ᵔ ᵕ ᵔ˶)",
@@ -1367,6 +1342,7 @@ export default function Home() {
   });
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
   const [syncCode, setSyncCode] = useState("");
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
@@ -1534,6 +1510,7 @@ export default function Home() {
             focusSessions?: number;
             appTheme?: AppTheme;
             colorMode?: ColorMode;
+            simplifiedCalendarMode?: boolean;
             customTheme?: CustomTheme;
             profilePhoto?: string | null;
             classes?: ClassItem[];
@@ -1644,6 +1621,9 @@ export default function Home() {
             setAppTheme("storybook");
           }
           if (state.colorMode) setColorMode(state.colorMode);
+          if (typeof state.simplifiedCalendarMode === "boolean") {
+            setSimplifiedCalendarMode(state.simplifiedCalendarMode);
+          }
           if (state.customTheme) {
             setCustomTheme((current) => ({
               ...current,
@@ -1709,6 +1689,21 @@ export default function Home() {
   }, [todayKey]);
 
   useEffect(() => {
+    if (!stateReady || !simplifiedCalendarMode) return;
+
+    const today = dateFromKey(todayKey);
+    setSelectedHomeDate(todayKey);
+    setSelectedCalendarDate(todayKey);
+    setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setEventEditorOpen(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarExpanded(true);
+    setCalendarOpen(true);
+  }, [simplifiedCalendarMode, stateReady, todayKey]);
+
+  useEffect(() => {
     let mounted = true;
     void currentAereaEmail().then((email) => {
       if (!mounted) return;
@@ -1745,6 +1740,7 @@ export default function Home() {
               focusSessions,
               appTheme,
               colorMode,
+              simplifiedCalendarMode,
               customTheme,
               profilePhoto,
               classes: classItems,
@@ -1779,6 +1775,7 @@ export default function Home() {
     classItems,
     appTheme,
     colorMode,
+    simplifiedCalendarMode,
     completedDays,
     customTheme,
     entries,
@@ -2658,6 +2655,29 @@ export default function Home() {
     setCalendarSearchQuery("");
     setMonthPickerOpen(false);
     setCalendarOpen(true);
+  };
+
+  const chooseSimplifiedCalendarMode = (enabled: boolean) => {
+    setSimplifiedCalendarMode(enabled);
+    setMonthPickerOpen(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setCalendarSearchQuery("");
+    setEventEditorOpen(false);
+
+    if (enabled) {
+      const today = dateFromKey(todayKey);
+      setSelectedHomeDate(todayKey);
+      setSelectedCalendarDate(todayKey);
+      setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+      setCalendarExpanded(true);
+      setCalendarOpen(true);
+    } else {
+      setCalendarExpanded(false);
+      setCalendarOpen(false);
+    }
+
+    setSettingsOpen(false);
   };
 
   const shiftCalendarMonth = (offset: number) => {
@@ -4465,6 +4485,7 @@ export default function Home() {
       className="app-shell"
       data-theme={appTheme}
       data-color-mode={colorMode}
+      data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
     >
       <div className="paper-grain" aria-hidden="true" />
@@ -5696,6 +5717,7 @@ export default function Home() {
                     "--post-it-x": `${postIt.x}%`,
                     "--post-it-y": `${postIt.y}%`,
                     "--post-it-rotation": `${postIt.rotation}deg`,
+                    "--post-it-text-size": postItTextSize(postIt.text),
                   } as CSSProperties
                 }
                 onPointerDown={(event) => startPostItDrag(event, postIt)}
@@ -6391,11 +6413,23 @@ export default function Home() {
                           className="extended-compact-button"
                           type="button"
                           onClick={() => {
-                            setCalendarExpanded(false);
                             setMonthPickerOpen(false);
+                            if (simplifiedCalendarMode) {
+                              setSettingsOpen(true);
+                            } else {
+                              setCalendarExpanded(false);
+                            }
                           }}
-                          aria-label="Back to compact month"
-                          title="Back to compact month"
+                          aria-label={
+                            simplifiedCalendarMode
+                              ? "Open settings"
+                              : "Back to compact month"
+                          }
+                          title={
+                            simplifiedCalendarMode
+                              ? "Open settings"
+                              : "Back to compact month"
+                          }
                         >
                           <span className="extended-compact-glyph" aria-hidden="true">
                             <i />
@@ -8255,7 +8289,14 @@ export default function Home() {
               </button>
             </header>
 
-            <div className={`post-it-editor-preview ${postItDraft.color}`}>
+            <div
+              className={`post-it-editor-preview ${postItDraft.color}`}
+              style={
+                {
+                  "--post-it-text-size": postItTextSize(postItDraft.text),
+                } as CSSProperties
+              }
+            >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
                 autoFocus
@@ -8449,6 +8490,38 @@ export default function Home() {
               </div>
             </section>
 
+            <section
+              className="mode-card simplified-mode-card"
+              aria-label="Little aérea simplified"
+            >
+              <div>
+                <p className="tiny-label">CALENDAR-ONLY SEASON</p>
+                <h3>Little aérea simplified</h3>
+                <p>
+                  Open straight into your full month while the rest of the
+                  interface stays tucked away.
+                </p>
+              </div>
+              <div className="mode-switch simplified-mode-switch">
+                <button
+                  className={!simplifiedCalendarMode ? "active" : ""}
+                  type="button"
+                  onClick={() => chooseSimplifiedCalendarMode(false)}
+                  aria-pressed={!simplifiedCalendarMode}
+                >
+                  Full aérea
+                </button>
+                <button
+                  className={simplifiedCalendarMode ? "active" : ""}
+                  type="button"
+                  onClick={() => chooseSimplifiedCalendarMode(true)}
+                  aria-pressed={simplifiedCalendarMode}
+                >
+                  Just calendar
+                </button>
+              </div>
+            </section>
+
             <section className="theme-wardrobe" aria-label="Aérea themes">
               <div className="theme-wardrobe-heading">
                 <div>
@@ -8465,7 +8538,6 @@ export default function Home() {
                     data-theme-option={theme.id}
                     onClick={() => {
                       setAppTheme(theme.id);
-                      if (theme.id === "ao3night") setColorMode("dark");
                     }}
                     aria-pressed={appTheme === theme.id}
                     style={

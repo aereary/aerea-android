@@ -51,7 +51,7 @@ const nativeStorageSource = await readFile(
   "utf8",
 );
 
-test("keeps the approved worlds and removes the ten rejected themes", () => {
+test("keeps the approved worlds and removes every rejected theme", () => {
   for (const theme of [
     "storybook",
     "otter",
@@ -60,19 +60,18 @@ test("keeps the approved worlds and removes the ten rejected themes", () => {
     "blueberrynight",
     "duckmail",
     "moonquilt",
-    "dreambear",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    3,
-    "the two full-scene themes and the dark reading theme should hide the welcome charm",
+    2,
+    "the two remaining full-scene themes should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    3,
-    "only the three remaining full-scene themes should decorate the sky",
+    2,
+    "only the two remaining full-scene themes should decorate the sky",
   );
   for (const removedTheme of [
     "piggyparcel",
@@ -96,6 +95,10 @@ test("keeps the approved worlds and removes the ten rejected themes", () => {
     "mosslibrary",
     "primaryplayroom",
     "orbitconsole",
+    "dreambear",
+    "lovelyevening",
+    "noirrest",
+    "ao3night",
   ]) {
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
@@ -105,10 +108,14 @@ test("keeps the approved worlds and removes the ten rejected themes", () => {
     /className="theme-scene-character"/,
     "the extra animal badge should never float above the welcome card",
   );
-  assert.match(pageSource, /id: "dreambear"/);
-  assert.match(pageSource, /\/assets\/openmoji\/teddy\.svg/);
-  assert.match(cssSource, /data-theme="dreambear"/);
-  assert.match(cssSource, /data-visual="dreambear"/);
+  for (const removedName of [
+    "Starlit teddy sky",
+    "Lovely lavender evening",
+    "Noir quiet hours",
+    "Rose Pine night letters",
+  ]) {
+    assert.doesNotMatch(pageSource, new RegExp(removedName));
+  }
 });
 
 test("curves the Lavender rest message", () => {
@@ -491,7 +498,7 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
-test("ships movable post-its, the extended month, and Lovely Lavender Evening", () => {
+test("ships movable post-its with an editor that matches the placed note", () => {
   assert.match(pageSource, /type PostItNote/);
   assert.match(pageSource, /page: PostItPage/);
   assert.match(pageSource, /currentPostItPage/);
@@ -505,12 +512,24 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(pageSource, /className="extended-calendar-view"/);
   assert.match(pageSource, /extendedCalendarDays/);
   assert.match(pageSource, /hiddenCalendarSources/);
-  assert.match(pageSource, /id: "lovelyevening"/);
+  for (const color of ["mint", "peach", "coral", "cream"]) {
+    assert.match(pageSource, new RegExp(`value: "${color}"`));
+    assert.match(cssSource, new RegExp(`post-it(?:-editor-preview)?\\.${color}`));
+  }
+  assert.match(pageSource, /function postItTextSize/);
+  assert.equal(
+    [...pageSource.matchAll(/"--post-it-text-size": postItTextSize/g)].length,
+    2,
+    "the editor and placed note must use the same text sizing",
+  );
   assert.match(cssSource, /Movable paper notes/);
   assert.match(cssSource, /Full monthly calendar/);
-  assert.match(cssSource, /Lovely lavender evening theme/);
-  assert.match(cssSource, /data-theme="lovelyevening"/);
   assert.match(cssSource, /font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive/);
+  assert.match(cssSource, /\.post-it-editor-preview \{[\s\S]*height:174px;[\s\S]*width:184px;/);
+  assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:174px;[\s\S]*width:184px;/);
+  assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);
+  assert.match(cssSource, /\.post-it-editor-options button \{[\s\S]*height:30px;[\s\S]*width:30px;/);
+  assert.match(cssSource, /\.post-it-editor-preview \{ height:139px;[\s\S]*width:145px; \}/);
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
 
@@ -588,20 +607,13 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /max-width:560px/);
 });
 
-test("ships the rose editorial and noir quiet-hours interfaces", () => {
-  for (const theme of ["rosegrid", "noirrest"]) {
-    assert.match(pageSource, new RegExp(`id: "${theme}"`));
-    assert.match(cssSource, new RegExp(`data-theme="${theme}"`));
-    assert.match(cssSource, new RegExp(`data-theme-option="${theme}"`));
-  }
+test("keeps the rose editorial interface in the theme gallery", () => {
+  assert.match(pageSource, /id: "rosegrid"/);
+  assert.match(cssSource, /data-theme="rosegrid"/);
+  assert.match(cssSource, /data-theme-option="rosegrid"/);
   assert.match(pageSource, /themeId=\{appTheme\}/);
-  assert.match(pageSource, /noir-coming-up/);
-  assert.match(pageSource, /className="noir-greeting-name"/);
-  assert.match(pageSource, /Rhea <i aria-hidden="true">✦<\/i>/);
   assert.match(cssSource, /Rose paper editorial/);
-  assert.match(cssSource, /Noir quiet hours/);
   assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
-  assert.doesNotMatch(cssSource, /\.noir-coming-up-card/);
 });
 
 test("shows Coming up next dynamically on today across every theme", () => {
@@ -620,14 +632,22 @@ test("shows Coming up next dynamically on today across every theme", () => {
   assert.doesNotMatch(pageSource, /coming-up-card/);
 });
 
-test("ships an AO3-inspired dark theme with pastel ink", () => {
-  assert.match(pageSource, /id: "ao3night"/);
-  assert.match(pageSource, /name: "Rose Pine night letters"/);
-  assert.match(pageSource, /theme\.id === "ao3night"/);
-  assert.match(cssSource, /Rose Pine night letters — dark AO3 base with the user's pastel accents/);
-  assert.match(cssSource, /data-theme="ao3night"/);
-  assert.match(cssSource, /data-theme-option="ao3night"/);
-  for (const pastel of ["#f8c8dc", "#c4a7e7", "#b8d7e8", "#b9d8c0"]) {
-    assert.match(cssSource, new RegExp(pastel));
-  }
+test("falls back safely when a saved theme is no longer offered", () => {
+  assert.match(pageSource, /themeOptions\.some\(\(theme\) => theme\.id === savedTheme\)/);
+  assert.match(pageSource, /setAppTheme\("storybook"\)/);
+  assert.doesNotMatch(pageSource, /theme\.id === "ao3night"/);
+});
+
+test("offers a persisted Little aérea simplified calendar mode", () => {
+  assert.match(pageSource, /const \[simplifiedCalendarMode, setSimplifiedCalendarMode\]/);
+  assert.match(pageSource, /simplifiedCalendarMode\?: boolean/);
+  assert.match(pageSource, /setSimplifiedCalendarMode\(state\.simplifiedCalendarMode\)/);
+  assert.match(pageSource, /const chooseSimplifiedCalendarMode = \(enabled: boolean\)/);
+  assert.match(pageSource, /data-simplified-calendar=\{simplifiedCalendarMode \? "true" : "false"\}/);
+  assert.match(pageSource, /aria-label="Little aérea simplified"/);
+  assert.match(pageSource, />\s*Just calendar\s*<\/button>/);
+  assert.match(pageSource, /simplifiedCalendarMode\s*\? "Open settings"\s*: "Back to compact month"/);
+  assert.match(cssSource, /Little aérea simplified: the themed month becomes the opening interface/);
+  assert.match(cssSource, /\.app-shell\[data-simplified-calendar="true"\] \.modal-backdrop\.extended-month-backdrop/);
+  assert.match(cssSource, /background:var\(--app-backdrop\)/);
 });

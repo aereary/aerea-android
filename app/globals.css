@@ -20151,6 +20151,10 @@ body {
 .movable-post-it.butter { --post-it-paper:#ffe3a0; }
 .movable-post-it.blush { --post-it-paper:#f5c6de; }
 .movable-post-it.sky { --post-it-paper:#c9ddf4; }
+.movable-post-it.mint { --post-it-paper:#cce8d4; }
+.movable-post-it.peach { --post-it-paper:#f7c9a9; }
+.movable-post-it.coral { --post-it-paper:#f2aaa7; }
+.movable-post-it.cream { --post-it-paper:#f3edc7; }
 
 .movable-post-it::after,
 .post-it-editor-preview::after {
@@ -20183,11 +20187,15 @@ body {
   font-size:17px;
   line-height:1.42;
   margin:0;
-  max-height:112px;
-  overflow:hidden;
+  height:100%;
+  max-height:none;
+  overflow:auto;
+  overflow-wrap:anywhere;
+  scrollbar-width:none;
   text-align:left;
   white-space:pre-wrap;
 }
+.movable-post-it p::-webkit-scrollbar { display:none; }
 
 .post-it-edit {
   align-items:center;
@@ -20261,27 +20269,31 @@ body {
   --post-it-paper:#dfd0f3;
   background:var(--post-it-paper);
   box-shadow:0 15px 24px rgba(70,51,92,.18);
-  height:250px;
+  height:174px;
   margin:30px auto 24px;
-  max-width:330px;
-  padding:45px 34px 34px;
+  max-width:none;
+  padding:32px 24px 25px;
   position:relative;
   transform:rotate(-1.5deg);
-  width:78%;
+  width:184px;
 }
 
 .post-it-editor-preview.lavender { --post-it-paper:#dfd0f3; }
 .post-it-editor-preview.butter { --post-it-paper:#ffe3a0; }
 .post-it-editor-preview.blush { --post-it-paper:#f5c6de; }
 .post-it-editor-preview.sky { --post-it-paper:#c9ddf4; }
+.post-it-editor-preview.mint { --post-it-paper:#cce8d4; }
+.post-it-editor-preview.peach { --post-it-paper:#f7c9a9; }
+.post-it-editor-preview.coral { --post-it-paper:#f2aaa7; }
+.post-it-editor-preview.cream { --post-it-paper:#f3edc7; }
 .post-it-editor-preview textarea {
   background:transparent;
   border:0;
   color:#282337;
   font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
-  font-size:20px;
+  font-size:var(--post-it-text-size,18px);
   height:100%;
-  line-height:1.5;
+  line-height:1.22;
   outline:0;
   padding:0;
   resize:none;
@@ -20294,13 +20306,17 @@ body {
   align-items:center;
   background:rgba(234,227,249,.58);
   border:1px solid rgba(105,84,143,.09);
-  border-radius:20px;
+  border-radius:999px;
   display:flex;
-  gap:9px;
-  margin:0;
-  padding:15px;
+  flex-wrap:wrap;
+  gap:5px;
+  justify-content:center;
+  margin:0 auto;
+  max-width:100%;
+  padding:6px 9px 8px;
+  width:max-content;
 }
-.post-it-editor-options legend { font-size:11px; font-weight:900; letter-spacing:.11em; padding:0 6px; text-transform:uppercase; }
+.post-it-editor-options legend { font-size:9px; font-weight:900; letter-spacing:.11em; margin:auto; padding:0 5px; text-align:center; text-transform:uppercase; }
 .post-it-editor-options button {
   align-items:center;
   background:#fff;
@@ -20308,12 +20324,12 @@ body {
   border-radius:50%;
   display:flex;
   font-size:23px;
-  height:39px;
+  height:30px;
   justify-content:center;
   padding:0;
-  width:39px;
+  width:30px;
 }
-.post-it-editor-options button > span { background:var(--post-it-swatch); border-radius:50%; height:29px; width:29px; }
+.post-it-editor-options button > span { background:var(--post-it-swatch); border-radius:50%; height:22px; width:22px; }
 .post-it-editor-options button.active { border-color:#7964be; box-shadow:0 0 0 2px rgba(121,100,190,.13); }
 
 .post-it-editor-modal > footer {
@@ -20789,7 +20805,7 @@ body {
   .post-it-tape { height:17px; top:-8px; width:52px; }
   .post-it-editor-backdrop { align-items:flex-end; padding:10px; }
   .post-it-editor-modal { border-radius:29px; max-height:calc(100dvh - 20px); padding:21px 18px; }
-  .post-it-editor-preview { height:220px; margin-top:24px; padding:39px 27px 29px; width:84%; }
+  .post-it-editor-preview { height:139px; margin-top:24px; padding:27px 18px 20px; width:145px; }
   .post-it-editor-options { grid-template-columns:1fr; }
   .post-it-editor-options fieldset { justify-content:center; }
   .post-it-editor-modal > footer { grid-template-columns:1fr 1fr; }
@@ -23262,8 +23278,11 @@ body {
   font-weight:700;
   letter-spacing:.01em;
 }
-.movable-post-it p { font-size:21px; line-height:1.22; }
-.post-it-editor-preview textarea { font-size:25px; line-height:1.28; }
+.movable-post-it p,
+.post-it-editor-preview textarea {
+  font-size:var(--post-it-text-size,18px);
+  line-height:1.22;
+}
 .movable-post-it.selected { outline:0!important; }
 .movable-post-it:focus,
 .movable-post-it:focus-visible {
@@ -24397,4 +24416,28 @@ body {
   .extended-calendar-title { font-size:20px; }
   .extended-filter-list > button:not(.extended-filter-show-all) { flex-basis:80px; font-size:9px; }
   .extended-event-pill > span > strong { font-size:7.8px; }
+}
+
+/* Little aérea simplified: the themed month becomes the opening interface. */
+.simplified-mode-card {
+  background:
+    radial-gradient(circle at 92% 15%,color-mix(in srgb,var(--lilac) 45%,transparent),transparent 120px),
+    linear-gradient(120deg,color-mix(in srgb,var(--paper) 96%,transparent),color-mix(in srgb,var(--blue) 38%,var(--paper)));
+}
+.simplified-mode-card .tiny-label { color:var(--leaf-deep); }
+.simplified-mode-card .simplified-mode-switch { min-width:246px; }
+.simplified-mode-card .simplified-mode-switch button.active:last-child {
+  background:color-mix(in srgb,var(--lilac) 62%,var(--paper));
+}
+.app-shell[data-simplified-calendar="true"] .modal-backdrop.extended-month-backdrop {
+  backdrop-filter:none;
+  background:var(--app-backdrop);
+}
+.app-shell[data-simplified-calendar="true"] .calendar-modal.calendar-extended-month {
+  background:var(--app-backdrop)!important;
+}
+.app-shell[data-simplified-calendar="true"] .settings-backdrop { z-index:640; }
+
+@media (max-width:720px) {
+  .simplified-mode-card .simplified-mode-switch { min-width:0; }
 }
