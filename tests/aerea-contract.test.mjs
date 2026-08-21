@@ -177,6 +177,22 @@ test("keeps notes, searchable readers, pastel highlights, and private files in L
   assert.match(nativeStorageSource, /deleteDocument/);
 });
 
+test("makes reader search navigable and adds a reader-only dark mode", () => {
+  assert.match(readerSource, /openPdfSearchResults/);
+  assert.match(readerSource, /pageWrapRef\.current\?\.scrollTo\(\{ top: 0, left: 0/);
+  assert.match(readerSource, /pdfSearchMatchSpans/);
+  assert.match(readerSource, /onPointerDownCapture=\{dismissPdfSearchHighlight\}/);
+  assert.match(readerSource, /openEpubSearchResults/);
+  assert.match(readerSource, /epubPaperRef\.current\?\.scrollTo\(\{ top: 0/);
+  assert.match(readerSource, /className="epub-search-match"/);
+  assert.match(readerSource, /onPointerDownCapture=\{dismissEpubSearchHighlight\}/);
+  assert.match(readerSource, /reader-dark-toggle/);
+  assert.match(readerSource, /aria-pressed=\{readerDark\}/);
+  assert.match(cssSource, /Reader-only night mode/);
+  assert.match(cssSource, /\.study-reader\.reader-dark/);
+  assert.match(cssSource, /filter:invert\(\.9\) hue-rotate\(180deg\)/);
+});
+
 test("removes the Sketchbook entry while preserving legacy drawings safely", () => {
   for (const size of ["letter", "legal", "oficio", "a4", "a5", "tabloid", "executive"]) {
     assert.match(sketchPaperSource, new RegExp(`id: "${size}"`));

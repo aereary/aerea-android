@@ -6357,15 +6357,7 @@ export default function Home() {
                   >
                     <header className="extended-calendar-header">
                       <div className="extended-calendar-heading-copy">
-                        <p>YOUR WHOLE RHYTHM</p>
                         <div className="extended-calendar-month">
-                          <button
-                            type="button"
-                            onClick={() => shiftCalendarMonth(-1)}
-                            aria-label="Previous month"
-                          >
-                            ‹
-                          </button>
                           <button
                             className="extended-calendar-title"
                             type="button"
@@ -6376,14 +6368,7 @@ export default function Home() {
                               month: "long",
                               year: "numeric",
                             })}
-                            <span aria-hidden="true">⌄</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => shiftCalendarMonth(1)}
-                            aria-label="Next month"
-                          >
-                            ›
+                            <span className="extended-month-chevron" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -6392,18 +6377,7 @@ export default function Home() {
                         aria-label="Calendar tools"
                       >
                         <button
-                          type="button"
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setMonthPickerOpen(false);
-                            setCalendarSearchOpen(true);
-                          }}
-                          aria-label="Search events"
-                          title="Search events"
-                        >
-                          <span className="calendar-search-glyph" aria-hidden="true" />
-                        </button>
-                        <button
+                          className="extended-schedule-button"
                           type="button"
                           onClick={() => {
                             setCalendarExpanded(false);
@@ -6413,19 +6387,7 @@ export default function Home() {
                           aria-label="Open day schedule"
                           title="Open day schedule"
                         >
-                          <span aria-hidden="true">☷</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const today = dateFromKey(todayKey);
-                            setSelectedCalendarDate(todayKey);
-                            setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-                          }}
-                          aria-label="Return to today"
-                          title="Return to today"
-                        >
-                          <span aria-hidden="true">⌂</span>
+                          <span className="extended-schedule-glyph" aria-hidden="true">☆</span>
                         </button>
                         <button
                           className="extended-compact-button"
@@ -6437,7 +6399,10 @@ export default function Home() {
                           aria-label="Back to compact month"
                           title="Back to compact month"
                         >
-                          <span aria-hidden="true">▦</span>
+                          <span className="extended-compact-glyph" aria-hidden="true">
+                            <i />
+                            <i />
+                          </span>
                         </button>
                       </nav>
                     </header>
@@ -6463,18 +6428,6 @@ export default function Home() {
                     )}
 
                     <section className="extended-calendar-filters" aria-label="Visible event types">
-                      <header className="extended-filter-heading">
-                        <span>
-                          <small>EVENT TYPES</small>
-                          <strong>Show what you need</strong>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => openCalendarCategoryEditor()}
-                        >
-                          ＋ Edit types
-                        </button>
-                      </header>
                       <div className="extended-filter-list">
                         {extendedCalendarSources.map((source, index) => {
                           const hidden = hiddenCalendarSources.includes(source);
@@ -6507,6 +6460,15 @@ export default function Home() {
                           </button>
                         )}
                       </div>
+                      <button
+                        className="extended-filter-menu"
+                        type="button"
+                        onClick={() => openCalendarCategoryEditor()}
+                        aria-label="Edit event types"
+                        title="Edit event types"
+                      >
+                        <span aria-hidden="true" />
+                      </button>
                     </section>
 
                     <div

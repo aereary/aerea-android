@@ -49,6 +49,34 @@ const pastelHighlightColors = [
   { name: "Sage", value: "#c7e2cb" },
 ];
 
+const readerDarkModeStorageKey = "aerea-reader-dark-mode";
+
+function useReaderDarkMode() {
+  const [readerDark, setReaderDark] = useState(false);
+
+  useEffect(() => {
+    try {
+      setReaderDark(window.localStorage.getItem(readerDarkModeStorageKey) === "dark");
+    } catch {
+      // Reading preferences still work for this session when storage is unavailable.
+    }
+  }, []);
+
+  const toggleReaderDark = () => {
+    setReaderDark((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(readerDarkModeStorageKey, next ? "dark" : "light");
+      } catch {
+        // Keep the in-memory preference even when storage is unavailable.
+      }
+      return next;
+    });
+  };
+
+  return { readerDark, toggleReaderDark };
+}
+
 function normalizeReaderSearch(value: string) {
   return value
     .normalize("NFD")
@@ -56,6 +84,76 @@ function normalizeReaderSearch(value: string) {
     .toLocaleLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function readerTextMatchRange(text: string, rawQuery: string) {
+  const query = normalizeReaderSearch(rawQuery);
+  if (!query) return null;
+
+  let normalized = "";
+  const starts: number[] = [];
+  const ends: number[] = [];
+  let previousWasSpace = false;
+
+  let characterIndex = 0;
+  Array.from(text).forEach((character) => {
+    const normalizedCharacter = character
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase();
+
+    Array.from(normalizedCharacter).forEach((part) => {
+      if (/\s/.test(part)) {
+        if (!normalized || previousWasSpace) return;
+        normalized += " ";
+        starts.push(characterIndex);
+        ends.push(characterIndex + character.length);
+        previousWasSpace = true;
+        return;
+      }
+      normalized += part;
+      starts.push(characterIndex);
+      ends.push(characterIndex + character.length);
+      previousWasSpace = false;
+    });
+    characterIndex += character.length;
+  });
+
+  if (normalized.endsWith(" ")) {
+    normalized = normalized.slice(0, -1);
+    starts.pop();
+    ends.pop();
+  }
+
+  const matchStart = normalized.indexOf(query);
+  if (matchStart < 0) return null;
+  return {
+    start: starts[matchStart] ?? 0,
+    end: ends[matchStart + query.length - 1] ?? text.length,
+  };
+}
+
+function pdfSearchMatchSpans(textLayer: HTMLDivElement, rawQuery: string) {
+  const query = normalizeReaderSearch(rawQuery);
+  if (!query) return [];
+
+  let searchableText = "";
+  const entries: { element: HTMLSpanElement; start: number; end: number }[] = [];
+  textLayer.querySelectorAll<HTMLSpanElement>("span").forEach((element) => {
+    const text = normalizeReaderSearch(element.textContent || "");
+    if (!text) return;
+    if (searchableText) searchableText += " ";
+    const start = searchableText.length;
+    searchableText += text;
+    entries.push({ element, start, end: searchableText.length });
+  });
+
+  const matchStart = searchableText.indexOf(query);
+  if (matchStart < 0) return [];
+  const matchEnd = matchStart + query.length;
+  return entries
+    .filter(({ start, end }) => end > matchStart && start < matchEnd)
+    .map(({ element }) => element);
 }
 
 function readerSearchSnippet(text: string, rawQuery: string) {
@@ -169,9 +267,15 @@ export function PdfStudyReader({
   const [renderVersion, setRenderVersion] = useState(0);
   const [textLayerVersion, setTextLayerVersion] = useState(0);
   const [pdfSearch, setPdfSearch] = useState("");
+  const [pdfSearchOpen, setPdfSearchOpen] = useState(false);
+  const [activePdfSearch, setActivePdfSearch] = useState<{
+    page: number;
+    query: string;
+  } | null>(null);
   const [pdfPageTexts, setPdfPageTexts] = useState<string[]>([]);
   const [indexedPages, setIndexedPages] = useState(0);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuPosition | null>(null);
+  const { readerDark, toggleReaderDark } = useReaderDarkMode();
 
   const pageStrokes = useMemo(
     () => annotations.filter((stroke) => stroke.page === page),
@@ -321,14 +425,52 @@ export function PdfStudyReader({
   }, [pdfPageTexts, pdfSearch]);
 
   useEffect(() => {
-    const query = normalizeReaderSearch(pdfSearch);
-    textLayerRef.current?.querySelectorAll("span").forEach((span) => {
-      span.classList.toggle(
-        "pdf-search-match",
-        Boolean(query && normalizeReaderSearch(span.textContent || "").includes(query)),
-      );
+    const textLayer = textLayerRef.current;
+    const wrap = pageWrapRef.current;
+    if (!textLayer || !wrap) return;
+    textLayer.querySelectorAll(".pdf-search-match").forEach((element) => {
+      element.classList.remove("pdf-search-match");
     });
-  }, [page, pdfSearch, textLayerVersion]);
+    if (!activePdfSearch || activePdfSearch.page !== page) return;
+
+    const matchingSpans = pdfSearchMatchSpans(textLayer, activePdfSearch.query);
+    matchingSpans.forEach((element) => element.classList.add("pdf-search-match"));
+    const frame = window.requestAnimationFrame(() => {
+      const firstMatch = matchingSpans[0];
+      if (!firstMatch) {
+        wrap.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      const wrapBounds = wrap.getBoundingClientRect();
+      const matchBounds = firstMatch.getBoundingClientRect();
+      wrap.scrollTo({
+        top: Math.max(
+          0,
+          wrap.scrollTop + matchBounds.top - wrapBounds.top - wrap.clientHeight * 0.34,
+        ),
+        left: Math.max(
+          0,
+          wrap.scrollLeft + matchBounds.left - wrapBounds.left - wrap.clientWidth * 0.24,
+        ),
+        behavior: "smooth",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activePdfSearch, page, textLayerVersion]);
+
+  const openPdfSearchResults = () => {
+    if (!normalizeReaderSearch(pdfSearch)) return;
+    setActivePdfSearch(null);
+    setPdfSearchOpen(true);
+    window.requestAnimationFrame(() => {
+      pageWrapRef.current?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    });
+  };
+
+  const dismissPdfSearchHighlight = () => {
+    setActivePdfSearch(null);
+    setPdfSearchOpen(false);
+  };
 
   useEffect(() => {
     const updateSelectionMenu = () => {
@@ -466,7 +608,10 @@ export function PdfStudyReader({
   };
 
   return (
-    <section className="study-reader pdf-study-reader" aria-label={`Annotating ${fileName}`}>
+    <section
+      className={`study-reader pdf-study-reader${readerDark ? " reader-dark" : ""}`}
+      aria-label={`Annotating ${fileName}`}
+    >
       <header className="study-reader-titlebar">
         <button type="button" onClick={onClose} aria-label="Close PDF">←</button>
         <div><small>PDF STUDY DESK</small><strong>{fileName}</strong></div>
@@ -483,12 +628,33 @@ export function PdfStudyReader({
             <span>{icon}</span><small>{label}</small>
           </button>
         ))}
+        <button
+          type="button"
+          className={`reader-dark-toggle${readerDark ? " active" : ""}`}
+          onClick={toggleReaderDark}
+          aria-label={readerDark ? "Use light reading mode" : "Use dark reading mode"}
+          aria-pressed={readerDark}
+        >
+          <span aria-hidden="true">{readerDark ? "☀" : "☾"}</span>
+          <small>{readerDark ? "Light" : "Dark"}</small>
+        </button>
         <label className="pdf-search-control">
           <span aria-hidden="true">⌕</span>
           <input
             type="search"
             value={pdfSearch}
-            onChange={(event) => setPdfSearch(event.target.value)}
+            onChange={(event) => {
+              const nextSearch = event.target.value;
+              setPdfSearch(nextSearch);
+              setActivePdfSearch(null);
+              setPdfSearchOpen(Boolean(normalizeReaderSearch(nextSearch)));
+            }}
+            onFocus={() => setPdfSearchOpen(Boolean(normalizeReaderSearch(pdfSearch)))}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              openPdfSearchResults();
+            }}
             placeholder="Search in this PDF"
             aria-label="Search in this PDF"
           />
@@ -524,13 +690,22 @@ export function PdfStudyReader({
       </nav>
       <div className="pdf-page-wrap" ref={pageWrapRef} data-tool={tool}>
         {loading && <div className="study-reader-loading">{loading}</div>}
-        {pdfSearch.trim() && (
+        {pdfSearchOpen && pdfSearch.trim() && (
           <aside className="pdf-search-results" aria-label="PDF search results">
             <header>
               <span>
                 <strong>{pdfSearchResults.length}</strong> pages with matches
               </span>
-              <button type="button" onClick={() => setPdfSearch("")}>Clear</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPdfSearch("");
+                  setPdfSearchOpen(false);
+                  setActivePdfSearch(null);
+                }}
+              >
+                Clear
+              </button>
             </header>
             {indexedPages < pages && <p>Reading the remaining pages…</p>}
             {indexedPages === pages && pdfSearchResults.length === 0 && (
@@ -540,8 +715,13 @@ export function PdfStudyReader({
               <button
                 type="button"
                 key={result.page}
-                className={result.page === page ? "active" : ""}
-                onClick={() => setPage(result.page)}
+                className={activePdfSearch?.page === result.page ? "active" : ""}
+                onClick={() => {
+                  setTool("hand");
+                  setPdfSearchOpen(false);
+                  setActivePdfSearch({ page: result.page, query: pdfSearch });
+                  setPage(result.page);
+                }}
               >
                 <strong>Page {result.page}</strong>
                 <span>{result.preview}</span>
@@ -550,7 +730,11 @@ export function PdfStudyReader({
             ))}
           </aside>
         )}
-        <div className="pdf-page-stack" ref={pageStackRef}>
+        <div
+          className="pdf-page-stack"
+          ref={pageStackRef}
+          onPointerDownCapture={dismissPdfSearchHighlight}
+        >
           <canvas ref={pdfCanvasRef} className="pdf-paper-canvas" />
           <div ref={textLayerRef} className="pdf-text-layer textLayer" />
           <canvas
@@ -596,9 +780,16 @@ export function EpubStudyReader({
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
+  const [searchResultsOpen, setSearchResultsOpen] = useState(false);
+  const [activeEpubSearch, setActiveEpubSearch] = useState<{
+    chapterId: string;
+    query: string;
+  } | null>(null);
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuPosition | null>(null);
   const epubArticleRef = useRef<HTMLElement | null>(null);
+  const epubPaperRef = useRef<HTMLElement | null>(null);
+  const { readerDark, toggleReaderDark } = useReaderDarkMode();
   const chapterIndex = Math.min(book.chapters.length - 1, Math.max(0, readingState.chapter));
   const chapter = book.chapters[chapterIndex];
   const paragraphs = useMemo(() => chapter.text.split(/\n{2,}/).filter(Boolean), [chapter.text]);
@@ -627,6 +818,44 @@ export function EpubStudyReader({
     onReadingStateChange({ ...readingState, ...patch });
   };
   const bookmarked = readingState.bookmarks.includes(chapterIndex);
+
+  const openEpubSearchResults = () => {
+    if (!normalizeReaderSearch(search)) return;
+    setActiveEpubSearch(null);
+    setSearchResultsOpen(true);
+    window.requestAnimationFrame(() => {
+      epubPaperRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
+  const dismissEpubSearchHighlight = () => {
+    setActiveEpubSearch(null);
+    setSearchResultsOpen(false);
+  };
+
+  useEffect(() => {
+    if (!activeEpubSearch || activeEpubSearch.chapterId !== chapter.id) return;
+    const frame = window.requestAnimationFrame(() => {
+      const article = epubArticleRef.current;
+      const paper = epubPaperRef.current;
+      const match = article?.querySelector<HTMLElement>(".epub-search-match");
+      if (!article || !paper) return;
+      if (!match) {
+        paper.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      const paperBounds = paper.getBoundingClientRect();
+      const matchBounds = match.getBoundingClientRect();
+      paper.scrollTo({
+        top: Math.max(
+          0,
+          paper.scrollTop + matchBounds.top - paperBounds.top - paper.clientHeight * 0.3,
+        ),
+        behavior: "smooth",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeEpubSearch, chapter.id]);
 
   useEffect(() => {
     const updateSelectionMenu = () => {
@@ -703,29 +932,59 @@ export function EpubStudyReader({
         end: paragraph.indexOf(highlight.text) + highlight.text.length,
       }))
       .sort((first, second) => first.start - second.start);
-    if (!paragraphHighlights.length) return paragraph;
-    const pieces = [];
-    let cursor = 0;
+    const searchMatch =
+      activeEpubSearch?.chapterId === chapter.id
+        ? readerTextMatchRange(paragraph, activeEpubSearch.query)
+        : null;
+    if (!paragraphHighlights.length && !searchMatch) return paragraph;
+
+    const boundaries = new Set([0, paragraph.length]);
     paragraphHighlights.forEach((highlight) => {
-      if (highlight.start < cursor) return;
-      if (highlight.start > cursor) pieces.push(paragraph.slice(cursor, highlight.start));
-      pieces.push(
-        <mark
-          className="epub-saved-highlight"
-          key={highlight.id}
-          style={{ "--saved-highlight": highlight.color } as CSSProperties}
-        >
-          {paragraph.slice(highlight.start, highlight.end)}
-        </mark>,
-      );
-      cursor = highlight.end;
+      boundaries.add(highlight.start);
+      boundaries.add(highlight.end);
     });
-    if (cursor < paragraph.length) pieces.push(paragraph.slice(cursor));
-    return pieces;
+    if (searchMatch) {
+      boundaries.add(searchMatch.start);
+      boundaries.add(searchMatch.end);
+    }
+    const orderedBoundaries = [...boundaries].sort((first, second) => first - second);
+
+    return orderedBoundaries.slice(0, -1).map((start, index) => {
+      const end = orderedBoundaries[index + 1];
+      const text = paragraph.slice(start, end);
+      const isSearchMatch = Boolean(
+        searchMatch && start >= searchMatch.start && end <= searchMatch.end,
+      );
+      if (isSearchMatch) {
+        return (
+          <mark className="epub-search-match" key={`search-${paragraphIndex}-${start}`}>
+            {text}
+          </mark>
+        );
+      }
+      const savedHighlight = paragraphHighlights.find(
+        (highlight) => start >= highlight.start && end <= highlight.end,
+      );
+      if (savedHighlight) {
+        return (
+          <mark
+            className="epub-saved-highlight"
+            key={`${savedHighlight.id}-${start}`}
+            style={{ "--saved-highlight": savedHighlight.color } as CSSProperties}
+          >
+            {text}
+          </mark>
+        );
+      }
+      return text;
+    });
   };
 
   return (
-    <section className="study-reader epub-study-reader" aria-label={`Reading ${fileName}`}>
+    <section
+      className={`study-reader epub-study-reader${readerDark ? " reader-dark" : ""}`}
+      aria-label={`Reading ${fileName}`}
+    >
       <header className="study-reader-titlebar">
         <button type="button" onClick={onClose} aria-label="Close EPUB">←</button>
         <div><small>EPUB READING NOOK</small><strong>{book.title}</strong><em>{book.author}</em></div>
@@ -742,10 +1001,39 @@ export function EpubStudyReader({
       </header>
       <nav className="epub-tool-ribbon" aria-label="EPUB reading tools">
         <button onClick={() => setOutlineOpen((value) => !value)}>☰ <span>Chapters</span></button>
-        <label><span>Search book</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this book" /></label>
+        <label>
+          <span>Search book</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => {
+              const nextSearch = event.target.value;
+              setSearch(nextSearch);
+              setActiveEpubSearch(null);
+              setSearchResultsOpen(Boolean(normalizeReaderSearch(nextSearch)));
+            }}
+            onFocus={() => setSearchResultsOpen(Boolean(normalizeReaderSearch(search)))}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              openEpubSearchResults();
+            }}
+            placeholder="Search this book"
+            aria-label="Search this book"
+          />
+        </label>
         <button onClick={() => update({ fontSize: Math.max(14, readingState.fontSize - 1) })}>A−</button>
         <button onClick={() => update({ fontSize: Math.min(30, readingState.fontSize + 1) })}>A＋</button>
         <button onClick={() => update({ lineHeight: readingState.lineHeight === 1.7 ? 2 : 1.7 })}>↕ <span>Spacing</span></button>
+        <button
+          type="button"
+          className={`reader-dark-toggle${readerDark ? " active" : ""}`}
+          onClick={toggleReaderDark}
+          aria-label={readerDark ? "Use light reading mode" : "Use dark reading mode"}
+          aria-pressed={readerDark}
+        >
+          {readerDark ? "☀" : "☾"} <span>{readerDark ? "Light" : "Dark"}</span>
+        </button>
       </nav>
       <div className={outlineOpen ? "epub-reading-layout outline-open" : "epub-reading-layout"}>
         <aside className="epub-outline">
@@ -757,26 +1045,45 @@ export function EpubStudyReader({
             </button>
           ))}
         </aside>
-        <main className="epub-paper">
-          {results.length > 0 && (
+        <main className="epub-paper" ref={epubPaperRef}>
+          {searchResultsOpen && results.length > 0 && (
             <section className="epub-search-results">
               <header>
                 <strong>{results.reduce((total, result) => total + result.matches, 0)} matches in {results.length} chapters</strong>
-                <button onClick={() => setSearch("")}>Clear</button>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setSearchResultsOpen(false);
+                    setActiveEpubSearch(null);
+                  }}
+                >
+                  Clear
+                </button>
               </header>
               {results.map((result) => (
-                <button key={`${result.index}-${result.title}`} onClick={() => { update({ chapter: result.index }); setSearch(""); }}>
+                <button
+                  key={`${result.index}-${result.title}`}
+                  onClick={() => {
+                    setSearchResultsOpen(false);
+                    setActiveEpubSearch({
+                      chapterId: book.chapters[result.index].id,
+                      query: search,
+                    });
+                    update({ chapter: result.index });
+                  }}
+                >
                   <strong>{result.title}</strong><span>{result.preview}</span><small>{result.matches}</small>
                 </button>
               ))}
             </section>
           )}
-          {search.trim() && results.length === 0 && (
+          {searchResultsOpen && search.trim() && results.length === 0 && (
             <section className="epub-search-results empty">No matches in this book.</section>
           )}
           <article
             ref={epubArticleRef}
             style={{ fontSize: readingState.fontSize, lineHeight: readingState.lineHeight }}
+            onPointerDownCapture={dismissEpubSearchHighlight}
           >
             <p className="epub-chapter-number">CHAPTER {chapterIndex + 1}</p>
             <h1>{chapter.title}</h1>
