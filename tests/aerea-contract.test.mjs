@@ -544,6 +544,9 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /\.extended-calendar-add \{ display:none!important; \}/);
   assert.match(cssSource, /the extended month is the screen, never a card behind controls/);
   assert.match(pageSource, /className="extended-calendar-header-actions"/);
+  assert.match(pageSource, /className="extended-schedule-button"/);
+  assert.match(pageSource, /className="extended-compact-glyph"/);
+  assert.match(pageSource, /className="extended-filter-menu"/);
   assert.match(pageSource, /const extendedCalendarTabs = tabs\.filter/);
   assert.match(pageSource, /tab\.id !== "add"/);
   assert.match(pageSource, /extendedCalendarTabs\.map/);
@@ -556,6 +559,9 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /\.extended-calendar-cell\.selected,[\s\S]*background:color-mix\(in srgb,var\(--paper\) 74%,transparent\);[\s\S]*box-shadow:none/);
   assert.match(cssSource, /breathing room, quiet selection, and motion for the extended month/);
   assert.match(cssSource, /Reference month: Sunday-first, open week rows, and compact event labels/);
+  assert.match(cssSource, /Exact reference chrome: two-tool month header, roomy type rail, and legible event slips/);
+  assert.match(cssSource, /\.extended-schedule-glyph \{[\s\S]*font-size:42px/);
+  assert.match(cssSource, /\.extended-event-pill > span > strong \{[\s\S]*font-size:10\.5px/);
   assert.match(cssSource, /\.extended-calendar-cell\.sunday \.extended-calendar-date/);
   assert.match(cssSource, /\.extended-event-pill > i,[\s\S]*display:none/);
   assert.match(cssSource, /Edit types stays deliberately compact, including on Android/);
