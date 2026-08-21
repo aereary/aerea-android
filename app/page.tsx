@@ -327,7 +327,6 @@ type EventDeleteRequest = {
 };
 
 type PostItColor = "lavender" | "butter" | "blush" | "sky";
-type PostItDoodle = "heart" | "star" | "smile" | "pin";
 type PostItPage =
   | "today"
   | "habits"
@@ -343,14 +342,13 @@ type PostItNote = {
   id: string;
   text: string;
   color: PostItColor;
-  doodle: PostItDoodle;
   page: PostItPage;
   x: number;
   y: number;
   rotation: number;
 };
 
-type PostItDraft = Pick<PostItNote, "text" | "color" | "doodle">;
+type PostItDraft = Pick<PostItNote, "text" | "color">;
 
 type SketchPage = {
   id: string;
@@ -799,21 +797,6 @@ const postItColors: Array<{
   { value: "sky", label: "Sky", hex: "#c9ddf4" },
 ];
 
-const postItDoodles: Array<{
-  value: PostItDoodle;
-  label: string;
-  glyph: string;
-}> = [
-  { value: "heart", label: "Heart", glyph: "♡" },
-  { value: "star", label: "Star", glyph: "☆" },
-  { value: "smile", label: "Smile", glyph: "☺" },
-  { value: "pin", label: "Pin", glyph: "⚑" },
-];
-
-function postItDoodleGlyph(doodle: PostItDoodle) {
-  return postItDoodles.find((item) => item.value === doodle)?.glyph ?? "♡";
-}
-
 const journalFaces = [
   "(˶ᵔ ᵕ ᵔ˶)",
   "૮ ˶ᵔ ᵕ ᵔ˶ ა",
@@ -1187,6 +1170,14 @@ function minutesFromTime(time = "09:00") {
   return Math.max(0, Math.min(24 * 60, (hours || 0) * 60 + (minutes || 0)));
 }
 
+function eventDraftHasValidRange(draft: EventDraft) {
+  const endDate = draft.endDate || draft.date;
+  if (!draft.date || !endDate || endDate < draft.date) return false;
+  if (draft.allDay || endDate > draft.date) return true;
+  if (!draft.time || !draft.endTime) return false;
+  return minutesFromTime(draft.endTime) > minutesFromTime(draft.time);
+}
+
 function findComingUpEvent(events: CalendarEvent[], now: Date) {
   const currentMinute = now.getHours() * 60 + now.getMinutes();
 
@@ -1373,7 +1364,6 @@ export default function Home() {
   const [postItDraft, setPostItDraft] = useState<PostItDraft>({
     text: "",
     color: "lavender",
-    doodle: "heart",
   });
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1937,6 +1927,7 @@ export default function Home() {
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const eventDraftRangeIsValid = eventDraftHasValidRange(eventDraft);
   const eventTitleSuggestions = useMemo(() => {
     const query = normalizeCalendarSearch(eventDraft.title);
     if (editingEventId || eventTemplateSuggestionsDismissed || query.length < 2) {
@@ -2541,14 +2532,12 @@ export default function Home() {
       setPostItDraft({
         text: postIt.text,
         color: postIt.color,
-        doodle: postIt.doodle,
       });
     } else {
       setEditingPostItId(null);
       setPostItDraft({
         text: "",
         color: postItColors[visiblePostIts.length % postItColors.length].value,
-        doodle: postItDoodles[visiblePostIts.length % postItDoodles.length].value,
       });
     }
     setPostItEditorOpen(true);
@@ -2572,7 +2561,6 @@ export default function Home() {
         id,
         text,
         color: postItDraft.color,
-        doodle: postItDraft.doodle,
         page: currentPostItPage,
         x: [24, 73, 68, 31][slot],
         y: [16, 26, 58, 77][slot],
@@ -3052,7 +3040,7 @@ export default function Home() {
   };
 
   const saveCalendarEvent = () => {
-    if (!eventDraft.title.trim()) return;
+    if (!eventDraft.title.trim() || !eventDraftHasValidRange(eventDraft)) return;
     const savedEvent: CalendarEvent = {
       ...eventDraft,
       id: editingEventId ?? crypto.randomUUID(),
@@ -5727,9 +5715,6 @@ export default function Home() {
               >
                 <span className="post-it-tape" aria-hidden="true" />
                 <p>{postIt.text}</p>
-                <span className="post-it-doodle" aria-hidden="true">
-                  {postItDoodleGlyph(postIt.doodle)}
-                </span>
               </article>
             ))}
           </div>
@@ -5869,7 +5854,7 @@ export default function Home() {
                     className="event-save-button"
                     type="button"
                     onClick={saveCalendarEvent}
-                    disabled={!eventDraft.title.trim()}
+                    disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
                   >
                     Save
                   </button>
@@ -6008,6 +5993,10 @@ export default function Home() {
                           type="date"
                           min={eventDraft.date}
                           value={eventDraft.endDate}
+                          aria-invalid={!eventDraftRangeIsValid}
+                          aria-describedby={
+                            eventDraftRangeIsValid ? undefined : "event-date-error"
+                          }
                           onChange={(event) =>
                             updateEventDraft("endDate", event.target.value)
                           }
@@ -6016,6 +6005,10 @@ export default function Home() {
                           <input
                             type="time"
                             value={eventDraft.endTime}
+                            aria-invalid={!eventDraftRangeIsValid}
+                            aria-describedby={
+                              eventDraftRangeIsValid ? undefined : "event-date-error"
+                            }
                             onChange={(event) =>
                               updateEventDraft("endTime", event.target.value)
                             }
@@ -6023,6 +6016,11 @@ export default function Home() {
                         )}
                       </label>
                     </div>
+                    {!eventDraftRangeIsValid && (
+                      <p className="event-date-error" id="event-date-error" role="alert">
+                        End must be later than start.
+                      </p>
+                    )}
 
                     <label className="event-row switch-row">
                       <span className="event-row-icon">⌖</span>
@@ -8246,7 +8244,7 @@ export default function Home() {
               <div>
                 <p className="tiny-label">A NOTE FOR THIS PAGE</p>
                 <h2>{editingPostItId ? "Edit your post-it" : "Make a post-it"}</h2>
-                <p>Write it, decorate it, then place it anywhere on this page.</p>
+                <p>Write it, choose its paper, then place it anywhere on this page.</p>
               </div>
               <button
                 type="button"
@@ -8272,9 +8270,6 @@ export default function Home() {
                 maxLength={220}
                 aria-label="Post-it text"
               />
-              <span className="post-it-doodle" aria-hidden="true">
-                {postItDoodleGlyph(postItDraft.doodle)}
-              </span>
             </div>
 
             <div className="post-it-editor-options">
@@ -8296,26 +8291,6 @@ export default function Home() {
                     aria-pressed={postItDraft.color === color.value}
                   >
                     <span />
-                  </button>
-                ))}
-              </fieldset>
-              <fieldset>
-                <legend>Little doodle</legend>
-                {postItDoodles.map((doodle) => (
-                  <button
-                    key={doodle.value}
-                    type="button"
-                    className={postItDraft.doodle === doodle.value ? "active" : ""}
-                    onClick={() =>
-                      setPostItDraft((current) => ({
-                        ...current,
-                        doodle: doodle.value,
-                      }))
-                    }
-                    aria-label={doodle.label}
-                    aria-pressed={postItDraft.doodle === doodle.value}
-                  >
-                    {doodle.glyph}
                   </button>
                 ))}
               </fieldset>
@@ -9440,7 +9415,6 @@ function NoteDetailDialog({
         </header>
         <p className="note-detail-text">{text}</p>
         <footer>
-          <small>Your words, fully here.</small>
           <button onClick={onDelete}>Delete note</button>
         </footer>
       </section>

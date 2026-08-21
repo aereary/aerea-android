@@ -514,6 +514,25 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
 
+test("rejects impossible event ranges and removes the requested UI copy", () => {
+  assert.match(pageSource, /function eventDraftHasValidRange/);
+  assert.match(pageSource, /endDate < draft\.date/);
+  assert.match(pageSource, /minutesFromTime\(draft\.endTime\) > minutesFromTime\(draft\.time\)/);
+  assert.match(pageSource, /disabled=\{!eventDraft\.title\.trim\(\) \|\| !eventDraftRangeIsValid\}/);
+  assert.match(pageSource, /End must be later than start\./);
+  assert.doesNotMatch(pageSource, /Your words, fully here\./);
+  assert.doesNotMatch(pageSource, /Little doodle|post-it-doodle|postItDoodles|PostItDoodle/);
+  assert.doesNotMatch(cssSource, /\.post-it-doodle/);
+});
+
+test("keeps the reference two-column home composition on every tablet theme", () => {
+  assert.match(cssSource, /Tablet home composition: schedule and reminders share one row in every theme/);
+  assert.match(cssSource, /@media \(min-width:681px\) and \(max-width:1200px\)/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.day-grid \{[\s\S]*grid-template-columns:minmax\(0,1\.08fr\) minmax\(300px,\.92fr\)/);
+  assert.match(pageSource, /<section className="day-grid">/);
+  assert.match(pageSource, /className="calendar-mood-note"/);
+});
+
 test("keeps editable event types above the redesigned extended calendar", () => {
   assert.match(pageSource, /starterCalendarCategories/);
   assert.match(pageSource, /calendarCategories,/);

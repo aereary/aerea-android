@@ -4122,6 +4122,13 @@ p {
   width: 100%;
 }
 
+.event-date-error {
+  color: color-mix(in srgb, var(--event-editor-accent) 76%, #9b3344);
+  font-size: 11px;
+  font-weight: 800;
+  margin: -5px 2px 13px;
+}
+
 .event-setting-heading {
   align-items: center;
   display: grid;
@@ -10901,11 +10908,7 @@ body {
   align-items: center;
   display: flex;
   gap: 14px;
-  justify-content: space-between;
-}
-
-.note-detail-card footer small {
-  color: var(--muted);
+  justify-content: flex-end;
 }
 
 .note-detail-card footer button {
@@ -20186,15 +20189,6 @@ body {
   white-space:pre-wrap;
 }
 
-.post-it-doodle {
-  bottom:9px;
-  font-family:"Segoe Print","Comic Sans MS",cursive;
-  font-size:31px;
-  line-height:1;
-  position:absolute;
-  right:12px;
-}
-
 .post-it-edit {
   align-items:center;
   background:#fffef1;
@@ -20289,13 +20283,13 @@ body {
   height:100%;
   line-height:1.5;
   outline:0;
-  padding:0 0 32px;
+  padding:0;
   resize:none;
   width:100%;
 }
 .post-it-editor-preview textarea::placeholder { color:rgba(40,35,55,.46); }
 
-.post-it-editor-options { display:grid; gap:14px; grid-template-columns:1fr 1fr; }
+.post-it-editor-options { display:grid; gap:14px; grid-template-columns:1fr; }
 .post-it-editor-options fieldset {
   align-items:center;
   background:rgba(234,227,249,.58);
@@ -20792,7 +20786,6 @@ body {
   .post-it-create-button { height:40px; width:40px; }
   .movable-post-it { height:139px; padding:27px 18px 20px; width:145px; }
   .movable-post-it p { font-size:14px; line-height:1.35; max-height:88px; }
-  .post-it-doodle { font-size:25px; }
   .post-it-tape { height:17px; top:-8px; width:52px; }
   .post-it-editor-backdrop { align-items:flex-end; padding:10px; }
   .post-it-editor-modal { border-radius:29px; max-height:calc(100dvh - 20px); padding:21px 18px; }
@@ -21661,6 +21654,15 @@ body {
   .app-shell[data-theme="noirrest"] .schedule-card { margin-left:86px; }
   .app-shell[data-theme="noirrest"] .time-block { left:-84px; width:61px; }
   .app-shell[data-theme="noirrest"] .add-event-button { margin-left:86px; width:calc(100% - 86px); }
+}
+
+/* Tablet home composition: schedule and reminders share one row in every theme. */
+@media (min-width:681px) and (max-width:1200px) {
+  .app-shell[data-theme] .day-grid {
+    align-items:start;
+    gap:clamp(24px,3vw,40px);
+    grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);
+  }
 }
 
 /* Refined extended calendar -------------------------------------------- */
@@ -23255,7 +23257,6 @@ body {
 .movable-post-it,
 .post-it-editor-preview { border:0; }
 .movable-post-it p,
-.post-it-doodle,
 .post-it-editor-preview textarea {
   font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive;
   font-weight:700;
