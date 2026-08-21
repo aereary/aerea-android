@@ -531,6 +531,14 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /\.extended-calendar-nav \{[\s\S]*position:static/);
   assert.match(cssSource, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(cssSource, /grid-template-rows:30px repeat\(var\(--extended-calendar-weeks,6\),minmax\(0,1fr\)\)/);
+  assert.match(pageSource, /calendar-slide-\$\{calendarSlideDirection\}/);
+  assert.match(pageSource, /aria-label="Extended calendar month\. Swipe left or right to change month\."/);
+  assert.match(cssSource, /\.extended-month-grid\.calendar-slide-next/);
+  assert.match(cssSource, /\.extended-calendar-cell\.selected,[\s\S]*background:color-mix\(in srgb,var\(--paper\) 74%,transparent\);[\s\S]*box-shadow:none/);
+  assert.match(cssSource, /breathing room, quiet selection, and motion for the extended month/);
+  assert.match(cssSource, /Edit types stays deliberately compact, including on Android/);
+  assert.match(cssSource, /max-height:min\(76dvh,620px\)/);
+  assert.match(cssSource, /max-width:560px/);
 });
 
 test("ships the rose editorial and noir quiet-hours interfaces", () => {

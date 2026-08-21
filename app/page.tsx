@@ -6486,14 +6486,24 @@ export default function Home() {
                     </section>
 
                     <div
-                      className="extended-month-grid"
+                      key={`${calendarYear}-${calendarMonth}`}
+                      className={[
+                        "extended-month-grid",
+                        calendarSlideDirection
+                          ? `calendar-slide-${calendarSlideDirection}`
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       style={
                         {
                           "--extended-calendar-weeks": extendedCalendarWeekCount,
                         } as CSSProperties
                       }
+                      onAnimationEnd={() => setCalendarSlideDirection(null)}
                       onTouchStart={startCalendarSwipe}
                       onTouchEnd={finishCalendarSwipe}
+                      aria-label="Extended calendar month. Swipe left or right to change month."
                     >
                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((weekday) => (
                         <strong key={weekday}>{weekday}</strong>
