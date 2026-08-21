@@ -512,34 +512,32 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /className="extended-calendar-view"/);
   assert.match(pageSource, /extendedCalendarDays/);
   assert.match(pageSource, /hiddenCalendarSources/);
-  for (const color of ["mint", "peach", "coral", "cream"]) {
+  for (const color of ["lavender", "butter", "blush", "sky", "mint", "peach", "coral", "cream"]) {
     assert.match(pageSource, new RegExp(`value: "${color}"`));
     assert.match(cssSource, new RegExp(`post-it(?:-editor-preview)?\\.${color}`));
   }
-  assert.match(pageSource, /function postItTextSize/);
-  assert.equal(
-    [...pageSource.matchAll(/"--post-it-text-size": postItTextSize/g)].length,
-    2,
-    "the editor and placed note must use the same text sizing",
-  );
+  assert.match(pageSource, /function postItVisualStyle/);
+  assert.match(pageSource, /const fontSize = length > 150 \? 15 : length > 80 \? 16 : 18/);
+  assert.match(pageSource, /\.\.\.postItVisualStyle\(postIt\.text\)/);
+  assert.match(pageSource, /style=\{postItVisualStyle\(postItDraft\.text\)\}/);
   assert.match(cssSource, /Movable paper notes/);
   assert.match(cssSource, /Full monthly calendar/);
   assert.match(cssSource, /font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive/);
-  assert.match(cssSource, /\.post-it-editor-preview \{[\s\S]*height:174px;[\s\S]*width:184px;/);
-  assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:174px;[\s\S]*width:184px;/);
+  assert.match(cssSource, /\.post-it-editor-preview \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
+  assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);
   assert.match(cssSource, /\.post-it-editor-options button \{[\s\S]*height:30px;[\s\S]*width:30px;/);
-  assert.match(cssSource, /\.post-it-editor-preview \{ height:139px;[\s\S]*width:145px; \}/);
+  assert.match(cssSource, /\.movable-post-it p \{ font-size:var\(--post-it-text-size,18px\); height:100%; line-height:1\.22; max-height:none; \}/);
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
 
-test("rejects impossible event ranges and removes the requested UI copy", () => {
+test("rejects impossible event ranges and keeps the restored journal footer", () => {
   assert.match(pageSource, /function eventDraftHasValidRange/);
   assert.match(pageSource, /endDate < draft\.date/);
   assert.match(pageSource, /minutesFromTime\(draft\.endTime\) > minutesFromTime\(draft\.time\)/);
   assert.match(pageSource, /disabled=\{!eventDraft\.title\.trim\(\) \|\| !eventDraftRangeIsValid\}/);
   assert.match(pageSource, /End must be later than start\./);
-  assert.doesNotMatch(pageSource, /Your words, fully here\./);
+  assert.match(pageSource, /Your words, fully here\./);
   assert.doesNotMatch(pageSource, /Little doodle|post-it-doodle|postItDoodles|PostItDoodle/);
   assert.doesNotMatch(cssSource, /\.post-it-doodle/);
 });
@@ -638,7 +636,7 @@ test("falls back safely when a saved theme is no longer offered", () => {
   assert.doesNotMatch(pageSource, /theme\.id === "ao3night"/);
 });
 
-test("offers a persisted Little aérea simplified calendar mode", () => {
+test("offers a persisted Little aérea simplified calendar-only screen", () => {
   assert.match(pageSource, /const \[simplifiedCalendarMode, setSimplifiedCalendarMode\]/);
   assert.match(pageSource, /simplifiedCalendarMode\?: boolean/);
   assert.match(pageSource, /setSimplifiedCalendarMode\(state\.simplifiedCalendarMode\)/);
@@ -646,8 +644,17 @@ test("offers a persisted Little aérea simplified calendar mode", () => {
   assert.match(pageSource, /data-simplified-calendar=\{simplifiedCalendarMode \? "true" : "false"\}/);
   assert.match(pageSource, /aria-label="Little aérea simplified"/);
   assert.match(pageSource, />\s*Just calendar\s*<\/button>/);
-  assert.match(pageSource, /simplifiedCalendarMode\s*\? "Open settings"\s*: "Back to compact month"/);
-  assert.match(cssSource, /Little aérea simplified: the themed month becomes the opening interface/);
-  assert.match(cssSource, /\.app-shell\[data-simplified-calendar="true"\] \.modal-backdrop\.extended-month-backdrop/);
-  assert.match(cssSource, /background:var\(--app-backdrop\)/);
+  assert.match(pageSource, /className="simplified-calendar-screen"/);
+  assert.match(pageSource, /"simplified-month-grid"/);
+  assert.match(pageSource, /className="simplified-calendar-filters"/);
+  assert.match(pageSource, /className="simplified-calendar-add"/);
+  assert.match(pageSource, /dayKey === todayKey \? "today" : ""/);
+  assert.match(pageSource, /dayEvents\.slice\(0, 4\)/);
+  assert.match(cssSource, /Little aérea simplified: a flat, calendar-only month in the active theme/);
+  assert.match(cssSource, /\.simplified-calendar-screen\s*\{/);
+  assert.match(cssSource, /grid-template-rows:auto auto minmax\(0,1fr\) 58px/);
+  assert.match(cssSource, /repeat\(var\(--simplified-calendar-weeks,6\),minmax\(0,1fr\)\)/);
+  assert.match(cssSource, /\.simplified-calendar-cell\.today\s*\{\s*background:/);
+  assert.match(cssSource, /\.simplified-event-strip/);
+  assert.doesNotMatch(cssSource, /data-simplified-calendar="true"\] \.calendar-modal\.calendar-extended-month/);
 });
