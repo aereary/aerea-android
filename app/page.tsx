@@ -731,6 +731,9 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
+const extendedCalendarTabs = tabs.filter(
+  (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
+);
 
 const starterHabits: Habit[] = [
   {
@@ -6360,54 +6363,60 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
-                      <button
-                        className="extended-compact-button"
-                        type="button"
-                        onClick={() => {
-                          setCalendarExpanded(false);
-                          setMonthPickerOpen(false);
-                        }}
+                      <nav
+                        className="extended-calendar-header-actions"
+                        aria-label="Calendar tools"
                       >
-                        <span aria-hidden="true">▦</span>
-                        Compact month
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                            setCalendarSearchOpen(true);
+                          }}
+                          aria-label="Search events"
+                          title="Search events"
+                        >
+                          <span className="calendar-search-glyph" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                            setCalendarScheduleOpen(true);
+                          }}
+                          aria-label="Open day schedule"
+                          title="Open day schedule"
+                        >
+                          <span aria-hidden="true">☷</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const today = dateFromKey(todayKey);
+                            setSelectedCalendarDate(todayKey);
+                            setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+                          }}
+                          aria-label="Return to today"
+                          title="Return to today"
+                        >
+                          <span aria-hidden="true">⌂</span>
+                        </button>
+                        <button
+                          className="extended-compact-button"
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                          }}
+                          aria-label="Back to compact month"
+                          title="Back to compact month"
+                        >
+                          <span aria-hidden="true">▦</span>
+                        </button>
+                      </nav>
                     </header>
-
-                    <nav className="extended-calendar-actions" aria-label="Calendar tools">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarExpanded(false);
-                          setMonthPickerOpen(false);
-                          setCalendarSearchOpen(true);
-                        }}
-                      >
-                        <span className="calendar-search-glyph" aria-hidden="true" />
-                        <span><small>FIND</small><strong>Search events</strong></span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarExpanded(false);
-                          setMonthPickerOpen(false);
-                          setCalendarScheduleOpen(true);
-                        }}
-                      >
-                        <span aria-hidden="true">☷</span>
-                        <span><small>PLAN</small><strong>Day schedule</strong></span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const today = dateFromKey(todayKey);
-                          setSelectedCalendarDate(todayKey);
-                          setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-                        }}
-                      >
-                        <span aria-hidden="true">⌂</span>
-                        <span><small>JUMP TO</small><strong>Today</strong></span>
-                      </button>
-                    </nav>
 
                     {monthPickerOpen && (
                       <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
@@ -6571,19 +6580,12 @@ export default function Home() {
                     </div>
 
                     <nav className="extended-calendar-nav" aria-label="Primary navigation">
-                      {tabs.map((tab) => (
+                      {extendedCalendarTabs.map((tab) => (
                         <button
                           key={tab.id}
                           type="button"
-                          className={[
-                            tab.id === activeTab ? "active" : "",
-                            tab.id === "add" ? "nav-add-event" : "",
-                          ].filter(Boolean).join(" ")}
+                          className={tab.id === activeTab ? "active" : ""}
                           onClick={() => {
-                            if (tab.id === "add") {
-                              openNewEvent(selectedCalendarDate);
-                              return;
-                            }
                             setCalendarExpanded(false);
                             setCalendarOpen(false);
                             changeTab(tab.id);

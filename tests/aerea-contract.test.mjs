@@ -524,8 +524,12 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /Extended month — the same glass, rhythm, and event anatomy as the schedule/);
   assert.match(cssSource, /\.extended-calendar-add \{ display:none!important; \}/);
   assert.match(cssSource, /the extended month is the screen, never a card behind controls/);
-  assert.match(cssSource, /\.extended-calendar-actions \{ display:none!important; \}/);
-  assert.match(cssSource, /\.extended-calendar-nav \{ display:none!important; \}/);
+  assert.match(pageSource, /className="extended-calendar-header-actions"/);
+  assert.match(pageSource, /const extendedCalendarTabs = tabs\.filter/);
+  assert.match(pageSource, /tab\.id !== "add"/);
+  assert.match(pageSource, /extendedCalendarTabs\.map/);
+  assert.match(cssSource, /\.extended-calendar-nav \{[\s\S]*position:static/);
+  assert.match(cssSource, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(cssSource, /grid-template-rows:30px repeat\(var\(--extended-calendar-weeks,6\),minmax\(0,1fr\)\)/);
 });
 
