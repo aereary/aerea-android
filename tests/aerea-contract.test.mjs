@@ -523,6 +523,10 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.doesNotMatch(pageSource, /className="extended-calendar-add"/);
   assert.match(cssSource, /Extended month — the same glass, rhythm, and event anatomy as the schedule/);
   assert.match(cssSource, /\.extended-calendar-add \{ display:none!important; \}/);
+  assert.match(cssSource, /the extended month is the screen, never a card behind controls/);
+  assert.match(cssSource, /\.extended-calendar-actions \{ display:none!important; \}/);
+  assert.match(cssSource, /\.extended-calendar-nav \{ display:none!important; \}/);
+  assert.match(cssSource, /grid-template-rows:30px repeat\(var\(--extended-calendar-weeks,6\),minmax\(0,1fr\)\)/);
 });
 
 test("ships the rose editorial and noir quiet-hours interfaces", () => {

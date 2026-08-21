@@ -23523,48 +23523,50 @@ body {
   .selection-highlight-menu small { display:none; }
 }
 
-/* August 21: let the extended month fill the screen like a real wall calendar. */
+/* August 21: the extended month is the screen, never a card behind controls. */
 .calendar-modal.calendar-extended-month {
-  height:calc(100dvh - 16px);
+  border-radius:0;
+  height:100dvh;
   max-height:none;
-  max-width:1480px;
-  padding:8px;
-  width:calc(100vw - 16px);
+  max-width:none;
+  padding:0;
+  width:100vw;
 }
 .extended-calendar-view {
-  gap:6px;
-  grid-template-rows:auto auto auto minmax(0,1fr);
-  padding:8px 8px 64px;
-}
-.extended-calendar-header {
-  min-height:58px;
-  padding:7px 10px 7px 13px;
-}
-.extended-calendar-heading-copy > p { margin-bottom:0; }
-.extended-calendar-actions {
   gap:4px;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto minmax(0,1fr);
   padding:4px;
 }
-.extended-calendar-actions > button { min-height:39px; padding-block:4px; }
-.extended-calendar-actions > button > span:first-child {
-  flex-basis:29px;
-  height:29px;
-  width:29px;
+.extended-calendar-header {
+  grid-column:1;
+  min-height:50px;
+  padding:5px 8px 5px 11px;
 }
+.extended-calendar-heading-copy > p { display:none; }
+.extended-calendar-actions { display:none!important; }
 .extended-calendar-filters {
   align-items:center;
   display:flex;
-  gap:9px;
-  min-height:43px;
+  gap:7px;
+  grid-column:1;
+  min-height:34px;
   overflow:hidden;
-  padding:5px 8px;
+  padding:3px 6px;
 }
 .extended-filter-heading { flex:0 0 auto; }
+.extended-filter-heading > span { display:none; }
+.extended-filter-heading > button { padding:5px 8px; }
 .extended-filter-list {
   flex:1 1 auto;
   min-width:0;
 }
+.extended-filter-list > button:not(.extended-filter-show-all) {
+  padding-block:3px;
+}
+.extended-filter-list > button > span { height:18px; width:18px; }
 .extended-month-grid {
+  grid-column:1;
   grid-template-rows:30px repeat(var(--extended-calendar-weeks,6),minmax(0,1fr));
   min-height:0;
   overflow:hidden;
@@ -23573,19 +23575,9 @@ body {
 .extended-calendar-cell:not(:nth-child(7n + 1)) {
   min-height:0;
 }
+.extended-calendar-nav { display:none!important; }
 
 @media (min-width:980px) {
-  .extended-calendar-view {
-    grid-template-columns:minmax(0,1fr) auto;
-    grid-template-rows:auto auto minmax(0,1fr);
-  }
-  .extended-calendar-header { grid-column:1; }
-  .extended-calendar-actions {
-    grid-column:2;
-    min-width:390px;
-  }
-  .extended-calendar-filters,
-  .extended-month-grid { grid-column:1 / -1; }
   .extended-calendar-date {
     font-size:14px;
     height:28px;
@@ -23596,31 +23588,10 @@ body {
   .extended-event-pill > span > small { font-size:7px; }
 }
 
-@media (max-width:900px) {
-  .calendar-modal.calendar-extended-month {
-    height:100dvh;
-    padding:0;
-    width:100%;
-  }
-}
-
 @media (max-width:720px) {
-  .extended-calendar-view { gap:5px; padding:5px 4px 58px; }
-  .extended-calendar-header { min-height:51px; padding:5px 7px 5px 9px; }
-  .extended-calendar-actions { padding:3px; }
-  .extended-calendar-actions > button { min-height:34px; padding:3px 5px; }
-  .extended-calendar-actions > button > span:first-child {
-    flex-basis:25px;
-    height:25px;
-    width:25px;
-  }
-  .extended-calendar-filters { min-height:36px; padding:3px 5px; }
-  .extended-filter-heading > span { display:none; }
-  .extended-filter-heading > button { padding:5px 7px; }
-  .extended-filter-list > button:not(.extended-filter-show-all) {
-    padding-block:3px;
-  }
-  .extended-filter-list > button > span { height:18px; width:18px; }
+  .extended-calendar-view { gap:3px; padding:3px; }
+  .extended-calendar-header { min-height:46px; padding:4px 6px 4px 8px; }
+  .extended-calendar-filters { min-height:32px; padding:2px 4px; }
   .extended-month-grid {
     grid-template-rows:22px repeat(var(--extended-calendar-weeks,6),minmax(0,1fr));
   }
