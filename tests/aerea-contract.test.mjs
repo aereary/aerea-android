@@ -66,8 +66,8 @@ test("keeps the approved worlds and removes the ten rejected themes", () => {
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    2,
-    "the two dedicated full-scene themes should hide the welcome charm",
+    3,
+    "the two full-scene themes and the dark reading theme should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
@@ -144,24 +144,30 @@ test("ships a clean draining focus clock and varied journal faces", () => {
   );
 });
 
-test("puts Library in every existing theme and moves the clock into Sketchbook", () => {
-  assert.match(pageSource, /\{ id: "library", icon: "▥", label: "Library" \}/);
+test("moves Library into Spaces and uses the center navigation action for events", () => {
+  assert.match(pageSource, /\{ id: "add", icon: "＋", label: "Add" \}/);
+  assert.doesNotMatch(pageSource, /\{ id: "library", icon: "▥", label: "Library" \}/);
   assert.doesNotMatch(pageSource, /id: "campstudy"/);
   assert.doesNotMatch(pageSource, /CampStudyShell/);
   assert.doesNotMatch(cssSource, /data-theme="campstudy"/);
-  assert.match(pageSource, /<StudyLibrary/);
-  assert.match(pageSource, /SKETCHBOOK EXTRAS/);
+  assert.match(pageSource, /title="Library"[\s\S]*onClick=\{\(\) => setSpace\("library"\)\}/);
+  assert.match(pageSource, /space === "library"[\s\S]*<StudyLibrary/);
+  assert.match(pageSource, /openNewEventFromNavigation/);
+  assert.match(pageSource, /tab\.id === "add" \? "nav-add-event" : ""/);
   assert.match(pageSource, /Focus clock/);
-  assert.match(pageSource, /Back to Sketchbook/);
-  assert.match(cssSource, /Library — one shared study shelf for every existing theme/);
+  assert.doesNotMatch(pageSource, /Back to Sketchbook/);
+  assert.match(cssSource, /Library belongs to Spaces; the center action adds events/);
 });
 
-test("keeps notebooks, notes, PDF annotation, EPUB reading, and private files in Library", () => {
+test("keeps notes, searchable readers, pastel highlights, and private files in Library", () => {
   assert.match(librarySource, /Your Library/);
-  assert.match(librarySource, /HANDWRITING/);
+  assert.doesNotMatch(librarySource, /HANDWRITING/);
   assert.match(librarySource, /READ & ANNOTATE/);
   assert.match(librarySource, /application\/epub\+zip/);
-  assert.match(readerSource, /PDF annotation tools/);
+  assert.match(readerSource, /Search in this PDF/);
+  assert.match(readerSource, /SelectionHighlightMenu/);
+  assert.match(readerSource, /highlightPdfSelection/);
+  assert.match(readerSource, /epub-saved-highlight/);
   assert.match(readerSource, /EPUB reading tools/);
   assert.match(fileApiSource, /const \{ BUCKET \} = getRuntimeEnv\(\)/);
   assert.match(fileApiSource, /BUCKET\.put/);
@@ -171,22 +177,12 @@ test("keeps notebooks, notes, PDF annotation, EPUB reading, and private files in
   assert.match(nativeStorageSource, /deleteDocument/);
 });
 
-test("gives Sketchbook classic paper sizes, colored pages, and complete exports", () => {
+test("removes the Sketchbook entry while preserving legacy drawings safely", () => {
   for (const size of ["letter", "legal", "oficio", "a4", "a5", "tabloid", "executive"]) {
     assert.match(sketchPaperSource, new RegExp(`id: "${size}"`));
   }
-  assert.match(sketchPaperSource, /8½ × 14 in/);
-  assert.match(pageSource, /PAGE COLOR/);
-  assert.match(pageSource, /PAGE SIZE/);
-  assert.match(pageSource, /ORIENTATION/);
-  assert.match(pageSource, /"cornell", "▥", "Cornell"/);
-  assert.match(pageSource, /renderSketchExportCanvas/);
-  assert.match(pageSource, /drawSketchPaper\(context/);
-  assert.match(pageSource, /canvasAsPdfBlob/);
-  assert.match(pageSource, /downloadDrawing\("png"\)/);
-  assert.match(pageSource, /downloadDrawing\("pdf"\)/);
-  assert.match(cssSource, /aspect-ratio:var\(--sketch-page-aspect/);
-  assert.match(cssSource, /\.drawing-page\.cornell/);
+  assert.doesNotMatch(pageSource, /title="Cute sketchbook"/);
+  assert.match(pageSource, /false && space === "sketchbook"/);
   assert.match(sketchApiSource, /isValidSketchPaperDescriptor/);
 });
 
@@ -237,15 +233,13 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
   assert.match(pageSource, /bottom-nav agenda-v2-home-nav/);
-  assert.match(pageSource, /welcome-row agenda-v2-greeting/);
-  assert.match(pageSource, /Good evening, lovely\./);
-  assert.match(pageSource, /A little look at \$\{selectedScheduleWeekday\}/);
+  assert.doesNotMatch(pageSource, /welcome-row agenda-v2-greeting/);
   assert.match(pageSource, /agenda-v2-week-arrow/);
   assert.match(pageSource, /agenda-v2-section-heading/);
   assert.match(pageSource, /onClick=\{goToScheduleToday\}/);
   assert.match(pageSource, /const goToScheduleToday[\s\S]*setScheduleSlideDirection/);
   assert.match(pageSource, />\s*Return to today\s*<\/button>/);
-  assert.match(pageSource, /className=\{tab\.id === activeTab \? "nav-item active" : "nav-item"\}/);
+  assert.match(pageSource, /"nav-item",[\s\S]*tab\.id === activeTab \? "active" : ""/);
   assert.match(pageSource, /aria-label="Back to compact calendar"/);
   assert.match(pageSource, />\s*Calendar\s*<\/button>/);
   assert.match(pageSource, /agenda-overlay-backdrop/);
@@ -262,7 +256,6 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.agenda-v2-time-grid > span:last-child \.agenda-v2-time-label/);
   assert.match(cssSource, /\.agenda-v2-week-content\.schedule-slide-next/);
   assert.match(cssSource, /\.agenda-v2-days button\.today:not\(\.selected\)/);
-  assert.match(cssSource, /\.agenda-v2-greeting/);
   assert.match(cssSource, /\.agenda-v2-week-content[\s\S]*grid-template-columns:42px minmax\(0,1fr\) 42px/);
   assert.match(cssSource, /\.agenda-v2-return-today/);
   assert.match(cssSource, /Schedule composition v7/);
@@ -270,7 +263,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal::after[\s\S]*background:var\(--cream\)[\s\S]*height:142px/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav::after/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav \.nav-item/);
-  assert.match(cssSource, /@media \(max-width:720px\)[\s\S]*\.agenda-v2-greeting[\s\S]*flex-basis:128px/);
+  assert.match(cssSource, /The daily schedule starts with its week strip; the old greeting card is gone/);
   assert.match(cssSource, /\.event-detail-backdrop[\s\S]*z-index:\s*320/);
   assert.doesNotMatch(cssSource, /min-width: 920px/);
 });
@@ -385,6 +378,8 @@ test("keeps the Day Pocket decorations faithful and stable across devices", () =
   assert.match(cssSource, /\.day-summary-cloud[\s\S]*fill:none/);
   assert.match(cssSource, /\.day-summary-sparkles i[\s\S]*clip-path:polygon/);
   assert.match(cssSource, /\.day-summary-event-heart svg[\s\S]*stroke-linejoin:round/);
+  assert.match(cssSource, /White paper for Day Pocket and event notes; decorations remain untouched/);
+  assert.match(cssSource, /\.app-shell:not\(\[data-theme="ao3night"\]\) \.day-summary-card/);
 });
 
 test("deletes unique events safely and edits repeating cycles by occurrence", () => {
@@ -487,6 +482,9 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(pageSource, /visiblePostIts\.map/);
   assert.match(pageSource, /className="post-it-layer"/);
   assert.match(pageSource, /startPostItDrag/);
+  assert.match(pageSource, /postItLongPressRef/);
+  assert.match(pageSource, /Movable post-it\. Hold to edit\./);
+  assert.doesNotMatch(pageSource, /className="post-it-edit"/);
   assert.match(pageSource, /postIts,/);
   assert.match(pageSource, /className="extended-calendar-view"/);
   assert.match(pageSource, /extendedCalendarDays/);
@@ -496,40 +494,35 @@ test("ships movable post-its, the extended month, and Lovely Lavender Evening", 
   assert.match(cssSource, /Full monthly calendar/);
   assert.match(cssSource, /Lovely lavender evening theme/);
   assert.match(cssSource, /data-theme="lovelyevening"/);
+  assert.match(cssSource, /font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive/);
+  assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
 
-test("uses full period goals and editable calendar event types", () => {
-  assert.match(pageSource, /const metricGoal = Math\.max\(1, metricDateKeys\.length\)/);
+test("keeps editable event types above the redesigned extended calendar", () => {
   assert.match(pageSource, /starterCalendarCategories/);
   assert.match(pageSource, /calendarCategories,/);
   assert.match(pageSource, /openCalendarCategoryEditor/);
   assert.match(pageSource, /className="category-editor-modal"/);
   assert.match(pageSource, /className="extended-filter-list"/);
+  assert.match(pageSource, /className=\{`extended-event-pill/);
   assert.match(pageSource, /date: null/);
   assert.match(pageSource, /\['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'\]/);
-  assert.match(cssSource, /August 14 review: page notes, rhythm metrics, and journal calendar/);
-  assert.match(cssSource, /\.metrics-screen\.metrics-screen-v2/);
   assert.match(cssSource, /\.extended-calendar-cell\.calendar-blank/);
+  assert.match(cssSource, /Event-type editing must sit over every calendar surface/);
+  assert.match(cssSource, /\.category-editor-backdrop \{[\s\S]*z-index:520/);
 });
 
-test("keeps the schedule separate from the extended month and opens real aérea metrics", () => {
+test("keeps the schedule separate, restyles the extended month, and removes statistics", () => {
   assert.match(pageSource, /calendarScheduleOpen/);
   assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
   assert.match(pageSource, /setCalendarExpanded\(true\)/);
   assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /calendar-extended-month/);
-  assert.match(pageSource, /onClick=\{openMetrics\}/);
-  assert.match(pageSource, /className="metrics-screen metrics-screen-v2"/);
-  assert.match(pageSource, /aérea metrics/);
-  assert.match(pageSource, /metricsDateRange/);
-  assert.match(pageSource, /dayHasHydration/);
-  assert.match(pageSource, /dayHasClass/);
-  assert.match(pageSource, /moodScores/);
-  assert.match(pageSource, /weekly overview/);
-  assert.match(cssSource, /aérea metrics/);
-  assert.match(cssSource, /\.metrics-summary-grid/);
-  assert.match(cssSource, /\.metrics-overview-grid/);
-  assert.match(cssSource, /\.metrics-donut/);
+  assert.doesNotMatch(pageSource, /onClick=\{openMetrics\}/);
+  assert.match(pageSource, /false && metricsOpen/);
+  assert.doesNotMatch(pageSource, /className="extended-calendar-add"/);
+  assert.match(cssSource, /Extended month — the same glass, rhythm, and event anatomy as the schedule/);
+  assert.match(cssSource, /\.extended-calendar-add \{ display:none!important; \}/);
 });
 
 test("ships the rose editorial and noir quiet-hours interfaces", () => {
@@ -546,4 +539,16 @@ test("ships the rose editorial and noir quiet-hours interfaces", () => {
   assert.match(cssSource, /Noir quiet hours/);
   assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
   assert.match(cssSource, /\.noir-coming-up-card/);
+});
+
+test("ships an AO3-inspired dark theme with pastel ink", () => {
+  assert.match(pageSource, /id: "ao3night"/);
+  assert.match(pageSource, /name: "Rose Pine night letters"/);
+  assert.match(pageSource, /theme\.id === "ao3night"/);
+  assert.match(cssSource, /Rose Pine night letters — dark AO3 base with the user's pastel accents/);
+  assert.match(cssSource, /data-theme="ao3night"/);
+  assert.match(cssSource, /data-theme-option="ao3night"/);
+  for (const pastel of ["#f8c8dc", "#c4a7e7", "#b8d7e8", "#b9d8c0"]) {
+    assert.match(cssSource, new RegExp(pastel));
+  }
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, CSSProperties, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useMemo, useRef, useState } from "react";
 
 export type StudyNotebook = {
   id: string;
@@ -59,9 +59,7 @@ export type StudyFileItem = {
   dataUrl?: string;
 };
 
-type LibraryFilter = "all" | "notebooks" | "notes" | "files";
-
-const notebookColors = ["#ec8f72", "#91b36e", "#7da7cf", "#c799b7", "#d4ad5c"];
+type LibraryFilter = "all" | "notes" | "files";
 
 function readableFileSize(size: number) {
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -74,41 +72,30 @@ function notePreview(body: string) {
 }
 
 export function StudyLibrary({
-  notebooks,
   notes,
   files,
-  onNotebooksChange,
   onNotesChange,
-  onOpenNotebook,
   onOpenFile,
   onDeleteFile,
   onImportFiles,
-  onOpenSketchbook,
+  onBack,
 }: {
-  notebooks: StudyNotebook[];
   notes: StudyNote[];
   files: StudyFileItem[];
-  onNotebooksChange: (notebooks: StudyNotebook[]) => void;
   onNotesChange: (notes: StudyNote[]) => void;
-  onOpenNotebook: (notebook: StudyNotebook) => void;
   onOpenFile: (file: StudyFileItem) => void;
   onDeleteFile: (file: StudyFileItem) => void;
   onImportFiles: (files: File[]) => Promise<void>;
-  onOpenSketchbook: () => void;
+  onBack: () => void;
 }) {
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [search, setSearch] = useState("");
-  const [notebookEditor, setNotebookEditor] = useState<StudyNotebook | null>(null);
   const [noteEditor, setNoteEditor] = useState<StudyNote | null>(null);
   const [message, setMessage] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const query = search.trim().toLowerCase();
-  const visibleNotebooks = useMemo(
-    () => notebooks.filter((item) => `${item.title} ${item.subject}`.toLowerCase().includes(query)),
-    [notebooks, query],
-  );
   const visibleNotes = useMemo(
     () => notes.filter((item) => `${item.title} ${item.body}`.toLowerCase().includes(query)),
     [notes, query],
@@ -117,20 +104,6 @@ export function StudyLibrary({
     () => files.filter((item) => item.name.toLowerCase().includes(query)),
     [files, query],
   );
-
-  const makeNotebook = () => {
-    const now = new Date().toISOString();
-    setNotebookEditor({
-      id: crypto.randomUUID(),
-      title: "",
-      subject: "",
-      color: notebookColors[notebooks.length % notebookColors.length],
-      paper: "grid",
-      pageCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
-  };
 
   const makeNote = () => {
     const now = new Date().toISOString();
@@ -161,19 +134,20 @@ export function StudyLibrary({
     }
   };
 
-  const hasNotebook = (id: string) => notebooks.some((item) => item.id === id);
   const hasNote = (id: string) => notes.some((item) => item.id === id);
 
   return (
     <section className="study-library-screen" aria-label="Library">
       <header className="study-library-hero">
         <div>
-          <p className="tiny-label">NOTEBOOKS · NOTES · READING</p>
+          <button className="study-library-back" type="button" onClick={onBack}>
+            <span aria-hidden="true">←</span> Spaces
+          </button>
+          <p className="tiny-label">NOTES · READING · FILES</p>
           <h1>Your Library</h1>
-          <p>Handwritten pages, quick notes, PDFs, EPUB books, and files—private and together.</p>
+          <p>Quick notes, PDFs, EPUB books, and private files—kept together inside Spaces.</p>
         </div>
         <div className="study-library-stats" aria-label="Library totals">
-          <span><strong>{notebooks.length}</strong><small>notebooks</small></span>
           <span><strong>{notes.length}</strong><small>notes</small></span>
           <span><strong>{files.length}</strong><small>files</small></span>
         </div>
@@ -191,7 +165,7 @@ export function StudyLibrary({
           {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search">×</button>}
         </label>
         <nav aria-label="Library filters">
-          {(["all", "notebooks", "notes", "files"] as LibraryFilter[]).map((item) => (
+          {(["all", "notes", "files"] as LibraryFilter[]).map((item) => (
             <button
               type="button"
               key={item}
@@ -206,43 +180,6 @@ export function StudyLibrary({
           ⇣ Import
         </button>
       </div>
-
-      {(filter === "all" || filter === "notebooks") && (
-        <section className="study-library-section">
-          <header>
-            <div><p className="tiny-label">HANDWRITING</p><h2>Notebooks</h2></div>
-            <button type="button" onClick={onOpenSketchbook}>Open Sketchbook →</button>
-          </header>
-          <div className="study-notebook-grid">
-            <button type="button" className="study-library-new study-new-notebook" onClick={makeNotebook}>
-              <span>＋</span><strong>New notebook</strong><small>Choose paper and start writing</small>
-            </button>
-            {visibleNotebooks.map((notebook) => (
-              <article
-                className="study-notebook-card"
-                key={notebook.id}
-                style={{ "--notebook-color": notebook.color } as CSSProperties}
-              >
-                <button type="button" className="study-notebook-open" onClick={() => onOpenNotebook(notebook)}>
-                  <i aria-hidden="true" />
-                  <small>{notebook.subject || "MY NOTEBOOK"}</small>
-                  <strong>{notebook.title}</strong>
-                  <span>{notebook.pageCount} pages · {notebook.paper}</span>
-                </button>
-                <button
-                  type="button"
-                  className="study-card-menu"
-                  onClick={() => setNotebookEditor({ ...notebook })}
-                  aria-label={`Edit ${notebook.title}`}
-                >
-                  •••
-                </button>
-              </article>
-            ))}
-          </div>
-          {!visibleNotebooks.length && query && <p className="study-library-empty">No notebooks match “{search}”.</p>}
-        </section>
-      )}
 
       {(filter === "all" || filter === "notes") && (
         <section className="study-library-section">
@@ -309,40 +246,6 @@ export function StudyLibrary({
         <button type="button" className="study-library-toast" onClick={() => !importBusy && setMessage("")}>
           {importBusy && <i aria-hidden="true" />}<span>{message}</span><b>×</b>
         </button>
-      )}
-
-      {notebookEditor && (
-        <div className="study-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setNotebookEditor(null); }}>
-          <section className="study-editor-card" role="dialog" aria-modal="true" aria-label="Notebook editor">
-            <header>
-              <div><p className="tiny-label">NOTEBOOK</p><h2>{hasNotebook(notebookEditor.id) ? "Edit its cover" : "A new notebook"}</h2></div>
-              <button type="button" onClick={() => setNotebookEditor(null)} aria-label="Close">×</button>
-            </header>
-            <label><span>Name</span><input autoFocus value={notebookEditor.title} onChange={(event) => setNotebookEditor({ ...notebookEditor, title: event.target.value })} placeholder="e.g. Differential Equations" /></label>
-            <label><span>Subject label</span><input value={notebookEditor.subject} onChange={(event) => setNotebookEditor({ ...notebookEditor, subject: event.target.value })} placeholder="COURSE · PROJECT · PERSONAL" /></label>
-            <fieldset><legend>Cover</legend><div className="study-cover-swatches">{notebookColors.map((color) => <button type="button" key={color} className={notebookEditor.color === color ? "active" : ""} style={{ backgroundColor: color }} onClick={() => setNotebookEditor({ ...notebookEditor, color })} aria-label={`Use ${color} cover`} />)}</div></fieldset>
-            <fieldset><legend>Paper</legend><div className="study-paper-choices">{(["grid", "lined", "dotted", "plain"] as StudyNotebook["paper"][]).map((paper) => <button type="button" key={paper} className={notebookEditor.paper === paper ? "active" : ""} onClick={() => setNotebookEditor({ ...notebookEditor, paper })}>{paper}</button>)}</div></fieldset>
-            <footer>
-              {hasNotebook(notebookEditor.id) ? <button type="button" className="danger" onClick={() => { onNotebooksChange(notebooks.filter((item) => item.id !== notebookEditor.id)); setNotebookEditor(null); }}>Delete</button> : <span />}
-              <span />
-              <button type="button" onClick={() => setNotebookEditor(null)}>Cancel</button>
-              <button
-                type="button"
-                className="primary"
-                disabled={!notebookEditor.title.trim()}
-                onClick={() => {
-                  const isExisting = hasNotebook(notebookEditor.id);
-                  const saved = { ...notebookEditor, title: notebookEditor.title.trim(), subject: notebookEditor.subject.trim(), updatedAt: new Date().toISOString() };
-                  onNotebooksChange(isExisting ? notebooks.map((item) => item.id === saved.id ? saved : item) : [saved, ...notebooks]);
-                  setNotebookEditor(null);
-                  onOpenNotebook(saved);
-                }}
-              >
-                Save & write
-              </button>
-            </footer>
-          </section>
-        </div>
       )}
 
       {noteEditor && (

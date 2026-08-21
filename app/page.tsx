@@ -54,8 +54,9 @@ import {
   sketchPaperInkColors,
 } from "./sketch-paper";
 
-type Tab = "today" | "habits" | "library" | "focus" | "journal" | "spaces";
-type Space = "menu" | "classes" | "sketchbook";
+type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
+type PrimaryNavId = Tab | "add";
+type Space = "menu" | "classes" | "library" | "sketchbook";
 type MetricsPeriod = "week" | "month" | "year" | "all";
 type AppTheme =
   | "storybook"
@@ -73,6 +74,7 @@ type AppTheme =
   | "lovelyevening"
   | "rosegrid"
   | "noirrest"
+  | "ao3night"
   | "peachparlor"
   | "mintletter"
   | "blueberrynight"
@@ -334,6 +336,7 @@ type PostItPage =
   | "journal"
   | "spaces:menu"
   | "spaces:classes"
+  | "spaces:library"
   | "spaces:sketchbook";
 
 type PostItNote = {
@@ -609,6 +612,22 @@ const themeOptions: {
     interfaceIdea: "monochrome glass",
   },
   {
+    id: "ao3night",
+    name: "Rose Pine night letters",
+    description: "Deep green-black AO3 ink with pastel rose, lilac, sky, and sage details.",
+    colors: ["#14201c", "#f8c8dc", "#c4a7e7"],
+    icon: "♡",
+    art: "/assets/openmoji/love-letter.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "little night letters",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "dark AO3 pastels",
+  },
+  {
     id: "peachparlor",
     name: "Peach ribbon parlor",
     description: "Peach cream, satin bows, tiny berries, and warm golden details.",
@@ -705,10 +724,10 @@ const starterReminders: Reminder[] = [
   },
 ];
 
-const tabs: { id: Tab; icon: string; label: string }[] = [
+const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
   { id: "today", icon: "⌂", label: "Today" },
   { id: "habits", icon: "✓", label: "Habits" },
-  { id: "library", icon: "▥", label: "Library" },
+  { id: "add", icon: "＋", label: "Add" },
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
@@ -1451,11 +1470,13 @@ export default function Home() {
   const postItDragRef = useRef<{
     id: string;
     pointerId: number;
+    target: HTMLElement;
     offsetX: number;
     offsetY: number;
     startX: number;
     startY: number;
   } | null>(null);
+  const postItLongPressRef = useRef<number | null>(null);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -2554,6 +2575,7 @@ export default function Home() {
     postItDragRef.current = {
       id: postIt.id,
       pointerId: event.pointerId,
+      target: event.currentTarget,
       offsetX: event.clientX - centerX,
       offsetY: event.clientY - centerY,
       startX: event.clientX,
@@ -2561,12 +2583,28 @@ export default function Home() {
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedPostItId(postIt.id);
+    if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
+    postItLongPressRef.current = window.setTimeout(() => {
+      const activeDrag = postItDragRef.current;
+      if (!activeDrag || activeDrag.id !== postIt.id) return;
+      if (activeDrag.target.hasPointerCapture(activeDrag.pointerId)) {
+        activeDrag.target.releasePointerCapture(activeDrag.pointerId);
+      }
+      postItDragRef.current = null;
+      setSelectedPostItId(null);
+      navigator.vibrate?.(18);
+      openPostItEditor(postIt);
+    }, 560);
   };
 
   const movePostIt = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = postItDragRef.current;
     const canvas = phoneCanvasRef.current;
     if (!drag || !canvas || drag.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 10) {
+      if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
+      postItLongPressRef.current = null;
+    }
     const bounds = canvas.getBoundingClientRect();
     const x = Math.max(
       9,
@@ -2582,6 +2620,8 @@ export default function Home() {
   };
 
   const finishPostItDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
+    postItLongPressRef.current = null;
     const drag = postItDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -2917,6 +2957,19 @@ export default function Home() {
     });
     setTodoDraft("");
     setEventEditorOpen(true);
+  };
+
+  const openNewEventFromNavigation = () => {
+    const dateKey = activeTab === "today" ? selectedHomeDate : todayKey;
+    const date = dateFromKey(dateKey);
+    setSelectedCalendarDate(dateKey);
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarOpen(true);
+    openNewEvent(dateKey);
   };
 
   const openNewEventAtMinute = (dateKey: string, minute: number) => {
@@ -4440,12 +4493,7 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
-          <button
-            className="brand-wrap"
-            type="button"
-            onClick={openMetrics}
-            aria-label="Open aérea metrics"
-          >
+          <div className="brand-wrap">
             <span className="brand-mark profile-mark">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="" />
@@ -4457,7 +4505,7 @@ export default function Home() {
               <span className="eyebrow">MY LITTLE DAY</span>
               <strong className="wordmark">aérea</strong>
             </span>
-          </button>
+          </div>
           <div className="header-actions">
             <button
               className="post-it-create-button"
@@ -4603,37 +4651,8 @@ export default function Home() {
             </section>
           )}
 
-          {activeTab === "library" && (
-            <StudyLibrary
-              notebooks={studyNotebooks}
-              notes={studyNotes}
-              files={studyFiles}
-              onNotebooksChange={setStudyNotebooks}
-              onNotesChange={setStudyNotes}
-              onOpenNotebook={openStudyNotebook}
-              onOpenFile={(file) => void openStudyFile(file)}
-              onDeleteFile={(file) => void deleteStudyFile(file)}
-              onImportFiles={importStudyFiles}
-              onOpenSketchbook={() => {
-                setActiveStudyNotebookId(null);
-                setActiveTab("spaces");
-                setSpace("sketchbook");
-              }}
-            />
-          )}
-
           {activeTab === "focus" && (
             <section className="screen-section focus-screen">
-              <button
-                type="button"
-                className="focus-sketchbook-back"
-                onClick={() => {
-                  setActiveTab("spaces");
-                  setSpace("sketchbook");
-                }}
-              >
-                <span>←</span> Back to Sketchbook
-              </button>
               <ScreenIntro
                 label="A QUIET POCKET OF TIME"
                 title="Let’s focus together"
@@ -4788,20 +4807,20 @@ export default function Home() {
                   />
                   <div className="spaces-grid">
                     <SpaceCard
-                      title="Class library"
+                      title="Library"
+                      subtitle="Notes, PDFs & books"
+                      color="space-lilac"
+                      icon="▥"
+                      note={`${studyNotes.length + studyFiles.length} saved items`}
+                      onClick={() => setSpace("library")}
+                    />
+                    <SpaceCard
+                      title="Class recordings"
                       subtitle="Recordings with notes"
                       color="space-blue"
                       icon="🎧"
                       note={`${recordings.length} recordings`}
                       onClick={() => setSpace("classes")}
-                    />
-                    <SpaceCard
-                      title="Cute sketchbook"
-                      subtitle="Draw and handwrite notes"
-                      color="space-lilac"
-                      icon="✎"
-                      note="Grid · lined · blank"
-                      onClick={() => setSpace("sketchbook")}
                     />
                     <SpaceCard
                       title="Calendar"
@@ -4813,6 +4832,18 @@ export default function Home() {
                     />
                   </div>
                 </>
+              )}
+
+              {space === "library" && (
+                <StudyLibrary
+                  notes={studyNotes}
+                  files={studyFiles}
+                  onNotesChange={setStudyNotes}
+                  onOpenFile={(file) => void openStudyFile(file)}
+                  onDeleteFile={(file) => void deleteStudyFile(file)}
+                  onImportFiles={importStudyFiles}
+                  onBack={() => setSpace("menu")}
+                />
               )}
 
               {space === "classes" && (
@@ -5032,7 +5063,7 @@ export default function Home() {
                 </section>
               )}
 
-              {space === "sketchbook" && (
+              {false && space === "sketchbook" && (
                 <section>
                   <InnerHeader
                     label="CUTE SKETCHBOOK"
@@ -5452,22 +5483,22 @@ export default function Home() {
                           </div>
                           <textarea
                             autoFocus
-                            value={sketchTextEditor.text}
+                            value={sketchTextEditor!.text}
                             onChange={(event) => setSketchTextEditor((current) => current ? { ...current, text: event.target.value } : current)}
                             placeholder="Type something for this spot…"
                           />
                           <footer>
                             <button onClick={() => setSketchTextEditor(null)}>Cancel</button>
                             <button
-                              disabled={!sketchTextEditor.text.trim()}
+                              disabled={!sketchTextEditor!.text.trim()}
                               onClick={() => {
                                 sketchStrokesRef.current.push({
                                   id: crypto.randomUUID(),
                                   tool: "text",
                                   color: penColor,
                                   size: penSize,
-                                  points: [sketchTextEditor.point],
-                                  text: sketchTextEditor.text.trim(),
+                                  points: [sketchTextEditor!.point],
+                                  text: sketchTextEditor!.text.trim(),
                                 });
                                 sketchRedoRef.current = [];
                                 setSketchTextEditor(null);
@@ -5641,7 +5672,7 @@ export default function Home() {
           >
             {visiblePostIts.map((postIt) => (
               <article
-                className={`movable-post-it ${postIt.color} ${selectedPostItId === postIt.id ? "selected" : ""}`}
+                className={`movable-post-it ${postIt.color}`}
                 key={postIt.id}
                 style={
                   {
@@ -5654,24 +5685,22 @@ export default function Home() {
                 onPointerMove={movePostIt}
                 onPointerUp={finishPostItDrag}
                 onPointerCancel={finishPostItDrag}
-                onDoubleClick={() => openPostItEditor(postIt)}
+                onContextMenu={(event) => event.preventDefault()}
+                role="button"
+                tabIndex={0}
+                aria-label="Movable post-it. Hold to edit."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openPostItEditor(postIt);
+                  }
+                }}
               >
                 <span className="post-it-tape" aria-hidden="true" />
                 <p>{postIt.text}</p>
                 <span className="post-it-doodle" aria-hidden="true">
                   {postItDoodleGlyph(postIt.doodle)}
                 </span>
-                <button
-                  className="post-it-edit"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openPostItEditor(postIt);
-                  }}
-                  aria-label="Edit this post-it"
-                >
-                  ✎
-                </button>
               </article>
             ))}
           </div>
@@ -5681,8 +5710,18 @@ export default function Home() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              className={activeTab === tab.id ? "nav-item active" : "nav-item"}
-              onClick={() => changeTab(tab.id)}
+              className={[
+                "nav-item",
+                activeTab === tab.id ? "active" : "",
+                tab.id === "add" ? "nav-add-event" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => {
+                if (tab.id === "add") {
+                  openNewEventFromNavigation();
+                  return;
+                }
+                changeTab(tab.id);
+              }}
             >
               <span>{tab.icon}</span>
               <small>{tab.label}</small>
@@ -5718,6 +5757,7 @@ export default function Home() {
               lineHeight: 1.7,
               bookmarks: [],
               chapterNotes: {},
+              highlights: [],
             }
           }
           onReadingStateChange={(readingState) =>
@@ -6243,16 +6283,7 @@ export default function Home() {
                       )}
                     </div>
                     <header className="topbar agenda-v2-homebar">
-                      <button
-                        className="brand-wrap"
-                        type="button"
-                        onClick={() => {
-                          setCalendarScheduleOpen(false);
-                          setCalendarOpen(false);
-                          openMetrics();
-                        }}
-                        aria-label="Open aérea metrics"
-                      >
+                      <div className="brand-wrap">
                         <span className="brand-mark profile-mark">
                           {profilePhoto ? (
                             <img src={profilePhoto} alt="" />
@@ -6264,7 +6295,7 @@ export default function Home() {
                           <span className="eyebrow">MY LITTLE DAY</span>
                           <strong className="wordmark">aérea</strong>
                         </span>
-                      </button>
+                      </div>
                       <div className="header-actions">
                         <button
                           className="calendar-button"
@@ -6516,7 +6547,11 @@ export default function Home() {
                                   }}
                                   title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
                                 >
-                                  {calendarEvent.title}
+                                  <i aria-hidden="true" />
+                                  <span>
+                                    <strong>{calendarEvent.title}</strong>
+                                    <small>{eventStartTimeLabel(calendarEvent)}</small>
+                                  </span>
                                 </button>
                               ))}
                               {dayEvents.length > 3 && (
@@ -6528,22 +6563,20 @@ export default function Home() {
                       })}
                     </div>
 
-                    <button
-                      className="extended-calendar-add"
-                      type="button"
-                      onClick={() => openNewEvent(selectedCalendarDate)}
-                      aria-label={`Add event to ${readableDate(selectedCalendarDate)}`}
-                    >
-                      +
-                    </button>
-
                     <nav className="extended-calendar-nav" aria-label="Primary navigation">
-                      {tabs.slice(0, 4).map((tab) => (
+                      {tabs.map((tab) => (
                         <button
                           key={tab.id}
                           type="button"
-                          className={tab.id === activeTab ? "active" : ""}
+                          className={[
+                            tab.id === activeTab ? "active" : "",
+                            tab.id === "add" ? "nav-add-event" : "",
+                          ].filter(Boolean).join(" ")}
                           onClick={() => {
+                            if (tab.id === "add") {
+                              openNewEvent(selectedCalendarDate);
+                              return;
+                            }
                             setCalendarExpanded(false);
                             setCalendarOpen(false);
                             changeTab(tab.id);
@@ -6833,72 +6866,6 @@ export default function Home() {
                 )}
                 {calendarScheduleOpen && (
                   <div className="agenda-v2">
-                    <section className="welcome-row agenda-v2-greeting">
-                      <div>
-                        <p className="date-label">
-                          {selectedScheduleDateObject
-                            .toLocaleDateString("en", {
-                              weekday: "long",
-                              month: "long",
-                              day: "numeric",
-                            })
-                            .toUpperCase()}
-                        </p>
-                        <h2>
-                          {selectedScheduleIsToday
-                            ? isNight
-                              ? "Good evening, lovely."
-                              : "Good morning, lovely."
-                            : `A little look at ${selectedScheduleWeekday}.`}
-                        </h2>
-                        <p className="soft-copy">
-                          {selectedScheduleIsToday
-                            ? isNight
-                              ? "You did enough today. Let the evening soften around you."
-                              : "Let’s make today feel a little lighter."
-                            : "Return to today whenever you want to come back."}
-                        </p>
-                      </div>
-                      {activeTheme.showCharm !== false && (
-                        <div
-                          className={[
-                            "day-charm",
-                            activeTheme.charm === "you may rest" ? "curved-copy" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          aria-label={`${activeTheme.name}: ${activeTheme.charm}`}
-                        >
-                          <img src={activeTheme.art} alt="" />
-                          {activeTheme.charm === "you may rest" ? (
-                            <svg
-                              className="day-charm-curve"
-                              viewBox="0 0 100 100"
-                              aria-hidden="true"
-                            >
-                              <defs>
-                                <path
-                                  id="agenda-you-may-rest-curve"
-                                  d="M 15 70 Q 50 94 85 70"
-                                />
-                              </defs>
-                              <text>
-                                <textPath
-                                  href="#agenda-you-may-rest-curve"
-                                  startOffset="50%"
-                                  textAnchor="middle"
-                                >
-                                  YOU MAY REST
-                                </textPath>
-                              </text>
-                            </svg>
-                          ) : (
-                            <span>{activeTheme.charm}</span>
-                          )}
-                        </div>
-                      )}
-                    </section>
-
                     <div
                       className="agenda-v2-week"
                       onTouchStart={startScheduleSwipe}
@@ -7177,9 +7144,17 @@ export default function Home() {
                       {tabs.map((tab) => (
                         <button
                           key={tab.id}
-                          className={tab.id === activeTab ? "nav-item active" : "nav-item"}
+                          className={[
+                            "nav-item",
+                            tab.id === activeTab ? "active" : "",
+                            tab.id === "add" ? "nav-add-event" : "",
+                          ].filter(Boolean).join(" ")}
                           type="button"
                           onClick={() => {
+                            if (tab.id === "add") {
+                              openNewEvent(selectedCalendarDate);
+                              return;
+                            }
                             setCalendarScheduleOpen(false);
                             setCalendarOpen(false);
                             changeTab(tab.id);
@@ -8043,7 +8018,7 @@ export default function Home() {
           );
         })()}
 
-      {metricsOpen && (
+      {false && metricsOpen && (
         <div className="metrics-backdrop metrics-v2-backdrop" role="presentation">
           <section
             className="metrics-screen metrics-screen-v2"
@@ -8516,7 +8491,10 @@ export default function Home() {
                     key={theme.id}
                     className={`theme-option ${appTheme === theme.id ? "active" : ""}`}
                     data-theme-option={theme.id}
-                    onClick={() => setAppTheme(theme.id)}
+                    onClick={() => {
+                      setAppTheme(theme.id);
+                      if (theme.id === "ao3night") setColorMode("dark");
+                    }}
                     aria-pressed={appTheme === theme.id}
                     style={
                       {
