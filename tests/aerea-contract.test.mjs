@@ -719,6 +719,93 @@ test("keeps sports provider secrets behind a normalized Supabase model", () => {
   assert.match(pageSource, /match-day-pocket-card/);
 });
 
+test("reads and caches the canonical Boca fixture independently", () => {
+  assert.match(syncSource, /export type FootballMatch = \{/);
+  assert.match(syncSource, /const FOOTBALL_MATCHES_KEY = "aerea-football-matches-v1"/);
+  assert.match(syncSource, /\.from\("football_matches"\)/);
+  assert.match(syncSource, /\.eq\("team_key", "boca_juniors"\)/);
+  assert.match(syncSource, /external_event_id,team_key,match_date,kickoff_at,time_confirmed/);
+  assert.match(syncSource, /new Map\(matches\.map\(\(match\) => \[match\.external_event_id, match\]\)\)/);
+  assert.match(syncSource, /throw new Error\("Supabase returned an invalid Boca fixture\."\)/);
+  assert.match(syncSource, /localStorage\.setItem\(FOOTBALL_MATCHES_KEY, JSON\.stringify\(matches\)\)/);
+  assert.match(pageSource, /useState<FootballMatch\[\]>\(\[\]\)/);
+  assert.match(pageSource, /readCachedFootballMatches\(\)/);
+  assert.match(pageSource, /Never replace the last valid Boca fixture after a failed refresh/);
+  assert.match(pageSource, /table: "football_matches"/);
+  assert.match(pageSource, /filter: "team_key=eq\.boca_juniors"/);
+  assert.match(pageSource, /window\.addEventListener\("online", refreshWhenOnline\)/);
+  assert.match(pageSource, /document\.addEventListener\("visibilitychange", refreshWhenVisible\)/);
+  assert.match(pageSource, /window\.setInterval\(refreshFootballMatches, 15 \* 60_000\)/);
+});
+
+test("keeps canonical Boca out of private and generic event state", () => {
+  const privateStateStart = pageSource.indexOf("const state = {");
+  const privateStateEnd = pageSource.indexOf("};", privateStateStart);
+  const privateStatePayload = pageSource.slice(privateStateStart, privateStateEnd);
+  assert.ok(privateStateStart >= 0 && privateStateEnd > privateStateStart);
+  assert.match(privateStatePayload, /calendarEvents,/);
+  assert.match(privateStatePayload, /sportsEvents,/);
+  assert.doesNotMatch(privateStatePayload, /footballMatches/);
+  assert.match(pageSource, /const footballCalendarEvents = useMemo<FootballVisualEvent\[\]>/);
+  assert.match(pageSource, /\.\.\.calendarEvents,[\s\S]{0,100}\.\.\.sportsCalendarEvents,[\s\S]{0,100}\.\.\.footballCalendarEvents/);
+  assert.match(pageSource, /state\.sportsEvents\.filter\([\s\S]{0,100}!isBocaSportsEvent\(event\)/);
+  assert.match(pageSource, /sportsEvents[\s\S]{0,240}!isBocaSportsEvent\(event\)/);
+  assert.match(syncSource, /\.filter\(\(event\) => !isBocaSportsEvent\(event\)\)/);
+  assert.match(featureSource, /export function isBocaSportsTeam/);
+  assert.match(featureSource, /providerExternalId === "451"/);
+  assert.match(featureSource, /export function isBocaSportsEvent/);
+});
+
+test("renders one read-only Boca match across the current v156 surfaces", () => {
+  assert.match(pageSource, /id: `football:\$\{match\.external_event_id\}`/);
+  assert.match(pageSource, /sportsSource: "football_matches"/);
+  assert.match(pageSource, /if \(!match\.time_confirmed \|\| !match\.kickoff_at\) return null/);
+  assert.match(pageSource, /if \(!kickoff\) return "Hora por confirmar"/);
+  assert.match(pageSource, /kickoff\.getHours\(\)/);
+  assert.match(pageSource, /footballMatchFinished\(event\.footballMatch\)/);
+  assert.match(pageSource, /footballMatchCancelled\(event\.footballMatch\)/);
+  assert.match(pageSource, /start: Number\.POSITIVE_INFINITY/);
+  assert.equal(
+    [...pageSource.matchAll(/findComingUpEvent\(selectedDateEvents, now\)/g)].length,
+    1,
+  );
+  assert.match(pageSource, /selectedFootballMatch &&/);
+  assert.match(pageSource, /football-match-detail/);
+  assert.match(pageSource, /Automatic match · read-only/);
+  assert.doesNotMatch(pageSource, /selectedFootballMatch[\s\S]{0,5000}Edit this event/);
+  assert.match(pageSource, /calendarEvent\.eventType !== "sports_event" &&[\s\S]{0,100}startCalendarEventDrag/);
+  assert.match(pageSource, /if \(event\.eventType === "sports_event"\) return/);
+  for (const surface of [
+    "simplified-event-strip",
+    "extended-event-pill",
+    "calendar-cell-event",
+    "agenda-v2-event",
+    "event-chip",
+    "match-day-pocket-card",
+    "match-day-schedule-card",
+  ]) {
+    assert.match(pageSource, new RegExp(surface));
+  }
+  assert.match(pageSource, /<p className="day-summary-category">DAY POCKET<\/p>/);
+  assert.match(pageSource, /beginCalendarLongPress\(dayKey, event\)/);
+  assert.match(pageSource, /window\.setTimeout\([\s\S]{0,120}setDaySummaryDate/);
+});
+
+test("schedules only one confirmed Boca notification identity", () => {
+  assert.match(pageSource, /const genericNotificationEvents = followedEvents\.map/);
+  assert.match(pageSource, /const bocaNotificationEvents = footballMatches\.flatMap/);
+  assert.match(pageSource, /if \(!kickoff\) return \[\]/);
+  assert.match(pageSource, /externalId: `boca:\$\{match\.external_event_id\}`/);
+  assert.match(pageSource, /externalId: `sports:\$\{event\.teamId\}:\$\{event\.externalId\}`/);
+  assert.match(pageSource, /const uniqueSportsNotificationEvents = Array\.from/);
+  assert.match(pageSource, /new Map\([\s\S]{0,240}\[event\.externalId, event\]/);
+  assert.match(pageSource, /eventsJson: JSON\.stringify\(uniqueSportsNotificationEvents\)/);
+  assert.equal(
+    [...pageSource.matchAll(/AereaSportsNotifications\.sync\(/g)].length,
+    1,
+  );
+});
+
 test("keeps morning, night and smart rescheduling small but actionable", () => {
   assert.match(pageSource, /MORNING RESET ♡/);
   assert.match(pageSource, /NIGHT RESET ♡/);
@@ -870,7 +957,7 @@ test("keeps the rose editorial interface in the theme gallery", () => {
 
 test("shows Coming up next dynamically on today across every theme", () => {
   assert.match(pageSource, /function findComingUpEvent/);
-  assert.match(pageSource, /\.filter\(\(event\) => !event\.allDay\)/);
+  assert.match(pageSource, /if \(!isFootballVisualEvent\(event\)\) return !event\.allDay/);
   assert.match(pageSource, /\.filter\(\(\{ end \}\) => end > currentMinute\)/);
   assert.match(pageSource, /now=\{scheduleNow\}/);
   assert.match(pageSource, /selectedIsToday\s*\?\s*findComingUpEvent/);
@@ -878,7 +965,7 @@ test("shows Coming up next dynamically on today across every theme", () => {
   assert.doesNotMatch(pageSource, /Nothing else is waiting for you today/);
   assert.match(pageSource, /comingUpEvent\.sportsCardStyle \? "match-day-schedule-card"/);
   assert.match(pageSource, /`\$\{comingUpEvent\.color\}-card`/);
-  assert.match(pageSource, /comingUpEvent\.allDay \? "ALL" : comingUpEvent\.time/);
+  assert.match(pageSource, /eventTimeBlockPrimary\(comingUpEvent\)/);
   assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
   assert.match(pageSource, /<div className="schedule-line" \/>/);
   assert.match(pageSource, /<div className="mini-people">/);

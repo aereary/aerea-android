@@ -12642,6 +12642,169 @@ body {
   }
 }
 
+/* Canonical Boca fixtures reuse the current v156 cards with one quiet identity. */
+.canonical-boca-match {
+  --sports-primary: #0b2f78;
+  --sports-secondary: #f6cf2f;
+}
+
+.event-chip.canonical-boca-match,
+.agenda-v2-all-day-event.canonical-boca-match {
+  background:linear-gradient(112deg,color-mix(in srgb,#0b2f78 88%,var(--paper)),color-mix(in srgb,#f6cf2f 70%,var(--paper)));
+  border-color:color-mix(in srgb,#f6cf2f 60%,transparent);
+  color:#fff;
+}
+
+.event-chip.canonical-boca-match :is(strong,small,span,i) { color:inherit; }
+
+.simplified-event-strip.canonical-boca-match,
+.extended-event-pill.canonical-boca-match,
+.calendar-cell-event.canonical-boca-match {
+  background:linear-gradient(100deg,color-mix(in srgb,#0b2f78 86%,var(--paper)),color-mix(in srgb,#f6cf2f 66%,var(--paper)));
+  border-color:color-mix(in srgb,#f6cf2f 52%,transparent);
+  color:#fff;
+}
+
+.simplified-event-strip.canonical-boca-match::before {
+  background:#f6cf2f;
+}
+
+.agenda-v2-event.canonical-boca-match {
+  border-color:color-mix(in srgb,#f6cf2f 66%,transparent);
+  box-shadow:inset 4px 0 #0b2f78;
+}
+
+.agenda-v2-pending-time-list .canonical-boca-match {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.schedule-card.canonical-boca-match .time-block strong:first-child {
+  font-size:clamp(.72rem,2.2vw,.9rem);
+}
+
+.canonical-team-source {
+  background:linear-gradient(100deg,#0b2f78,#315495);
+  border:2px solid color-mix(in srgb,#f6cf2f 66%,transparent);
+  border-radius:999px;
+  color:#fff;
+  font-size:.58rem;
+  font-weight:950;
+  letter-spacing:.08em;
+  padding:6px 9px;
+}
+
+.football-match-detail {
+  --detail-tint:#d8e3f5;
+  background:linear-gradient(150deg,color-mix(in srgb,#fff 94%,#f6cf2f),color-mix(in srgb,#fff 91%,#0b2f78));
+  border:1px solid color-mix(in srgb,#0b2f78 24%,transparent);
+  box-shadow:0 28px 70px rgba(11,47,120,.22);
+}
+
+.football-match-detail-heading { margin-top:12px; }
+.football-match-detail-heading .event-detail-category-row > span {
+  background:color-mix(in srgb,#f6cf2f 32%,#fff);
+  border-radius:999px;
+  color:#0b2f78;
+  font-size:.56rem;
+  font-weight:950;
+  letter-spacing:.08em;
+  margin-left:auto;
+  padding:6px 9px;
+}
+.football-match-detail-heading .event-detail-title {
+  color:#0b2f78;
+  font-size:clamp(1.8rem,7vw,2.55rem);
+  line-height:1.03;
+}
+.football-match-detail-heading .event-detail-title em {
+  color:#8e7310;
+  font-family:inherit;
+  font-size:.5em;
+  font-style:normal;
+  text-transform:uppercase;
+}
+.football-match-detail-heading > p {
+  color:var(--muted);
+  font-size:.76rem;
+  font-weight:800;
+  margin:8px 0 0;
+}
+
+.football-match-scoreboard {
+  align-items:center;
+  background:linear-gradient(115deg,#0b2f78,#244889);
+  border:2px solid color-mix(in srgb,#f6cf2f 66%,transparent);
+  border-radius:22px;
+  color:#fff;
+  display:grid;
+  gap:8px;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  margin-top:18px;
+  padding:16px;
+  text-align:center;
+}
+.football-match-scoreboard span {
+  font-size:.78rem;
+  font-weight:850;
+  line-height:1.15;
+}
+.football-match-scoreboard strong {
+  color:#f6cf2f;
+  font-size:1.35rem;
+  white-space:nowrap;
+}
+
+.football-match-facts {
+  display:grid;
+  gap:9px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.football-match-facts > div {
+  background:color-mix(in srgb,var(--detail-tint) 70%,#fff);
+  border:1px solid color-mix(in srgb,#0b2f78 13%,transparent);
+  border-radius:17px;
+  display:grid;
+  gap:4px;
+  min-width:0;
+  padding:12px;
+}
+.football-match-facts small {
+  color:#6d7190;
+  font-size:.56rem;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+.football-match-facts strong {
+  color:#26345f;
+  font-size:.8rem;
+  overflow-wrap:anywhere;
+}
+.football-match-read-only {
+  color:var(--muted);
+  font-size:.66rem;
+  font-weight:850;
+  margin:18px 0 0;
+  text-align:center;
+}
+
+.app-shell[data-theme="ao3night"] .football-match-detail {
+  background:linear-gradient(150deg,#26372f,#24364f);
+  border-color:rgba(246,207,47,.3);
+}
+.app-shell[data-theme="ao3night"] .football-match-detail-heading .event-detail-title,
+.app-shell[data-theme="ao3night"] .football-match-facts strong { color:#f2eff7; }
+.app-shell[data-theme="ao3night"] .football-match-facts > div {
+  background:rgba(255,255,255,.07);
+  border-color:rgba(246,207,47,.16);
+}
+
+@media (max-width:520px) {
+  .football-match-facts { grid-template-columns:1fr; }
+  .football-match-scoreboard { padding:14px 10px; }
+}
+
 /* The schedule is a focused daily agenda on every screen. */
 .calendar-expanded .schedule-shell {
   align-items:stretch;

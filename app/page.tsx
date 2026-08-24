@@ -11,9 +11,11 @@ import {
   currentAereaEmail,
   deleteAereaLibraryFile,
   downloadAereaLibraryFile,
+  fetchFootballMatches,
   fetchSportsFixtures,
   handleAereaAuthCallback,
   pushCloudState,
+  readCachedFootballMatches,
   readBrowserSketches,
   readBrowserState,
   reconcileCloudState,
@@ -24,6 +26,7 @@ import {
   verifyAereaCode,
   writeBrowserSketches,
   writeBrowserState,
+  type FootballMatch,
 } from "./supabase-sync";
 import {
   DEFAULT_RESET_PREFERENCES,
@@ -33,6 +36,8 @@ import {
   createTrashItem,
   fileKind,
   inferInboxKind,
+  isBocaSportsEvent,
+  isBocaSportsTeam,
   rangesOverlap,
   trashDaysRemaining,
   type EntityLink,
@@ -452,7 +457,19 @@ type CalendarEvent = {
   sportsPrimary?: string;
   sportsSecondary?: string;
   sportsIcon?: string;
+  sportsSource?: "generic" | "football_matches";
+  timePending?: boolean;
+  kickoffTimestamp?: number | null;
+  footballMatch?: FootballMatch;
   sourceInboxId?: string;
+};
+
+type FootballVisualEvent = CalendarEvent & {
+  eventType: "sports_event";
+  sportsSource: "football_matches";
+  timePending: boolean;
+  kickoffTimestamp: number | null;
+  footballMatch: FootballMatch;
 };
 
 type CalendarConflictRequest = {
@@ -1092,6 +1109,184 @@ function dateFromKey(dateKey: string) {
   return new Date(year, month - 1, day);
 }
 
+function normalizedFootballStatus(status: string) {
+  return status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function footballStatusLabel(status: string) {
+  const normalized = normalizedFootballStatus(status);
+  const labels: Record<string, string> = {
+    scheduled: "Scheduled",
+    not_started: "Scheduled",
+    live: "Live",
+    in_progress: "Live",
+    halftime: "Half time",
+    half_time: "Half time",
+    finished: "Finished",
+    full_time: "Finished",
+    ft: "Finished",
+    final: "Finished",
+    completed: "Finished",
+    ended: "Finished",
+    after_penalties: "Finished · penalties",
+    postponed: "Postponed",
+    suspended: "Suspended",
+    cancelled: "Cancelled",
+    canceled: "Cancelled",
+  };
+  return (
+    labels[normalized] ??
+    normalized
+      .split("_")
+      .filter(Boolean)
+      .map((word) => `${word[0]?.toUpperCase() ?? ""}${word.slice(1)}`)
+      .join(" ")
+  );
+}
+
+function footballMatchFinished(match: FootballMatch) {
+  return [
+    "finished",
+    "full_time",
+    "ft",
+    "final",
+    "completed",
+    "ended",
+    "after_penalties",
+  ].includes(normalizedFootballStatus(match.status));
+}
+
+function footballMatchCancelled(match: FootballMatch) {
+  return ["cancelled", "canceled", "abandoned", "awarded", "walkover"].includes(
+    normalizedFootballStatus(match.status),
+  );
+}
+
+function footballMatchIsLive(match: FootballMatch) {
+  return ["live", "in_progress", "halftime", "half_time"].includes(
+    normalizedFootballStatus(match.status),
+  );
+}
+
+function footballNotificationStatus(match: FootballMatch) {
+  const normalized = normalizedFootballStatus(match.status);
+  if (footballMatchFinished(match)) return "finished";
+  if (footballMatchCancelled(match)) return "cancelled";
+  if (["postponed", "suspended"].includes(normalized)) return "postponed";
+  if (footballMatchIsLive(match)) return "live";
+  return "scheduled";
+}
+
+function footballKickoff(match: FootballMatch) {
+  if (!match.time_confirmed || !match.kickoff_at) return null;
+  const kickoff = new Date(match.kickoff_at);
+  return Number.isNaN(kickoff.getTime()) ? null : kickoff;
+}
+
+function footballMatchDateKey(match: FootballMatch) {
+  const kickoff = footballKickoff(match);
+  return kickoff ? localDateKey(kickoff) : match.match_date;
+}
+
+function footballMatchTime(match: FootballMatch) {
+  const kickoff = footballKickoff(match);
+  if (!kickoff) return "Hora por confirmar";
+  return `${String(kickoff.getHours()).padStart(2, "0")}:${String(
+    kickoff.getMinutes(),
+  ).padStart(2, "0")}`;
+}
+
+function normalizedFootballTeamName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function footballMatchIsHome(match: FootballMatch) {
+  return normalizedFootballTeamName(match.home_team).includes("boca");
+}
+
+function footballMatchOpponent(match: FootballMatch) {
+  return footballMatchIsHome(match) ? match.away_team : match.home_team;
+}
+
+function footballScore(match: FootballMatch) {
+  if (match.home_score === null || match.away_score === null) return null;
+  return `${match.home_score}—${match.away_score}`;
+}
+
+function footballMatchTitle(match: FootballMatch) {
+  const score = footballScore(match);
+  const normalized = normalizedFootballStatus(match.status);
+  const prefix = footballMatchFinished(match)
+    ? "FINAL · "
+    : footballMatchIsLive(match)
+      ? "LIVE · "
+      : ["postponed", "suspended"].includes(normalized)
+        ? "POSTPONED · "
+        : footballMatchCancelled(match)
+          ? "CANCELLED · "
+          : "";
+  return `${prefix}${match.home_team} vs ${match.away_team}${score ? ` · ${score}` : ""}`;
+}
+
+function footballMatchSummary(match: FootballMatch) {
+  return [
+    footballMatchIsHome(match) ? "Home" : "Away",
+    match.competition,
+    match.venue,
+    footballStatusLabel(match.status),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function footballMatchToCalendarEvent(match: FootballMatch): FootballVisualEvent {
+  const kickoff = footballKickoff(match);
+  const startMinutes = kickoff
+    ? kickoff.getHours() * 60 + kickoff.getMinutes()
+    : null;
+  return {
+    id: `football:${match.external_event_id}`,
+    date: footballMatchDateKey(match),
+    endDate: footballMatchDateKey(match),
+    title: footballMatchTitle(match),
+    time: footballMatchTime(match),
+    endTime:
+      startMinutes === null
+        ? undefined
+        : timeFromMinutes(Math.min(23 * 60 + 45, startMinutes + 120)),
+    allDay: startMinutes === null,
+    calendar: "Boca Juniors",
+    color: "blue",
+    reminder: "Automatic fixture",
+    repeat: "Never",
+    location: match.venue ?? undefined,
+    note: footballMatchSummary(match),
+    eventType: "sports_event",
+    sportsEventId: match.external_event_id,
+    sportsCardStyle: true,
+    sportsPrimary: "#0b2f78",
+    sportsSecondary: "#f6cf2f",
+    sportsIcon: "💙💛",
+    sportsSource: "football_matches",
+    timePending: startMinutes === null,
+    kickoffTimestamp: kickoff?.getTime() ?? null,
+    footballMatch: match,
+  };
+}
+
+function isFootballVisualEvent(
+  event: CalendarEvent,
+): event is FootballVisualEvent {
+  return (
+    event.sportsSource === "football_matches" &&
+    event.footballMatch?.team_key === "boca_juniors"
+  );
+}
+
 function weekForDate(dateKey: string) {
   const anchor = dateFromKey(dateKey);
   const mondayOffset = (anchor.getDay() + 6) % 7;
@@ -1215,6 +1410,7 @@ const moodScores: Record<string, number> = {
 };
 
 function eventCompactTimeLabel(event: CalendarEvent) {
+  if (event.timePending) return "Hora por confirmar";
   if (event.allDay) return "All day";
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
@@ -1224,6 +1420,7 @@ function eventTimeLabel(event: CalendarEvent) {
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
+  if (event.timePending) return "Hora por confirmar";
   if (event.allDay) return "All day";
   const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return event.time;
@@ -1253,6 +1450,7 @@ function eventEndTimeLabel(event: CalendarEvent) {
 }
 
 function eventDetailTimeParts(event: CalendarEvent) {
+  if (event.timePending) return { range: "Hora por confirmar", period: "" };
   if (event.allDay) return { range: "All day", period: "" };
 
   const formatPart = (value: string) => {
@@ -1321,6 +1519,7 @@ function calendarEventAtOccurrence(event: CalendarEvent, dateKey: string) {
 }
 
 function scheduleEventIcon(event: CalendarEvent) {
+  if (isFootballVisualEvent(event)) return "⚽";
   const searchable = `${event.calendar ?? ""} ${event.title}`.toLowerCase();
   if (searchable.includes("workout") || searchable.includes("health")) return "🏋️";
   if (searchable.includes("class") || searchable.includes("school")) return "💻";
@@ -1355,13 +1554,30 @@ function findComingUpEvent(events: CalendarEvent[], now: Date) {
 
   return (
     events
-      .filter((event) => !event.allDay)
+      .filter((event) => {
+        if (!isFootballVisualEvent(event)) return !event.allDay;
+        return (
+          !footballMatchFinished(event.footballMatch) &&
+          !footballMatchCancelled(event.footballMatch)
+        );
+      })
       .map((event) => {
+        if (event.timePending) {
+          return {
+            event,
+            start: Number.POSITIVE_INFINITY,
+            end: Number.POSITIVE_INFINITY,
+          };
+        }
         const start = minutesFromTime(event.time);
         const requestedEnd = event.endTime
           ? minutesFromTime(event.endTime)
           : start + 60;
-        const end = Math.min(24 * 60, Math.max(start + 15, requestedEnd));
+        const end =
+          isFootballVisualEvent(event) &&
+          footballMatchIsLive(event.footballMatch)
+            ? Number.POSITIVE_INFINITY
+            : Math.min(24 * 60, Math.max(start + 15, requestedEnd));
         return { event, start, end };
       })
       .filter(({ end }) => end > currentMinute)
@@ -1395,7 +1611,7 @@ function scheduleDatesFor(dateKey: string, count: 5 | 7) {
 
 function layoutScheduleEvents(events: CalendarEvent[]) {
   const timed = events
-    .filter((event) => !event.allDay)
+    .filter((event) => !event.allDay && !event.timePending)
     .map((event) => {
       const start = minutesFromTime(event.time);
       const requestedEnd = event.endTime
@@ -1438,6 +1654,7 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
 }
 
 function matchCountdownLabel(event: CalendarEvent) {
+  if (event.timePending) return "Hora por confirmar";
   const start = new Date(`${event.date}T${event.time || "00:00"}:00`);
   const difference = start.getTime() - Date.now();
   const hours = Math.ceil(difference / 3_600_000);
@@ -1447,6 +1664,16 @@ function matchCountdownLabel(event: CalendarEvent) {
   if (hours < 24) return `In ${hours} hours ♡`;
   if (days === 1) return "Tomorrow ♡";
   return `In ${days} days ♡`;
+}
+
+function eventTimeBlockPrimary(event: CalendarEvent) {
+  if (event.timePending) return "TBC";
+  return event.allDay ? "ALL" : event.time;
+}
+
+function eventTimeBlockSecondary(event: CalendarEvent) {
+  if (event.timePending) return "TIME";
+  return event.allDay ? "DAY" : "TIME";
 }
 
 function eventRepeatLabel(event: CalendarEvent) {
@@ -1517,6 +1744,8 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [selectedFootballMatch, setSelectedFootballMatch] =
+    useState<FootballVisualEvent | null>(null);
   const [eventDetailReturnDayPocket, setEventDetailReturnDayPocket] =
     useState<string | null>(null);
   const [eventDeleteRequest, setEventDeleteRequest] =
@@ -1533,6 +1762,7 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
@@ -1840,7 +2070,11 @@ export default function Home() {
     const refresh = () => {
       void fetchSportsFixtures()
         .then((fixtures) => {
-          if (active && fixtures) setSportsEvents(fixtures);
+          if (active && fixtures) {
+            setSportsEvents(
+              fixtures.filter((event) => !isBocaSportsEvent(event)),
+            );
+          }
         })
         .catch(() => {
           // Cached fixtures remain visible while the device is offline.
@@ -1857,6 +2091,63 @@ export default function Home() {
   }, [stateReady]);
 
   useEffect(() => {
+    let cancelled = false;
+    let refreshRunning = false;
+    const cachedMatches = readCachedFootballMatches();
+    const cachedTimer = window.setTimeout(() => {
+      if (!cancelled && cachedMatches.length > 0) {
+        setFootballMatches(cachedMatches);
+      }
+    }, 0);
+
+    const refreshFootballMatches = async () => {
+      if (refreshRunning) return;
+      refreshRunning = true;
+      try {
+        const matches = await fetchFootballMatches();
+        if (!cancelled) setFootballMatches(matches);
+      } catch {
+        // Never replace the last valid Boca fixture after a failed refresh.
+      } finally {
+        refreshRunning = false;
+      }
+    };
+
+    void refreshFootballMatches();
+    const channel = supabase
+      .channel("aerea-boca-football-matches")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "football_matches",
+          filter: "team_key=eq.boca_juniors",
+        },
+        () => void refreshFootballMatches(),
+      )
+      .subscribe();
+    const refreshWhenOnline = () => void refreshFootballMatches();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshFootballMatches();
+      }
+    };
+    const interval = window.setInterval(refreshFootballMatches, 15 * 60_000);
+    window.addEventListener("online", refreshWhenOnline);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(cachedTimer);
+      window.clearInterval(interval);
+      window.removeEventListener("online", refreshWhenOnline);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!stateReady) return;
     const timer = window.setTimeout(() => {
       void syncFollowedSportsTeams(sportsSettings).catch(() => undefined);
@@ -1866,8 +2157,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady || !isNative()) return;
-    const followedEvents = sportsEvents.filter((event) =>
-      sportsSettings.followedTeamIds.includes(event.teamId),
+    const followedEvents = sportsEvents.filter(
+      (event) =>
+        !isBocaSportsEvent(event) &&
+        sportsSettings.followedTeamIds.includes(event.teamId),
     );
     const sync = async () => {
       if (sportsSettings.notifyBeforeMatches) {
@@ -1875,29 +2168,51 @@ export default function Home() {
           () => undefined,
         );
       }
+      const genericNotificationEvents = followedEvents.map((event) => {
+        const team = INITIAL_SPORTS_TEAMS.find(
+          (candidate) => candidate.id === event.teamId,
+        );
+        return {
+          externalId: `sports:${event.teamId}:${event.externalId}`,
+          startsAt: new Date(event.startsAtUtc).getTime(),
+          status: event.status,
+          team: team?.shortName ?? event.teamName ?? "Your team",
+          icon: team?.icon ?? "♡",
+          opponent: event.opponent,
+          time: event.localTime,
+        };
+      });
+      const bocaNotificationEvents = footballMatches.flatMap((match) => {
+        const kickoff = footballKickoff(match);
+        if (!kickoff) return [];
+        return [
+          {
+            externalId: `boca:${match.external_event_id}`,
+            startsAt: kickoff.getTime(),
+            status: footballNotificationStatus(match),
+            team: "Boca",
+            icon: "💙💛",
+            opponent: footballMatchOpponent(match),
+            time: footballMatchTime(match),
+          },
+        ];
+      });
+      const uniqueSportsNotificationEvents = Array.from(
+        new Map(
+          [...genericNotificationEvents, ...bocaNotificationEvents].map(
+            (event) => [event.externalId, event],
+          ),
+        ).values(),
+      );
+
       await AereaSportsNotifications.sync({
         enabled: sportsSettings.notifyBeforeMatches,
         leadMinutes: sportsSettings.notificationLeadMinutes,
-        eventsJson: JSON.stringify(
-          followedEvents.map((event) => {
-            const team = INITIAL_SPORTS_TEAMS.find(
-              (candidate) => candidate.id === event.teamId,
-            );
-            return {
-              externalId: event.externalId,
-              startsAt: new Date(event.startsAtUtc).getTime(),
-              status: event.status,
-              team: team?.shortName ?? "Your team",
-              icon: team?.icon ?? "♡",
-              opponent: event.opponent,
-              time: event.localTime,
-            };
-          }),
-        ),
+        eventsJson: JSON.stringify(uniqueSportsNotificationEvents),
       });
     };
     void sync().catch(() => undefined);
-  }, [sportsEvents, sportsSettings, stateReady]);
+  }, [footballMatches, sportsEvents, sportsSettings, stateReady]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -2060,7 +2375,11 @@ export default function Home() {
             });
           }
           if (Array.isArray(state.sportsEvents)) {
-            setSportsEvents(state.sportsEvents);
+            setSportsEvents(
+              state.sportsEvents.filter(
+                (event) => !isBocaSportsEvent(event),
+              ),
+            );
           }
           if (Array.isArray(state.calendarCategories) && state.calendarCategories.length) {
             setCalendarCategories(state.calendarCategories);
@@ -2500,7 +2819,11 @@ export default function Home() {
   const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
     if (!sportsSettings.addAutomatically) return [];
     return sportsEvents
-      .filter((event) => sportsSettings.followedTeamIds.includes(event.teamId))
+      .filter(
+        (event) =>
+          !isBocaSportsEvent(event) &&
+          sportsSettings.followedTeamIds.includes(event.teamId),
+      )
       .map((event) => {
         const team = INITIAL_SPORTS_TEAMS.find(
           (candidate) => candidate.id === event.teamId,
@@ -2556,12 +2879,44 @@ export default function Home() {
           sportsPrimary: team?.primaryColor,
           sportsSecondary: team?.secondaryColor,
           sportsIcon: team?.icon,
+          sportsSource: "generic" as const,
         };
       });
   }, [sportsEvents, sportsSettings]);
+  const footballCalendarEvents = useMemo<FootballVisualEvent[]>(
+    () =>
+      footballMatches
+        .map(footballMatchToCalendarEvent)
+        .sort((first, second) => {
+          const byDate = first.date.localeCompare(second.date);
+          if (byDate !== 0) return byDate;
+          if (
+            first.kickoffTimestamp === null &&
+            second.kickoffTimestamp !== null
+          ) {
+            return 1;
+          }
+          if (
+            first.kickoffTimestamp !== null &&
+            second.kickoffTimestamp === null
+          ) {
+            return -1;
+          }
+          return (
+            (first.kickoffTimestamp ?? 0) -
+              (second.kickoffTimestamp ?? 0) ||
+            first.title.localeCompare(second.title)
+          );
+        }),
+    [footballMatches],
+  );
   const allCalendarEvents = useMemo(
-    () => [...calendarEvents, ...sportsCalendarEvents],
-    [calendarEvents, sportsCalendarEvents],
+    () => [
+      ...calendarEvents,
+      ...sportsCalendarEvents,
+      ...footballCalendarEvents,
+    ],
+    [calendarEvents, footballCalendarEvents, sportsCalendarEvents],
   );
   const currentPostItPage: PostItPage =
     activeTab === "spaces" ? `spaces:${space}` : activeTab;
@@ -2732,17 +3087,23 @@ export default function Home() {
     });
     return groups;
   }, [calendarSearchResults]);
+  const selectedSchedulePendingTimeEvents = selectedDateEvents.filter(
+    (event) => event.timePending,
+  );
   const selectedScheduleAllDayEvents = selectedDateEvents.filter(
-    (event) => event.allDay,
+    (event) => event.allDay && !event.timePending,
   );
   const selectedTimedScheduleEvents = layoutScheduleEvents(
-    selectedDateEvents.filter((event) => !event.allDay),
+    selectedDateEvents.filter((event) => !event.allDay && !event.timePending),
   );
   const selectedScheduleAgendaEvents = [
+    ...selectedSchedulePendingTimeEvents,
     ...selectedScheduleAllDayEvents,
     ...selectedTimedScheduleEvents.map(({ event }) => event),
   ];
-  const scheduleHasAllDayEvents = selectedScheduleAllDayEvents.length > 0;
+  const scheduleHasFloatingEvents =
+    selectedSchedulePendingTimeEvents.length > 0 ||
+    selectedScheduleAllDayEvents.length > 0;
   const lastScheduledMinute = selectedTimedScheduleEvents.reduce(
     (latest, { end }) => Math.max(latest, end),
     0,
@@ -2797,7 +3158,11 @@ export default function Home() {
           .slice(0, 3)
           .map((event) => ({
             title: event.title,
-            time: event.allDay ? "Todo el día" : event.time,
+            time: event.timePending
+              ? "Hora por confirmar"
+              : event.allDay
+                ? "Todo el día"
+                : event.time,
             color: event.color,
           }));
 
@@ -3917,9 +4282,11 @@ export default function Home() {
         month: "long",
       }),
       eventTitle: nextEvent?.title ?? "Sin eventos para hoy",
-      eventTime: nextEvent?.allDay
-        ? "Todo el día"
-        : nextEvent?.time || "Abre aérea para planear",
+      eventTime: nextEvent?.timePending
+        ? "Hora por confirmar"
+        : nextEvent?.allDay
+          ? "Todo el día"
+          : nextEvent?.time || "Abre aérea para planear",
       temperature: activeTheme.icon,
       progress: `${doneIds.length}/${reminders.length} recordatorios · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tareas`,
       theme: widgetTheme,
@@ -4883,11 +5250,18 @@ export default function Home() {
     returnDayPocket: string | null = null,
   ) => {
     setEventDetailReturnDayPocket(returnDayPocket);
+    if (isFootballVisualEvent(calendarEvent)) {
+      setSelectedEventDetail(null);
+      setSelectedFootballMatch(calendarEvent);
+      return;
+    }
+    setSelectedFootballMatch(null);
     setSelectedEventDetail(calendarEvent);
   };
 
   const closeEventDetail = () => {
     setSelectedEventDetail(null);
+    setSelectedFootballMatch(null);
     setEventDetailReturnDayPocket(null);
   };
 
@@ -4895,6 +5269,7 @@ export default function Home() {
     if (!eventDetailReturnDayPocket) return;
     const returnDate = eventDetailReturnDayPocket;
     setSelectedEventDetail(null);
+    setSelectedFootballMatch(null);
     setEventDetailReturnDayPocket(null);
     setSelectedCalendarDate(returnDate);
     setDaySummaryDate(returnDate);
@@ -6900,7 +7275,11 @@ export default function Home() {
                       return (
                         <button
                           type="button"
-                          className="simplified-event-strip"
+                          className={`simplified-event-strip ${
+                            isFootballVisualEvent(calendarEvent)
+                              ? "canonical-boca-match"
+                              : ""
+                          }`}
                           style={
                             { "--simplified-event-color": eventColor } as CSSProperties
                           }
@@ -10231,7 +10610,11 @@ export default function Home() {
                               {dayEvents.slice(0, 3).map((calendarEvent) => (
                                 <button
                                   type="button"
-                                  className={`extended-event-pill ${calendarEvent.color}`}
+                                  className={`extended-event-pill ${calendarEvent.color} ${
+                                    isFootballVisualEvent(calendarEvent)
+                                      ? "canonical-boca-match"
+                                      : ""
+                                  }`}
                                   key={`${calendarEvent.id}-${dayKey}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
@@ -10671,7 +11054,7 @@ export default function Home() {
                     <div
                       className={[
                         selectedScheduleAgendaEvents.length
-                          ? `agenda-v2-board agenda-v2-timeline-board ${scheduleHasAllDayEvents ? "has-all-day" : ""}`
+                          ? `agenda-v2-board agenda-v2-timeline-board ${scheduleHasFloatingEvents ? "has-all-day" : ""}`
                           : "agenda-v2-board agenda-v2-list-board is-empty",
                         scheduleFocusOpen ? "is-focus-open" : "",
                       ].filter(Boolean).join(" ")}
@@ -10692,7 +11075,29 @@ export default function Home() {
                         </div>
                       ) : (
                         <>
-                          {scheduleHasAllDayEvents && (
+                          {selectedSchedulePendingTimeEvents.length > 0 && (
+                            <>
+                              <span className="agenda-v2-all-day-label">TIME TBC</span>
+                              <div className="agenda-v2-all-day-list agenda-v2-pending-time-list">
+                                <div className="selected">
+                                  {selectedSchedulePendingTimeEvents.slice(0, 2).map((event) => (
+                                    <button
+                                      key={event.id}
+                                      className={`agenda-v2-all-day-event ${event.color} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
+                                      onClick={() => openEventDetail(event)}
+                                    >
+                                      {event.title}
+                                    </button>
+                                  ))}
+                                  {selectedSchedulePendingTimeEvents.length > 2 && (
+                                    <small>+{selectedSchedulePendingTimeEvents.length - 2}</small>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {selectedScheduleAllDayEvents.length > 0 && (
                             <>
                               <span className="agenda-v2-all-day-label">ALL DAY</span>
                               <div className="agenda-v2-all-day-list">
@@ -10782,7 +11187,7 @@ export default function Home() {
                                     return (
                                       <button
                                         key={event.id}
-                                        className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""} ${previewMinute !== null ? "is-dragging" : ""}`.trim()}
+                                        className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""} ${previewMinute !== null ? "is-dragging" : ""} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
                                         style={{
                                           top: `${((visibleStart - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%`,
                                           height: `${(duration / SCHEDULE_TOTAL_MINUTES) * 100}%`,
@@ -10985,7 +11390,11 @@ export default function Home() {
                           <span className="calendar-cell-events">
                             {dayEvents.slice(0, 3).map((calendarEvent) => (
                               <span
-                                className={`calendar-cell-event ${calendarEvent.color}`}
+                                className={`calendar-cell-event ${calendarEvent.color} ${
+                                  isFootballVisualEvent(calendarEvent)
+                                    ? "canonical-boca-match"
+                                    : ""
+                                }`}
                                 key={calendarEvent.id}
                                 title={calendarEvent.title}
                               >
@@ -11111,6 +11520,10 @@ export default function Home() {
                               ? "sports-event"
                               : ""
                           } ${
+                            isFootballVisualEvent(calendarEvent)
+                              ? "canonical-boca-match"
+                              : ""
+                          } ${
                             calendarEventHasConflictOnDate(
                               calendarEvent,
                               selectedCalendarDate,
@@ -11137,7 +11550,7 @@ export default function Home() {
                                 return;
                               }
                               if (calendarEvent.eventType === "sports_event") {
-                                setSelectedEventDetail(calendarEvent);
+                                openEventDetail(calendarEvent);
                               } else {
                                 openEventEditor(calendarEvent);
                               }
@@ -11155,6 +11568,10 @@ export default function Home() {
                                 : ""}
                               {calendarEvent.location
                                 ? ` · ${calendarEvent.location}`
+                                : ""}
+                              {isFootballVisualEvent(calendarEvent) &&
+                              calendarEvent.note
+                                ? ` · ${calendarEvent.note}`
                                 : ""}
                             </small>
                           </button>
@@ -11348,6 +11765,7 @@ export default function Home() {
                           event.color,
                           hasDetails ? "expanded" : "compact",
                           event.sportsCardStyle ? "match-day-pocket-card" : "",
+                          isFootballVisualEvent(event) ? "canonical-boca-match" : "",
                         ].filter(Boolean).join(" ")}
                         style={
                           event.sportsCardStyle
@@ -11512,6 +11930,94 @@ export default function Home() {
           onDelete={() => deleteJournalEntry(selectedJournalEntry.id)}
         />
       )}
+
+      {selectedFootballMatch &&
+        (() => {
+          const match = selectedFootballMatch.footballMatch;
+          const score = footballScore(match);
+          const home = footballMatchIsHome(match);
+          return (
+            <div
+              className="modal-backdrop event-detail-backdrop football-match-detail-backdrop"
+              role="presentation"
+              onPointerDown={(event) => {
+                if (event.target === event.currentTarget) closeEventDetail();
+              }}
+            >
+              <section
+                className="event-detail-note football-match-detail"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Match details for ${match.home_team} versus ${match.away_team}`}
+              >
+                <header className="event-detail-header">
+                  <p className="event-detail-date-eyebrow">
+                    {eventDetailHeadingDate(selectedFootballMatch.date)}
+                  </p>
+                  <button onClick={closeEventDetail} aria-label="Close match details">
+                    ×
+                  </button>
+                </header>
+
+                <div className="football-match-detail-heading">
+                  <div className="event-detail-category-row">
+                    {eventDetailReturnDayPocket && (
+                      <button
+                        type="button"
+                        className="event-detail-back"
+                        onClick={returnToDayPocket}
+                        aria-label="Return to Daily Pocket"
+                      >
+                        ←
+                      </button>
+                    )}
+                    <p className="event-detail-category">💙💛 BOCA JUNIORS</p>
+                    <span>OFFICIAL FIXTURE</span>
+                  </div>
+                  <h2 className="event-detail-title">
+                    {match.home_team} <em>vs</em> {match.away_team}
+                  </h2>
+                  <p>{home ? "Boca plays at home" : "Boca plays away"}</p>
+                </div>
+
+                <div className="football-match-scoreboard">
+                  <span>{match.home_team}</span>
+                  <strong>{score ?? (footballMatchIsLive(match) ? "LIVE" : "—")}</strong>
+                  <span>{match.away_team}</span>
+                </div>
+
+                <div className="event-detail-divider" aria-hidden="true" />
+
+                <div className="football-match-facts">
+                  <div>
+                    <small>TIME</small>
+                    <strong>{eventStartTimeLabel(selectedFootballMatch)}</strong>
+                  </div>
+                  <div>
+                    <small>STATUS</small>
+                    <strong>{footballStatusLabel(match.status)}</strong>
+                  </div>
+                  {match.competition && (
+                    <div>
+                      <small>COMPETITION</small>
+                      <strong>{match.competition}</strong>
+                    </div>
+                  )}
+                  {match.venue && (
+                    <div>
+                      <small>STADIUM</small>
+                      <strong>{match.venue}</strong>
+                    </div>
+                  )}
+                </div>
+
+                <p className="football-match-read-only">
+                  Automatic match · read-only
+                </p>
+              </section>
+            </div>
+          );
+        })()}
 
       {selectedEventDetail &&
         (() => {
@@ -12400,6 +12906,7 @@ export default function Home() {
               </div>
               {INITIAL_SPORTS_TEAMS.map((team) => {
                 const followed = sportsSettings.followedTeamIds.includes(team.id);
+                const canonicalBoca = isBocaSportsTeam(team);
                 return (
                   <label className="follow-team-row" key={team.id}>
                     <span className="team-colors" style={{
@@ -12408,20 +12915,30 @@ export default function Home() {
                     } as CSSProperties} />
                     <span>
                       <strong>{team.name} {team.icon}</strong>
-                      <small>{followed ? "Matches are visible" : "Available to follow"}</small>
+                      <small>
+                        {canonicalBoca
+                          ? "Official fixtures · always visible"
+                          : followed
+                            ? "Matches are visible"
+                            : "Available to follow"}
+                      </small>
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={followed}
-                      onChange={(event) =>
-                        setSportsSettings((current) => ({
-                          ...current,
-                          followedTeamIds: event.target.checked
-                            ? Array.from(new Set([...current.followedTeamIds, team.id]))
-                            : current.followedTeamIds.filter((id) => id !== team.id),
-                        }))
-                      }
-                    />
+                    {canonicalBoca ? (
+                      <span className="canonical-team-source">OFFICIAL</span>
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={followed}
+                        onChange={(event) =>
+                          setSportsSettings((current) => ({
+                            ...current,
+                            followedTeamIds: event.target.checked
+                              ? Array.from(new Set([...current.followedTeamIds, team.id]))
+                              : current.followedTeamIds.filter((id) => id !== team.id),
+                          }))
+                        }
+                      />
+                    )}
                   </label>
                 );
               })}
@@ -13262,6 +13779,7 @@ function TodayScreen({
               "schedule-card",
               `${comingUpEvent.color}-card`,
               comingUpEvent.sportsCardStyle ? "match-day-schedule-card" : "",
+              isFootballVisualEvent(comingUpEvent) ? "canonical-boca-match" : "",
             ].filter(Boolean).join(" ")}
             style={
               comingUpEvent.sportsCardStyle
@@ -13283,8 +13801,8 @@ function TodayScreen({
             title="Hold to preview event"
           >
             <div className="time-block">
-              <strong>{comingUpEvent.allDay ? "ALL" : comingUpEvent.time}</strong>
-              <span>{comingUpEvent.allDay ? "DAY" : "TIME"}</span>
+              <strong>{eventTimeBlockPrimary(comingUpEvent)}</strong>
+              <span>{eventTimeBlockSecondary(comingUpEvent)}</span>
             </div>
             <div className="schedule-line" />
             <div className="schedule-copy">
@@ -13340,6 +13858,7 @@ function TodayScreen({
                   "schedule-card",
                   `${event.color}-card`,
                   event.sportsCardStyle ? "match-day-schedule-card" : "",
+                  isFootballVisualEvent(event) ? "canonical-boca-match" : "",
                 ].filter(Boolean).join(" ")}
                 style={
                   event.sportsCardStyle
@@ -13362,8 +13881,8 @@ function TodayScreen({
                 title="Hold to preview event"
               >
                 <div className="time-block">
-                  <strong>{event.allDay ? "ALL" : event.time}</strong>
-                  <span>{event.allDay ? "DAY" : "TIME"}</span>
+                  <strong>{eventTimeBlockPrimary(event)}</strong>
+                  <span>{eventTimeBlockSecondary(event)}</span>
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">

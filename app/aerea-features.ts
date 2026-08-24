@@ -200,6 +200,9 @@ export type SportsEvent = {
   status: "scheduled" | "postponed" | "cancelled" | "live" | "finished";
   homeScore?: number;
   awayScore?: number;
+  provider?: string;
+  teamName?: string;
+  teamProviderExternalId?: string;
   updatedAt: string;
 };
 
@@ -215,6 +218,51 @@ export const INITIAL_SPORTS_TEAMS: SportsTeam[] = [
     icon: "💙💛",
   },
 ];
+
+const BOCA_TEAM_SLUGS = new Set(["boca-juniors", "boca_juniors"]);
+
+function normalizedSportsIdentity(value: string | undefined) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function isBocaSportsTeam(identity: {
+  id?: string;
+  teamId?: string;
+  name?: string;
+  shortName?: string;
+  externalId?: string;
+  providerExternalId?: string;
+}) {
+  const slugs = [identity.id, identity.teamId, identity.name, identity.shortName]
+    .map(normalizedSportsIdentity)
+    .filter(Boolean);
+  const providerExternalId =
+    identity.providerExternalId ?? identity.externalId ?? "";
+  return (
+    slugs.some((slug) => BOCA_TEAM_SLUGS.has(slug)) ||
+    slugs.some((slug) => slug === "boca" || slug.includes("boca-juniors")) ||
+    providerExternalId === "451"
+  );
+}
+
+export function isBocaSportsEvent(event: SportsEvent) {
+  const registeredTeam = INITIAL_SPORTS_TEAMS.find(
+    (team) => team.id === event.teamId,
+  );
+  return isBocaSportsTeam({
+    teamId: event.teamId,
+    name: event.teamName ?? registeredTeam?.name,
+    shortName: registeredTeam?.shortName,
+    providerExternalId:
+      event.teamProviderExternalId ?? registeredTeam?.externalId,
+  });
+}
 
 export const DEFAULT_RESET_PREFERENCES: ResetPreferences = {
   morningEnabled: true,
