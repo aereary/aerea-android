@@ -1076,16 +1076,6 @@ function readableDate(dateKey: string) {
   }).format(new Date(year, month - 1, day));
 }
 
-function eventDetailDate(dateKey: string) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(year, month - 1, day));
-}
-
 function eventDetailHeadingDate(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   return new Intl.DateTimeFormat("en", {
@@ -1603,7 +1593,6 @@ export default function Home() {
   const [activeStudyNotebookId, setActiveStudyNotebookId] = useState<string | null>(null);
   const [postItEditorOpen, setPostItEditorOpen] = useState(false);
   const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
-  const [selectedPostItId, setSelectedPostItId] = useState<string | null>(null);
   const [postItDraft, setPostItDraft] = useState<PostItDraft>({
     text: "",
     color: "lavender",
@@ -4116,7 +4105,6 @@ export default function Home() {
             : note,
         ),
       );
-      setSelectedPostItId(editingPostItId);
     } else {
       const id = crypto.randomUUID();
       const slot = visiblePostIts.length % 4;
@@ -4139,7 +4127,6 @@ export default function Home() {
         updatedAt,
       };
       setPostIts((current) => [...current, newPostIt]);
-      setSelectedPostItId(id);
     }
     setPostItEditorOpen(false);
   };
@@ -4147,7 +4134,6 @@ export default function Home() {
   const deletePostIt = (id: string) => {
     const note = postIts.find((candidate) => candidate.id === id);
     if (note) moveToTrash("post-it", "Post-it", note);
-    setSelectedPostItId((current) => (current === id ? null : current));
     setPostItEditorOpen(false);
   };
 
@@ -4180,7 +4166,6 @@ export default function Home() {
       updatedAt: now,
     };
     setPostIts((current) => [...current, copy]);
-    setSelectedPostItId(copy.id);
   };
 
   const updateSelectedPostIts = (
@@ -4278,7 +4263,6 @@ export default function Home() {
       setSelectedPostItIds([]);
     } else {
       setSelectedPostItIds([postItId]);
-      setSelectedPostItId(postItId);
       setHistoryMessage("Tap the other post-its, then choose Group.");
     }
     setPostItEditorOpen(false);
@@ -4517,7 +4501,6 @@ export default function Home() {
         : [{ id: postIt.id, x: postIt.x, y: postIt.y }],
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    setSelectedPostItId(postIt.id);
     if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
     postItLongPressRef.current = window.setTimeout(() => {
       const activeDrag = postItDragRef.current;
@@ -4526,7 +4509,6 @@ export default function Home() {
         activeDrag.target.releasePointerCapture(activeDrag.pointerId);
       }
       postItDragRef.current = null;
-      setSelectedPostItId(null);
       navigator.vibrate?.(18);
       openPostItEditor(postIt);
     }, 560);
@@ -8813,58 +8795,6 @@ export default function Home() {
               >
                 <span className="post-it-tape" aria-hidden="true" />
                 <p>{postIt.text}</p>
-                {selectedPostItId === postIt.id && (
-                  <div className="post-it-mini-actions">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedPostItIds((current) => {
-                          const relatedIds = postIt.groupId
-                            ? postIts
-                                .filter((item) => item.groupId === postIt.groupId)
-                                .map((item) => item.id)
-                            : [postIt.id];
-                          const allSelected = relatedIds.every((id) =>
-                            current.includes(id),
-                          );
-                          return allSelected
-                            ? current.filter((id) => !relatedIds.includes(id))
-                            : Array.from(new Set([...current, ...relatedIds]));
-                        })
-                      }
-                      title="Select multiple"
-                    >
-                      {selectedPostItIds.includes(postIt.id) ? "✓" : "○"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updatePostIt(postIt.id, postIt.pinned ? "Unpinned post-it" : "Pinned post-it", (item) => ({
-                          ...item,
-                          pinned: !item.pinned,
-                        }))
-                      }
-                      title={postIt.pinned ? "Unpin" : "Pin"}
-                    >
-                      {postIt.pinned ? "◇" : "◆"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => togglePostItLock(postIt)}
-                      title={postIt.locked ? "Unlock position" : "Lock position"}
-                    >
-                      {postIt.locked ? "🔒" : "♙"}
-                    </button>
-                    <button type="button" onClick={() => duplicatePostIt(postIt)} title="Duplicate">⧉</button>
-                    <button
-                      type="button"
-                      onClick={() => archivePostIt(postIt)}
-                      title="Archive"
-                    >
-                      ▱
-                    </button>
-                  </div>
-                )}
                 {!postIt.locked && (
                   <button
                     type="button"
@@ -11550,29 +11480,23 @@ export default function Home() {
         return (
           <div className="modal-backdrop day-summary-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setDaySummaryDate(null); }}>
             <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
-              <span className="day-summary-orbs" aria-hidden="true"><i /><i /><i /></span>
               <header>
-                <div className="day-summary-heading">
-                  <p className="tiny-label">DAY POCKET</p>
-                  <h2>{readableDate(daySummaryDate)}</h2>
-                  <div className="day-summary-subline">
-                    <small>{summaryEvents.length === 0 ? "a quiet day ♡" : `${summaryEvents.length} ${summaryEvents.length === 1 ? "plan" : "plans"} tucked inside`}</small>
-                    <span className="day-summary-doodle" aria-hidden="true">
-                      <svg className="day-summary-cloud" viewBox="0 0 102 56" focusable="false">
-                        <path d="M24 46h54c10 0 17-6 17-15 0-9-7-15-16-15-3 0-5 .4-7 1.5C68 8 60 3 50 3 37 3 27 12 25 24h-2C13 24 6 30 6 35s7 11 18 11Z" />
-                      </svg>
-                      <span className="day-summary-sparkles"><i>✦</i><i>✦</i><i>✦</i></span>
-                    </span>
-                  </div>
-                </div>
+                <p className="day-summary-date-eyebrow">
+                  {eventDetailHeadingDate(daySummaryDate)}
+                </p>
                 <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M7 7 17 17M17 7 7 17" />
                   </svg>
                 </button>
               </header>
+
+              <div className="day-summary-heading">
+                <p className="day-summary-category">DAY POCKET</p>
+                <h2>{summaryEvents.length === 0 ? "A quiet day" : "Your plans"}</h2>
+              </div>
               {summaryEvents.length === 0 ? (
-                <div className="day-summary-empty"><span>☁</span><strong>Nothing written here yet</strong><p>This little page is completely yours.</p></div>
+                <div className="day-summary-empty"><strong>Nothing planned yet</strong><p>This little page is completely yours.</p></div>
               ) : (
                 <div className="day-summary-events">
                   {summaryEvents.map((event, index) => {
@@ -11618,9 +11542,10 @@ export default function Home() {
                         }}
                       >
                         <div className="day-summary-event-heading">
-                          <span className="day-summary-event-heart" aria-hidden="true">
+                          <span className="day-summary-event-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" focusable="false">
-                              <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
+                              <circle cx="12" cy="12" r="8" />
+                              <path d="M12 7v5l3 2" />
                             </svg>
                           </span>
                           <div>
@@ -11629,15 +11554,17 @@ export default function Home() {
                                 {event.sportsIcon ?? "♡"} MATCH DAY
                               </span>
                             )}
+                            <span className="day-summary-event-category">
+                              {event.calendar ?? "PERSONAL"}
+                            </span>
                             <strong>{event.title}</strong>
-                            <small>
+                            <small className="day-summary-event-time">
                               {eventStartTimeLabel(event)}
                               {event.eventType === "sports_event"
                                 ? ` · ${matchCountdownLabel(event)}`
                                 : ""}
                             </small>
                           </div>
-                          <i aria-hidden="true">›</i>
                         </div>
                         {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
                         {!!event.todos?.length && (
@@ -11648,19 +11575,19 @@ export default function Home() {
                   })}
                 </div>
               )}
-              <div className="day-summary-divider" aria-hidden="true"><span>✦</span></div>
+              <div className="day-summary-divider" aria-hidden="true" />
               <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>
                 <span className="day-summary-add-icon" aria-hidden="true">
                   <svg viewBox="0 0 42 42" focusable="false">
                     <rect x="5" y="8" width="32" height="28" rx="7" />
                     <path d="M13 4v9M29 4v9M5 16h32" />
-                    <path d="M21 31s-7-4.3-7-8.1c0-3.5 4.7-4.7 7-1.5 2.3-3.2 7-2 7 1.5 0 3.8-7 8.1-7 8.1Z" />
+                    <path d="M21 21v10M16 26h10" />
                   </svg>
                 </span>
                 <strong>+ Add event</strong>
-                <span className="day-summary-add-sparkle" aria-hidden="true">✦</span>
+                <span className="day-summary-add-spacer" aria-hidden="true" />
               </button>
-              <p className="day-summary-hint">♡&nbsp; tap a plan to see everything</p>
+              <p className="day-summary-hint">Tap a plan to see everything</p>
             </section>
           </div>
         );
@@ -11805,9 +11732,7 @@ export default function Home() {
                   </h2>
                 </div>
 
-                <div className="event-detail-divider" aria-hidden="true">
-                  <span>✦</span>
-                </div>
+                <div className="event-detail-divider" aria-hidden="true" />
 
                 <div className="event-detail-time">
                   <span className="event-detail-time-icon" aria-hidden="true">
@@ -11818,13 +11743,6 @@ export default function Home() {
                   </span>
                   <div>
                     <strong>{detailTime.range}</strong>
-                    <small>
-                      {eventDetailDate(selectedEventDetail.date)}
-                      {selectedEventDetail.endDate &&
-                      selectedEventDetail.endDate !== selectedEventDetail.date
-                        ? ` → ${eventDetailDate(selectedEventDetail.endDate)}`
-                        : ""}
-                    </small>
                   </div>
                 </div>
 
@@ -12510,6 +12428,56 @@ export default function Home() {
                   ? "Ungroup these post-its"
                   : "Group with other post-its…"}
               </button>
+            )}
+
+            {editingPostItId && (
+              <div className="post-it-editor-secondary-actions" aria-label="Post-it options">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const postIt = postIts.find((item) => item.id === editingPostItId);
+                    if (!postIt) return;
+                    updatePostIt(
+                      postIt.id,
+                      postIt.pinned ? "Unpinned post-it" : "Pinned post-it",
+                      (item) => ({ ...item, pinned: !item.pinned }),
+                    );
+                  }}
+                >
+                  {postIts.find((item) => item.id === editingPostItId)?.pinned ? "Unpin" : "Pin"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const postIt = postIts.find((item) => item.id === editingPostItId);
+                    if (postIt) togglePostItLock(postIt);
+                  }}
+                >
+                  {postIts.find((item) => item.id === editingPostItId)?.locked ? "Unlock" : "Lock"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const postIt = postIts.find((item) => item.id === editingPostItId);
+                    if (!postIt) return;
+                    duplicatePostIt(postIt);
+                    setPostItEditorOpen(false);
+                  }}
+                >
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const postIt = postIts.find((item) => item.id === editingPostItId);
+                    if (!postIt) return;
+                    archivePostIt(postIt);
+                    setPostItEditorOpen(false);
+                  }}
+                >
+                  Archive
+                </button>
+              </div>
             )}
 
             <footer>

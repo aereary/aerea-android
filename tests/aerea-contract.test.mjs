@@ -430,7 +430,7 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(pageSource, /onContextMenu=\{\(contextEvent\) => contextEvent\.preventDefault\(\)\}/);
   assert.match(pageSource, /Hold to preview event/);
   assert.match(pageSource, /eventDetailTimeParts/);
-  assert.match(pageSource, /eventDetailDate/);
+  assert.doesNotMatch(pageSource, /eventDetailDate/);
   assert.match(pageSource, /eventDetailHeadingDate/);
   assert.match(pageSource, /className="event-detail-date-eyebrow"/);
   assert.match(pageSource, /className="event-detail-category-row"/);
@@ -443,26 +443,31 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /Long-press event card — shared faithfully by every theme/);
   assert.match(cssSource, /backdrop-filter:blur\(7px\)/);
   assert.match(cssSource, /Reference-style event note shared by Personal and Day Pocket/);
-  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:450px/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-note[\s\S]*max-width:520px/);
   assert.match(cssSource, /\.event-detail-date-eyebrow[\s\S]*letter-spacing:\.14em/);
   assert.match(cssSource, /\.event-detail-title[\s\S]*letter-spacing:-\.06em/);
-  assert.match(cssSource, /\.event-detail-divider span[\s\S]*background:transparent/);
-  assert.match(cssSource, /\.event-detail-divider::before[\s\S]*right:29px/);
+  assert.match(pageSource, /<div className="event-detail-divider" aria-hidden="true" \/>/);
+  assert.match(cssSource, /\.event-detail-divider::before[\s\S]*right:0/);
   assert.match(cssSource, /\.event-detail-reminder[\s\S]*grid-template-columns:54px minmax\(0,1fr\)/);
   assert.match(pageSource, /range: `\$\{startLabel\} – \$\{endLabel\}`/);
   assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
 });
 
-test("keeps the Day Pocket decorations faithful and stable across devices", () => {
-  assert.match(pageSource, /className="day-summary-orbs"/);
-  assert.match(pageSource, /className="day-summary-doodle"/);
+test("matches the clean event-note language in Day Pocket", () => {
+  assert.doesNotMatch(pageSource, /className="day-summary-orbs"/);
+  assert.doesNotMatch(pageSource, /className="day-summary-doodle"/);
+  assert.doesNotMatch(pageSource, /className="day-summary-cloud"/);
+  assert.doesNotMatch(pageSource, /className="day-summary-sparkles"/);
+  assert.doesNotMatch(pageSource, /className="day-summary-event-heart"/);
+  assert.doesNotMatch(pageSource, /className="day-summary-add-sparkle"/);
   assert.match(pageSource, /className="day-summary-close"[\s\S]*M7 7 17 17M17 7 7 17/);
-  assert.match(pageSource, /className="day-summary-event-heart"[\s\S]*M12 20\.5C/);
-  assert.match(cssSource, /\.day-summary-orbs i:nth-child\(1\)[\s\S]*border-radius:0 0 0 100%/);
-  assert.match(cssSource, /\.day-summary-cloud[\s\S]*fill:none/);
-  assert.match(cssSource, /\.day-summary-sparkles i[\s\S]*clip-path:polygon/);
-  assert.match(cssSource, /\.day-summary-event-heart svg[\s\S]*stroke-linejoin:round/);
-  assert.match(cssSource, /White paper for Day Pocket and event notes; decorations remain untouched/);
+  assert.match(pageSource, /className="day-summary-date-eyebrow"[\s\S]*eventDetailHeadingDate\(daySummaryDate\)/);
+  assert.match(pageSource, /className="day-summary-category">DAY POCKET/);
+  assert.match(pageSource, /className="day-summary-event-icon"/);
+  assert.match(pageSource, /className="day-summary-event-category"/);
+  assert.match(pageSource, /className="day-summary-add-spacer"/);
+  assert.match(cssSource, /Clean reference card shared visually with the event note/);
+  assert.match(cssSource, /\.day-summary-backdrop \.day-summary-card[\s\S]*max-width:520px/);
   assert.match(cssSource, /\.app-shell:not\(\[data-theme="ao3night"\]\) \.day-summary-card/);
 });
 
@@ -737,6 +742,10 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /choosePostItGroupAction/);
   assert.match(pageSource, /ungroupSelectedPostIts/);
   assert.match(pageSource, /archiveSelectedPostIts/);
+  assert.doesNotMatch(pageSource, /className="post-it-mini-actions"/);
+  assert.doesNotMatch(cssSource, /\.post-it-mini-actions/);
+  assert.match(pageSource, /className="post-it-editor-secondary-actions"/);
+  assert.match(cssSource, /\.post-it-editor-secondary-actions/);
   assert.doesNotMatch(pageSource, /Bring forward/);
   assert.doesNotMatch(pageSource, /Send backward/);
   assert.match(cssSource, /\.post-it-resize-handle\s*\{[\s\S]{0,100}background:\s*transparent/);
