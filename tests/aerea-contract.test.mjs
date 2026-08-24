@@ -308,6 +308,14 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
     pageSource,
     /className="day-summary-add event-detail-add"[\s\S]*openNewEvent\(eventDate\)/,
   );
+  assert.match(
+    pageSource,
+    /const eventDate = selectedEventDetail\.date;[\s\S]{0,600}setCalendarOpen\(true\);[\s\S]{0,120}openNewEvent\(eventDate\)/,
+  );
+  assert.match(
+    pageSource,
+    /calendarDays\.map\([\s\S]{0,700}!hiddenCalendarSources\.includes\([\s\S]{0,100}event\.calendar \|\| "Personal"/,
+  );
   assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /scheduleMarks/);
   assert.match(pageSource, /flushOverlapGroup/);
@@ -484,6 +492,7 @@ test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /className="day-summary-event-category"/);
   assert.match(pageSource, /className="day-summary-add-spacer"/);
   assert.match(cssSource, /\.day-summary-card \.day-summary-divider \{ margin:18px 2px; \}/);
+  assert.match(cssSource, /\.day-summary-card \.day-summary-add \{ margin-top:10px; \}/);
   assert.match(cssSource, /Clean reference card shared visually with the event note/);
   assert.match(cssSource, /\.day-summary-backdrop \.day-summary-card[\s\S]*max-width:450px;[\s\S]*width:min\(86vw,450px\)/);
   assert.match(cssSource, /\.day-summary-event\.yellow \{ --pocket-color:#ffe9a9; \}/);
@@ -629,6 +638,13 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /ensureInboxLibraryItem/);
   assert.match(pageSource, /libraryItemAsStudyFile/);
   assert.match(pageSource, /Capture is still here/);
+  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) return/);
+  assert.match(pageSource, /disabled=\{converted\}/);
+  assert.match(pageSource, /Already saved as \$\{destination\}/);
+  assert.match(pageSource, /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/);
+  assert.match(pageSource, /className="inbox-item-icon"/);
+  assert.match(pageSource, /className="inbox-item-copy"/);
+  assert.match(cssSource, /\.inbox-convert-actions button:disabled/);
 });
 
 test("keeps reversible history, archive and a 30-day Trash", () => {
@@ -650,6 +666,11 @@ test("keeps reversible history, archive and a 30-day Trash", () => {
   assert.match(pageSource, /setSpace\("inbox"\)/);
   assert.match(pageSource, /setSpace\("postit-archive"\)/);
   assert.match(pageSource, /setSpace\("trash"\)/);
+  assert.match(pageSource, /const emptyTrash = async \(\) =>/);
+  assert.match(pageSource, /Promise\.all\(trashItems\.map\(\(item\) => purgeTrashItemPayload\(item\)\)\)/);
+  assert.match(pageSource, /className="empty-trash-button"/);
+  assert.match(pageSource, />\s*Empty trash\s*<\/button>/);
+  assert.match(cssSource, /\.feature-space \.trash-list \{ margin-top:18px; \}/);
   assert.doesNotMatch(pageSource, /title="Post-it Archive"/);
   assert.doesNotMatch(pageSource, /className="global-history-controls"/);
 });
@@ -733,6 +754,9 @@ test("keeps sports provider secrets behind a normalized Supabase model", () => {
   assert.match(pageSource, /MATCH DAY/);
   assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
   assert.match(pageSource, /match-day-pocket-card/);
+  assert.doesNotMatch(pageSource, /aria-label="Sports settings"/);
+  assert.doesNotMatch(pageSource, />Teams you follow</);
+  assert.doesNotMatch(pageSource, />Add matches automatically</);
 });
 
 test("reads and caches the canonical Boca fixture independently", () => {
@@ -875,6 +899,11 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /className="extended-calendar-view"/);
   assert.match(pageSource, /extendedCalendarDays/);
   assert.match(pageSource, /hiddenCalendarSources/);
+  assert.match(cssSource, /grid-template-areas:[\s\S]{0,100}"dot edit delete name"/);
+  assert.match(
+    cssSource,
+    /\.category-editor-list article > button:not\(\.category-delete\)[\s\S]{0,120}width:100%/,
+  );
   for (const color of ["lavender", "butter", "blush", "sky", "mint", "peach", "coral", "cream"]) {
     assert.match(pageSource, new RegExp(`value: "${color}"`));
     assert.match(cssSource, new RegExp(`post-it(?:-editor-preview)?\\.${color}`));

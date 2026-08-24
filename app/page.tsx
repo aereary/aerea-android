@@ -38,7 +38,6 @@ import {
   fileKind,
   inferInboxKind,
   isBocaSportsEvent,
-  isBocaSportsTeam,
   trashDaysRemaining,
   type EntityLink,
   type InboxItem,
@@ -3745,6 +3744,7 @@ export default function Home() {
     item: InboxItem,
     destination: "event" | "task" | "post-it" | "note" | "library",
   ) => {
+    if (item.processedAs?.includes(destination)) return;
     const now = new Date().toISOString();
     recordAction(`Converted Inbox item to ${destination}`);
     if (destination === "event") {
@@ -3859,6 +3859,11 @@ export default function Home() {
       ensureInboxLibraryItem(item, now, true);
     }
     markInboxProcessed(item.id, destination);
+    const destinationLabel =
+      destination === "post-it"
+        ? "Post-it"
+        : destination.charAt(0).toUpperCase() + destination.slice(1);
+    setHistoryMessage(`Saved as ${destinationLabel} ♡`);
   };
 
   const discardInboxItem = (item: InboxItem) => {
@@ -4026,14 +4031,7 @@ export default function Home() {
     setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
   };
 
-  const deleteTrashItemForever = async (trashItem: TrashItem) => {
-    if (
-      !window.confirm(
-        `Delete “${trashItem.label}” permanently? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const purgeTrashItemPayload = async (trashItem: TrashItem) => {
     const file =
       trashItem.kind === "file"
         ? (trashItem.payload as LibraryItem | StudyFileItem)
@@ -4073,7 +4071,34 @@ export default function Home() {
         return next;
       });
     }
+  };
+
+  const deleteTrashItemForever = async (trashItem: TrashItem) => {
+    if (
+      !window.confirm(
+        `Delete “${trashItem.label}” permanently? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    await purgeTrashItemPayload(trashItem);
     setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
+    setHistoryMessage(`Deleted ${trashItem.label} forever`);
+  };
+
+  const emptyTrash = async () => {
+    if (trashItems.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete all ${trashItems.length} Trash items permanently? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    recordAction("Emptied Trash");
+    await Promise.all(trashItems.map((item) => purgeTrashItemPayload(item)));
+    setTrashItems([]);
+    setHistoryMessage("Trash emptied ♡");
   };
 
   const rescheduleTask = (task: TaskItem, dueDate: string | null) => {
@@ -7810,8 +7835,8 @@ export default function Home() {
                   <div className="inbox-list">
                     {inboxItems.map((item) => (
                       <article className="inbox-item" key={item.id}>
-                        <span className="inbox-kind">{item.kind}</span>
-                        <div>
+                        <span className="inbox-item-icon">{item.kind}</span>
+                        <div className="inbox-item-copy">
                           <strong>{item.originalName || item.text}</strong>
                           {item.originalName && item.text !== item.originalName && (
                             <p>{item.text}</p>
@@ -7825,19 +7850,28 @@ export default function Home() {
                         </div>
                         <div className="inbox-convert-actions" aria-label="Convert capture">
                           {(["event", "task", "post-it", "note", "library"] as const).map(
-                            (destination) => (
-                              <button
-                                type="button"
-                                key={destination}
-                                onClick={() => convertInboxItem(item, destination)}
-                              >
-                                {destination}
-                              </button>
-                            ),
+                            (destination) => {
+                              const converted = item.processedAs?.includes(destination) ?? false;
+                              return (
+                                <button
+                                  type="button"
+                                  key={destination}
+                                  disabled={converted}
+                                  aria-label={
+                                    converted
+                                      ? `Already saved as ${destination}`
+                                      : `Save as ${destination}`
+                                  }
+                                  onClick={() => convertInboxItem(item, destination)}
+                                >
+                                  {converted ? `✓ ${destination}` : destination}
+                                </button>
+                              );
+                            },
                           )}
                           <button
                             type="button"
-                            className="danger"
+                            className="inbox-discard"
                             onClick={() => discardInboxItem(item)}
                           >
                             discard
@@ -7859,10 +7893,20 @@ export default function Home() {
                     title="Trash"
                     onBack={() => setSpace("menu")}
                   />
-                  <p className="trash-explainer">
-                    Archive keeps things for later. Trash is for deleted items and
-                    removes them automatically after 30 days.
-                  </p>
+                  <div className="trash-space-toolbar">
+                    <p className="trash-explainer">
+                      Archive keeps things for later. Trash is for deleted items and
+                      removes them automatically after 30 days.
+                    </p>
+                    <button
+                      type="button"
+                      className="empty-trash-button"
+                      disabled={trashItems.length === 0}
+                      onClick={() => void emptyTrash()}
+                    >
+                      Empty trash
+                    </button>
+                  </div>
                   <div className="trash-list">
                     {trashItems.map((item) => (
                       <article key={item.id}>
@@ -11298,8 +11342,12 @@ export default function Home() {
                   {calendarDays.map(({ date, currentMonth }) => {
                     const day = date.getDate();
                     const dayKey = localDateKey(date);
-                    const dayEvents = allCalendarEvents.filter((event) =>
-                      eventOccursOn(event, dayKey),
+                    const dayEvents = allCalendarEvents.filter(
+                      (event) =>
+                        eventOccursOn(event, dayKey) &&
+                        !hiddenCalendarSources.includes(
+                          event.calendar || "Personal",
+                        ),
                     );
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
@@ -12277,7 +12325,17 @@ export default function Home() {
                       type="button"
                       onClick={() => {
                         const eventDate = selectedEventDetail.date;
+                        const eventMonth = dateFromKey(eventDate);
+                        setSelectedCalendarDate(eventDate);
+                        setViewMonth(
+                          new Date(
+                            eventMonth.getFullYear(),
+                            eventMonth.getMonth(),
+                            1,
+                          ),
+                        );
                         closeEventDetail();
+                        setCalendarOpen(true);
                         openNewEvent(eventDate);
                       }}
                     >
@@ -12801,162 +12859,6 @@ export default function Home() {
                   }
                 />
               </label>
-            </section>
-
-            <section className="sports-settings-card" aria-label="Sports settings">
-              <div className="sports-settings-heading">
-                <div>
-                  <p className="tiny-label">SETTINGS → SPORTS</p>
-                  <h3>Teams you follow</h3>
-                  <p>Automatic fixtures stay separate from your personal events.</p>
-                </div>
-                <span>💙💛</span>
-              </div>
-              {INITIAL_SPORTS_TEAMS.map((team) => {
-                const followed = sportsSettings.followedTeamIds.includes(team.id);
-                const canonicalBoca = isBocaSportsTeam(team);
-                return (
-                  <label className="follow-team-row" key={team.id}>
-                    <span className="team-colors" style={{
-                      "--team-primary": team.primaryColor,
-                      "--team-secondary": team.secondaryColor,
-                    } as CSSProperties} />
-                    <span>
-                      <strong>{team.name} {team.icon}</strong>
-                      <small>
-                        {canonicalBoca
-                          ? "Official fixtures · always visible"
-                          : followed
-                            ? "Matches are visible"
-                            : "Available to follow"}
-                      </small>
-                    </span>
-                    {canonicalBoca ? (
-                      <span className="canonical-team-source">OFFICIAL</span>
-                    ) : (
-                      <input
-                        type="checkbox"
-                        checked={followed}
-                        onChange={(event) =>
-                          setSportsSettings((current) => ({
-                            ...current,
-                            followedTeamIds: event.target.checked
-                              ? Array.from(new Set([...current.followedTeamIds, team.id]))
-                              : current.followedTeamIds.filter((id) => id !== team.id),
-                          }))
-                        }
-                      />
-                    )}
-                  </label>
-                );
-              })}
-              <div className="sports-toggle-grid">
-                <label>
-                  <span>Add matches automatically</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.addAutomatically}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        addAutomatically: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Show special match cards</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showSpecialCards}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showSpecialCards: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Notify me before matches</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.notifyBeforeMatches}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        notifyBeforeMatches: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Notification time</span>
-                  <select
-                    value={sportsSettings.notificationLeadMinutes}
-                    onChange={(event) => {
-                      const selected = Number(event.target.value);
-                      if (selected === -1) {
-                        const custom = Number(
-                          window.prompt(
-                            "Minutes before the match",
-                            String(sportsSettings.notificationLeadMinutes),
-                          ),
-                        );
-                        if (!Number.isFinite(custom) || custom < 0) return;
-                        setSportsSettings((current) => ({
-                          ...current,
-                          notificationLeadMinutes: Math.round(custom),
-                        }));
-                        return;
-                      }
-                      setSportsSettings((current) => ({
-                        ...current,
-                        notificationLeadMinutes: selected,
-                      }));
-                    }}
-                  >
-                    {![30, 60, 180, 1440].includes(
-                      sportsSettings.notificationLeadMinutes,
-                    ) && (
-                      <option value={sportsSettings.notificationLeadMinutes}>
-                        Custom · {sportsSettings.notificationLeadMinutes} min
-                      </option>
-                    )}
-                    <option value={30}>30 min</option>
-                    <option value={60}>1 hour</option>
-                    <option value={180}>3 hours</option>
-                    <option value={1440}>1 day</option>
-                    <option value={-1}>Custom…</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Show live score</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showLiveScore}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showLiveScore: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Show final score</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showFinalScore}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showFinalScore: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
             </section>
 
             <section className="sync-card" aria-label="Private device sync">

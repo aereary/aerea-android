@@ -28801,3 +28801,69 @@ button.brand-wrap {
   .extended-month-grid { grid-template-rows:27px repeat(var(--extended-calendar-weeks,6),minmax(0,1fr)); }
   .extended-event-pill > span > strong { font-size:7px; }
 }
+
+/* August 24 follow-up: clearer Space actions and even calendar controls. */
+.day-summary-card .day-summary-add { margin-top:10px; }
+
+.inbox-convert-actions button:disabled {
+  background:color-mix(in srgb,var(--leaf) 16%,var(--paper));
+  color:var(--leaf-deep);
+  cursor:default;
+  opacity:.82;
+}
+
+.feature-space .trash-list { margin-top:18px; }
+
+.trash-space-toolbar {
+  align-items:center;
+  display:grid;
+  gap:10px;
+  grid-template-columns:minmax(0,1fr) auto;
+  margin-top:18px;
+}
+
+.trash-space-toolbar .trash-explainer { margin:0; }
+
+.empty-trash-button {
+  background:color-mix(in srgb,#ffd8dd 70%,var(--paper));
+  border:1px solid color-mix(in srgb,#b74f61 24%,var(--line));
+  border-radius:999px;
+  color:#a43c4f;
+  font:inherit;
+  font-size:.72rem;
+  font-weight:900;
+  padding:10px 14px;
+  white-space:nowrap;
+}
+
+.empty-trash-button:disabled { cursor:default; opacity:.42; }
+
+.category-editor-list article {
+  grid-template-areas:
+    "dot edit delete name"
+    "dot edit delete detail";
+  grid-template-columns:18px minmax(0,1fr) 30px minmax(92px,118px);
+}
+
+.category-editor-list article > i { grid-area:dot; }
+.category-editor-list article > strong { grid-area:name; }
+.category-editor-list article > small { grid-area:detail; }
+.category-editor-list article > button:not(.category-delete) {
+  grid-area:edit;
+  justify-self:stretch;
+  width:100%;
+}
+.category-editor-list article > .category-delete { grid-area:delete; }
+
+@media (max-width:520px) {
+  .trash-space-toolbar {
+    align-items:stretch;
+    grid-template-columns:1fr;
+  }
+
+  .empty-trash-button { justify-self:end; }
+
+  .category-editor-list article {
+    grid-template-columns:15px minmax(0,1fr) 30px minmax(88px,108px);
+  }
+}
