@@ -1,5 +1,6 @@
 "use client";
 
+import { Ao3Library } from "./ao3-library";
 import {
   Capacitor,
   registerPlugin,
@@ -57,6 +58,7 @@ import {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   TouchEvent as ReactTouchEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -94,6 +96,7 @@ import {
 } from "./sketch-paper";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
+const AO3_HISTORY_MARKER = "aereaAo3LibraryOpen";
 type PrimaryNavId = Tab | "add";
 type Space =
   | "menu"
@@ -1691,6 +1694,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
+  const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
@@ -4305,6 +4309,36 @@ export default function Home() {
     todayWidgetEvents,
     widgetDaysJson,
   ]);
+
+  useEffect(() => {
+    const closeAo3FromHistory = () => setAo3LibraryOpen(false);
+    window.addEventListener("popstate", closeAo3FromHistory);
+    return () => window.removeEventListener("popstate", closeAo3FromHistory);
+  }, []);
+
+  const closeAo3Library = useCallback(() => {
+    if (window.history.state?.[AO3_HISTORY_MARKER]) {
+      window.history.back();
+      return;
+    }
+    setAo3LibraryOpen(false);
+  }, []);
+
+  const brandOpensAo3 =
+    activeTab === "spaces" && space === "library" && !calendarOpen;
+  const openAereaFromBrand = useCallback(() => {
+    if (!brandOpensAo3) {
+      setAereaHubOpen(true);
+      return;
+    }
+    if (!ao3LibraryOpen) {
+      window.history.pushState(
+        { ...window.history.state, [AO3_HISTORY_MARKER]: true },
+        "",
+      );
+      setAo3LibraryOpen(true);
+    }
+  }, [ao3LibraryOpen, brandOpensAo3]);
 
   const changeTab = (tab: Tab) => {
     setActiveTab(tab);
@@ -7380,6 +7414,8 @@ export default function Home() {
       <div className="paper-grain" aria-hidden="true" />
       <section
         ref={phoneCanvasRef}
+        aria-hidden={ao3LibraryOpen ? true : undefined}
+        inert={ao3LibraryOpen ? true : undefined}
         className={
           sketchFullscreen
             ? "phone-canvas sketchbook-fullscreen-active"
@@ -7422,8 +7458,8 @@ export default function Home() {
           <button
             className="brand-wrap"
             type="button"
-            onClick={() => setAereaHubOpen(true)}
-            aria-label="Open aérea spaces"
+            onClick={openAereaFromBrand}
+            aria-label={brandOpensAo3 ? "Open My AO3 Library" : "Open aérea spaces"}
           >
             <span className="brand-mark profile-mark">
               {profilePhoto ? (
@@ -9019,6 +9055,8 @@ export default function Home() {
         </nav>}
       </section>
 
+      {ao3LibraryOpen && <Ao3Library onBack={closeAo3Library} />}
+
       {aereaHubOpen && (
         <div
           className="modal-backdrop aerea-hub-backdrop"
@@ -10376,8 +10414,8 @@ export default function Home() {
                       <button
                         className="brand-wrap"
                         type="button"
-                        onClick={() => setAereaHubOpen(true)}
-                        aria-label="Open aérea spaces"
+                        onClick={openAereaFromBrand}
+                        aria-label={brandOpensAo3 ? "Open My AO3 Library" : "Open aérea spaces"}
                       >
                         <span className="brand-mark profile-mark">
                           {profilePhoto ? (

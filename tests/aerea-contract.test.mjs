@@ -629,7 +629,10 @@ test("keeps reversible history, archive and a 30-day Trash", () => {
   assert.match(pageSource, /deleteDocument\(\{ id: file\.id \}\)/);
   assert.match(pageSource, /moveToTrash\("note"/);
   assert.match(pageSource, /className="aerea-hub-modal"/);
-  assert.match(pageSource, /aria-label="Open aérea spaces"/);
+  assert.match(
+    pageSource,
+    /brandOpensAo3 \? "Open My AO3 Library" : "Open aérea spaces"/,
+  );
   assert.match(pageSource, /setSpace\("inbox"\)/);
   assert.match(pageSource, /setSpace\("postit-archive"\)/);
   assert.match(pageSource, /setSpace\("trash"\)/);
