@@ -2509,10 +2509,10 @@ export default function Home() {
     try {
       await requestAereaCode(AEREA_ACCOUNT);
       setSyncCodeSent(true);
-      setSyncMessage(`A sign-in code was sent to ${AEREA_ACCOUNT}.`);
+      setSyncMessage(`A sign-in link was sent to ${AEREA_ACCOUNT}.`);
     } catch (error) {
       setSyncMessage(
-        error instanceof Error ? error.message : "Could not send the code.",
+        error instanceof Error ? error.message : "Could not send the sign-in link.",
       );
     }
   };
@@ -4800,17 +4800,17 @@ export default function Home() {
               ) : (
                 <div className="sync-actions">
                   {!syncCodeSent ? (
-                    <button onClick={sendSyncCode}>Email me a sign-in code</button>
+                    <button onClick={sendSyncCode}>Connect this device</button>
                   ) : (
                     <>
                       <label>
-                        Sign-in code
+                        Callback URL (only if Android does not return automatically)
                         <input
                           inputMode="numeric"
                           autoComplete="one-time-code"
                           value={syncCode}
                           onChange={(event) => setSyncCode(event.target.value)}
-                          placeholder="Enter the code"
+                          placeholder="aerea://auth/callback#..."
                         />
                       </label>
                       <button
@@ -4823,7 +4823,7 @@ export default function Home() {
                         className="sync-resend"
                         onClick={sendSyncCode}
                       >
-                        Send another code
+                        Send another link
                       </button>
                     </>
                   )}
