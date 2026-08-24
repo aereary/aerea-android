@@ -9020,7 +9020,7 @@ export default function Home() {
               }}
             >
               <span>{tab.icon}</span>
-              <small>{tab.label}</small>
+              {tab.id !== "add" && <small>{tab.label}</small>}
             </button>
           ))}
         </nav>}
@@ -10676,7 +10676,7 @@ export default function Home() {
                           }}
                         >
                           <span aria-hidden="true">{tab.icon}</span>
-                          <small>{tab.label}</small>
+                          {tab.id !== "add" && <small>{tab.label}</small>}
                         </button>
                       ))}
                     </nav>

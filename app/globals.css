@@ -28867,3 +28867,26 @@ button.brand-wrap {
     grid-template-columns:15px minmax(0,1fr) 30px minmax(88px,108px);
   }
 }
+
+/* Keep the Recordings class editor as a centered note instead of a full sheet. */
+.class-editor-backdrop {
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+
+.class-editor-backdrop > .class-editor-modal {
+  flex:0 1 500px;
+  max-height:min(660px,calc(100dvh - 32px));
+  max-width:500px;
+  overflow:auto;
+  padding:20px;
+  width:min(88vw,500px);
+}
+
+@media (max-width:520px) {
+  .class-editor-backdrop > .class-editor-modal {
+    border-radius:26px;
+    padding:18px;
+  }
+}

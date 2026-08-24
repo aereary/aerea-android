@@ -624,6 +624,11 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
   assert.match(pageSource, /tab\.id === "add" \? "Open Quick Capture" : tab\.label/);
   assert.equal(
+    (pageSource.match(/\{tab\.id !== "add" && <small>\{tab\.label\}<\/small>\}/g) ?? []).length,
+    2,
+    "the center plus should not repeat the Add label in either bottom navigation",
+  );
+  assert.equal(
     (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
     2,
     "only the two rendered variants of the central navigation plus may open Quick Capture",
@@ -649,6 +654,18 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /className="inbox-item-icon"/);
   assert.match(pageSource, /className="inbox-item-copy"/);
   assert.match(cssSource, /\.inbox-convert-actions button:disabled/);
+});
+
+test("keeps the Recordings class editor compact and centered", () => {
+  assert.match(pageSource, /className="modal-backdrop class-editor-backdrop"/);
+  assert.match(
+    cssSource,
+    /\.class-editor-backdrop \{[\s\S]{0,140}align-items:center;[\s\S]{0,140}padding:16px/,
+  );
+  assert.match(
+    cssSource,
+    /\.class-editor-backdrop > \.class-editor-modal \{[\s\S]{0,260}max-height:min\(660px,calc\(100dvh - 32px\)\);[\s\S]{0,180}width:min\(88vw,500px\)/,
+  );
 });
 
 test("keeps reversible history, archive and a 30-day Trash", () => {
