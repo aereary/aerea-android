@@ -1765,8 +1765,9 @@ export default function Home() {
   );
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayKey = localDateKey(yesterdayDate);
   const yesterdayDoneCount =
-    reminderHistory[localDateKey(yesterdayDate)]?.length ?? 0;
+    reminderHistory[yesterdayKey]?.length ?? 0;
 
   useEffect(() => {
     const updateClock = () => {
@@ -7613,9 +7614,6 @@ export default function Home() {
                       <strong>Nothing gets lost.</strong>
                       <p>The original capture stays here after you convert it.</p>
                     </div>
-                    <button type="button" onClick={() => setQuickCaptureOpen(true)}>
-                      ＋ Quick Capture
-                    </button>
                   </div>
                   <div className="inbox-list">
                     {inboxItems.map((item) => (
@@ -9051,7 +9049,11 @@ export default function Home() {
                     <strong>Still waiting from yesterday</strong>
                     {overdueTasks.map((task) => (
                       <article key={task.id}>
-                        <span>You didn’t finish “{task.title}”.</span>
+                        <span>
+                          You didn’t finish “{task.title}” {task.dueDate === yesterdayKey
+                            ? "yesterday"
+                            : `on ${readableDate(task.dueDate)}`}.
+                        </span>
                         <div>
                           <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
                           <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>

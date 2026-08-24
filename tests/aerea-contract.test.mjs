@@ -66,6 +66,18 @@ const monthWidgetSource = await readFile(
   new URL("../android/app/src/main/java/com/aereaary/aerea/AereaMonthWidget.java", import.meta.url),
   "utf8",
 );
+const todayWidgetInfoSource = await readFile(
+  new URL("../android/app/src/main/res/xml/aerea_today_widget_info.xml", import.meta.url),
+  "utf8",
+);
+const monthWidgetInfoSource = await readFile(
+  new URL("../android/app/src/main/res/xml/aerea_month_widget_info.xml", import.meta.url),
+  "utf8",
+);
+const widgetFallbackSource = await readFile(
+  new URL("../android/app/src/main/res/layout/aerea_widget_fallback.xml", import.meta.url),
+  "utf8",
+);
 const sportsFunctionSource = await readFile(
   new URL("../supabase/functions/sync-sports-events/index.ts", import.meta.url),
   "utf8",
@@ -198,8 +210,15 @@ test("keeps notes, searchable readers, pastel highlights, and private files in L
   assert.match(librarySource, /Your Library/);
   assert.doesNotMatch(librarySource, /HANDWRITING/);
   assert.match(librarySource, /READ & ANNOTATE/);
+  assert.match(librarySource, /COLLECTIONS/);
+  assert.match(librarySource, /favoriteFiles/);
+  assert.match(librarySource, /recentFiles/);
+  assert.match(librarySource, /Recently opened/);
+  assert.match(librarySource, /Continue ·/);
+  assert.match(librarySource, /study-file-batch-actions/);
   assert.match(librarySource, /application\/epub\+zip/);
   assert.match(readerSource, /Search in this PDF/);
+  assert.match(readerSource, /"contents" \| "pages" \| "bookmarks" \| "highlights" \| "notes"/);
   assert.match(readerSource, /SelectionHighlightMenu/);
   assert.match(readerSource, /highlightPdfSelection/);
   assert.match(readerSource, /epub-saved-highlight/);
@@ -542,6 +561,14 @@ test("ships launcher-safe widgets with a useful empty first render", () => {
     assert.match(source, /aerea_widget_fallback/);
     assert.match(source, /onAppWidgetOptionsChanged/);
   }
+  for (const source of [todayWidgetInfoSource, monthWidgetInfoSource]) {
+    assert.match(source, /android:initialLayout="@layout\/aerea_widget_fallback"/);
+    assert.match(source, /android:previewImage="@mipmap\/ic_launcher"/);
+    assert.match(source, /android:previewLayout="@layout\/aerea_widget_preview_/);
+    assert.doesNotMatch(source, /android:configure=/);
+  }
+  assert.match(widgetFallbackSource, /android:text="aérea"/);
+  assert.match(widgetFallbackSource, /android:text="No events yet ♡"/);
   assert.match(todayWidgetSource, /No events yet ♡/);
   assert.match(manifestSource, /AereaTodayWidget/);
   assert.match(manifestSource, /AereaMonthWidget/);
@@ -550,6 +577,15 @@ test("ships launcher-safe widgets with a useful empty first render", () => {
 test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
   assert.match(pageSource, /tab\.id === "add" \? "Open Quick Capture" : tab\.label/);
+  assert.equal(
+    (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
+    2,
+    "only the two rendered variants of the central navigation plus may open Quick Capture",
+  );
+  assert.doesNotMatch(
+    pageSource,
+    /className="feature-space-toolbar"[\s\S]{0,500}setQuickCaptureOpen\(true\)/,
+  );
   assert.match(pageSource, /Keep in Inbox/);
   for (const kind of ["photo", "pdf", "file", "link"]) {
     assert.match(featureSource, new RegExp(`\\| "${kind}"`));
@@ -585,8 +621,28 @@ test("wires calendar drag, duplicate, selection and conflict checks to the UI", 
   assert.match(pageSource, /className="event-detail-duplicate"/);
   assert.match(pageSource, /duplicateCalendarEvent\(selectedEventDetail\)/);
   assert.match(pageSource, /toggleCalendarEventSelection/);
+  assert.match(pageSource, /copyCurrentWeek/);
+  assert.match(pageSource, /goToScheduleToday/);
+  assert.match(pageSource, /Jump to date/);
+  assert.match(pageSource, /className="agenda-v2-all-day-list"/);
   assert.match(pageSource, /This overlaps with \$\{conflict\.title\}/);
   assert.match(cssSource, /\.agenda-v2-event\.is-dragging/);
+});
+
+test("keeps Library links and backlinks bidirectional without duplicating content", () => {
+  assert.match(featureSource, /export type EntityLink/);
+  assert.match(pageSource, /const \[entityLinks, setEntityLinks\] = useState<EntityLink\[\]>/);
+  assert.match(pageSource, /setEntityLinks\(snapshot\.entityLinks\)/);
+  assert.match(pageSource, /fromType: "event",[\s\S]{0,140}toType: "file"/);
+  assert.match(pageSource, /fromType: "event",[\s\S]{0,140}toType: "recording"/);
+  assert.match(pageSource, /fromType: "task",[\s\S]{0,140}toType: "file"/);
+  assert.match(pageSource, /toggleEntityLink\([\s\S]{0,180}"class",[\s\S]{0,180}"note"/);
+  assert.match(pageSource, /Attach from Library/);
+  assert.match(pageSource, /Related notes & recordings/);
+  assert.match(pageSource, /usedInForFile=\{\(fileId\) =>/);
+  assert.match(librarySource, /Used in:/);
+  assert.match(pageSource, /const alreadyLinked = hasEntityLink/);
+  assert.match(pageSource, /alreadyLinked[\s\S]{0,220}current\.filter/);
 });
 
 test("draws edge-to-edge and handles the Android auth callback in every lifecycle", () => {
@@ -630,7 +686,13 @@ test("keeps morning, night and smart rescheduling small but actionable", () => {
   assert.match(pageSource, /NIGHT RESET ♡/);
   assert.match(pageSource, /reset-summary-categories/);
   assert.match(pageSource, /Still waiting from yesterday/);
+  assert.match(pageSource, /task\.dueDate === yesterdayKey[\s\S]{0,80}\? "yesterday"/);
   assert.match(pageSource, /rescheduleHistory/);
+  assert.match(pageSource, /skipped: dueDate === null/);
+  assert.match(featureSource, /attachmentIds\?: string\[\]/);
+  assert.match(featureSource, /checklist\?: string\[\]/);
+  assert.match(featureSource, /tags\?: string\[\]/);
+  assert.match(featureSource, /priority\?: "gentle" \| "important" \| "urgent"/);
   assert.match(pageSource, /Pick date/);
   assert.match(pageSource, /Move unfinished things to tomorrow\?/);
 });
@@ -644,6 +706,12 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /startPostItDrag/);
   assert.match(pageSource, /startPostItResize/);
   assert.match(pageSource, /changePostItLayer/);
+  assert.match(pageSource, /pinned: !item\.pinned/);
+  assert.match(pageSource, /togglePostItLock/);
+  assert.match(pageSource, /duplicatePostIt/);
+  assert.match(pageSource, /groupSelectedPostIts/);
+  assert.match(pageSource, /ungroupSelectedPostIts/);
+  assert.match(pageSource, /archiveSelectedPostIts/);
   assert.match(pageSource, /Bring forward/);
   assert.match(pageSource, /Send backward/);
   assert.match(pageSource, /postItLongPressRef/);
