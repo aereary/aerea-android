@@ -5309,6 +5309,24 @@ export default function Home() {
     setEventDetailReturnDayPocket(null);
   };
 
+  const openSelectedEventEditor = () => {
+    if (!selectedEventDetail || selectedEventDetail.eventType === "sports_event") {
+      return;
+    }
+    const editableEvent =
+      calendarEvents.find((event) => event.id === selectedEventDetail.id) ??
+      selectedEventDetail;
+    const occurrenceDate = selectedEventDetail.date;
+    const eventMonth = dateFromKey(occurrenceDate);
+    setSelectedCalendarDate(occurrenceDate);
+    setViewMonth(
+      new Date(eventMonth.getFullYear(), eventMonth.getMonth(), 1),
+    );
+    closeEventDetail();
+    setCalendarOpen(true);
+    openEventEditor(editableEvent);
+  };
+
   const returnToDayPocket = () => {
     if (!eventDetailReturnDayPocket) return;
     const returnDate = eventDetailReturnDayPocket;
@@ -12057,6 +12075,19 @@ export default function Home() {
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Details for ${selectedEventDetail.title}`}
+                onClickCapture={(event) => {
+                  const target = event.target as Element;
+                  if (
+                    target.closest(
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                    )
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSelectedEventEditor();
+                }}
               >
                 <header className="event-detail-header">
                   <p className="event-detail-date-eyebrow">

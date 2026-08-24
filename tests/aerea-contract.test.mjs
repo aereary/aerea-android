@@ -476,6 +476,18 @@ test("opens the faithful event note with a real long press", () => {
   );
 });
 
+test("opens the normal event editor from every detail-card surface except navigation actions", () => {
+  assert.match(pageSource, /const openSelectedEventEditor = \(\) =>/);
+  assert.match(
+    pageSource,
+    /calendarEvents\.find\(\(event\) => event\.id === selectedEventDetail\.id\)[\s\S]{0,500}setCalendarOpen\(true\);[\s\S]{0,100}openEventEditor\(editableEvent\)/,
+  );
+  assert.match(
+    pageSource,
+    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}`\}[\s\S]{0,500}onClickCapture=[\s\S]{0,500}\.event-detail-add, \.event-detail-header > button, \.event-detail-back[\s\S]{0,300}openSelectedEventEditor\(\)/,
+  );
+});
+
 test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /className="day-summary-orbs"/);
   assert.doesNotMatch(pageSource, /className="day-summary-doodle"/);
