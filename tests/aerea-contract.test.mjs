@@ -440,6 +440,7 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(pageSource, /className="event-detail-reminder"/);
   assert.match(pageSource, /<small>Reminder<\/small>/);
   assert.match(pageSource, /No reminder/);
+  assert.match(pageSource, /aria-label="Close event details"[\s\S]*M7 7 17 17M17 7 7 17/);
   assert.match(cssSource, /Long-press event card — shared faithfully by every theme/);
   assert.match(cssSource, /backdrop-filter:blur\(7px\)/);
   assert.match(cssSource, /Reference-style event note shared by Personal and Day Pocket/);
@@ -451,6 +452,8 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-divider::before \{ display:none; \}/);
   assert.match(cssSource, /\.event-detail-divider,[\s\S]*border-radius:999px;[\s\S]*height:6px;[\s\S]*width:38px;/);
   assert.match(cssSource, /\.event-detail-reminder[\s\S]*grid-template-columns:54px minmax\(0,1fr\)/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-reminder,[\s\S]*background:#fff9ea;[\s\S]*border-color:#f1dfad/);
+  assert.match(cssSource, /\.event-detail-header > button svg \{[\s\S]*stroke:currentColor/);
   assert.match(pageSource, /range: `\$\{startLabel\} – \$\{endLabel\}`/);
   assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
 });
@@ -466,6 +469,10 @@ test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /className="day-summary-date-eyebrow"/);
   assert.match(pageSource, /className="day-summary-category">DAY POCKET/);
   assert.match(pageSource, /<h2>\{readableDate\(daySummaryDate\)\}<\/h2>/);
+  assert.match(
+    pageSource,
+    /className="day-summary-card"[\s\S]*?<\/header>\s*<div className="day-summary-divider" aria-hidden="true" \/>\s*\{summaryEvents\.length/,
+  );
   assert.doesNotMatch(pageSource, />Your plans</);
   assert.doesNotMatch(pageSource, /`pocket-tone-\$\{index % 4\}`/);
   assert.doesNotMatch(pageSource, /className="day-summary-event-category"/);
@@ -838,6 +845,12 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /groupSelectedPostIts/);
   assert.match(pageSource, /choosePostItGroupAction/);
   assert.match(pageSource, /Group with other post-its…/);
+  assert.match(pageSource, />Group it<\/button>/);
+  assert.match(pageSource, /if \(selectedPostItIds\.length > 0\)/);
+  assert.doesNotMatch(
+    pageSource,
+    /const groupSelectedPostIts = \(\) => \{[\s\S]{0,700}window\.prompt/,
+  );
   assert.doesNotMatch(pageSource, /togglePostItLock/);
   assert.doesNotMatch(pageSource, /duplicatePostIt/);
   assert.doesNotMatch(pageSource, /archiveSelectedPostIts/);
@@ -871,6 +884,9 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);
   assert.match(cssSource, /\.post-it-editor-options button \{[\s\S]*height:30px;[\s\S]*width:30px;/);
+  assert.match(cssSource, /August 24 polish: match the latest event, calendar, and post-it references/);
+  assert.match(cssSource, /\.post-it-group-action \{[\s\S]*margin:16px auto 0/);
+  assert.match(cssSource, /\.post-it-editor-backdrop \{[\s\S]*align-items:center;[\s\S]*justify-content:center/);
   assert.match(cssSource, /\.movable-post-it p \{ font-size:var\(--post-it-text-size,18px\); height:100%; line-height:1\.22; max-height:none; \}/);
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
@@ -926,6 +942,8 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(pageSource, /className="extended-calendar-header-actions"/);
   assert.match(pageSource, /className="extended-schedule-button"/);
   assert.match(pageSource, /className="extended-compact-glyph"/);
+  assert.match(pageSource, /className="extended-compact-button extended-back-button"/);
+  assert.match(pageSource, /className="extended-filter-control"/);
   assert.match(pageSource, /className="extended-filter-menu"/);
   assert.match(pageSource, /const extendedCalendarTabs = tabs\.filter/);
   assert.match(pageSource, /tab\.id !== "add"/);
@@ -940,6 +958,8 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /breathing room, quiet selection, and motion for the extended month/);
   assert.match(cssSource, /Reference month: Sunday-first, open week rows, and compact event labels/);
   assert.match(cssSource, /Exact reference chrome: two-tool month header, roomy type rail, and legible event slips/);
+  assert.match(cssSource, /Extended month — the airy portrait reference, recolored by the active theme/);
+  assert.match(cssSource, /\.extended-calendar-header > \.extended-back-button/);
   assert.match(cssSource, /\.extended-schedule-glyph \{[\s\S]*font-size:42px/);
   assert.match(cssSource, /\.extended-event-pill > span > strong \{[\s\S]*font-size:10\.5px/);
   assert.match(cssSource, /\.extended-calendar-cell\.sunday \.extended-calendar-date/);

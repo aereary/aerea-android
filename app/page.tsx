@@ -4537,7 +4537,9 @@ export default function Home() {
 
   const groupSelectedPostIts = () => {
     if (selectedPostItIds.length < 2) return;
-    const name = window.prompt("Optional group name", "Ideas")?.trim() || "Group";
+    const name =
+      postItGroups.length === 0 ? "Group" : `Group ${postItGroups.length + 1}`;
+    const updatedAt = new Date().toISOString();
     const group: PostItGroup = {
       id: crypto.randomUUID(),
       name,
@@ -4550,9 +4552,12 @@ export default function Home() {
     setPostIts((current) =>
       current.map((postIt) =>
         selectedPostItIds.includes(postIt.id)
-          ? { ...postIt, groupId: group.id }
+          ? { ...postIt, groupId: group.id, updatedAt }
           : postIt,
       ),
+    );
+    setHistoryMessage(
+      `${selectedPostItIds.length} post-its grouped. Move one to move them together.`,
     );
     setSelectedPostItIds([]);
   };
@@ -4706,6 +4711,19 @@ export default function Home() {
         "button, summary, input, textarea, select, .post-it-resize-handle",
       )
     ) return;
+    if (selectedPostItIds.length > 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedPostItIds((current) =>
+        current.includes(postIt.id)
+          ? current.length > 1
+            ? current.filter((id) => id !== postIt.id)
+            : current
+          : [...current, postIt.id],
+      );
+      navigator.vibrate?.(10);
+      return;
+    }
     raisePostItOnTouch(postIt);
     const canvas = phoneCanvasRef.current;
     if (!canvas) return;
@@ -9602,7 +9620,7 @@ export default function Home() {
       {selectedPostItIds.length > 0 && (
         <div className="postit-multi-toolbar" aria-label="Selected post-it actions">
           <strong>{selectedPostItIds.length} selected</strong>
-          <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group</button>
+          <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group it</button>
           <button type="button" onClick={() => setSelectedPostItIds([])}>Done</button>
         </div>
       )}
@@ -10460,6 +10478,22 @@ export default function Home() {
                     aria-label="Extended monthly calendar"
                   >
                     <header className="extended-calendar-header">
+                      <button
+                        className="extended-compact-button extended-back-button"
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          setCalendarExpanded(false);
+                        }}
+                        aria-label="Back to compact month"
+                        title="Back to compact month"
+                      >
+                        <span className="extended-compact-glyph" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12H19" />
+                          </svg>
+                        </span>
+                      </button>
                       <div className="extended-calendar-heading-copy">
                         <div className="extended-calendar-month">
                           <button
@@ -10472,7 +10506,7 @@ export default function Home() {
                               month: "long",
                               year: "numeric",
                             })}
-                            <span className="extended-month-chevron" aria-hidden="true" />
+                            <span className="extended-month-chevron" aria-hidden="true">✧</span>
                           </button>
                         </div>
                       </div>
@@ -10494,19 +10528,18 @@ export default function Home() {
                           <span className="extended-schedule-glyph" aria-hidden="true">☆</span>
                         </button>
                         <button
-                          className="extended-compact-button"
+                          className="extended-filter-control"
                           type="button"
-                          onClick={() => {
-                            setMonthPickerOpen(false);
-                            setCalendarExpanded(false);
-                          }}
-                          aria-label="Back to compact month"
-                          title="Back to compact month"
+                          onClick={() => openCalendarCategoryEditor()}
+                          aria-label="Edit visible event types"
+                          title="Edit event types"
                         >
-                          <span className="extended-compact-glyph" aria-hidden="true">
-                            <i />
-                            <i />
-                          </span>
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h9M17 17h3" />
+                            <circle cx="16" cy="7" r="2" />
+                            <circle cx="10" cy="12" r="2" />
+                            <circle cx="15" cy="17" r="2" />
+                          </svg>
                         </button>
                       </nav>
                     </header>
@@ -11790,6 +11823,7 @@ export default function Home() {
                   </svg>
                 </button>
               </header>
+              <div className="day-summary-divider" aria-hidden="true" />
               {summaryEvents.length === 0 ? (
                 <div className="day-summary-empty"><strong>Nothing planned yet</strong><p>This little page is completely yours.</p></div>
               ) : (
@@ -11866,7 +11900,6 @@ export default function Home() {
                   })}
                 </div>
               )}
-              <div className="day-summary-divider" aria-hidden="true" />
               <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>
                 <span className="day-summary-add-icon" aria-hidden="true">
                   <svg viewBox="0 0 42 42" focusable="false">
@@ -12084,7 +12117,9 @@ export default function Home() {
                     onClick={closeEventDetail}
                     aria-label="Close event details"
                   >
-                    ×
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M7 7 17 17M17 7 7 17" />
+                    </svg>
                   </button>
                 </header>
 
