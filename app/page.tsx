@@ -4,16 +4,44 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
   AEREA_ACCOUNT,
   currentAereaEmail,
+  deleteAereaLibraryFile,
+  downloadAereaLibraryFile,
+  fetchSportsFixtures,
+  handleAereaAuthCallback,
   pushCloudState,
   readBrowserSketches,
   readBrowserState,
   reconcileCloudState,
   requestAereaCode,
   supabase,
+  syncFollowedSportsTeams,
+  uploadAereaLibraryFile,
   verifyAereaCode,
   writeBrowserSketches,
   writeBrowserState,
 } from "./supabase-sync";
+import {
+  DEFAULT_RESET_PREFERENCES,
+  DEFAULT_SPORTS_SETTINGS,
+  INITIAL_SPORTS_TEAMS,
+  addDays,
+  createTrashItem,
+  fileKind,
+  inferInboxKind,
+  rangesOverlap,
+  trashDaysRemaining,
+  type EntityLink,
+  type InboxItem,
+  type LibraryCollection,
+  type LibraryItem,
+  type PostIt,
+  type PostItGroup,
+  type ResetPreferences,
+  type SportsEvent,
+  type SportsSettings,
+  type TaskItem,
+  type TrashItem,
+} from "./aerea-features";
 import {
   ChangeEvent,
   CSSProperties,
@@ -26,7 +54,14 @@ import {
 } from "react";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
-type Space = "menu" | "classes" | "sketchbook";
+type Space =
+  | "menu"
+  | "inbox"
+  | "classes"
+  | "library"
+  | "postits"
+  | "sketchbook"
+  | "trash";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type AppTheme =
   | "storybook"
@@ -65,6 +100,31 @@ type AereaWidgetPlugin = {
 
 const AereaWidget = registerPlugin<AereaWidgetPlugin>("AereaWidget");
 
+type AereaAuthPlugin = {
+  getPendingLink(): Promise<{ url: string | null }>;
+};
+
+type SystemBarsPlugin = {
+  setStyle(options: {
+    style: "LIGHT" | "DARK";
+    bar?: "StatusBar" | "NavigationBar";
+  }): Promise<void>;
+};
+
+type AereaSportsNotificationsPlugin = {
+  requestPermissions(): Promise<{ notifications?: string }>;
+  sync(options: {
+    eventsJson: string;
+    enabled: boolean;
+    leadMinutes: number;
+  }): Promise<void>;
+};
+
+const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
+const SystemBars = registerPlugin<SystemBarsPlugin>("SystemBars");
+const AereaSportsNotifications =
+  registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
+
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
@@ -75,6 +135,17 @@ type AereaStoragePlugin = {
     dataUrl: string;
   }): Promise<void>;
   deleteSketch(options: { id: string }): Promise<void>;
+  saveFile(options: {
+    name: string;
+    mimeType: string;
+    dataUrl: string;
+  }): Promise<{ id: string }>;
+  readFile(options: { id: string }): Promise<{
+    name: string;
+    mimeType: string;
+    dataUrl: string;
+  }>;
+  deleteFile(options: { id: string }): Promise<void>;
 };
 
 const AereaStorage = registerPlugin<AereaStoragePlugin>("AereaStorage");
@@ -166,6 +237,18 @@ type CalendarEvent = {
   todos?: string[];
   todoStates?: ("pending" | "done" | "missed")[];
   files?: string[];
+  attachmentIds?: string[];
+  attachedNoteIds?: number[];
+  attachedRecordingIds?: number[];
+  tags?: string[];
+  priority?: "gentle" | "important" | "urgent";
+  eventType?: "personal" | "sports_event";
+  sportsEventId?: string;
+  sportsCardStyle?: boolean;
+  sportsPrimary?: string;
+  sportsSecondary?: string;
+  sportsIcon?: string;
+  sourceInboxId?: string;
 };
 
 type EventColor =
@@ -212,6 +295,29 @@ type SketchStroke = {
   color: string;
   size: number;
   points: SketchPoint[];
+};
+
+type AereaHistorySnapshot = {
+  reminders: Reminder[];
+  reminderHistory: Record<string, number[]>;
+  calendarEvents: CalendarEvent[];
+  entries: JournalEntry[];
+  tasks: TaskItem[];
+  inboxItems: InboxItem[];
+  postIts: PostIt[];
+  postItGroups: PostItGroup[];
+  libraryItems: LibraryItem[];
+  libraryCollections: LibraryCollection[];
+  entityLinks: EntityLink[];
+  trashItems: TrashItem[];
+  classItems: ClassItem[];
+  recordings: Recording[];
+  selectedClass: string;
+};
+
+type AereaHistoryEntry = {
+  label: string;
+  snapshot: AereaHistorySnapshot;
 };
 
 const themeOptions: {
@@ -526,29 +632,7 @@ const safePlaceLittleThings = [
 
 const CLEAN_START_VERSION = "android-release-1";
 
-const reminders: Reminder[] = [
-  {
-    id: 1,
-    title: "Drink water",
-    detail: "Your first glass of the day",
-    icon: "💧",
-    tint: "blue",
-  },
-  {
-    id: 2,
-    title: "Morning vitamins",
-    detail: "With breakfast",
-    icon: "🌼",
-    tint: "yellow",
-  },
-  {
-    id: 3,
-    title: "Review class notes",
-    detail: "15 gentle minutes",
-    icon: "📖",
-    tint: "lilac",
-  },
-];
+const starterReminders: Reminder[] = [];
 
 const tabs: { id: Tab; icon: string; label: string }[] = [
   { id: "today", icon: "⌂", label: "Today" },
@@ -558,40 +642,7 @@ const tabs: { id: Tab; icon: string; label: string }[] = [
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
 
-const starterHabits: Habit[] = [
-  {
-    id: 1,
-    title: "Drink 6 glasses of water",
-    icon: "💧",
-    color: "habit-blue",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 2,
-    title: "Study for at least 25 minutes",
-    icon: "📚",
-    color: "habit-lilac",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 3,
-    title: "Write one gentle thought",
-    icon: "🪶",
-    color: "habit-pink",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 4,
-    title: "Stretch and breathe",
-    icon: "🌿",
-    color: "habit-sage",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-];
+const starterHabits: Habit[] = [];
 
 const habitColorOptions = [
   { value: "habit-blue", label: "Sky blue", hex: "#bdeaff" },
@@ -695,14 +746,13 @@ function makeEventDraft(date: string): EventDraft {
     todos: [],
     todoStates: [],
     files: [],
+    attachmentIds: [],
+    attachedNoteIds: [],
+    attachedRecordingIds: [],
   };
 }
 
-const starterClasses: ClassItem[] = [
-  { id: "differential-equations", name: "Differential Equations", icon: "∫", color: "#ddd8ff" },
-  { id: "ethical-hacking", name: "Ethical Hacking", icon: "⌘", color: "#cceeff" },
-  { id: "intellectual-property", name: "Intellectual Property", icon: "§", color: "#f7dec7" },
-];
+const starterClasses: ClassItem[] = [];
 
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -793,6 +843,18 @@ function eventTimeLabel(event: CalendarEvent) {
   return event.time;
 }
 
+function matchCountdownLabel(event: CalendarEvent) {
+  const start = new Date(`${event.date}T${event.time || "00:00"}:00`);
+  const difference = start.getTime() - Date.now();
+  const hours = Math.ceil(difference / 3_600_000);
+  const days = Math.ceil(difference / 86_400_000);
+  if (difference <= 0) return "Today ♡";
+  if (hours <= 1) return "In 1 hour ♡";
+  if (hours < 24) return `In ${hours} hours ♡`;
+  if (days === 1) return "Tomorrow ♡";
+  return `In ${days} days ♡`;
+}
+
 function eventRepeatLabel(event: CalendarEvent) {
   if (!event.repeat || event.repeat === "Never") return "Does not repeat";
   if (event.repeat !== "Custom") return event.repeat;
@@ -810,6 +872,7 @@ export default function Home() {
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
+  const [reminders, setReminders] = useState<Reminder[]>(starterReminders);
   const [habits, setHabits] = useState<Habit[]>(starterHabits);
   const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
@@ -841,12 +904,59 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
+  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
+  const [quickCaptureText, setQuickCaptureText] = useState("");
+  const [quickCaptureFile, setQuickCaptureFile] = useState<File | null>(null);
+  const [quickCaptureSaving, setQuickCaptureSaving] = useState(false);
+  const [postIts, setPostIts] = useState<PostIt[]>([]);
+  const [postItGroups, setPostItGroups] = useState<PostItGroup[]>([]);
+  const [selectedPostItIds, setSelectedPostItIds] = useState<string[]>([]);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [libraryCollections, setLibraryCollections] = useState<
+    LibraryCollection[]
+  >([]);
+  const [selectedLibraryItem, setSelectedLibraryItem] =
+    useState<LibraryItem | null>(null);
+  const [libraryPanel, setLibraryPanel] = useState<
+    "contents" | "pages" | "bookmarks" | "highlights" | "notes"
+  >("contents");
+  const [libraryCollectionFilter, setLibraryCollectionFilter] = useState<
+    string | null
+  >(null);
+  const [entityLinks, setEntityLinks] = useState<EntityLink[]>([]);
+  const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
+  const [resetPreferences, setResetPreferences] = useState<ResetPreferences>(
+    DEFAULT_RESET_PREFERENCES,
+  );
+  const [resetExperience, setResetExperience] = useState<
+    "morning" | "night" | null
+  >(null);
+  const [sportsSettings, setSportsSettings] = useState<SportsSettings>(
+    DEFAULT_SPORTS_SETTINGS,
+  );
+  const [sportsEvents, setSportsEvents] = useState<SportsEvent[]>([]);
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [calendarMultiSelect, setCalendarMultiSelect] = useState(false);
+  const [jumpDate, setJumpDate] = useState(todayKey);
+  const [draggingCalendarEventId, setDraggingCalendarEventId] = useState<
+    string | null
+  >(null);
+  const [calendarDragTarget, setCalendarDragTarget] = useState<string | null>(
+    null,
+  );
+  const [historyMessage, setHistoryMessage] = useState("");
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
   const [syncCode, setSyncCode] = useState("");
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
   const [syncCodeSent, setSyncCodeSent] = useState(false);
+  const [authCallbackStatus, setAuthCallbackStatus] = useState<{
+    kind: "working" | "success" | "error";
+    message: string;
+  } | null>(null);
   const [refugeOpen, setRefugeOpen] = useState(false);
   const [safePlaceMode, setSafePlaceMode] =
     useState<SafePlaceMode>("home");
@@ -881,7 +991,9 @@ export default function Home() {
     color: "habit-sage",
   });
   const [classItems, setClassItems] = useState<ClassItem[]>(starterClasses);
-  const [selectedClass, setSelectedClass] = useState(starterClasses[0].name);
+  const [selectedClass, setSelectedClass] = useState(
+    starterClasses[0]?.name ?? "",
+  );
   const [classEditorOpen, setClassEditorOpen] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [classDraft, setClassDraft] = useState({
@@ -908,6 +1020,24 @@ export default function Home() {
   const refugeAudioContextRef = useRef<AudioContext | null>(null);
   const refugeHeartbeatTimerRef = useRef<number | null>(null);
   const secretDiaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const consumedAuthLinksRef = useRef(new Set<string>());
+  const undoStackRef = useRef<AereaHistoryEntry[]>([]);
+  const redoStackRef = useRef<AereaHistoryEntry[]>([]);
+  const [globalHistoryDepth, setGlobalHistoryDepth] = useState({
+    undo: 0,
+    redo: 0,
+  });
+  const postItDragRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    positions: Record<string, { x: number; y: number }>;
+  } | null>(null);
+  const calendarEventDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    timer: number;
+  } | null>(null);
 
   const [pageStyle, setPageStyle] = useState<PageStyle>("grid");
   const [penColor, setPenColor] = useState("#1f241b");
@@ -915,9 +1045,7 @@ export default function Home() {
   const [penTool, setPenTool] = useState<"pen" | "eraser">("pen");
   const [sketchFullscreen, setSketchFullscreen] = useState(false);
   const [sketchToolbarOpen, setSketchToolbarOpen] = useState(true);
-  const [sketchTitle, setSketchTitle] = useState(
-    "Differential Equations — notes",
-  );
+  const [sketchTitle, setSketchTitle] = useState("Untitled page");
   const [savedPages, setSavedPages] = useState<SketchPage[]>([]);
   const [sketchSaving, setSketchSaving] = useState(false);
   const [sketchMessage, setSketchMessage] = useState("");
@@ -973,6 +1101,131 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.dataset.native = String(
+      Capacitor.isNativePlatform(),
+    );
+    return () => {
+      delete document.documentElement.dataset.native;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    void SystemBars.setStyle({
+      style: colorMode === "dark" ? "DARK" : "LIGHT",
+    }).catch(() => undefined);
+  }, [colorMode, appTheme]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    let active = true;
+    const refresh = () => {
+      void fetchSportsFixtures()
+        .then((fixtures) => {
+          if (active && fixtures) setSportsEvents(fixtures);
+        })
+        .catch(() => {
+          // Keep the cached fixtures visible while offline or before migration.
+        });
+    };
+    refresh();
+    window.addEventListener("online", refresh);
+    const interval = window.setInterval(refresh, 6 * 60 * 60 * 1000);
+    return () => {
+      active = false;
+      window.removeEventListener("online", refresh);
+      window.clearInterval(interval);
+    };
+  }, [stateReady]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    const timer = window.setTimeout(() => {
+      void syncFollowedSportsTeams(sportsSettings).catch(() => undefined);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [sportsSettings, stateReady]);
+
+  useEffect(() => {
+    if (!stateReady || !isNative()) return;
+    const followedEvents = sportsEvents.filter((event) =>
+      sportsSettings.followedTeamIds.includes(event.teamId),
+    );
+    const sync = async () => {
+      if (sportsSettings.notifyBeforeMatches) {
+        await AereaSportsNotifications.requestPermissions().catch(() => undefined);
+      }
+      await AereaSportsNotifications.sync({
+        enabled: sportsSettings.notifyBeforeMatches,
+        leadMinutes: sportsSettings.notificationLeadMinutes,
+        eventsJson: JSON.stringify(
+          followedEvents.map((event) => {
+            const team = INITIAL_SPORTS_TEAMS.find(
+              (candidate) => candidate.id === event.teamId,
+            );
+            return {
+              externalId: event.externalId,
+              startsAt: new Date(event.startsAtUtc).getTime(),
+              status: event.status,
+              team: team?.shortName ?? "Your team",
+              icon: team?.icon ?? "♡",
+              opponent: event.opponent,
+              time: event.localTime,
+            };
+          }),
+        ),
+      });
+    };
+    void sync().catch(() => undefined);
+  }, [sportsEvents, sportsSettings, stateReady]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let active = true;
+    const processLink = async (url: string | null) => {
+      if (!active || !url || consumedAuthLinksRef.current.has(url)) return;
+      consumedAuthLinksRef.current.add(url);
+      setSyncMessage("Confirming your email…");
+      setAuthCallbackStatus({
+        kind: "working",
+        message: "Confirming your email…",
+      });
+      try {
+        const message = await handleAereaAuthCallback(url);
+        if (!active) return;
+        const email = await currentAereaEmail();
+        setSyncEmail(email);
+        setSyncCodeSent(false);
+        setSyncMessage(message);
+        setAuthCallbackStatus({ kind: "success", message });
+      } catch (error) {
+        if (!active) return;
+        const message =
+          error instanceof Error
+            ? `${error.message} You can request another email below.`
+            : "This confirmation link could not be completed.";
+        setSyncMessage(message);
+        setAuthCallbackStatus({ kind: "error", message });
+      }
+    };
+
+    const onAuthLink = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail;
+      void processLink(detail?.url ?? null);
+    };
+    window.addEventListener("aereaAuthLink", onAuthLink);
+    void AereaAuth.getPendingLink()
+      .then(({ url }) => processLink(url))
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      window.removeEventListener("aereaAuthLink", onAuthLink);
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       !refugeOpen ||
       safePlaceMode === "home" ||
@@ -1025,12 +1278,24 @@ export default function Home() {
           : readBrowserState()) as {
           state?: {
             reminderHistory?: Record<string, number[]>;
+            reminders?: Reminder[];
             habits?: Habit[];
             entries?: JournalEntry[];
             secretDiaryEntries?: SecretDiaryEntry[];
             moodHistory?: Record<string, string>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
+            tasks?: TaskItem[];
+            inboxItems?: InboxItem[];
+            postIts?: PostIt[];
+            postItGroups?: PostItGroup[];
+            libraryItems?: LibraryItem[];
+            libraryCollections?: LibraryCollection[];
+            entityLinks?: EntityLink[];
+            trashItems?: TrashItem[];
+            resetPreferences?: ResetPreferences;
+            sportsSettings?: SportsSettings;
+            sportsEvents?: SportsEvent[];
             focusSessions?: number;
             appTheme?: AppTheme;
             colorMode?: ColorMode;
@@ -1046,33 +1311,71 @@ export default function Home() {
 
         if (payload.state) {
           const state = payload.state;
-          if (state.cleanStartVersion === CLEAN_START_VERSION) {
-            if (state.reminderHistory) setReminderHistory(state.reminderHistory);
-            if (state.habits) setHabits(state.habits);
-            if (state.entries) setEntries(state.entries);
-            if (state.secretDiaryEntries) {
-              setSecretDiaryEntries(state.secretDiaryEntries);
+          // Older payloads are migrated in place. An APK update must never
+          // interpret a missing version marker as permission to erase data.
+          if (state.reminderHistory) setReminderHistory(state.reminderHistory);
+          if (Array.isArray(state.reminders)) setReminders(state.reminders);
+          if (state.habits) setHabits(state.habits);
+          if (state.entries) setEntries(state.entries);
+          if (state.secretDiaryEntries) {
+            setSecretDiaryEntries(state.secretDiaryEntries);
+          }
+          if (state.moodHistory) setMoodHistory(state.moodHistory);
+          if (state.completedDays) setCompletedDays(state.completedDays);
+          if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
+          if (Array.isArray(state.tasks)) setTasks(state.tasks);
+          if (Array.isArray(state.inboxItems)) setInboxItems(state.inboxItems);
+          if (Array.isArray(state.postIts)) setPostIts(state.postIts);
+          if (Array.isArray(state.postItGroups)) {
+            setPostItGroups(state.postItGroups);
+          }
+          if (Array.isArray(state.libraryItems)) {
+            setLibraryItems(state.libraryItems);
+          }
+          if (Array.isArray(state.libraryCollections)) {
+            setLibraryCollections(state.libraryCollections);
+          }
+          if (Array.isArray(state.entityLinks)) setEntityLinks(state.entityLinks);
+          if (Array.isArray(state.trashItems)) {
+            const expiredTrash = state.trashItems.filter(
+              (item) => new Date(item.purgeAt).getTime() <= Date.now(),
+            );
+            if (isNative()) {
+              expiredTrash.forEach((item) => {
+                const nativeFileId =
+                  item.kind === "file"
+                    ? (item.payload as LibraryItem).nativeFileId
+                    : undefined;
+                if (nativeFileId) {
+                  void AereaStorage.deleteFile({ id: nativeFileId }).catch(
+                    () => undefined,
+                  );
+                }
+              });
             }
-            if (state.moodHistory) setMoodHistory(state.moodHistory);
-            if (state.completedDays) setCompletedDays(state.completedDays);
-            if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
-            if (typeof state.focusSessions === "number") {
-              setFocusSessions(state.focusSessions);
-            }
-          } else {
-            setReminderHistory({});
-            setHabits(starterHabits);
-            setEntries([]);
-            setSecretDiaryEntries([]);
-            setMoodHistory({});
-            setCompletedDays({});
-            setCalendarEvents([]);
-            setFocusSessions(0);
-            setRecordings([]);
-            window.localStorage.removeItem("aerea-reminders");
-            window.localStorage.removeItem("aerea-habits");
-            window.localStorage.removeItem("aerea-journal");
-            window.localStorage.removeItem("aerea-mood");
+            setTrashItems(
+              state.trashItems.filter(
+                (item) => new Date(item.purgeAt).getTime() > Date.now(),
+              ),
+            );
+          }
+          if (state.resetPreferences) {
+            setResetPreferences({
+              ...DEFAULT_RESET_PREFERENCES,
+              ...state.resetPreferences,
+            });
+          }
+          if (state.sportsSettings) {
+            setSportsSettings({
+              ...DEFAULT_SPORTS_SETTINGS,
+              ...state.sportsSettings,
+            });
+          }
+          if (Array.isArray(state.sportsEvents)) {
+            setSportsEvents(state.sportsEvents);
+          }
+          if (typeof state.focusSessions === "number") {
+            setFocusSessions(state.focusSessions);
           }
           const savedTheme = state.appTheme;
           if (
@@ -1158,12 +1461,24 @@ export default function Home() {
       try {
         const state = {
               reminderHistory,
+              reminders,
               habits,
               entries,
               secretDiaryEntries,
               moodHistory,
               completedDays,
               calendarEvents,
+              tasks,
+              inboxItems,
+              postIts,
+              postItGroups,
+              libraryItems,
+              libraryCollections,
+              entityLinks,
+              trashItems,
+              resetPreferences,
+              sportsSettings,
+              sportsEvents,
               focusSessions,
               appTheme,
               colorMode,
@@ -1197,15 +1512,27 @@ export default function Home() {
     completedDays,
     customTheme,
     entries,
+    entityLinks,
     focusSessions,
     habits,
+    inboxItems,
+    libraryCollections,
+    libraryItems,
     moodHistory,
     profilePhoto,
     reminderHistory,
+    reminders,
+    resetPreferences,
     recordings,
     secretDiaryEntries,
+    postItGroups,
+    postIts,
+    sportsEvents,
+    sportsSettings,
     stateReady,
     syncEmail,
+    tasks,
+    trashItems,
   ]);
 
   useEffect(() => {
@@ -1254,15 +1581,33 @@ export default function Home() {
 
   const pending = useMemo(
     () => reminders.filter((item) => !doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
   );
   const completed = useMemo(
     () => reminders.filter((item) => doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
+  );
+  const overdueTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          !task.completed && !task.skipped && task.dueDate < todayKey,
+      ),
+    [tasks, todayKey],
+  );
+  const todayTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) => !task.skipped && task.dueDate === todayKey,
+      ),
+    [tasks, todayKey],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
   const classRecordings = recordings.filter(
     (recording) => recording.className === selectedClass,
+  );
+  const selectedClassItem = classItems.find(
+    (item) => item.name === selectedClass,
   );
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
@@ -1273,7 +1618,56 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
-  const selectedDateEvents = calendarEvents
+  const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
+    if (!sportsSettings.addAutomatically) return [];
+    return sportsEvents
+      .filter((event) => sportsSettings.followedTeamIds.includes(event.teamId))
+      .map((event) => {
+        const team = INITIAL_SPORTS_TEAMS.find(
+          (candidate) => candidate.id === event.teamId,
+        );
+        const teamName = team?.name ?? "Your team";
+        const matchup =
+          event.homeAway === "away"
+            ? `${event.opponent} vs ${teamName}`
+            : `${teamName} vs ${event.opponent}`;
+        const score =
+          event.status === "finished" &&
+          sportsSettings.showFinalScore &&
+          typeof event.homeScore === "number" &&
+          typeof event.awayScore === "number"
+            ? ` · ${event.homeScore}—${event.awayScore}`
+            : "";
+        return {
+          id: `sports:${event.id}`,
+          date: event.localDate,
+          title: `${event.status === "finished" ? "FINAL · " : ""}${matchup}${score}`,
+          time: event.localTime || "00:00",
+          endDate: event.localDate,
+          endTime: event.localTime || "00:00",
+          allDay: false,
+          calendar: "Sports",
+          color: "blue",
+          reminder: sportsSettings.notifyBeforeMatches
+            ? `${sportsSettings.notificationLeadMinutes} minutes before`
+            : "None",
+          repeat: "Never",
+          location: event.venue,
+          note: `${event.competition} · ${event.status}${event.homeAway === "home" ? " · Home" : " · Away"}`,
+          eventType: "sports_event",
+          sportsEventId: event.id,
+          sportsCardStyle: sportsSettings.showSpecialCards,
+          sportsPrimary: team?.primaryColor,
+          sportsSecondary: team?.secondaryColor,
+          sportsIcon: team?.icon,
+        };
+      });
+  }, [sportsEvents, sportsSettings]);
+  const allCalendarEvents = useMemo(
+    () => [...calendarEvents, ...sportsCalendarEvents],
+    [calendarEvents, sportsCalendarEvents],
+  );
+  const selectedDateEvents = allCalendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const selectedDateMood = moods.find(
@@ -1283,15 +1677,15 @@ export default function Home() {
   const selectedDayMissed =
     selectedCalendarDate < todayKey && !selectedDayComplete;
   const homeWeek = useMemo(() => weekForDate(todayKey), [todayKey]);
-  const selectedHomeEvents = calendarEvents
+  const selectedHomeEvents = allCalendarEvents
     .filter((event) => eventOccursOn(event, selectedHomeDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const todayWidgetEvents = useMemo(
     () =>
-      calendarEvents
+      allCalendarEvents
         .filter((event) => eventOccursOn(event, todayKey))
         .sort((a, b) => a.time.localeCompare(b.time)),
-    [calendarEvents, todayKey],
+    [allCalendarEvents, todayKey],
   );
   const widgetDaysJson = useMemo(() => {
     const start = dateFromKey(todayKey);
@@ -1305,7 +1699,7 @@ export default function Home() {
         const mood = moods.find(
           (item) => item.label === moodHistory[dateKey],
         );
-        const events = calendarEvents
+        const events = allCalendarEvents
           .filter((event) => eventOccursOn(event, dateKey))
           .sort((a, b) => a.time.localeCompare(b.time))
           .slice(0, 3)
@@ -1323,7 +1717,7 @@ export default function Home() {
         };
       }),
     );
-  }, [calendarEvents, completedDays, moodHistory, todayKey]);
+  }, [allCalendarEvents, completedDays, moodHistory, todayKey]);
   const customArtTheme =
     themeOptions.find((theme) => theme.art === customTheme.art) ??
     themeOptions[0]!;
@@ -1380,8 +1774,159 @@ export default function Home() {
             "--app-backdrop": `linear-gradient(145deg, ${customTheme.background}, color-mix(in srgb, ${customTheme.accent} 25%, white))`,
           } as CSSProperties)
       : undefined;
-  const canUndo = historyDepth.undo > 0;
-  const canRedo = historyDepth.redo > 0;
+  const canUndoSketch = historyDepth.undo > 0;
+  const canRedoSketch = historyDepth.redo > 0;
+  const captureHistorySnapshot = (): AereaHistorySnapshot =>
+    structuredClone({
+      reminders,
+      reminderHistory,
+      calendarEvents,
+      entries,
+      tasks,
+      inboxItems,
+      postIts,
+      postItGroups,
+      libraryItems,
+      libraryCollections,
+      entityLinks,
+      trashItems,
+      classItems,
+      recordings,
+      selectedClass,
+    });
+
+  const restoreHistorySnapshot = (snapshot: AereaHistorySnapshot) => {
+    setReminders(snapshot.reminders);
+    setReminderHistory(snapshot.reminderHistory);
+    setCalendarEvents(snapshot.calendarEvents);
+    setEntries(snapshot.entries);
+    setTasks(snapshot.tasks);
+    setInboxItems(snapshot.inboxItems);
+    setPostIts(snapshot.postIts);
+    setPostItGroups(snapshot.postItGroups);
+    setLibraryItems(snapshot.libraryItems);
+    setLibraryCollections(snapshot.libraryCollections);
+    setEntityLinks(snapshot.entityLinks);
+    setTrashItems(snapshot.trashItems);
+    setClassItems(snapshot.classItems);
+    setRecordings(snapshot.recordings);
+    setSelectedClass(snapshot.selectedClass);
+    setSelectedEventDetail(null);
+    setSelectedJournalEntry(null);
+    setSelectedLibraryItem(null);
+  };
+
+  const syncGlobalHistoryDepth = () => {
+    setGlobalHistoryDepth({
+      undo: undoStackRef.current.length,
+      redo: redoStackRef.current.length,
+    });
+  };
+
+  const recordAction = (label: string) => {
+    undoStackRef.current.push({
+      label,
+      snapshot: captureHistorySnapshot(),
+    });
+    if (undoStackRef.current.length > 30) undoStackRef.current.shift();
+    redoStackRef.current = [];
+    setHistoryMessage(`${label} · Undo`);
+    syncGlobalHistoryDepth();
+  };
+
+  const hasEntityLink = (
+    fromType: EntityLink["fromType"],
+    fromId: string,
+    toType: EntityLink["toType"],
+    toId: string,
+  ) =>
+    entityLinks.some(
+      (link) =>
+        link.fromType === fromType &&
+        link.fromId === fromId &&
+        link.toType === toType &&
+        link.toId === toId,
+    );
+
+  const toggleEntityLink = (
+    fromType: EntityLink["fromType"],
+    fromId: string,
+    toType: EntityLink["toType"],
+    toId: string,
+    label: string,
+  ) => {
+    recordAction(label);
+    const alreadyLinked =
+      hasEntityLink(fromType, fromId, toType, toId) ||
+      (fromType === "task" &&
+        toType === "file" &&
+        (tasks.find((task) => task.id === fromId)?.attachmentIds ?? []).includes(
+          toId,
+        ));
+    setEntityLinks((current) =>
+      alreadyLinked
+        ? current.filter(
+            (link) =>
+              !(
+                link.fromType === fromType &&
+                link.fromId === fromId &&
+                link.toType === toType &&
+                link.toId === toId
+              ),
+          )
+        : [
+            ...current,
+            {
+              id: crypto.randomUUID(),
+              fromType,
+              fromId,
+              toType,
+              toId,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+    );
+
+    if (fromType === "task" && toType === "file") {
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === fromId
+            ? {
+                ...task,
+                attachmentIds: alreadyLinked
+                  ? (task.attachmentIds ?? []).filter((id) => id !== toId)
+                  : Array.from(new Set([...(task.attachmentIds ?? []), toId])),
+                updatedAt: new Date().toISOString(),
+              }
+            : task,
+        ),
+      );
+    }
+  };
+
+  const undoGlobal = () => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current.push({
+      label: previous.label,
+      snapshot: captureHistorySnapshot(),
+    });
+    restoreHistorySnapshot(previous.snapshot);
+    setHistoryMessage(`Undid ${previous.label}`);
+    syncGlobalHistoryDepth();
+  };
+
+  const redoGlobal = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push({
+      label: next.label,
+      snapshot: captureHistorySnapshot(),
+    });
+    restoreHistorySnapshot(next.snapshot);
+    setHistoryMessage(`Redid ${next.label}`);
+    syncGlobalHistoryDepth();
+  };
   const focusProgress = Math.max(
     0,
     Math.min(100, (focusSeconds / Math.max(1, focusLength * 60)) * 100),
@@ -1406,6 +1951,32 @@ export default function Home() {
     safePlaceLittleThings[
       safePlaceLittleStep % safePlaceLittleThings.length
     ]!;
+
+  useEffect(() => {
+    if (!stateReady || resetExperience) return;
+    const hour = new Date().getHours();
+    let nextExperience: "morning" | "night" | null = null;
+    if (
+      resetPreferences.morningEnabled &&
+      hour >= 5 &&
+      hour < 12 &&
+      resetPreferences.lastMorningDate !== todayKey
+    ) {
+      nextExperience = "morning";
+    } else if (
+      resetPreferences.nightEnabled &&
+      (hour >= 19 || hour < 2) &&
+      resetPreferences.lastNightDate !== todayKey
+    ) {
+      nextExperience = "night";
+    }
+    if (!nextExperience) return;
+    const timer = window.setTimeout(
+      () => setResetExperience(nextExperience),
+      0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [resetExperience, resetPreferences, stateReady, todayKey]);
 
   useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
@@ -1433,6 +2004,7 @@ export default function Home() {
     appTheme,
     activeTheme.icon,
     doneIds.length,
+    reminders.length,
     stateReady,
     todayKey,
     todayWidgetEvents,
@@ -1445,6 +2017,631 @@ export default function Home() {
     if (tab === "today") setSelectedHomeDate(todayKey);
   };
 
+  const saveQuickCapture = async () => {
+    const text = quickCaptureText.trim();
+    const file = quickCaptureFile;
+    if (!text && !file) return;
+    setQuickCaptureSaving(true);
+    try {
+      const rawDataUrl = file ? await blobAsDataUrl(file) : undefined;
+      const nativeFile =
+        file && rawDataUrl && isNative()
+          ? await AereaStorage.saveFile({
+              name: file.name,
+              mimeType: file.type || "application/octet-stream",
+              dataUrl: rawDataUrl,
+            })
+          : null;
+      const cloudPath = file
+        ? await uploadAereaLibraryFile(crypto.randomUUID(), file).catch(
+            () => null,
+          )
+        : null;
+      const item: InboxItem = {
+        id: crypto.randomUUID(),
+        kind: inferInboxKind(text, file),
+        text: text || file?.name || "Untitled capture",
+        createdAt: new Date().toISOString(),
+        originalName: file?.name,
+        mimeType: file?.type,
+        size: file?.size,
+        dataUrl: nativeFile ? undefined : rawDataUrl,
+        nativeFileId: nativeFile?.id,
+        cloudPath: cloudPath ?? undefined,
+        processedAs: [],
+      };
+      recordAction("Quick capture");
+      setInboxItems((current) => [item, ...current]);
+      setQuickCaptureText("");
+      setQuickCaptureFile(null);
+      setQuickCaptureOpen(false);
+      setHistoryMessage("Saved to Inbox ♡");
+    } finally {
+      setQuickCaptureSaving(false);
+    }
+  };
+
+  const markInboxProcessed = (id: string, destination: string) => {
+    setInboxItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              processedAs: Array.from(
+                new Set([...(item.processedAs ?? []), destination]),
+              ),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const newPostIt = (text: string): PostIt => {
+    const offset = (postIts.length % 6) * 22;
+    const now = new Date().toISOString();
+    return {
+      id: crypto.randomUUID(),
+      text,
+      x: 24 + offset,
+      y: 30 + offset,
+      width: 190,
+      height: 160,
+      rotation: ((postIts.length % 5) - 2) * 0.8,
+      zIndex: Math.max(0, ...postIts.map((item) => item.zIndex)) + 1,
+      color: ["#fff0a8", "#ffd8e5", "#d9ecff", "#ddf3cf", "#e4dcff"][
+        postIts.length % 5
+      ],
+      style: "plain",
+      pinned: false,
+      locked: false,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
+  const convertInboxItem = (
+    item: InboxItem,
+    destination: "event" | "task" | "post-it" | "note" | "library",
+  ) => {
+    recordAction(`Converted Inbox item to ${destination}`);
+    const now = new Date().toISOString();
+    let linkedLibraryItemId = item.libraryItemId;
+    if (
+      (destination === "event" || destination === "task") &&
+      !linkedLibraryItemId &&
+      item.originalName &&
+      (item.dataUrl || item.nativeFileId)
+    ) {
+      linkedLibraryItemId = crypto.randomUUID();
+      const capturedFile: LibraryItem = {
+        id: linkedLibraryItemId,
+        name: item.originalName,
+        kind: item.kind === "pdf" ? "pdf" : item.kind === "photo" ? "image" : "file",
+        mimeType: item.mimeType,
+        size: item.size,
+        dataUrl: item.dataUrl,
+        nativeFileId: item.nativeFileId,
+        createdAt: now,
+        updatedAt: now,
+        favorite: false,
+        collectionIds: [],
+        annotations: [],
+      };
+      setLibraryItems((current) => [capturedFile, ...current]);
+      setInboxItems((current) =>
+        current.map((candidate) =>
+          candidate.id === item.id
+            ? { ...candidate, libraryItemId: linkedLibraryItemId }
+            : candidate,
+        ),
+      );
+    }
+
+    if (destination === "event") {
+      setEditingEventId(null);
+      setEventDraft({
+        ...makeEventDraft(todayKey),
+        title: item.text,
+        files: item.originalName ? [item.originalName] : [],
+        attachmentIds: linkedLibraryItemId ? [linkedLibraryItemId] : [],
+        sourceInboxId: item.id,
+      });
+      setTodoDraft("");
+      setEventEditorOpen(true);
+      setCalendarOpen(true);
+    }
+
+    if (destination === "task") {
+      setTasks((current) => [
+        {
+          id: crypto.randomUUID(),
+          title: item.text,
+          dueDate: todayKey,
+          completed: false,
+          notes: "",
+          attachmentIds: linkedLibraryItemId ? [linkedLibraryItemId] : [],
+          priority: "gentle",
+          createdAt: now,
+          updatedAt: now,
+        },
+        ...current,
+      ]);
+    }
+
+    if (destination === "post-it") {
+      setPostIts((current) => [...current, newPostIt(item.text)]);
+    }
+
+    if (destination === "note") {
+      setEntries((current) => [
+        {
+          id: Date.now(),
+          date: readableDate(todayKey),
+          mood: "♡",
+          text: item.text,
+        },
+        ...current,
+      ]);
+    }
+
+    if (destination === "library") {
+      const existing = item.libraryItemId
+        ? libraryItems.find((candidate) => candidate.id === item.libraryItemId)
+        : null;
+      if (!existing) {
+        const libraryItem: LibraryItem = {
+          id: crypto.randomUUID(),
+          name: item.originalName || notePreview(item.text, 54) || "Quick note",
+          kind:
+            item.kind === "pdf"
+              ? "pdf"
+              : item.kind === "photo"
+                ? "image"
+                : item.kind === "file"
+                  ? "file"
+                  : "note",
+          mimeType: item.mimeType,
+          size: item.size,
+          dataUrl: item.dataUrl,
+          nativeFileId: item.nativeFileId,
+          cloudPath: item.cloudPath,
+          textContent:
+            item.kind === "text" || item.kind === "note" || item.kind === "link"
+              ? item.text
+              : undefined,
+          createdAt: now,
+          updatedAt: now,
+          favorite: false,
+          collectionIds: [],
+          annotations: [],
+        };
+        setLibraryItems((current) => [libraryItem, ...current]);
+        setInboxItems((current) =>
+          current.map((candidate) =>
+            candidate.id === item.id
+              ? { ...candidate, libraryItemId: libraryItem.id }
+              : candidate,
+          ),
+        );
+      }
+    }
+
+    markInboxProcessed(item.id, destination);
+  };
+
+  const discardInboxItem = (item: InboxItem) => {
+    recordAction("Discarded Inbox item");
+    setInboxItems((current) =>
+      current.filter((candidate) => candidate.id !== item.id),
+    );
+  };
+
+  const importLibraryFile = async (file: File) => {
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const dataUrl = await blobAsDataUrl(file);
+    const nativeFile = isNative()
+      ? await AereaStorage.saveFile({
+          name: file.name,
+          mimeType: file.type || "application/octet-stream",
+          dataUrl,
+        })
+      : null;
+    const cloudPath = await uploadAereaLibraryFile(id, file).catch(() => null);
+    recordAction("Imported Library file");
+    const item: LibraryItem = {
+      id,
+      name: file.name,
+      kind: fileKind(file),
+      mimeType: file.type,
+      size: file.size,
+      dataUrl: nativeFile ? undefined : dataUrl,
+      nativeFileId: nativeFile?.id,
+      cloudPath: cloudPath ?? undefined,
+      createdAt: now,
+      updatedAt: now,
+      favorite: false,
+      collectionIds: [],
+      annotations: [],
+    };
+    setLibraryItems((current) => [item, ...current]);
+    return item;
+  };
+
+  const openLibraryItem = async (item: LibraryItem) => {
+    const lastOpenedAt = new Date().toISOString();
+    setLibraryItems((current) =>
+      current.map((candidate) =>
+        candidate.id === item.id ? { ...candidate, lastOpenedAt } : candidate,
+      ),
+    );
+    let dataUrl = item.dataUrl;
+    let mimeType = item.mimeType;
+    if (item.nativeFileId && isNative()) {
+      try {
+        const stored = await AereaStorage.readFile({ id: item.nativeFileId });
+        dataUrl = stored.dataUrl;
+        mimeType = item.mimeType || stored.mimeType;
+      } catch {
+        // A file synced from another device can be restored from private storage.
+      }
+    }
+    if (!dataUrl && item.cloudPath) {
+      try {
+        const downloaded = await downloadAereaLibraryFile(item.cloudPath);
+        dataUrl = await blobAsDataUrl(downloaded);
+        mimeType = item.mimeType || downloaded.type;
+        if (isNative()) {
+          const local = await AereaStorage.saveFile({
+            name: item.name,
+            mimeType: mimeType || "application/octet-stream",
+            dataUrl,
+          });
+          setLibraryItems((current) =>
+            current.map((candidate) =>
+              candidate.id === item.id
+                ? { ...candidate, nativeFileId: local.id }
+                : candidate,
+            ),
+          );
+        }
+      } catch {
+        setHistoryMessage("This file could not be opened, but its Library record is safe.");
+      }
+    }
+    setLibraryPanel("contents");
+    setSelectedLibraryItem({ ...item, dataUrl, mimeType, lastOpenedAt });
+  };
+
+  const updateLibraryItem = (
+    id: string,
+    update: (item: LibraryItem) => LibraryItem,
+  ) => {
+    setLibraryItems((current) =>
+      current.map((item) => (item.id === id ? update(item) : item)),
+    );
+    setSelectedLibraryItem((current) =>
+      current?.id === id ? update(current) : current,
+    );
+  };
+
+  const addLibraryAnnotation = (
+    item: LibraryItem,
+    type: "bookmark" | "highlight" | "note",
+  ) => {
+    const page = item.readerLocation?.page ?? 1;
+    const text =
+      type === "bookmark"
+        ? window.prompt("Optional bookmark name", `Page ${page}`)
+        : window.prompt(
+            type === "highlight" ? "Highlighted text or excerpt" : "Write a note",
+          );
+    if (text === null) return;
+    recordAction(`Created ${type}`);
+    const timestamp = new Date().toISOString();
+    updateLibraryItem(item.id, (current) => ({
+      ...current,
+      updatedAt: timestamp,
+      annotations: [
+        ...(current.annotations ?? []),
+        {
+          id: crypto.randomUUID(),
+          type,
+          location: { ...current.readerLocation, page },
+          ...(type === "bookmark"
+            ? { name: text.trim() || `Page ${page}` }
+            : type === "highlight"
+              ? { excerpt: text.trim(), color: "#ffe69a" }
+              : { text: text.trim() }),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+      ],
+    }));
+  };
+
+  const deleteLibraryAnnotation = (itemId: string, annotationId: string) => {
+    recordAction("Deleted annotation");
+    updateLibraryItem(itemId, (current) => ({
+      ...current,
+      annotations: (current.annotations ?? []).filter(
+        (annotation) => annotation.id !== annotationId,
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const createLibraryCollection = () => {
+    const name = window.prompt("Name this collection");
+    if (!name?.trim()) return;
+    recordAction("Created collection");
+    setLibraryCollections((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        order: current.length,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  };
+
+  const moveToTrash = (
+    kind: "event" | "task" | "note" | "post-it" | "file",
+    label: string,
+    payload: unknown,
+  ) => {
+    recordAction(`Moved ${label} to Trash`);
+    setTrashItems((current) => [createTrashItem(kind, label, payload), ...current]);
+    if (kind === "event") {
+      const event = payload as CalendarEvent;
+      setCalendarEvents((current) =>
+        current.filter((candidate) => candidate.id !== event.id),
+      );
+    } else if (kind === "task") {
+      const task = payload as TaskItem;
+      setTasks((current) => current.filter((candidate) => candidate.id !== task.id));
+    } else if (kind === "note") {
+      const note = payload as JournalEntry;
+      setEntries((current) => current.filter((candidate) => candidate.id !== note.id));
+    } else if (kind === "post-it") {
+      const postIt = payload as PostIt;
+      setPostIts((current) =>
+        current.filter((candidate) => candidate.id !== postIt.id),
+      );
+    } else {
+      const file = payload as LibraryItem;
+      setLibraryItems((current) =>
+        current.filter((candidate) => candidate.id !== file.id),
+      );
+    }
+  };
+
+  const restoreTrashItem = (item: TrashItem) => {
+    recordAction(`Restored ${item.label}`);
+    if (item.kind === "event") {
+      setCalendarEvents((current) => [...current, item.payload as CalendarEvent]);
+    } else if (item.kind === "task") {
+      setTasks((current) => [...current, item.payload as TaskItem]);
+    } else if (item.kind === "note") {
+      setEntries((current) => [item.payload as JournalEntry, ...current]);
+    } else if (item.kind === "post-it") {
+      setPostIts((current) => [...current, item.payload as PostIt]);
+    } else if (item.kind === "file") {
+      setLibraryItems((current) => [item.payload as LibraryItem, ...current]);
+    }
+    setTrashItems((current) =>
+      current.filter((candidate) => candidate.id !== item.id),
+    );
+  };
+
+  const deleteTrashItemForever = async (item: TrashItem) => {
+    if (item.kind === "file") {
+      const file = item.payload as LibraryItem;
+      const nativeFileId = file.nativeFileId;
+      if (nativeFileId && isNative()) {
+        await AereaStorage.deleteFile({ id: nativeFileId }).catch(
+          () => undefined,
+        );
+      }
+      if (file.cloudPath) {
+        await deleteAereaLibraryFile(file.cloudPath).catch(() => undefined);
+      }
+    }
+    setTrashItems((current) =>
+      current.filter((candidate) => candidate.id !== item.id),
+    );
+    const entityId = String(
+      (item.payload as { id?: string | number } | null)?.id ?? "",
+    );
+    const entityType =
+      item.kind === "event"
+        ? "event"
+        : item.kind === "task"
+          ? "task"
+          : item.kind === "note"
+            ? "note"
+            : item.kind === "file"
+              ? "file"
+              : null;
+    if (entityId && entityType) {
+      setEntityLinks((current) =>
+        current.filter(
+          (link) =>
+            !(
+              (link.fromType === entityType && link.fromId === entityId) ||
+              (link.toType === entityType && link.toId === entityId)
+            ),
+        ),
+      );
+    }
+  };
+
+  const rescheduleTask = (
+    task: TaskItem,
+    destination: "today" | "tomorrow" | "pick" | "dismiss",
+  ) => {
+    const picked =
+      destination === "pick"
+        ? window.prompt("Move it to which date? (YYYY-MM-DD)", todayKey)
+        : null;
+    if (destination === "pick" && !/^\d{4}-\d{2}-\d{2}$/.test(picked ?? "")) {
+      return;
+    }
+    recordAction(`Rescheduled ${task.title}`);
+    setTasks((current) =>
+      current.map((candidate) => {
+        if (candidate.id !== task.id) return candidate;
+        if (destination === "dismiss") {
+          return { ...candidate, skipped: true, updatedAt: new Date().toISOString() };
+        }
+        const dueDate =
+          destination === "today"
+            ? todayKey
+            : destination === "tomorrow"
+              ? addDays(todayKey, 1)
+              : picked!;
+        return {
+          ...candidate,
+          dueDate,
+          skipped: false,
+          updatedAt: new Date().toISOString(),
+          rescheduleHistory: [
+            ...(candidate.rescheduleHistory ?? []),
+            { from: candidate.dueDate, to: dueDate, at: new Date().toISOString() },
+          ],
+        };
+      }),
+    );
+  };
+
+  const closeResetExperience = () => {
+    const current = resetExperience;
+    if (!current) return;
+    setResetPreferences((preferences) => ({
+      ...preferences,
+      ...(current === "morning"
+        ? { lastMorningDate: todayKey }
+        : { lastNightDate: todayKey }),
+    }));
+    setResetExperience(null);
+  };
+
+  const startPostItDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    postIt: PostIt,
+  ) => {
+    const group = postIt.groupId
+      ? postItGroups.find((candidate) => candidate.id === postIt.groupId)
+      : null;
+    if (postIt.locked || group?.locked) return;
+    const groupIds = postIt.groupId
+      ? postIts
+          .filter((candidate) => candidate.groupId === postIt.groupId)
+          .map((candidate) => candidate.id)
+      : selectedPostItIds.includes(postIt.id)
+        ? selectedPostItIds
+        : [postIt.id];
+    recordAction("Moved post-it");
+    postItDragRef.current = {
+      id: postIt.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      positions: Object.fromEntries(
+        postIts
+          .filter((candidate) => groupIds.includes(candidate.id))
+          .map((candidate) => [
+            candidate.id,
+            { x: candidate.x, y: candidate.y },
+          ]),
+      ),
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const movePostIt = (event: ReactPointerEvent<HTMLElement>) => {
+    const drag = postItDragRef.current;
+    if (!drag) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    setPostIts((current) =>
+      current.map((candidate) => {
+        const origin = drag.positions[candidate.id];
+        return origin
+          ? {
+              ...candidate,
+              x: Math.max(0, origin.x + deltaX),
+              y: Math.max(0, origin.y + deltaY),
+              updatedAt: new Date().toISOString(),
+            }
+          : candidate;
+      }),
+    );
+  };
+
+  const stopPostItDrag = () => {
+    postItDragRef.current = null;
+  };
+
+  const groupSelectedPostIts = () => {
+    if (selectedPostItIds.length < 2) return;
+    const name = window.prompt("Optional group name", "Ideas")?.trim() || "Group";
+    const group: PostItGroup = {
+      id: crypto.randomUUID(),
+      name,
+      locked: false,
+      archived: false,
+      createdAt: new Date().toISOString(),
+    };
+    recordAction("Grouped post-its");
+    setPostItGroups((current) => [...current, group]);
+    setPostIts((current) =>
+      current.map((item) =>
+        selectedPostItIds.includes(item.id)
+          ? { ...item, groupId: group.id, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    setSelectedPostItIds([]);
+  };
+
+  const updateSelectedPostIts = (
+    label: string,
+    update: (item: PostIt, all: PostIt[]) => PostIt,
+  ) => {
+    if (selectedPostItIds.length === 0) return;
+    recordAction(label);
+    setPostIts((current) =>
+      current.map((item) =>
+        selectedPostItIds.includes(item.id) ? update(item, current) : item,
+      ),
+    );
+  };
+
+  const ungroupSelectedPostIts = () => {
+    const groupIds = Array.from(
+      new Set(
+        postIts
+          .filter((item) => selectedPostItIds.includes(item.id) && item.groupId)
+          .map((item) => item.groupId!),
+      ),
+    );
+    if (groupIds.length === 0) return;
+    recordAction("Ungrouped post-its");
+    setPostIts((current) =>
+      current.map((item) =>
+        groupIds.includes(item.groupId ?? "")
+          ? { ...item, groupId: undefined, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    setPostItGroups((current) =>
+      current.filter((group) => !groupIds.includes(group.id)),
+    );
+    setSelectedPostItIds([]);
+  };
+
   const openCalendarAtToday = () => {
     const today = dateFromKey(todayKey);
     setSelectedHomeDate(todayKey);
@@ -1452,6 +2649,22 @@ export default function Home() {
     setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setEventEditorOpen(false);
     setCalendarOpen(true);
+  };
+
+  const goToCalendarDate = (dateKey = jumpDate) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      setHistoryMessage("Choose a valid date.");
+      return;
+    }
+    const date = dateFromKey(dateKey);
+    if (localDateKey(date) !== dateKey) {
+      setHistoryMessage("Choose a valid date.");
+      return;
+    }
+    setSelectedCalendarDate(dateKey);
+    setSelectedHomeDate(dateKey);
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setEventEditorOpen(false);
   };
 
   const shiftCalendarMonth = (offset: number) => {
@@ -1603,6 +2816,7 @@ export default function Home() {
   const saveClass = () => {
     const nextName = classDraft.name.trim();
     if (!nextName) return;
+    recordAction(editingClassId ? "Edited class" : "Created class");
 
     if (editingClassId) {
       const previous = classItems.find((item) => item.id === editingClassId);
@@ -1651,10 +2865,17 @@ export default function Home() {
       return;
     }
 
+    recordAction("Deleted class");
     const remaining = classItems.filter((item) => item.id !== editingClassId);
     setClassItems(remaining);
     setRecordings((current) =>
       current.filter((recording) => recording.className !== removed.name),
+    );
+    setEntityLinks((current) =>
+      current.filter(
+        (link) =>
+          !(link.fromType === "class" && link.fromId === removed.id),
+      ),
     );
     if (selectedClass === removed.name) {
       setSelectedClass(remaining[0]?.name ?? "");
@@ -1680,6 +2901,38 @@ export default function Home() {
     });
   };
 
+  const createReminder = () => {
+    const title = window.prompt("What should aérea remind you about?")?.trim();
+    if (!title) return;
+    const detail = window.prompt("Optional gentle detail", "")?.trim() ?? "";
+    recordAction("Created reminder");
+    setReminders((current) => [
+      ...current,
+      {
+        id: Date.now(),
+        title,
+        detail,
+        icon: "♡",
+        tint: ["blue", "yellow", "lilac"][current.length % 3],
+      },
+    ]);
+  };
+
+  const deleteReminder = (id: number) => {
+    const reminder = reminders.find((item) => item.id === id);
+    if (!reminder || !window.confirm(`Delete “${reminder.title}”?`)) return;
+    recordAction("Deleted reminder");
+    setReminders((current) => current.filter((item) => item.id !== id));
+    setReminderHistory((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([date, ids]) => [
+          date,
+          ids.filter((itemId) => itemId !== id),
+        ]),
+      ),
+    );
+  };
+
   const chooseMood = (dateKey: string, mood: string) => {
     setMoodHistory((current) => ({ ...current, [dateKey]: mood }));
   };
@@ -1703,6 +2956,36 @@ export default function Home() {
 
   const saveCalendarEvent = () => {
     if (!eventDraft.title.trim()) return;
+    if (
+      !eventDraft.allDay &&
+      (eventDraft.endDate || eventDraft.date) === eventDraft.date &&
+      (eventDraft.endTime ?? "") <= eventDraft.time
+    ) {
+      setHistoryMessage("The end time must be after the start time.");
+      return;
+    }
+    const conflictingEvent = allCalendarEvents.find(
+      (event) =>
+        event.id !== editingEventId &&
+        !event.allDay &&
+        !eventDraft.allDay &&
+        eventOccursOn(event, eventDraft.date) &&
+        rangesOverlap(
+          eventDraft.time,
+          eventDraft.endTime,
+          event.time,
+          event.endTime,
+        ),
+    );
+    if (
+      conflictingEvent &&
+      !window.confirm(
+        `This overlaps with ${conflictingEvent.title} · ${eventTimeLabel(conflictingEvent)}. Keep it anyway?`,
+      )
+    ) {
+      return;
+    }
+    recordAction(editingEventId ? "Edited event" : "Created event");
     const savedEvent: CalendarEvent = {
       ...eventDraft,
       id: editingEventId ?? crypto.randomUUID(),
@@ -1716,7 +2999,52 @@ export default function Home() {
           )
         : [...current, savedEvent],
     );
+    setEntityLinks((current) => {
+      const withoutOldAttachments = current.filter(
+        (link) => !(link.fromType === "event" && link.fromId === savedEvent.id),
+      );
+      const createdAt = new Date().toISOString();
+      const attachments: EntityLink[] = (savedEvent.attachmentIds ?? []).map(
+        (fileId) => ({
+          id: crypto.randomUUID(),
+          fromType: "event",
+          fromId: savedEvent.id,
+          toType: "file",
+          toId: fileId,
+          createdAt,
+        }),
+      );
+      const noteLinks: EntityLink[] = (savedEvent.attachedNoteIds ?? []).map(
+        (noteId) => ({
+          id: crypto.randomUUID(),
+          fromType: "event",
+          fromId: savedEvent.id,
+          toType: "note",
+          toId: String(noteId),
+          createdAt,
+        }),
+      );
+      const recordingLinks: EntityLink[] = (
+        savedEvent.attachedRecordingIds ?? []
+      ).map((recordingId) => ({
+        id: crypto.randomUUID(),
+        fromType: "event",
+        fromId: savedEvent.id,
+        toType: "recording",
+        toId: String(recordingId),
+        createdAt,
+      }));
+      return [
+        ...withoutOldAttachments,
+        ...attachments,
+        ...noteLinks,
+        ...recordingLinks,
+      ];
+    });
     setSelectedCalendarDate(savedEvent.date);
+    if (savedEvent.sourceInboxId) {
+      markInboxProcessed(savedEvent.sourceInboxId, "event");
+    }
     setEventEditorOpen(false);
     setEditingEventId(null);
   };
@@ -1726,6 +3054,245 @@ export default function Home() {
     value: EventDraft[Key],
   ) => {
     setEventDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const duplicateCalendarEvent = (event: CalendarEvent) => {
+    if (event.eventType === "sports_event") return;
+    setEditingEventId(null);
+    setEventDraft({
+      ...makeEventDraft(event.date),
+      ...event,
+      title: `${event.title} (copy)`,
+      sourceInboxId: undefined,
+    });
+    setTodoDraft("");
+    setSelectedEventDetail(null);
+    setCalendarOpen(true);
+    setEventEditorOpen(true);
+  };
+
+  const moveCalendarEvent = (eventId: string, destinationDate: string) => {
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (!event || event.date === destinationDate) return;
+    const conflict = allCalendarEvents.find(
+      (candidate) =>
+        candidate.id !== event.id &&
+        !candidate.allDay &&
+        !event.allDay &&
+        eventOccursOn(candidate, destinationDate) &&
+        rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
+    );
+    if (
+      conflict &&
+      !window.confirm(
+        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Move it anyway?`,
+      )
+    ) {
+      return;
+    }
+    recordAction("Moved event");
+    setCalendarEvents((current) =>
+      current.map((candidate) =>
+        candidate.id === eventId
+          ? {
+              ...candidate,
+              date: destinationDate,
+              endDate:
+                candidate.endDate && candidate.endDate !== candidate.date
+                  ? addDays(
+                      destinationDate,
+                      Math.max(
+                        0,
+                        Math.round(
+                          (dateFromKey(candidate.endDate).getTime() -
+                            dateFromKey(candidate.date).getTime()) /
+                            86_400_000,
+                        ),
+                      ),
+                    )
+                  : destinationDate,
+            }
+          : candidate,
+      ),
+    );
+    setSelectedCalendarDate(destinationDate);
+  };
+
+  const startCalendarEventDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    calendarEvent: CalendarEvent,
+  ) => {
+    if (calendarEvent.eventType === "sports_event") return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const timer = window.setTimeout(() => {
+      setDraggingCalendarEventId(calendarEvent.id);
+      setCalendarDragTarget(calendarEvent.date);
+    }, 360);
+    calendarEventDragRef.current = {
+      id: calendarEvent.id,
+      pointerId: event.pointerId,
+      timer,
+    };
+  };
+
+  const updateCalendarEventDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (!draggingCalendarEventId) return;
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-calendar-date]")
+      ?.dataset.calendarDate;
+    if (target) setCalendarDragTarget(target);
+  };
+
+  const finishCalendarEventDrag = () => {
+    const drag = calendarEventDragRef.current;
+    if (drag) window.clearTimeout(drag.timer);
+    if (draggingCalendarEventId && calendarDragTarget) {
+      moveCalendarEvent(draggingCalendarEventId, calendarDragTarget);
+    }
+    calendarEventDragRef.current = null;
+    setDraggingCalendarEventId(null);
+    setCalendarDragTarget(null);
+  };
+
+  const copyCurrentWeek = () => {
+    const destination = window.prompt(
+      "Choose any date in the destination week (YYYY-MM-DD)",
+      addDays(selectedCalendarDate, 7),
+    );
+    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
+    const sourceWeek = weekForDate(selectedCalendarDate).map((day) => day.key);
+    const destinationWeek = weekForDate(destination).map((day) => day.key);
+    const sourceEvents = calendarEvents.filter(
+      (event) => event.repeat === "Never" && sourceWeek.includes(event.date),
+    );
+    if (sourceEvents.length === 0) {
+      setHistoryMessage("There are no one-time events to copy this week.");
+      return;
+    }
+    const preview = sourceEvents
+      .map((event) => `${event.title} · ${eventTimeLabel(event)}`)
+      .join("\n");
+    if (!window.confirm(`Copy ${sourceEvents.length} events?\n\n${preview}`)) return;
+    recordAction("Copied week");
+    setCalendarEvents((current) => {
+      const copies: CalendarEvent[] = [];
+      sourceEvents.forEach((event) => {
+        const dayIndex = sourceWeek.indexOf(event.date);
+        const date = destinationWeek[dayIndex];
+        const duplicate = current.some(
+          (candidate) =>
+            candidate.date === date &&
+            candidate.time === event.time &&
+            candidate.title.trim().toLowerCase() ===
+              event.title.trim().toLowerCase(),
+        );
+        if (!duplicate) {
+          copies.push({
+            ...event,
+            id: crypto.randomUUID(),
+            date,
+            endDate: date,
+            sourceInboxId: undefined,
+          });
+        }
+      });
+      return [...current, ...copies];
+    });
+    setSelectedCalendarDate(destination);
+  };
+
+  const deleteSelectedEvents = () => {
+    const events = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (events.length === 0) return;
+    if (!window.confirm(`Move ${events.length} events to Trash?`)) return;
+    recordAction("Deleted selected events");
+    setTrashItems((current) => [
+      ...events.map((event) => createTrashItem("event", event.title, event)),
+      ...current,
+    ]);
+    setCalendarEvents((current) =>
+      current.filter((event) => !selectedEventIds.includes(event.id)),
+    );
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
+  };
+
+  const moveSelectedEvents = () => {
+    const selected = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (selected.length === 0) return;
+    const firstDate = [...selected].sort((a, b) => a.date.localeCompare(b.date))[0].date;
+    const destination = window.prompt(
+      "Move the first selected event to (YYYY-MM-DD)",
+      addDays(firstDate, 1),
+    );
+    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
+    const offset = Math.round(
+      (dateFromKey(destination).getTime() - dateFromKey(firstDate).getTime()) /
+        86_400_000,
+    );
+    const hasConflict = selected.some((event) => {
+      const targetDate = addDays(event.date, offset);
+      return allCalendarEvents.some(
+        (candidate) =>
+          !selectedEventIds.includes(candidate.id) &&
+          !candidate.allDay &&
+          !event.allDay &&
+          eventOccursOn(candidate, targetDate) &&
+          rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
+      );
+    });
+    if (hasConflict && !window.confirm("One or more moved events overlap another event. Keep them anyway?")) return;
+    recordAction("Moved selected events");
+    setCalendarEvents((current) =>
+      current.map((event) =>
+        selectedEventIds.includes(event.id)
+          ? {
+              ...event,
+              date: addDays(event.date, offset),
+              endDate: addDays(event.endDate || event.date, offset),
+            }
+          : event,
+      ),
+    );
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
+    goToCalendarDate(destination);
+  };
+
+  const recolorSelectedEvents = (color: EventColor) => {
+    if (selectedEventIds.length === 0) return;
+    recordAction("Changed selected event colors");
+    setCalendarEvents((current) =>
+      current.map((event) =>
+        selectedEventIds.includes(event.id) ? { ...event, color } : event,
+      ),
+    );
+  };
+
+  const duplicateSelectedEvents = () => {
+    const selected = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (selected.length === 0) return;
+    recordAction("Duplicated selected events");
+    setCalendarEvents((current) => [
+      ...current,
+      ...selected.map((event) => ({
+        ...event,
+        id: crypto.randomUUID(),
+        title: `${event.title} (copy)`,
+        sourceInboxId: undefined,
+      })),
+    ]);
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
   };
 
   const setEventTodoState = (
@@ -1764,6 +3331,7 @@ export default function Home() {
 
   const saveJournalEntry = () => {
     if (!journalText.trim()) return;
+    recordAction("Created note");
     const mood =
       moods.find((item) => item.label === moodHistory[todayKey])?.face ??
       journalFaces[entries.length % journalFaces.length];
@@ -1780,7 +3348,9 @@ export default function Home() {
   };
 
   const deleteJournalEntry = (id: number) => {
-    setEntries((current) => current.filter((entry) => entry.id !== id));
+    const entry = entries.find((candidate) => candidate.id === id);
+    if (!entry) return;
+    moveToTrash("note", `Note · ${entry.date}`, entry);
     setSelectedJournalEntry((current) =>
       current?.id === id ? null : current,
     );
@@ -1881,6 +3451,7 @@ export default function Home() {
 
   const saveSafePlaceCryNote = () => {
     if (!safePlaceCryText.trim()) return;
+    recordAction("Created note");
     setEntries((current) => [
       {
         id: Date.now(),
@@ -1929,6 +3500,7 @@ export default function Home() {
           type: recorder.mimeType || "audio/webm",
         });
         const url = isNative() ? await blobAsDataUrl(blob) : URL.createObjectURL(blob);
+        recordAction("Created class recording");
         setRecordings((current) => [
           {
             id: Date.now(),
@@ -1974,6 +3546,7 @@ export default function Home() {
     if (editingRecordingId === null) return;
     const nextName = recordingEditDraft.name.trim();
     if (!nextName) return;
+    recordAction("Edited class recording");
     setRecordings((current) =>
       current.map((recording) =>
         recording.id === editingRecordingId
@@ -1990,6 +3563,7 @@ export default function Home() {
 
   const deleteRecording = (recording: Recording) => {
     if (!window.confirm(`Delete “${recording.name}”?`)) return;
+    recordAction("Deleted class recording");
     if (recording.url?.startsWith("blob:")) {
       URL.revokeObjectURL(recording.url);
     }
@@ -2635,6 +4209,8 @@ export default function Home() {
                   current.filter((item) => item !== id),
                 )
               }
+              createReminder={createReminder}
+              deleteReminder={deleteReminder}
               openCalendar={openCalendarAtToday}
               yesterdayDoneCount={yesterdayDoneCount}
               selectedDate={selectedHomeDate}
@@ -2667,7 +4243,9 @@ export default function Home() {
                 <div>
                   <p className="tiny-label">TODAY&apos;S PROGRESS</p>
                   <h3>
-                    {habitCompletions === habits.length
+                    {habits.length === 0
+                      ? "Your first habit can start softly."
+                      : habitCompletions === habits.length
                       ? "Every little promise kept!"
                       : "You are growing gently."}
                   </h3>
@@ -2871,12 +4449,36 @@ export default function Home() {
                   />
                   <div className="spaces-grid">
                     <SpaceCard
+                      title="Inbox"
+                      subtitle="Quick captures to sort later"
+                      color="space-peach"
+                      icon="＋"
+                      note={`${inboxItems.length} captured`}
+                      onClick={() => setSpace("inbox")}
+                    />
+                    <SpaceCard
+                      title="Library"
+                      subtitle="PDFs, EPUBs, files & notes"
+                      color="space-blue"
+                      icon="▤"
+                      note={`${libraryItems.length} items`}
+                      onClick={() => setSpace("library")}
+                    />
+                    <SpaceCard
                       title="Class library"
                       subtitle="Recordings with notes"
                       color="space-blue"
                       icon="🎧"
                       note={`${recordings.length} recordings`}
                       onClick={() => setSpace("classes")}
+                    />
+                    <SpaceCard
+                      title="Post-its"
+                      subtitle="A free little note board"
+                      color="space-lilac"
+                      icon="✎"
+                      note={`${postIts.filter((item) => !item.archived).length} notes`}
+                      onClick={() => setSpace("postits")}
                     />
                     <SpaceCard
                       title="Cute sketchbook"
@@ -2887,6 +4489,14 @@ export default function Home() {
                       onClick={() => setSpace("sketchbook")}
                     />
                     <SpaceCard
+                      title="Focus"
+                      subtitle="Your gentle timer"
+                      color="space-peach"
+                      icon="◷"
+                      note={`${focusSessions} sessions today`}
+                      onClick={() => changeTab("focus")}
+                    />
+                    <SpaceCard
                       title="Calendar"
                       subtitle="Everything in one rhythm"
                       color="space-peach"
@@ -2894,8 +4504,778 @@ export default function Home() {
                       note="Android + aérea"
                       onClick={openCalendarAtToday}
                     />
+                    <SpaceCard
+                      title="Trash"
+                      subtitle="Recoverable for 30 days"
+                      color="space-lilac"
+                      icon="♲"
+                      note={`${trashItems.length} items`}
+                      onClick={() => setSpace("trash")}
+                    />
                   </div>
                 </>
+              )}
+
+              {space === "inbox" && (
+                <section className="feature-space inbox-space">
+                  <InnerHeader
+                    label="QUICK CAPTURE"
+                    title="Inbox"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <div className="feature-space-toolbar">
+                    <p>
+                      Keep first, decide later. The original capture stays here
+                      even after you turn it into something else.
+                    </p>
+                    <button onClick={() => setQuickCaptureOpen(true)}>
+                      ＋ Capture something
+                    </button>
+                  </div>
+
+                  {overdueTasks.length > 0 && (
+                    <section className="reschedule-shelf">
+                      <p className="tiny-label">NEEDS A NEW DAY</p>
+                      {overdueTasks.map((task) => (
+                        <article key={task.id}>
+                          <div>
+                            <strong>You didn&apos;t finish “{task.title}”.</strong>
+                            <small>Originally {readableDate(task.dueDate)}</small>
+                          </div>
+                          <div>
+                            <button onClick={() => rescheduleTask(task, "today")}>Today</button>
+                            <button onClick={() => rescheduleTask(task, "tomorrow")}>Tomorrow</button>
+                            <button onClick={() => rescheduleTask(task, "pick")}>Pick date</button>
+                            <button onClick={() => rescheduleTask(task, "dismiss")}>Dismiss</button>
+                          </div>
+                        </article>
+                      ))}
+                    </section>
+                  )}
+
+                  <div className="inbox-list">
+                    {inboxItems.map((item) => (
+                      <article className="inbox-item" key={item.id}>
+                        <div className="inbox-item-icon" aria-hidden="true">
+                          {item.kind === "photo"
+                            ? "▧"
+                            : item.kind === "pdf"
+                              ? "PDF"
+                              : item.kind === "link"
+                                ? "⌁"
+                                : "✎"}
+                        </div>
+                        <div className="inbox-item-copy">
+                          <small>{item.kind} · {new Date(item.createdAt).toLocaleString()}</small>
+                          <strong>{item.text}</strong>
+                          {item.originalName && <span>{item.originalName}</span>}
+                          {(item.processedAs ?? []).length > 0 && (
+                            <span>Also kept as {item.processedAs?.join(" · ")}</span>
+                          )}
+                        </div>
+                        <div className="inbox-convert-actions">
+                          {(["event", "task", "post-it", "note", "library"] as const).map(
+                            (destination) => (
+                              <button
+                                key={destination}
+                                onClick={() => convertInboxItem(item, destination)}
+                              >
+                                {destination}
+                              </button>
+                            ),
+                          )}
+                          <button
+                            className="inbox-discard"
+                            onClick={() => discardInboxItem(item)}
+                          >
+                            discard
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                    {inboxItems.length === 0 && (
+                      <p className="empty-feature-space">Your Inbox is clear ♡</p>
+                    )}
+                  </div>
+
+                  <section className="task-shelf">
+                    <div className="section-heading">
+                      <div>
+                        <p className="tiny-label">TASKS</p>
+                        <h3>{tasks.filter((task) => !task.completed && !task.skipped).length} open</h3>
+                      </div>
+                    </div>
+                    {tasks.filter((task) => !task.skipped).map((task) => (
+                      <article className={task.completed ? "task-row done" : "task-row"} key={task.id}>
+                        <button
+                          onClick={() => {
+                            recordAction(task.completed ? "Reopened task" : "Completed task");
+                            setTasks((current) =>
+                              current.map((candidate) =>
+                                candidate.id === task.id
+                                  ? {
+                                      ...candidate,
+                                      completed: !candidate.completed,
+                                      updatedAt: new Date().toISOString(),
+                                    }
+                                  : candidate,
+                              ),
+                            );
+                          }}
+                        >
+                          {task.completed ? "✓" : "○"}
+                        </button>
+                        <div>
+                          <strong>{task.title}</strong>
+                          <small>{readableDate(task.dueDate)}</small>
+                        </div>
+                        <details className="task-attachments">
+                          <summary>
+                            Attached
+                            {((task.attachmentIds ?? []).length +
+                              entityLinks.filter(
+                                (link) =>
+                                  link.fromType === "task" &&
+                                  link.fromId === task.id &&
+                                  link.toType === "note",
+                              ).length) > 0 &&
+                              ` · ${(task.attachmentIds ?? []).length + entityLinks.filter(
+                                (link) =>
+                                  link.fromType === "task" &&
+                                  link.fromId === task.id &&
+                                  link.toType === "note",
+                              ).length}`}
+                          </summary>
+                          <div className="entity-attachment-picker">
+                            <p className="tiny-label">LIBRARY</p>
+                            {libraryItems
+                              .filter((item) => !item.archived)
+                              .map((item) => {
+                                const checked =
+                                  (task.attachmentIds ?? []).includes(item.id) ||
+                                  hasEntityLink("task", task.id, "file", item.id);
+                                return (
+                                  <label key={item.id}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() =>
+                                        toggleEntityLink(
+                                          "task",
+                                          task.id,
+                                          "file",
+                                          item.id,
+                                          checked
+                                            ? "Detached file from task"
+                                            : "Attached file to task",
+                                        )
+                                      }
+                                    />
+                                    {item.kind === "pdf" ? "📄" : "▤"} {item.name}
+                                  </label>
+                                );
+                              })}
+                            <p className="tiny-label">NOTES</p>
+                            {entries.map((entry) => {
+                              const noteId = String(entry.id);
+                              const checked = hasEntityLink(
+                                "task",
+                                task.id,
+                                "note",
+                                noteId,
+                              );
+                              return (
+                                <label key={entry.id}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      toggleEntityLink(
+                                        "task",
+                                        task.id,
+                                        "note",
+                                        noteId,
+                                        checked
+                                          ? "Detached note from task"
+                                          : "Attached note to task",
+                                      )
+                                    }
+                                  />
+                                  📝 {notePreview(entry.text, 38)}
+                                </label>
+                              );
+                            })}
+                            {libraryItems.length === 0 && entries.length === 0 && (
+                              <small>Add a Library file or note first.</small>
+                            )}
+                          </div>
+                        </details>
+                        <button onClick={() => moveToTrash("task", task.title, task)}>×</button>
+                      </article>
+                    ))}
+                  </section>
+                </section>
+              )}
+
+              {space === "library" && (
+                <section className="feature-space library-space">
+                  <InnerHeader
+                    label="YOUR REAL LIBRARY"
+                    title="Library"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <div className="feature-space-toolbar">
+                    <div>
+                      <strong>Files stay in one place.</strong>
+                      <p>Collections and favorites never duplicate the original.</p>
+                    </div>
+                    <div>
+                      <label className="feature-file-button">
+                        ＋ Add files
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.epub,image/*,audio/*,.doc,.docx,.txt"
+                          onChange={(event) => {
+                            const files = Array.from(event.target.files ?? []);
+                            event.target.value = "";
+                            files.forEach((file) => void importLibraryFile(file));
+                          }}
+                        />
+                      </label>
+                      <button onClick={createLibraryCollection}>New collection</button>
+                    </div>
+                  </div>
+
+                  <div className="library-collections">
+                    {libraryCollections.map((collection) => (
+                      <article key={collection.id}>
+                        <button
+                          className={libraryCollectionFilter === collection.id ? "active" : ""}
+                          onClick={() =>
+                            setLibraryCollectionFilter((current) =>
+                              current === collection.id ? null : collection.id,
+                            )
+                          }
+                        >
+                          <span>♡</span>
+                          <strong>{collection.name}</strong>
+                          <small>
+                            {libraryItems.filter((item) =>
+                              item.collectionIds?.includes(collection.id),
+                            ).length} items
+                          </small>
+                        </button>
+                        <div>
+                          <button
+                            onClick={() => {
+                              const name = window.prompt("Rename collection", collection.name);
+                              if (!name?.trim()) return;
+                              recordAction("Renamed collection");
+                              setLibraryCollections((current) =>
+                                current.map((item) =>
+                                  item.id === collection.id
+                                    ? { ...item, name: name.trim() }
+                                    : item,
+                                ),
+                              );
+                            }}
+                          >Rename</button>
+                          <button
+                            onClick={() => {
+                              if (!window.confirm(`Delete collection “${collection.name}”? Files will stay in Library.`)) return;
+                              recordAction("Deleted collection");
+                              setLibraryCollections((current) =>
+                                current.filter((item) => item.id !== collection.id),
+                              );
+                              setLibraryItems((current) =>
+                                current.map((item) => ({
+                                  ...item,
+                                  collectionIds: item.collectionIds?.filter(
+                                    (id) => id !== collection.id,
+                                  ),
+                                })),
+                              );
+                              setLibraryCollectionFilter(null);
+                            }}
+                          >Delete</button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  {libraryItems.some((item) => item.lastOpenedAt) && (
+                    <section className="library-strip">
+                      <p className="tiny-label">RECENTLY OPENED</p>
+                      <div>
+                        {[...libraryItems]
+                          .filter((item) => item.lastOpenedAt)
+                          .sort((a, b) =>
+                            (b.lastOpenedAt ?? "").localeCompare(a.lastOpenedAt ?? ""),
+                          )
+                          .slice(0, 6)
+                          .map((item) => (
+                            <button key={item.id} onClick={() => openLibraryItem(item)}>
+                              <span>{item.kind === "pdf" ? "PDF" : "▤"}</span>
+                              <strong>{item.name}</strong>
+                              <small>
+                                {item.readerLocation?.page
+                                  ? `Continue · page ${item.readerLocation.page}`
+                                  : "Open again"}
+                              </small>
+                            </button>
+                          ))}
+                      </div>
+                    </section>
+                  )}
+
+                  <div className="library-filter-row">
+                    <button
+                      className={!libraryCollectionFilter ? "active" : ""}
+                      onClick={() => setLibraryCollectionFilter(null)}
+                    >All files</button>
+                    <button
+                      className={libraryCollectionFilter === "favorites" ? "active" : ""}
+                      onClick={() => setLibraryCollectionFilter("favorites")}
+                    >Favorites</button>
+                    <span>{libraryItems.filter((item) => !item.archived).length}</span>
+                    <span>♡ {libraryItems.filter((item) => item.favorite).length} favorites</span>
+                  </div>
+                  <div className="library-grid">
+                    {libraryItems
+                      .filter((item) => !item.archived)
+                      .filter((item) =>
+                        !libraryCollectionFilter
+                          ? true
+                          : libraryCollectionFilter === "favorites"
+                            ? item.favorite
+                            : item.collectionIds?.includes(libraryCollectionFilter),
+                      )
+                      .map((item) => (
+                      <article key={item.id}>
+                        <button className="library-cover" onClick={() => openLibraryItem(item)}>
+                          {item.kind === "image" && item.dataUrl ? (
+                            <img src={item.dataUrl} alt="" />
+                          ) : (
+                            <span>{item.kind === "pdf" ? "PDF" : item.kind.toUpperCase()}</span>
+                          )}
+                        </button>
+                        <div>
+                          <button onClick={() => openLibraryItem(item)}>
+                            <strong>{item.name}</strong>
+                            <small>
+                              {item.readerLocation?.percentage
+                                ? `${item.readerLocation.percentage}% read`
+                                : item.kind}
+                            </small>
+                          </button>
+                          <button
+                            className={item.favorite ? "favorite active" : "favorite"}
+                            onClick={() => {
+                              recordAction(item.favorite ? "Removed favorite" : "Added favorite");
+                              setLibraryItems((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === item.id
+                                    ? { ...candidate, favorite: !candidate.favorite }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                            aria-label="Toggle favorite"
+                          >
+                            ♡
+                          </button>
+                          <button onClick={() => moveToTrash("file", item.name, item)}>×</button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  {libraryItems.some((item) => item.archived) && (
+                    <details className="library-archive">
+                      <summary>Archive · {libraryItems.filter((item) => item.archived).length}</summary>
+                      {libraryItems.filter((item) => item.archived).map((item) => (
+                        <article key={item.id}>
+                          <span>{item.kind.toUpperCase()}</span>
+                          <strong>{item.name}</strong>
+                          <button
+                            onClick={() => {
+                              recordAction("Restored Library file");
+                              updateLibraryItem(item.id, (current) => ({ ...current, archived: false }));
+                            }}
+                          >Restore</button>
+                          <button onClick={() => moveToTrash("file", item.name, item)}>Trash</button>
+                        </article>
+                      ))}
+                    </details>
+                  )}
+                  {libraryItems.length === 0 && (
+                    <p className="empty-feature-space">Your Library is ready for its first file.</p>
+                  )}
+                </section>
+              )}
+
+              {space === "postits" && (
+                <section className="feature-space postit-space">
+                  <InnerHeader
+                    label="LITTLE NOTES EVERYWHERE"
+                    title="Post-its"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <div className="postit-toolbar">
+                    <button
+                      onClick={() => {
+                        recordAction("Created post-it");
+                        setPostIts((current) => [...current, newPostIt("")]);
+                      }}
+                    >
+                      ＋ New post-it
+                    </button>
+                    <button
+                      disabled={selectedPostItIds.length < 2}
+                      onClick={groupSelectedPostIts}
+                    >
+                      Group selected
+                    </button>
+                    <button
+                      disabled={!selectedPostItIds.some((id) =>
+                        postIts.find((item) => item.id === id)?.groupId,
+                      )}
+                      onClick={ungroupSelectedPostIts}
+                    >Ungroup</button>
+                    <button
+                      disabled={!selectedPostItIds.length}
+                      onClick={() =>
+                        updateSelectedPostIts("Locked selected post-its", (item) => ({
+                          ...item,
+                          locked: true,
+                          updatedAt: new Date().toISOString(),
+                        }))
+                      }
+                    >Lock</button>
+                    <select
+                      aria-label="Change selected post-it color"
+                      defaultValue=""
+                      disabled={!selectedPostItIds.length}
+                      onChange={(event) => {
+                        const color = event.target.value;
+                        if (!color) return;
+                        updateSelectedPostIts("Changed post-it colors", (item) => ({
+                          ...item,
+                          color,
+                          updatedAt: new Date().toISOString(),
+                        }));
+                        event.target.value = "";
+                      }}
+                    >
+                      <option value="">Color…</option>
+                      <option value="#fff0a8">Butter</option>
+                      <option value="#ffd8e5">Blush</option>
+                      <option value="#d9ecff">Sky</option>
+                      <option value="#ddf3cf">Mint</option>
+                      <option value="#e4dcff">Lilac</option>
+                    </select>
+                    <button
+                      disabled={!selectedPostItIds.length}
+                      onClick={() => {
+                        updateSelectedPostIts("Archived selected post-its", (item) => ({
+                          ...item,
+                          archived: true,
+                          updatedAt: new Date().toISOString(),
+                        }));
+                        setSelectedPostItIds([]);
+                      }}
+                    >Archive</button>
+                    <button
+                      className="destructive"
+                      disabled={!selectedPostItIds.length}
+                      onClick={() => {
+                        const selected = postIts.filter((item) => selectedPostItIds.includes(item.id));
+                        if (!window.confirm(`Move ${selected.length} post-its to Trash?`)) return;
+                        recordAction("Deleted selected post-its");
+                        setTrashItems((current) => [
+                          ...selected.map((item) => createTrashItem("post-it", "Post-it", item)),
+                          ...current,
+                        ]);
+                        setPostIts((current) => current.filter((item) => !selectedPostItIds.includes(item.id)));
+                        setSelectedPostItIds([]);
+                      }}
+                    >Trash</button>
+                    <span>{selectedPostItIds.length} selected</span>
+                  </div>
+                  {postItGroups.length > 0 && (
+                    <div className="postit-group-strip">
+                      {postItGroups.map((group) => (
+                        <button
+                          key={group.id}
+                          className={group.locked ? "locked" : ""}
+                          onClick={() => {
+                            recordAction(group.locked ? "Unlocked post-it group" : "Locked post-it group");
+                            setPostItGroups((current) =>
+                              current.map((candidate) =>
+                                candidate.id === group.id
+                                  ? { ...candidate, locked: !candidate.locked }
+                                  : candidate,
+                              ),
+                            );
+                          }}
+                        >
+                          {group.locked ? "🔒" : "◇"} {group.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="postit-board">
+                    {postIts.filter((item) => !item.archived).map((postIt) => (
+                      <article
+                        className={[
+                          "postit",
+                          postIt.locked ? "locked" : "",
+                          postIt.pinned ? "pinned" : "",
+                          selectedPostItIds.includes(postIt.id) ? "selected" : "",
+                        ].filter(Boolean).join(" ")}
+                        key={postIt.id}
+                        style={{
+                          left: postIt.x,
+                          top: postIt.y,
+                          width: postIt.width,
+                          height: postIt.height,
+                          zIndex: postIt.zIndex,
+                          background: postIt.color,
+                          transform: `rotate(${postIt.rotation}deg)`,
+                        }}
+                        onPointerDown={(event) => startPostItDrag(event, postIt)}
+                        onPointerMove={movePostIt}
+                        onPointerUp={stopPostItDrag}
+                        onPointerCancel={stopPostItDrag}
+                      >
+                        <header>
+                          <button
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={() =>
+                              setSelectedPostItIds((current) =>
+                                current.includes(postIt.id)
+                                  ? current.filter((id) => id !== postIt.id)
+                                  : [...current, postIt.id],
+                              )
+                            }
+                            aria-label="Select post-it"
+                          >
+                            {selectedPostItIds.includes(postIt.id) ? "✓" : "○"}
+                          </button>
+                          <span>{postIt.pinned ? "PINNED" : postIt.groupId ? "GROUP" : "NOTE"}</span>
+                          <button
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={() => {
+                              recordAction(postIt.locked ? "Unlocked post-it" : "Locked post-it");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, locked: !candidate.locked }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >
+                            {postIt.locked ? "🔒" : "◇"}
+                          </button>
+                        </header>
+                        <textarea
+                          value={postIt.text}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onFocus={() => recordAction("Edited post-it")}
+                          onChange={(event) =>
+                            setPostIts((current) =>
+                              current.map((candidate) =>
+                                candidate.id === postIt.id
+                                  ? {
+                                      ...candidate,
+                                      text: event.target.value,
+                                      updatedAt: new Date().toISOString(),
+                                    }
+                                  : candidate,
+                              ),
+                            )
+                          }
+                          placeholder="Write a little something…"
+                        />
+                        <footer onPointerDown={(event) => event.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              recordAction(postIt.pinned ? "Unpinned post-it" : "Pinned post-it");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, pinned: !candidate.pinned }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Pin</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Duplicated post-it");
+                              setPostIts((current) => [
+                                ...current,
+                                {
+                                  ...postIt,
+                                  id: crypto.randomUUID(),
+                                  x: postIt.x + 24,
+                                  y: postIt.y + 24,
+                                  zIndex: Math.max(...current.map((item) => item.zIndex)) + 1,
+                                  groupId: undefined,
+                                  createdAt: new Date().toISOString(),
+                                  updatedAt: new Date().toISOString(),
+                                },
+                              ]);
+                            }}
+                          >Duplicate</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Brought post-it forward");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? {
+                                        ...candidate,
+                                        zIndex: Math.max(...current.map((item) => item.zIndex)) + 1,
+                                      }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Front</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Brought post-it forward");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, zIndex: candidate.zIndex + 1 }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Forward</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Sent post-it backward");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, zIndex: Math.max(0, candidate.zIndex - 1) }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Backward</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Sent post-it to back");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, zIndex: 0 }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Back</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Resized post-it");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? {
+                                        ...candidate,
+                                        width: candidate.width >= 270 ? 170 : candidate.width + 50,
+                                        height: candidate.height >= 230 ? 140 : candidate.height + 40,
+                                      }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Size</button>
+                          <button
+                            onClick={() => {
+                              recordAction("Archived post-it");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === postIt.id
+                                    ? { ...candidate, archived: true }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Archive</button>
+                          <button onClick={() => moveToTrash("post-it", "Post-it", postIt)}>×</button>
+                        </footer>
+                      </article>
+                    ))}
+                    {postIts.filter((item) => !item.archived).length === 0 && (
+                      <p className="postit-empty">Tap “New post-it” and place it anywhere ♡</p>
+                    )}
+                  </div>
+                  {postIts.some((item) => item.archived) && (
+                    <details className="postit-archive">
+                      <summary>Archive · {postIts.filter((item) => item.archived).length}</summary>
+                      {postIts.filter((item) => item.archived).map((item) => (
+                        <article key={item.id}>
+                          <span>{notePreview(item.text, 70) || "Empty post-it"}</span>
+                          <button
+                            onClick={() => {
+                              recordAction("Restored post-it from Archive");
+                              setPostIts((current) =>
+                                current.map((candidate) =>
+                                  candidate.id === item.id
+                                    ? { ...candidate, archived: false }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                          >Restore</button>
+                          <button onClick={() => moveToTrash("post-it", "Post-it", item)}>Trash</button>
+                        </article>
+                      ))}
+                    </details>
+                  )}
+                </section>
+              )}
+
+              {space === "trash" && (
+                <section className="feature-space trash-space">
+                  <InnerHeader
+                    label="RECOVERABLE FOR 30 DAYS"
+                    title="Trash"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <p className="trash-explainer">
+                    Archive keeps things for later. Trash is only for deleted
+                    items and clears itself after 30 days.
+                  </p>
+                  <div className="trash-list">
+                    {trashItems.map((item) => (
+                      <article key={item.id}>
+                        <span>{item.kind}</span>
+                        <div>
+                          <strong>{item.label}</strong>
+                          <small>{trashDaysRemaining(item)} days remaining</small>
+                        </div>
+                        <button onClick={() => restoreTrashItem(item)}>Restore</button>
+                        <button
+                          className="delete-forever"
+                          onClick={() => {
+                            if (!window.confirm(`Delete “${item.label}” forever?`)) return;
+                            void deleteTrashItemForever(item);
+                          }}
+                        >Delete forever</button>
+                      </article>
+                    ))}
+                    {trashItems.length === 0 && (
+                      <p className="empty-feature-space">Trash is empty.</p>
+                    )}
+                  </div>
+                </section>
               )}
 
               {space === "classes" && (
@@ -3016,6 +5396,141 @@ export default function Home() {
                           <p className="record-error">{recordingError}</p>
                         )}
                       </article>
+                      {selectedClassItem && (
+                        <article className="class-materials card">
+                          <div className="section-heading">
+                            <div>
+                              <p className="tiny-label">ATTACHED</p>
+                              <h3>Files & notes for {selectedClass}</h3>
+                            </div>
+                          </div>
+                          <div className="class-attached-items">
+                            {entityLinks
+                              .filter(
+                                (link) =>
+                                  link.fromType === "class" &&
+                                  link.fromId === selectedClassItem.id,
+                              )
+                              .map((link) => {
+                                const file =
+                                  link.toType === "file"
+                                    ? libraryItems.find(
+                                        (item) => item.id === link.toId,
+                                      )
+                                    : null;
+                                const note =
+                                  link.toType === "note"
+                                    ? entries.find(
+                                        (entry) => String(entry.id) === link.toId,
+                                      )
+                                    : null;
+                                if (file) {
+                                  return (
+                                    <button
+                                      key={link.id}
+                                      onClick={() => void openLibraryItem(file)}
+                                    >
+                                      {file.kind === "pdf" ? "📄" : "▤"} {file.name}
+                                    </button>
+                                  );
+                                }
+                                if (note) {
+                                  return (
+                                    <button
+                                      key={link.id}
+                                      onClick={() => setSelectedJournalEntry(note)}
+                                    >
+                                      📝 {notePreview(note.text, 42)}
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })}
+                            {classRecordings.map((recording) => (
+                              <span key={`recording-${recording.id}`}>
+                                🎙 {recording.name}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="class-material-pickers">
+                            <details>
+                              <summary>Attach from Library</summary>
+                              <div className="entity-attachment-picker">
+                                {libraryItems
+                                  .filter((item) => !item.archived)
+                                  .map((item) => {
+                                    const checked = hasEntityLink(
+                                      "class",
+                                      selectedClassItem.id,
+                                      "file",
+                                      item.id,
+                                    );
+                                    return (
+                                      <label key={item.id}>
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() =>
+                                            toggleEntityLink(
+                                              "class",
+                                              selectedClassItem.id,
+                                              "file",
+                                              item.id,
+                                              checked
+                                                ? "Detached file from class"
+                                                : "Attached file to class",
+                                            )
+                                          }
+                                        />
+                                        {item.kind === "pdf" ? "📄" : "▤"} {item.name}
+                                      </label>
+                                    );
+                                  })}
+                                {libraryItems.length === 0 && (
+                                  <small>Your Library is empty.</small>
+                                )}
+                              </div>
+                            </details>
+                            <details>
+                              <summary>Attach a note</summary>
+                              <div className="entity-attachment-picker">
+                                {entries.map((entry) => {
+                                  const noteId = String(entry.id);
+                                  const checked = hasEntityLink(
+                                    "class",
+                                    selectedClassItem.id,
+                                    "note",
+                                    noteId,
+                                  );
+                                  return (
+                                    <label key={entry.id}>
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() =>
+                                          toggleEntityLink(
+                                            "class",
+                                            selectedClassItem.id,
+                                            "note",
+                                            noteId,
+                                            checked
+                                              ? "Detached note from class"
+                                              : "Attached note to class",
+                                          )
+                                        }
+                                      />
+                                      📝 {notePreview(entry.text, 44)}
+                                    </label>
+                                  );
+                                })}
+                                {entries.length === 0 && (
+                                  <small>No notes yet.</small>
+                                )}
+                              </div>
+                            </details>
+                          </div>
+                        </article>
+                      )}
                       <div className="recording-list">
                         <div className="section-heading">
                           <div>
@@ -3160,14 +5675,14 @@ export default function Home() {
                         <div className="sketch-history-controls">
                           <button
                             onClick={undoDrawing}
-                            disabled={!canUndo}
+                            disabled={!canUndoSketch}
                             aria-label="Undo last stroke"
                           >
                             <span>↶</span> Undo
                           </button>
                           <button
                             onClick={redoDrawing}
-                            disabled={!canRedo}
+                            disabled={!canRedoSketch}
                             aria-label="Redo stroke"
                           >
                             <span>↷</span> Redo
@@ -3291,14 +5806,14 @@ export default function Home() {
                         <div className="sketch-fullscreen-actions">
                           <button
                             onClick={undoDrawing}
-                            disabled={!canUndo}
+                            disabled={!canUndoSketch}
                             aria-label="Undo last stroke"
                           >
                             ↶
                           </button>
                           <button
                             onClick={redoDrawing}
-                            disabled={!canRedo}
+                            disabled={!canRedoSketch}
                             aria-label="Redo stroke"
                           >
                             ↷
@@ -3477,19 +5992,263 @@ export default function Home() {
           )}
         </div>
 
-        {!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={activeTab === tab.id ? "nav-item active" : "nav-item"}
-              onClick={() => changeTab(tab.id)}
-            >
-              <span>{tab.icon}</span>
-              <small>{tab.label}</small>
-            </button>
-          ))}
-        </nav>}
+        {!sketchFullscreen && (
+          <>
+            {(globalHistoryDepth.undo > 0 || globalHistoryDepth.redo > 0) && (
+              <div className="global-history-controls" aria-label="Undo and redo">
+                <button
+                  onClick={undoGlobal}
+                  disabled={globalHistoryDepth.undo === 0}
+                  aria-label="Undo last action"
+                >↶</button>
+                <button
+                  onClick={redoGlobal}
+                  disabled={globalHistoryDepth.redo === 0}
+                  aria-label="Redo last action"
+                >↷</button>
+              </div>
+            )}
+            <nav className="bottom-nav" aria-label="Primary navigation">
+              {tabs.map((tab) =>
+                tab.id === "focus" ? (
+                  <button
+                    key="quick-capture"
+                    className="nav-item quick-capture-nav"
+                    onClick={() => setQuickCaptureOpen(true)}
+                    aria-label="Open Quick Capture"
+                  >
+                    <span>＋</span>
+                    <small>Capture</small>
+                  </button>
+                ) : (
+                  <button
+                    key={tab.id}
+                    className={
+                      activeTab === tab.id ? "nav-item active" : "nav-item"
+                    }
+                    onClick={() => changeTab(tab.id)}
+                  >
+                    <span>{tab.icon}</span>
+                    <small>{tab.label}</small>
+                  </button>
+                ),
+              )}
+            </nav>
+          </>
+        )}
       </section>
+
+      {historyMessage && (
+        <div className="history-snackbar" role="status">
+          <span>{historyMessage}</span>
+          {globalHistoryDepth.undo > 0 && (
+            <button onClick={undoGlobal}>Undo</button>
+          )}
+          <button onClick={() => setHistoryMessage("")} aria-label="Dismiss">×</button>
+        </div>
+      )}
+
+      {authCallbackStatus && (
+        <div className="modal-backdrop auth-callback-backdrop" role="presentation">
+          <section
+            className={`auth-callback-modal ${authCallbackStatus.kind}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Email confirmation"
+          >
+            <span aria-hidden="true">
+              {authCallbackStatus.kind === "working"
+                ? "⋯"
+                : authCallbackStatus.kind === "success"
+                  ? "♡"
+                  : "!"}
+            </span>
+            <p className="tiny-label">EMAIL CONFIRMATION</p>
+            <h2>
+              {authCallbackStatus.kind === "working"
+                ? "One little moment"
+                : authCallbackStatus.kind === "success"
+                  ? "You’re confirmed"
+                  : "This link needs help"}
+            </h2>
+            <p>{authCallbackStatus.message}</p>
+            {authCallbackStatus.kind === "error" ? (
+              <div>
+                <button
+                  onClick={() => {
+                    setAuthCallbackStatus(null);
+                    setSettingsOpen(true);
+                    void sendSyncCode();
+                  }}
+                >Send another email</button>
+                <button onClick={() => setAuthCallbackStatus(null)}>Close</button>
+              </div>
+            ) : authCallbackStatus.kind === "success" ? (
+              <button onClick={() => setAuthCallbackStatus(null)}>Continue to aérea</button>
+            ) : null}
+          </section>
+        </div>
+      )}
+
+      {quickCaptureOpen && (
+        <div className="modal-backdrop quick-capture-backdrop" role="presentation">
+          <form
+            className="quick-capture-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quick Capture"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveQuickCapture();
+            }}
+          >
+            <header>
+              <div>
+                <p className="tiny-label">INBOX · KEEP IT NOW</p>
+                <h2>Quick Capture</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickCaptureOpen(false)}
+                aria-label="Close Quick Capture"
+              >×</button>
+            </header>
+            <textarea
+              autoFocus
+              value={quickCaptureText}
+              onChange={(event) => setQuickCaptureText(event.target.value)}
+              placeholder="entregar tarea martes…"
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  void saveQuickCapture();
+                }
+              }}
+            />
+            <label className="quick-capture-file">
+              <span>＋ Add a photo, PDF, or file</span>
+              <input
+                type="file"
+                accept="image/*,.pdf,.epub,.doc,.docx,.txt,audio/*"
+                onChange={(event) =>
+                  setQuickCaptureFile(event.target.files?.[0] ?? null)
+                }
+              />
+              {quickCaptureFile && <strong>{quickCaptureFile.name}</strong>}
+            </label>
+            <footer>
+              <small>No folder needed. Sort it whenever you want.</small>
+              <button
+                type="submit"
+                disabled={
+                  quickCaptureSaving ||
+                  (!quickCaptureText.trim() && !quickCaptureFile)
+                }
+              >
+                {quickCaptureSaving ? "Keeping it…" : "Keep in Inbox"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+
+      {resetExperience && (
+        <div className="modal-backdrop reset-backdrop" role="presentation">
+          <section
+            className={`reset-modal ${resetExperience}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={resetExperience === "morning" ? "Morning Reset" : "Night Reset"}
+          >
+            <header>
+              <div>
+                <p className="tiny-label">
+                  {resetExperience === "morning" ? "MORNING RESET" : "NIGHT RESET"}
+                </p>
+                <h2>
+                  {dateFromKey(todayKey).toLocaleDateString("en", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </h2>
+              </div>
+              <button onClick={closeResetExperience} aria-label="Close">×</button>
+            </header>
+
+            {resetExperience === "morning" ? (
+              <>
+                <p className="reset-summary">
+                  {allCalendarEvents.filter((event) => eventOccursOn(event, todayKey)).length} events · {todayTasks.filter((task) => !task.completed).length} tasks · {pending.length} reminders
+                </p>
+                <div className="reset-category-grid">
+                  <button onClick={() => { closeResetExperience(); openCalendarAtToday(); }}>
+                    <span>▦</span>
+                    <strong>{allCalendarEvents.filter((event) => eventOccursOn(event, todayKey)).length}</strong>
+                    <small>today&apos;s events</small>
+                  </button>
+                  <button onClick={() => { changeTab("spaces"); setSpace("inbox"); closeResetExperience(); }}>
+                    <span>✓</span>
+                    <strong>{todayTasks.filter((task) => !task.completed).length}</strong>
+                    <small>open tasks</small>
+                  </button>
+                  <button onClick={() => { changeTab("today"); closeResetExperience(); }}>
+                    <span>♡</span>
+                    <strong>{pending.length}</strong>
+                    <small>gentle reminders</small>
+                  </button>
+                </div>
+                {overdueTasks.length > 0 && (
+                  <div className="reset-overdue">
+                    <p className="tiny-label">FROM YESTERDAY</p>
+                    {overdueTasks.map((task) => (
+                      <article key={task.id}>
+                        <strong>You didn&apos;t finish “{task.title}”.</strong>
+                        <div>
+                          <button onClick={() => rescheduleTask(task, "today")}>Today</button>
+                          <button onClick={() => rescheduleTask(task, "tomorrow")}>Tomorrow</button>
+                          <button onClick={() => rescheduleTask(task, "pick")}>Pick date</button>
+                          <button onClick={() => rescheduleTask(task, "dismiss")}>Dismiss</button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="reset-summary">
+                  You finished {todayTasks.filter((task) => task.completed).length + doneIds.length} of {todayTasks.length + reminders.length} things today ♡
+                </p>
+                {todayTasks.filter((task) => !task.completed).length > 0 ? (
+                  <div className="night-unfinished">
+                    <p className="tiny-label">MOVE UNFINISHED THINGS?</p>
+                    {todayTasks.filter((task) => !task.completed).map((task) => (
+                      <article key={task.id}>
+                        <strong>{task.title}</strong>
+                        <div>
+                          <button onClick={() => rescheduleTask(task, "tomorrow")}>Tomorrow</button>
+                          <button onClick={() => rescheduleTask(task, "pick")}>Pick date</button>
+                          <button onClick={() => rescheduleTask(task, "dismiss")}>Skip</button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="reset-all-done">Everything important is tucked away for tonight.</p>
+                )}
+              </>
+            )}
+            <button className="reset-done" onClick={closeResetExperience}>
+              {resetExperience === "morning" ? "Start my day" : "Good night ♡"}
+            </button>
+          </section>
+        </div>
+      )}
 
       {calendarOpen && (
         <div className="modal-backdrop" role="presentation">
@@ -3869,23 +6628,118 @@ export default function Home() {
                     </div>
 
                     <label className="event-file-field">
-                      <span>⌕ Files</span>
+                      <span>⌕ Add new files</span>
                       <input
                         type="file"
                         multiple
-                        onChange={(event) =>
-                          updateEventDraft(
-                            "files",
-                            Array.from(event.target.files ?? []).map(
-                              (file) => file.name,
-                            ),
-                          )
-                        }
+                        onChange={(event) => {
+                          const files = Array.from(event.target.files ?? []);
+                          event.target.value = "";
+                          void Promise.all(files.map(importLibraryFile)).then(
+                            (items) => {
+                              updateEventDraft("files", [
+                                ...(eventDraft.files ?? []),
+                                ...items.map((item) => item.name),
+                              ]);
+                              updateEventDraft("attachmentIds", Array.from(new Set([
+                                ...(eventDraft.attachmentIds ?? []),
+                                ...items.map((item) => item.id),
+                              ])));
+                            },
+                          );
+                        }}
                       />
                       {(eventDraft.files ?? []).length > 0 && (
                         <small>{eventDraft.files?.join(" · ")}</small>
                       )}
                     </label>
+
+                    {libraryItems.length > 0 && (
+                      <div className="event-existing-attachments">
+                        <span>Attached · choose from Library</span>
+                        <div>
+                          {libraryItems.filter((item) => !item.archived).map((item) => {
+                            const attached = eventDraft.attachmentIds?.includes(item.id) ?? false;
+                            return (
+                              <label key={item.id}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) => {
+                                    const ids = eventDraft.attachmentIds ?? [];
+                                    updateEventDraft(
+                                      "attachmentIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...ids, item.id]))
+                                        : ids.filter((id) => id !== item.id),
+                                    );
+                                    const names = eventDraft.files ?? [];
+                                    updateEventDraft(
+                                      "files",
+                                      event.target.checked
+                                        ? Array.from(new Set([...names, item.name]))
+                                        : names.filter((name) => name !== item.name),
+                                    );
+                                  }}
+                                />
+                                <span>{item.kind === "pdf" ? "📄" : "▤"}</span>
+                                <strong>{item.name}</strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(entries.length > 0 || recordings.length > 0) && (
+                      <div className="event-existing-attachments related-content-picker">
+                        <span>Related notes & recordings</span>
+                        <div>
+                          {entries.map((note) => {
+                            const attached = eventDraft.attachedNoteIds?.includes(note.id) ?? false;
+                            return (
+                              <label key={`note-${note.id}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) =>
+                                    updateEventDraft(
+                                      "attachedNoteIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...(eventDraft.attachedNoteIds ?? []), note.id]))
+                                        : (eventDraft.attachedNoteIds ?? []).filter((id) => id !== note.id),
+                                    )
+                                  }
+                                />
+                                <span>📝</span>
+                                <strong>{notePreview(note.text, 42)}</strong>
+                              </label>
+                            );
+                          })}
+                          {recordings.map((recording) => {
+                            const attached = eventDraft.attachedRecordingIds?.includes(recording.id) ?? false;
+                            return (
+                              <label key={`recording-${recording.id}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) =>
+                                    updateEventDraft(
+                                      "attachedRecordingIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...(eventDraft.attachedRecordingIds ?? []), recording.id]))
+                                        : (eventDraft.attachedRecordingIds ?? []).filter((id) => id !== recording.id),
+                                    )
+                                  }
+                                />
+                                <span>🎙</span>
+                                <strong>{recording.name}</strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <button
@@ -3940,6 +6794,57 @@ export default function Home() {
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
                 </div>
+                <div className="calendar-power-tools">
+                  {selectedCalendarDate !== todayKey && (
+                    <button onClick={openCalendarAtToday}>Today</button>
+                  )}
+                  <label>
+                    <span>Jump to</span>
+                    <input
+                      type="date"
+                      value={jumpDate}
+                      onChange={(event) => setJumpDate(event.target.value)}
+                    />
+                    <button onClick={() => goToCalendarDate()}>Go</button>
+                  </label>
+                  <button onClick={copyCurrentWeek}>Copy week</button>
+                  <button
+                    className={calendarMultiSelect ? "active" : ""}
+                    onClick={() => {
+                      setCalendarMultiSelect((current) => !current);
+                      setSelectedEventIds([]);
+                    }}
+                  >
+                    {calendarMultiSelect ? "Done selecting" : "Select events"}
+                  </button>
+                </div>
+                {calendarMultiSelect && (
+                  <div className="calendar-batch-tools">
+                    <strong>{selectedEventIds.length} selected</strong>
+                    <button disabled={!selectedEventIds.length} onClick={moveSelectedEvents}>Move</button>
+                    <button disabled={!selectedEventIds.length} onClick={duplicateSelectedEvents}>Duplicate</button>
+                    <select
+                      aria-label="Change selected event color"
+                      defaultValue=""
+                      disabled={!selectedEventIds.length}
+                      onChange={(event) => {
+                        if (!event.target.value) return;
+                        recolorSelectedEvents(event.target.value as EventColor);
+                        event.target.value = "";
+                      }}
+                    >
+                      <option value="">Color…</option>
+                      {eventColors.map((color) => (
+                        <option key={color.value} value={color.value}>{color.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      className="destructive"
+                      disabled={!selectedEventIds.length}
+                      onClick={deleteSelectedEvents}
+                    >Trash</button>
+                  </div>
+                )}
                 <div className="month-grid-viewport">
                   <div
                     key={`${calendarYear}-${calendarMonth}`}
@@ -3969,7 +6874,7 @@ export default function Home() {
                       calendarMonth,
                       day,
                     );
-                    const dayEvents = calendarEvents.filter((event) =>
+                    const dayEvents = allCalendarEvents.filter((event) =>
                       eventOccursOn(event, dayKey),
                     );
                     const dayMood = moods.find(
@@ -3980,6 +6885,7 @@ export default function Home() {
                     return (
                       <button
                         key={day}
+                        data-calendar-date={dayKey}
                         className={[
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
@@ -3987,6 +6893,7 @@ export default function Home() {
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
                           dayKey === todayKey ? "today" : "",
+                          calendarDragTarget === dayKey ? "drag-target" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
@@ -4027,9 +6934,11 @@ export default function Home() {
                                 />
                               ))}
                             </span>
-                            <small>
+                            <small className={dayEvents.some((event) => event.sportsCardStyle) ? "has-match" : ""}>
                               {dayEvents.length === 1
-                                ? dayEvents[0].title
+                                ? dayEvents[0].sportsCardStyle
+                                  ? `${dayEvents[0].sportsIcon ?? "♡"} MATCH DAY`
+                                  : dayEvents[0].title
                                 : `${dayEvents.length} plans`}
                             </small>
                           </>
@@ -4145,43 +7054,95 @@ export default function Home() {
                     </p>
                   ) : (
                     <div className="selected-day-events">
-                      {selectedDateEvents.map((calendarEvent) => (
-                        <article
-                          className={`event-chip ${calendarEvent.color}`}
-                          key={calendarEvent.id}
-                        >
-                          <span>{eventTimeLabel(calendarEvent)}</span>
-                          <button
-                            className="event-chip-main"
-                            onClick={() => openEventEditor(calendarEvent)}
-                            aria-label={`Edit ${calendarEvent.title}`}
-                          >
-                            <strong>{calendarEvent.title}</strong>
-                            <small>
-                              {calendarEvent.calendar ?? "Personal"}
-                              {(calendarEvent.repeat ?? "Never") !== "Never"
-                                ? ` · ${calendarEvent.repeat}`
-                                : ""}
-                              {calendarEvent.location
-                                ? ` · ${calendarEvent.location}`
-                                : ""}
-                            </small>
-                          </button>
-                          <button
-                            className="event-chip-delete"
-                            onClick={() =>
-                              setCalendarEvents((current) =>
-                                current.filter(
-                                  (item) => item.id !== calendarEvent.id,
-                                ),
-                              )
+                      {selectedDateEvents.map((calendarEvent) => {
+                        const conflict =
+                          !calendarEvent.allDay &&
+                          selectedDateEvents.some(
+                            (candidate) =>
+                              candidate.id !== calendarEvent.id &&
+                              !candidate.allDay &&
+                              rangesOverlap(
+                                calendarEvent.time,
+                                calendarEvent.endTime,
+                                candidate.time,
+                                candidate.endTime,
+                              ),
+                          );
+                        const selected = selectedEventIds.includes(calendarEvent.id);
+                        return (
+                          <article
+                            className={[
+                              "event-chip",
+                              calendarEvent.color,
+                              calendarEvent.sportsCardStyle ? "match-day" : "",
+                              calendarEvent.allDay ? "all-day" : "",
+                              conflict ? "has-conflict" : "",
+                              selected ? "selected" : "",
+                              draggingCalendarEventId === calendarEvent.id ? "dragging" : "",
+                            ].filter(Boolean).join(" ")}
+                            key={calendarEvent.id}
+                            style={
+                              calendarEvent.sportsCardStyle
+                                ? ({
+                                    "--sports-primary": calendarEvent.sportsPrimary,
+                                    "--sports-secondary": calendarEvent.sportsSecondary,
+                                  } as CSSProperties)
+                                : undefined
                             }
-                            aria-label={`Delete ${calendarEvent.title}`}
+                            onPointerDown={(event) => startCalendarEventDrag(event, calendarEvent)}
+                            onPointerMove={updateCalendarEventDrag}
+                            onPointerUp={finishCalendarEventDrag}
+                            onPointerCancel={finishCalendarEventDrag}
                           >
-                            ×
-                          </button>
-                        </article>
-                      ))}
+                            <span>{calendarEvent.allDay ? "ALL DAY" : eventTimeLabel(calendarEvent)}</span>
+                            <button
+                              className="event-chip-main"
+                              onClick={() => {
+                                if (calendarMultiSelect) {
+                                  if (calendarEvent.eventType === "sports_event") return;
+                                  setSelectedEventIds((current) =>
+                                    current.includes(calendarEvent.id)
+                                      ? current.filter((id) => id !== calendarEvent.id)
+                                      : [...current, calendarEvent.id],
+                                  );
+                                } else if (calendarEvent.eventType === "sports_event") {
+                                  setSelectedEventDetail(calendarEvent);
+                                } else {
+                                  openEventEditor(calendarEvent);
+                                }
+                              }}
+                              aria-label={`${calendarMultiSelect ? "Select" : "Open"} ${calendarEvent.title}`}
+                            >
+                              {calendarEvent.sportsCardStyle && (
+                                <i>{calendarEvent.sportsIcon ?? "♡"} MATCH DAY</i>
+                              )}
+                              <strong>{calendarEvent.title}</strong>
+                              <small>
+                                {calendarEvent.calendar ?? "Personal"}
+                                {(calendarEvent.repeat ?? "Never") !== "Never"
+                                  ? ` · ${calendarEvent.repeat}`
+                                  : ""}
+                                {calendarEvent.location
+                                  ? ` · ${calendarEvent.location}`
+                                  : ""}
+                                {conflict ? " · overlaps" : ""}
+                              </small>
+                            </button>
+                            {calendarEvent.eventType !== "sports_event" && (
+                              <button
+                                className="event-chip-delete"
+                                onClick={() => {
+                                  if (!window.confirm(`Move “${calendarEvent.title}” to Trash?`)) return;
+                                  moveToTrash("event", calendarEvent.title, calendarEvent);
+                                }}
+                                aria-label={`Delete ${calendarEvent.title}`}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </article>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -4493,13 +7454,462 @@ export default function Home() {
         </div>
       )}
 
+      {selectedLibraryItem && (
+        <div className="modal-backdrop library-reader-backdrop" role="presentation">
+          <section
+            className="library-reader-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Reader for ${selectedLibraryItem.name}`}
+          >
+            <header className="library-reader-header">
+              <div>
+                <p className="tiny-label">{selectedLibraryItem.kind.toUpperCase()} · LIBRARY</p>
+                <h2>{selectedLibraryItem.name}</h2>
+                <small>
+                  {selectedLibraryItem.readerLocation?.page
+                    ? `Continue · page ${selectedLibraryItem.readerLocation.page}`
+                    : "Your position is saved automatically"}
+                </small>
+              </div>
+              <div>
+                <button
+                  className={selectedLibraryItem.favorite ? "active" : ""}
+                  onClick={() => {
+                    recordAction(
+                      selectedLibraryItem.favorite ? "Removed favorite" : "Added favorite",
+                    );
+                    updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                      ...item,
+                      favorite: !item.favorite,
+                    }));
+                  }}
+                  aria-label="Toggle favorite"
+                >♡</button>
+                <button onClick={() => setSelectedLibraryItem(null)} aria-label="Close reader">×</button>
+              </div>
+            </header>
+
+            <div className="library-reader-layout">
+              <main className="library-document-stage">
+                {selectedLibraryItem.kind === "image" && selectedLibraryItem.dataUrl ? (
+                  <img src={selectedLibraryItem.dataUrl} alt={selectedLibraryItem.name} />
+                ) : selectedLibraryItem.kind === "audio" && selectedLibraryItem.dataUrl ? (
+                  <audio controls src={selectedLibraryItem.dataUrl} />
+                ) : selectedLibraryItem.kind === "pdf" && selectedLibraryItem.dataUrl ? (
+                  <iframe
+                    key={`${selectedLibraryItem.id}-${selectedLibraryItem.readerLocation?.page ?? 1}-${selectedLibraryItem.readerLocation?.zoom ?? 100}`}
+                    src={`${selectedLibraryItem.dataUrl}#page=${selectedLibraryItem.readerLocation?.page ?? 1}&zoom=${selectedLibraryItem.readerLocation?.zoom ?? 100}`}
+                    title={selectedLibraryItem.name}
+                  />
+                ) : selectedLibraryItem.kind === "note" ? (
+                  <article className="library-note-preview">
+                    <p>{selectedLibraryItem.textContent ?? selectedLibraryItem.name}</p>
+                  </article>
+                ) : (
+                  <div className="library-generic-preview">
+                    <span>{selectedLibraryItem.kind === "epub" ? "EPUB" : "▤"}</span>
+                    <strong>{selectedLibraryItem.name}</strong>
+                    <p>
+                      This format is kept safely in Library. Use the panel to
+                      save chapters, bookmarks and notes.
+                    </p>
+                  </div>
+                )}
+                <div className="reader-location-controls">
+                  <label>
+                    Page
+                    <input
+                      type="number"
+                      min="1"
+                      value={selectedLibraryItem.readerLocation?.page ?? 1}
+                      onChange={(event) => {
+                        const page = Math.max(1, Number(event.target.value) || 1);
+                        updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                          ...item,
+                          readerLocation: { ...item.readerLocation, page },
+                        }));
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Progress
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={selectedLibraryItem.readerLocation?.percentage ?? 0}
+                      onChange={(event) => {
+                        const percentage = Number(event.target.value);
+                        updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                          ...item,
+                          readerLocation: { ...item.readerLocation, percentage },
+                        }));
+                      }}
+                    />
+                    <span>{selectedLibraryItem.readerLocation?.percentage ?? 0}%</span>
+                  </label>
+                  {selectedLibraryItem.kind === "pdf" && (
+                    <label>
+                      Zoom
+                      <select
+                        value={selectedLibraryItem.readerLocation?.zoom ?? 100}
+                        onChange={(event) =>
+                          updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                            ...item,
+                            readerLocation: {
+                              ...item.readerLocation,
+                              zoom: Number(event.target.value),
+                            },
+                          }))
+                        }
+                      >
+                        <option value={75}>75%</option>
+                        <option value={100}>100%</option>
+                        <option value={125}>125%</option>
+                        <option value={150}>150%</option>
+                      </select>
+                    </label>
+                  )}
+                </div>
+              </main>
+
+              <aside className="library-reader-panel">
+                <nav aria-label="Reader navigation">
+                  {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map(
+                    (panel) => (
+                      <button
+                        key={panel}
+                        className={libraryPanel === panel ? "active" : ""}
+                        onClick={() => setLibraryPanel(panel)}
+                      >
+                        {panel}
+                      </button>
+                    ),
+                  )}
+                </nav>
+
+                {libraryPanel === "contents" && (
+                  <section className="reader-panel-section">
+                    <p className="tiny-label">CONTENTS</p>
+                    <h3>{selectedLibraryItem.name}</h3>
+                    {selectedLibraryItem.kind === "epub" ? (
+                      <label>
+                        Current chapter
+                        <input
+                          value={selectedLibraryItem.readerLocation?.chapter ?? ""}
+                          placeholder="Chapter title"
+                          onChange={(event) =>
+                            updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                              ...item,
+                              readerLocation: {
+                                ...item.readerLocation,
+                                chapter: event.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </label>
+                    ) : (
+                      <p>
+                        PDF outlines remain available in the embedded reader when
+                        the document contains one. Page navigation always works.
+                      </p>
+                    )}
+
+                    <div className="reader-collections">
+                      <strong>Collections</strong>
+                      {libraryCollections.map((collection) => {
+                        const included = selectedLibraryItem.collectionIds?.includes(collection.id) ?? false;
+                        return (
+                          <label key={collection.id}>
+                            <input
+                              type="checkbox"
+                              checked={included}
+                              onChange={(event) => {
+                                recordAction("Changed Library collection");
+                                updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                                  ...item,
+                                  collectionIds: event.target.checked
+                                    ? Array.from(new Set([...(item.collectionIds ?? []), collection.id]))
+                                    : (item.collectionIds ?? []).filter((id) => id !== collection.id),
+                                }));
+                              }}
+                            />
+                            {collection.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div className="library-used-in">
+                      <p className="tiny-label">USED IN</p>
+                      {calendarEvents
+                        .filter((event) => event.attachmentIds?.includes(selectedLibraryItem.id))
+                        .map((event) => (
+                          <button key={event.id} onClick={() => setSelectedEventDetail(event)}>
+                            ▦ {event.title} · {readableDate(event.date)}
+                          </button>
+                        ))}
+                      {tasks
+                        .filter((task) => task.attachmentIds?.includes(selectedLibraryItem.id))
+                        .map((task) => <span key={task.id}>✓ {task.title}</span>)}
+                      {entityLinks
+                        .filter(
+                          (link) =>
+                            link.fromType === "class" &&
+                            link.toType === "file" &&
+                            link.toId === selectedLibraryItem.id,
+                        )
+                        .map((link) => {
+                          const classItem = classItems.find(
+                            (item) => item.id === link.fromId,
+                          );
+                          return classItem ? (
+                            <button
+                              key={link.id}
+                              onClick={() => {
+                                setSelectedClass(classItem.name);
+                                setSelectedLibraryItem(null);
+                                setSpace("classes");
+                                setActiveTab("spaces");
+                              }}
+                            >
+                              {classItem.icon} {classItem.name}
+                            </button>
+                          ) : null;
+                        })}
+                      {!calendarEvents.some((event) => event.attachmentIds?.includes(selectedLibraryItem.id)) &&
+                        !tasks.some((task) => task.attachmentIds?.includes(selectedLibraryItem.id)) &&
+                        !entityLinks.some(
+                          (link) =>
+                            link.fromType === "class" &&
+                            link.toType === "file" &&
+                            link.toId === selectedLibraryItem.id,
+                        ) && (
+                          <small>Not attached anywhere yet.</small>
+                        )}
+                    </div>
+                  </section>
+                )}
+
+                {libraryPanel === "pages" && (
+                  <section className="reader-panel-section">
+                    <p className="tiny-label">PAGE THUMBNAILS</p>
+                    <div className="reader-page-grid">
+                      {Array.from({ length: 9 }, (_, index) => {
+                        const currentPage = selectedLibraryItem.readerLocation?.page ?? 1;
+                        const page = Math.max(1, currentPage - 4) + index;
+                        const hasMark = selectedLibraryItem.annotations?.some(
+                          (annotation) => annotation.location.page === page,
+                        );
+                        return (
+                          <button
+                            key={page}
+                            className={page === currentPage ? "active" : ""}
+                            onClick={() =>
+                              updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                                ...item,
+                                readerLocation: { ...item.readerLocation, page },
+                              }))
+                            }
+                          >
+                            <span>PAGE</span>
+                            <strong>{page}</strong>
+                            {hasMark && <i>♡</i>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {(["bookmarks", "highlights", "notes"] as const).includes(libraryPanel as "bookmarks" | "highlights" | "notes") && (
+                  <section className="reader-panel-section">
+                    <div className="reader-annotation-heading">
+                      <div>
+                        <p className="tiny-label">{libraryPanel.toUpperCase()}</p>
+                        <h3>{(selectedLibraryItem.annotations ?? []).filter((annotation) => annotation.type === libraryPanel.slice(0, -1)).length} saved</h3>
+                      </div>
+                      <button
+                        onClick={() =>
+                          addLibraryAnnotation(
+                            selectedLibraryItem,
+                            libraryPanel === "bookmarks"
+                              ? "bookmark"
+                              : libraryPanel === "highlights"
+                                ? "highlight"
+                                : "note",
+                          )
+                        }
+                      >＋ Add</button>
+                    </div>
+                    <div className="reader-annotation-list">
+                      {(selectedLibraryItem.annotations ?? [])
+                        .filter((annotation) => annotation.type === libraryPanel.slice(0, -1))
+                        .map((annotation) => (
+                          <article key={annotation.id}>
+                            <button
+                              onClick={() =>
+                                updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                                  ...item,
+                                  readerLocation: {
+                                    ...item.readerLocation,
+                                    ...annotation.location,
+                                  },
+                                }))
+                              }
+                            >
+                              <strong>
+                                {annotation.name || annotation.excerpt || annotation.text || "Saved place"}
+                              </strong>
+                              <small>
+                                {annotation.location.chapter || `Page ${annotation.location.page ?? 1}`}
+                              </small>
+                            </button>
+                            <button
+                              aria-label="Edit annotation"
+                              onClick={() => {
+                                const currentText = annotation.name || annotation.excerpt || annotation.text || "";
+                                const text = window.prompt("Edit", currentText);
+                                if (text === null) return;
+                                recordAction("Edited annotation");
+                                updateLibraryItem(selectedLibraryItem.id, (item) => ({
+                                  ...item,
+                                  annotations: (item.annotations ?? []).map((candidate) =>
+                                    candidate.id === annotation.id
+                                      ? {
+                                          ...candidate,
+                                          ...(candidate.type === "bookmark"
+                                            ? { name: text }
+                                            : candidate.type === "highlight"
+                                              ? { excerpt: text }
+                                              : { text }),
+                                          updatedAt: new Date().toISOString(),
+                                        }
+                                      : candidate,
+                                  ),
+                                }));
+                              }}
+                            >✎</button>
+                            <button
+                              aria-label="Delete annotation"
+                              onClick={() => deleteLibraryAnnotation(selectedLibraryItem.id, annotation.id)}
+                            >×</button>
+                          </article>
+                        ))}
+                      {(selectedLibraryItem.annotations ?? []).filter(
+                        (annotation) => annotation.type === libraryPanel.slice(0, -1),
+                      ).length === 0 && <p>Nothing saved here yet.</p>}
+                    </div>
+                  </section>
+                )}
+
+                <footer className="library-reader-actions">
+                  <button
+                    onClick={() => {
+                      recordAction("Archived Library file");
+                      updateLibraryItem(selectedLibraryItem.id, (item) => ({ ...item, archived: true }));
+                      setSelectedLibraryItem(null);
+                    }}
+                  >Archive</button>
+                  <button
+                    className="destructive"
+                    onClick={() => {
+                      const stored = libraryItems.find((item) => item.id === selectedLibraryItem.id);
+                      if (!stored || !window.confirm(`Move “${stored.name}” to Trash?`)) return;
+                      setSelectedLibraryItem(null);
+                      moveToTrash("file", stored.name, stored);
+                    }}
+                  >Move to Trash</button>
+                </footer>
+              </aside>
+            </div>
+          </section>
+        </div>
+      )}
+
       {selectedJournalEntry && (
         <NoteDetailDialog
           date={selectedJournalEntry.date}
           face={selectedJournalEntry.mood || "♡"}
           label="A FULL LITTLE MOMENT"
           text={selectedJournalEntry.text}
+          usedIn={[
+            ...calendarEvents
+              .filter((event) =>
+                event.attachedNoteIds?.includes(selectedJournalEntry.id),
+              )
+              .map((event) => ({
+                id: `event-${event.id}`,
+                label: `▦ ${event.title}`,
+                onClick: () => {
+                  setSelectedJournalEntry(null);
+                  setSelectedEventDetail(event);
+                },
+              })),
+            ...entityLinks
+              .filter(
+                (link) =>
+                  link.toType === "note" &&
+                  link.toId === String(selectedJournalEntry.id) &&
+                  link.fromType === "task",
+              )
+              .flatMap((link) => {
+                const task = tasks.find((item) => item.id === link.fromId);
+                return task
+                  ? [
+                      {
+                        id: `task-${task.id}`,
+                        label: `✓ ${task.title}`,
+                        onClick: () => {
+                          setSelectedJournalEntry(null);
+                          setActiveTab("spaces");
+                          setSpace("inbox");
+                        },
+                      },
+                    ]
+                  : [];
+              }),
+            ...entityLinks
+              .filter(
+                (link) =>
+                  link.toType === "note" &&
+                  link.toId === String(selectedJournalEntry.id) &&
+                  link.fromType === "class",
+              )
+              .flatMap((link) => {
+                const classItem = classItems.find(
+                  (item) => item.id === link.fromId,
+                );
+                return classItem
+                  ? [
+                      {
+                        id: `class-${classItem.id}`,
+                        label: `${classItem.icon} ${classItem.name}`,
+                        onClick: () => {
+                          setSelectedJournalEntry(null);
+                          setSelectedClass(classItem.name);
+                          setActiveTab("spaces");
+                          setSpace("classes");
+                        },
+                      },
+                    ]
+                  : [];
+              }),
+          ]}
           onClose={() => setSelectedJournalEntry(null)}
+          onSave={(text) => {
+            recordAction("Edited note");
+            setEntries((current) =>
+              current.map((entry) =>
+                entry.id === selectedJournalEntry.id ? { ...entry, text } : entry,
+              ),
+            );
+            setSelectedJournalEntry((current) =>
+              current ? { ...current, text } : current,
+            );
+          }}
           onDelete={() => deleteJournalEntry(selectedJournalEntry.id)}
         />
       )}
@@ -4672,13 +8082,61 @@ export default function Home() {
               </section>
             )}
 
-            {(selectedEventDetail.files ?? []).length > 0 && (
+            {((selectedEventDetail.files ?? []).length > 0 ||
+              (selectedEventDetail.attachmentIds ?? []).length > 0 ||
+              (selectedEventDetail.attachedNoteIds ?? []).length > 0 ||
+              (selectedEventDetail.attachedRecordingIds ?? []).length > 0) && (
               <section className="event-detail-section">
-                <p className="tiny-label">ATTACHED FILES</p>
+                <p className="tiny-label">ATTACHED</p>
                 <div className="event-detail-files">
-                  {selectedEventDetail.files?.map((file) => (
-                    <span key={file}>⌕ {file}</span>
-                  ))}
+                  {(selectedEventDetail.attachmentIds ?? []).map((fileId) => {
+                    const item = libraryItems.find((candidate) => candidate.id === fileId);
+                    if (!item) return null;
+                    return (
+                      <button key={fileId} onClick={() => void openLibraryItem(item)}>
+                        {item.kind === "pdf" ? "📄" : "▤"} {item.name} ↗
+                      </button>
+                    );
+                  })}
+                  {(selectedEventDetail.files ?? [])
+                    .filter(
+                      (name) =>
+                        !libraryItems.some(
+                          (item) =>
+                            selectedEventDetail.attachmentIds?.includes(item.id) &&
+                            item.name === name,
+                        ),
+                    )
+                    .map((file) => <span key={file}>⌕ {file}</span>)}
+                  {(selectedEventDetail.attachedNoteIds ?? []).map((noteId) => {
+                    const note = entries.find((candidate) => candidate.id === noteId);
+                    if (!note) return null;
+                    return (
+                      <button
+                        key={`note-${noteId}`}
+                        onClick={() => {
+                          setSelectedEventDetail(null);
+                          setSelectedJournalEntry(note);
+                        }}
+                      >📝 {notePreview(note.text, 48)} ↗</button>
+                    );
+                  })}
+                  {(selectedEventDetail.attachedRecordingIds ?? []).map((recordingId) => {
+                    const recording = recordings.find((candidate) => candidate.id === recordingId);
+                    if (!recording) return null;
+                    return (
+                      <button
+                        key={`recording-${recordingId}`}
+                        onClick={() => {
+                          setSelectedEventDetail(null);
+                          setSelectedClass(recording.className);
+                          changeTab("spaces");
+                          setSpace("classes");
+                          openRecordingEditor(recording);
+                        }}
+                      >🎙 {recording.name} ↗</button>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -4694,22 +8152,51 @@ export default function Home() {
               </a>
             )}
 
-            <button
-              className="event-detail-edit"
-              onClick={() => {
-                const event = selectedEventDetail;
-                const eventDate = dateFromKey(event.date);
-                setSelectedCalendarDate(event.date);
-                setViewMonth(
-                  new Date(eventDate.getFullYear(), eventDate.getMonth(), 1),
-                );
-                setSelectedEventDetail(null);
-                setCalendarOpen(true);
-                openEventEditor(event);
-              }}
-            >
-              ✎ Edit this event
-            </button>
+            {selectedEventDetail.eventType === "sports_event" ? (
+              <div
+                className="match-day-detail-note"
+                style={{
+                  "--sports-primary": selectedEventDetail.sportsPrimary,
+                  "--sports-secondary": selectedEventDetail.sportsSecondary,
+                } as CSSProperties}
+              >
+                <strong>{selectedEventDetail.sportsIcon ?? "♡"} MATCH DAY</strong>
+                <span>Automatic sports events stay separate from your personal calendar.</span>
+              </div>
+            ) : (
+              <div className="event-detail-actions">
+                <button
+                  className="event-detail-edit"
+                  onClick={() => {
+                    const event = selectedEventDetail;
+                    const eventDate = dateFromKey(event.date);
+                    setSelectedCalendarDate(event.date);
+                    setViewMonth(
+                      new Date(eventDate.getFullYear(), eventDate.getMonth(), 1),
+                    );
+                    setSelectedEventDetail(null);
+                    setCalendarOpen(true);
+                    openEventEditor(event);
+                  }}
+                >
+                  ✎ Edit
+                </button>
+                <button onClick={() => duplicateCalendarEvent(selectedEventDetail)}>
+                  Duplicate
+                </button>
+                <button
+                  className="destructive"
+                  onClick={() => {
+                    const event = selectedEventDetail;
+                    if (!window.confirm(`Move “${event.title}” to Trash?`)) return;
+                    setSelectedEventDetail(null);
+                    moveToTrash("event", event.title, event);
+                  }}
+                >
+                  Move to Trash
+                </button>
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -4763,6 +8250,155 @@ export default function Home() {
                     Remove
                   </button>
                 )}
+              </div>
+            </section>
+
+            <section className="reset-settings-card" aria-label="Daily resets">
+              <div>
+                <p className="tiny-label">BEGIN & END GENTLY</p>
+                <h3>Morning and Night Reset</h3>
+                <p>Small daily check-ins, never another statistics page.</p>
+              </div>
+              <label>
+                <span>
+                  <strong>Morning Reset</strong>
+                  <small>Only what matters today</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={resetPreferences.morningEnabled}
+                  onChange={(event) =>
+                    setResetPreferences((current) => ({
+                      ...current,
+                      morningEnabled: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>
+                  <strong>Night Reset</strong>
+                  <small>Decide what happens to unfinished things</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={resetPreferences.nightEnabled}
+                  onChange={(event) =>
+                    setResetPreferences((current) => ({
+                      ...current,
+                      nightEnabled: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+            </section>
+
+            <section className="sports-settings-card" aria-label="Sports settings">
+              <div className="sports-settings-heading">
+                <div>
+                  <p className="tiny-label">SETTINGS → SPORTS</p>
+                  <h3>Teams you follow</h3>
+                  <p>Automatic fixtures stay separate from your personal events.</p>
+                </div>
+                <span>💙💛</span>
+              </div>
+              {INITIAL_SPORTS_TEAMS.map((team) => {
+                const followed = sportsSettings.followedTeamIds.includes(team.id);
+                return (
+                  <label className="follow-team-row" key={team.id}>
+                    <span className="team-colors" style={{
+                      "--team-primary": team.primaryColor,
+                      "--team-secondary": team.secondaryColor,
+                    } as CSSProperties} />
+                    <span>
+                      <strong>{team.name} {team.icon}</strong>
+                      <small>{followed ? "Matches are visible" : "Available to follow"}</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={followed}
+                      onChange={(event) =>
+                        setSportsSettings((current) => ({
+                          ...current,
+                          followedTeamIds: event.target.checked
+                            ? Array.from(new Set([...current.followedTeamIds, team.id]))
+                            : current.followedTeamIds.filter((id) => id !== team.id),
+                        }))
+                      }
+                    />
+                  </label>
+                );
+              })}
+              <div className="sports-toggle-grid">
+                <label>
+                  <span>Add matches automatically</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.addAutomatically}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        addAutomatically: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Show special match cards</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.showSpecialCards}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        showSpecialCards: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Notify me before matches</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.notifyBeforeMatches}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        notifyBeforeMatches: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Notification time</span>
+                  <select
+                    value={sportsSettings.notificationLeadMinutes}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        notificationLeadMinutes: Number(event.target.value),
+                      }))
+                    }
+                  >
+                    <option value={30}>30 min</option>
+                    <option value={60}>1 hour</option>
+                    <option value={180}>3 hours</option>
+                    <option value={1440}>1 day</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Show final score</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.showFinalScore}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        showFinalScore: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
               </div>
             </section>
 
@@ -5206,6 +8842,8 @@ function TodayScreen({
   completed,
   completeReminder,
   restoreReminder,
+  createReminder,
+  deleteReminder,
   openCalendar,
   selectedDate,
   selectDate,
@@ -5224,6 +8862,8 @@ function TodayScreen({
   completed: Reminder[];
   completeReminder: (id: number) => void;
   restoreReminder: (id: number) => void;
+  createReminder: () => void;
+  deleteReminder: (id: number) => void;
   openCalendar: () => void;
   selectedDate: string;
   selectDate: (dateKey: string) => void;
@@ -5357,7 +8997,19 @@ function TodayScreen({
             selectedDateEvents.map((event) => (
               <button
                 type="button"
-                className={`schedule-card ${event.color}-card`}
+                className={[
+                  "schedule-card",
+                  `${event.color}-card`,
+                  event.sportsCardStyle ? "match-day-schedule-card" : "",
+                ].filter(Boolean).join(" ")}
+                style={
+                  event.sportsCardStyle
+                    ? ({
+                        "--sports-primary": event.sportsPrimary,
+                        "--sports-secondary": event.sportsSecondary,
+                      } as CSSProperties)
+                    : undefined
+                }
                 key={event.id}
                 onClick={() => openEventDetail(event)}
                 aria-label={`Open details for ${event.title}`}
@@ -5368,14 +9020,25 @@ function TodayScreen({
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">
-                  <p className="card-tag">{event.calendar ?? "AÉREA"}</p>
+                  <p className="card-tag">
+                    {event.sportsCardStyle
+                      ? `${event.sportsIcon ?? "♡"} MATCH DAY`
+                      : event.calendar ?? "AÉREA"}
+                  </p>
                   <h4>{event.title}</h4>
                   <span>
                     {event.location || event.note || "Saved in your calendar"}
                   </span>
+                  {event.eventType === "sports_event" && (
+                    <small className="match-countdown">{matchCountdownLabel(event)}</small>
+                  )}
                 </div>
                 <div className="mini-people">
-                  {event.color === "yellow" ? "☀️" : "✦"}
+                  {event.eventType === "sports_event"
+                    ? event.sportsIcon ?? "♡"
+                    : event.color === "yellow"
+                      ? "☀️"
+                      : "✦"}
                 </div>
               </button>
             ))
@@ -5391,38 +9054,53 @@ function TodayScreen({
               <p className="tiny-label">LITTLE REMINDERS</p>
               <h3>Take care of you</h3>
             </div>
-            <span className="progress-pill">
-              {completed.length}/{reminders.length}
-            </span>
+            <div className="reminder-heading-actions">
+              <span className="progress-pill">
+                {completed.length}/{pending.length + completed.length}
+              </span>
+              <button className="text-button" onClick={createReminder}>＋ Reminder</button>
+            </div>
           </div>
           <div className="reminder-card">
             {pending.length === 0 ? (
               <div className="all-done">
-                <span>🌈</span>
-                <strong>Everything is complete!</strong>
-                <p>Your little list is resting for the day.</p>
+                <span>{completed.length === 0 ? "♡" : "🌈"}</span>
+                <strong>
+                  {completed.length === 0 ? "No reminders yet" : "Everything is complete!"}
+                </strong>
+                <p>
+                  {completed.length === 0
+                    ? "Add only what would genuinely help today."
+                    : "Your little list is resting for the day."}
+                </p>
               </div>
             ) : (
               pending.map((item) => (
-                <button
-                  className={`reminder-row ${item.tint}`}
-                  key={item.id}
-                  onClick={() => completeReminder(item.id)}
-                >
-                  <span className="reminder-icon">{item.icon}</span>
-                  <span className="reminder-copy">
-                    <strong>{item.title}</strong>
-                    <small>{item.detail}</small>
-                  </span>
-                  <span className="check-circle">✓</span>
-                </button>
+                <div className="reminder-item-wrap" key={item.id}>
+                  <button
+                    className={`reminder-row ${item.tint}`}
+                    onClick={() => completeReminder(item.id)}
+                  >
+                    <span className="reminder-icon">{item.icon}</span>
+                    <span className="reminder-copy">
+                      <strong>{item.title}</strong>
+                      <small>{item.detail}</small>
+                    </span>
+                    <span className="check-circle">✓</span>
+                  </button>
+                  <button
+                    className="delete-reminder"
+                    onClick={() => deleteReminder(item.id)}
+                    aria-label={`Delete ${item.title}`}
+                  >×</button>
+                </div>
               ))
             )}
           </div>
           <div className="completed-wrap">
             <div className="completed-history-line">
               <p className="completed-title">COMPLETED TODAY</p>
-              <span>Yesterday {yesterdayDoneCount}/{reminders.length}</span>
+              <span>Yesterday {yesterdayDoneCount}/{pending.length + completed.length}</span>
             </div>
             {completed.length === 0 ? (
               <p className="empty-completed">
@@ -5490,7 +9168,9 @@ function NoteDetailDialog({
   text,
   secret = false,
   onClose,
+  onSave,
   onDelete,
+  usedIn = [],
 }: {
   date: string;
   face: string;
@@ -5498,8 +9178,12 @@ function NoteDetailDialog({
   text: string;
   secret?: boolean;
   onClose: () => void;
+  onSave?: (text: string) => void;
   onDelete: () => void;
+  usedIn?: { id: string; label: string; onClick: () => void }[];
 }) {
+  const [draft, setDraft] = useState(text);
+  const [editing, setEditing] = useState(false);
   return (
     <div
       className={
@@ -5525,9 +9209,42 @@ function NoteDetailDialog({
             ×
           </button>
         </header>
-        <p className="note-detail-text">{text}</p>
+        {editing ? (
+          <textarea
+            className="note-detail-editor"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            autoFocus
+          />
+        ) : (
+          <p className="note-detail-text">{draft}</p>
+        )}
+        {usedIn.length > 0 && (
+          <aside className="note-used-in">
+            <p className="tiny-label">USED IN</p>
+            <div>
+              {usedIn.map((item) => (
+                <button key={item.id} onClick={item.onClick}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
         <footer>
           <small>{secret ? "This page stays private." : "Your words, fully here."}</small>
+          {onSave && (
+            <button
+              onClick={() => {
+                if (editing) {
+                  const next = draft.trim();
+                  if (!next) return;
+                  onSave(next);
+                }
+                setEditing((current) => !current);
+              }}
+            >{editing ? "Save note" : "Edit note"}</button>
+          )}
           <button onClick={onDelete}>Delete note</button>
         </footer>
       </section>

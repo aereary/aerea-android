@@ -22,6 +22,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="aerea"
+                    android:host="auth"
+                    android:pathPrefix="/callback" />
+            </intent-filter>
+
         </activity>
 
         <receiver
@@ -44,6 +54,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/aerea_month_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".AereaSportsNotificationReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".AereaSportsBootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
         <service
@@ -69,4 +92,5 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

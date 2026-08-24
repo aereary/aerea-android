@@ -133,9 +133,92 @@ public class AereaStoragePlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void saveFile(PluginCall call) {
+        String dataUrl = call.getString("dataUrl");
+        if (dataUrl == null || !dataUrl.contains(",")) {
+            call.reject("A file data URL is required");
+            return;
+        }
+        String id = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
+        File directory = new File(getContext().getFilesDir(), "library");
+        File file = new File(directory, id + ".bin");
+        try {
+            if (!directory.exists() && !directory.mkdirs()) {
+                throw new IllegalStateException("Could not create Library directory");
+            }
+            byte[] bytes = Base64.decode(dataUrl.substring(dataUrl.indexOf(',') + 1), Base64.DEFAULT);
+            try (FileOutputStream stream = new FileOutputStream(file)) {
+                stream.write(bytes);
+            }
+            ContentValues values = new ContentValues();
+            values.put("id", id);
+            values.put("name", call.getString("name", "Untitled file"));
+            values.put("mime_type", call.getString("mimeType", "application/octet-stream"));
+            values.put("path", file.getAbsolutePath());
+            values.put("created_at", now);
+            values.put("updated_at", now);
+            database.getWritableDatabase().insertOrThrow("library_files", null, values);
+            JSObject result = new JSObject();
+            result.put("id", id);
+            call.resolve(result);
+        } catch (Exception error) {
+            file.delete();
+            call.reject("Could not save Library file", error);
+        }
+    }
+
+    @PluginMethod
+    public void readFile(PluginCall call) {
+        String id = call.getString("id");
+        if (id == null) {
+            call.reject("id is required");
+            return;
+        }
+        try (Cursor cursor = database.getReadableDatabase().query(
+                "library_files", new String[]{"name", "mime_type", "path"}, "id=?",
+                new String[]{id}, null, null, null)) {
+            if (!cursor.moveToFirst()) {
+                call.reject("Library file not found");
+                return;
+            }
+            File file = new File(cursor.getString(2));
+            if (!file.isFile()) {
+                call.reject("Library file is unavailable");
+                return;
+            }
+            String mimeType = cursor.getString(1);
+            JSObject result = new JSObject();
+            result.put("name", cursor.getString(0));
+            result.put("mimeType", mimeType);
+            result.put("dataUrl", "data:" + mimeType + ";base64," +
+                    Base64.encodeToString(Files.readAllBytes(file.toPath()), Base64.NO_WRAP));
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject("Could not read Library file", error);
+        }
+    }
+
+    @PluginMethod
+    public void deleteFile(PluginCall call) {
+        String id = call.getString("id");
+        if (id == null) {
+            call.reject("id is required");
+            return;
+        }
+        try (Cursor cursor = database.getReadableDatabase().query(
+                "library_files", new String[]{"path"}, "id=?", new String[]{id},
+                null, null, null)) {
+            if (cursor.moveToFirst()) new File(cursor.getString(0)).delete();
+        }
+        database.getWritableDatabase().delete("library_files", "id=?", new String[]{id});
+        call.resolve();
+    }
+
     static class AereaDatabase extends SQLiteOpenHelper {
         AereaDatabase(Context context) {
-            super(context, "aerea-private.db", null, 2);
+            super(context, "aerea-private.db", null, 3);
         }
 
         @Override
@@ -151,6 +234,13 @@ public class AereaStoragePlugin extends Plugin {
                     "path TEXT NOT NULL," +
                     "created_at INTEGER NOT NULL," +
                     "updated_at INTEGER NOT NULL)");
+            db.execSQL("CREATE TABLE library_files (" +
+                    "id TEXT PRIMARY KEY NOT NULL," +
+                    "name TEXT NOT NULL," +
+                    "mime_type TEXT NOT NULL," +
+                    "path TEXT NOT NULL," +
+                    "created_at INTEGER NOT NULL," +
+                    "updated_at INTEGER NOT NULL)");
         }
 
         @Override
@@ -160,6 +250,15 @@ public class AereaStoragePlugin extends Plugin {
                         "id TEXT PRIMARY KEY NOT NULL," +
                         "title TEXT NOT NULL," +
                         "page_style TEXT NOT NULL," +
+                        "path TEXT NOT NULL," +
+                        "created_at INTEGER NOT NULL," +
+                        "updated_at INTEGER NOT NULL)");
+            }
+            if (oldVersion < 3) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS library_files (" +
+                        "id TEXT PRIMARY KEY NOT NULL," +
+                        "name TEXT NOT NULL," +
+                        "mime_type TEXT NOT NULL," +
                         "path TEXT NOT NULL," +
                         "created_at INTEGER NOT NULL," +
                         "updated_at INTEGER NOT NULL)");

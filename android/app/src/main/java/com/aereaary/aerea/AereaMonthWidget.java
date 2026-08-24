@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -36,8 +37,30 @@ public class AereaMonthWidget extends AppWidgetProvider {
         int[] appWidgetIds
     ) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            updateWidgetSafely(context, appWidgetManager, appWidgetId);
         }
+    }
+
+    @Override
+    public void onEnabled(Context context) {
+        super.onEnabled(context);
+        updateAll(context);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(
+        Context context,
+        AppWidgetManager appWidgetManager,
+        int appWidgetId,
+        Bundle newOptions
+    ) {
+        super.onAppWidgetOptionsChanged(
+            context,
+            appWidgetManager,
+            appWidgetId,
+            newOptions
+        );
+        updateWidgetSafely(context, appWidgetManager, appWidgetId);
     }
 
     @Override
@@ -63,12 +86,16 @@ public class AereaMonthWidget extends AppWidgetProvider {
             Context.MODE_PRIVATE
         );
         String offsetKey = "monthOffset_" + widgetId;
-        int offset = preferences.getInt(offsetKey, 0);
+        int offset = AereaWidgetData.safeInt(preferences, offsetKey, 0);
         if (ACTION_PREVIOUS.equals(action)) offset -= 1;
         if (ACTION_NEXT.equals(action)) offset += 1;
         if (ACTION_TODAY.equals(action)) offset = 0;
         preferences.edit().putInt(offsetKey, offset).apply();
-        updateWidget(context, AppWidgetManager.getInstance(context), widgetId);
+        updateWidgetSafely(
+            context,
+            AppWidgetManager.getInstance(context),
+            widgetId
+        );
     }
 
     static void updateAll(Context context) {
@@ -76,7 +103,39 @@ public class AereaMonthWidget extends AppWidgetProvider {
         ComponentName component = new ComponentName(context, AereaMonthWidget.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
-            updateWidget(context, manager, id);
+            updateWidgetSafely(context, manager, id);
+        }
+    }
+
+    private static void updateWidgetSafely(
+        Context context,
+        AppWidgetManager manager,
+        int appWidgetId
+    ) {
+        try {
+            updateWidget(context, manager, appWidgetId);
+        } catch (RuntimeException ignored) {
+            showFallback(context, manager, appWidgetId);
+        }
+    }
+
+    private static void showFallback(
+        Context context,
+        AppWidgetManager manager,
+        int appWidgetId
+    ) {
+        try {
+            RemoteViews fallback = new RemoteViews(
+                context.getPackageName(),
+                R.layout.aerea_widget_fallback
+            );
+            fallback.setOnClickPendingIntent(
+                R.id.widget_fallback_root,
+                openAppIntent(context, appWidgetId)
+            );
+            manager.updateAppWidget(appWidgetId, fallback);
+        } catch (RuntimeException ignored) {
+            // Keep a launcher-specific RemoteViews failure contained.
         }
     }
 
@@ -89,11 +148,19 @@ public class AereaMonthWidget extends AppWidgetProvider {
             AereaWidgetPlugin.PREFERENCES,
             Context.MODE_PRIVATE
         );
-        int offset = preferences.getInt("monthOffset_" + appWidgetId, 0);
+        int offset = AereaWidgetData.safeInt(
+            preferences,
+            "monthOffset_" + appWidgetId,
+            0
+        );
         Calendar month = Calendar.getInstance();
         month.set(Calendar.DAY_OF_MONTH, 1);
         month.add(Calendar.MONTH, offset);
-        String theme = preferences.getString("theme", "storybook");
+        String theme = AereaWidgetData.safeString(
+            preferences,
+            "theme",
+            "storybook"
+        );
 
         RemoteViews views = new RemoteViews(
             context.getPackageName(),

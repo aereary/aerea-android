@@ -63,6 +63,12 @@ public class AereaMonthGridService extends RemoteViewsService {
 
         @Override
         public RemoteViews getViewAt(int position) {
+            if (preferences == null) {
+                preferences = context.getSharedPreferences(
+                    AereaWidgetPlugin.PREFERENCES,
+                    Context.MODE_PRIVATE
+                );
+            }
             Calendar first = Calendar.getInstance();
             first.clear();
             first.set(year, month, 1);
@@ -119,7 +125,13 @@ public class AereaMonthGridService extends RemoteViewsService {
 
         @Override
         public RemoteViews getLoadingView() {
-            return null;
+            RemoteViews loading = new RemoteViews(
+                context.getPackageName(),
+                R.layout.aerea_month_day_cell
+            );
+            loading.setTextViewText(R.id.month_day_number, "");
+            loading.setTextViewText(R.id.month_day_marker, "");
+            return loading;
         }
 
         @Override

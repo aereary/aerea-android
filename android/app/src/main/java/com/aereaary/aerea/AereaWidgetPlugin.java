@@ -15,21 +15,38 @@ public class AereaWidgetPlugin extends Plugin {
 
     @PluginMethod
     public void sync(PluginCall call) {
-        SharedPreferences.Editor editor = getContext()
-            .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-            .edit();
+        try {
+            SharedPreferences.Editor editor = getContext()
+                .getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit();
 
-        editor.putString("date", call.getString("date", ""));
-        editor.putString("eventTitle", call.getString("eventTitle", "Sin eventos para hoy"));
-        editor.putString("eventTime", call.getString("eventTime", "Abre aérea para planear"));
-        editor.putString("temperature", call.getString("temperature", "—°"));
-        editor.putString("progress", call.getString("progress", "0/3 recordatorios"));
-        editor.putString("theme", call.getString("theme", "storybook"));
-        editor.putString("daysJson", call.getString("daysJson", "[]"));
-        editor.apply();
+            editor.putString("date", call.getString("date", ""));
+            editor.putString(
+                "eventTitle",
+                call.getString("eventTitle", "No events yet ♡")
+            );
+            editor.putString(
+                "eventTime",
+                call.getString("eventTime", "Open aérea to plan")
+            );
+            editor.putString("temperature", call.getString("temperature", "♡"));
+            editor.putString(
+                "progress",
+                call.getString("progress", "No events yet ♡")
+            );
+            editor.putString("theme", call.getString("theme", "storybook"));
+            editor.putString("daysJson", call.getString("daysJson", "[]"));
+            editor.apply();
+        } catch (RuntimeException ignored) {
+            // Defaults in each provider keep both widgets renderable.
+        }
 
-        AereaTodayWidget.updateAll(getContext());
-        AereaMonthWidget.updateAll(getContext());
+        try {
+            AereaTodayWidget.updateAll(getContext());
+            AereaMonthWidget.updateAll(getContext());
+        } catch (RuntimeException ignored) {
+            // Never fail the bridge call because of a launcher implementation.
+        }
         call.resolve(new JSObject());
     }
 }

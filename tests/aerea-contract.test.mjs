@@ -26,6 +26,30 @@ const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
 );
+const featureSource = await readFile(
+  new URL("../app/aerea-features.ts", import.meta.url),
+  "utf8",
+);
+const mainActivitySource = await readFile(
+  new URL("../android/app/src/main/java/com/aereaary/aerea/MainActivity.java", import.meta.url),
+  "utf8",
+);
+const todayWidgetSource = await readFile(
+  new URL("../android/app/src/main/java/com/aereaary/aerea/AereaTodayWidget.java", import.meta.url),
+  "utf8",
+);
+const monthWidgetSource = await readFile(
+  new URL("../android/app/src/main/java/com/aereaary/aerea/AereaMonthWidget.java", import.meta.url),
+  "utf8",
+);
+const sportsFunctionSource = await readFile(
+  new URL("../supabase/functions/sync-sports-events/index.ts", import.meta.url),
+  "utf8",
+);
+const sportsMigrationSource = await readFile(
+  new URL("../supabase/migrations/20260823090000_sports_events.sql", import.meta.url),
+  "utf8",
+);
 
 test("keeps only the approved theme collection", () => {
   for (const theme of [
@@ -110,8 +134,79 @@ test("opens saved notes fully and edits calendar rows directly", () => {
   assert.match(pageSource, /function notePreview\(text: string/);
   assert.match(pageSource, /setSelectedJournalEntry\(entry\)/);
   assert.match(pageSource, /<NoteDetailDialog/);
-  assert.match(pageSource, /onClick=\{\(\) => openEventEditor\(calendarEvent\)\}/);
+  assert.match(pageSource, /openEventEditor\(calendarEvent\)/);
+  assert.match(pageSource, /calendarEvent\.eventType === "sports_event"/);
   assert.match(cssSource, /\.note-detail-text/);
+});
+
+test("starts without demo content and never resets an older install", () => {
+  assert.match(pageSource, /const starterReminders: Reminder\[\] = \[\];/);
+  assert.match(pageSource, /const starterHabits: Habit\[\] = \[\];/);
+  assert.match(pageSource, /const starterClasses: ClassItem\[\] = \[\];/);
+  assert.match(pageSource, /Older payloads are migrated in place/);
+  assert.doesNotMatch(pageSource, /localStorage\.clear\(/);
+});
+
+test("ships launcher-safe widgets with a useful empty first render", () => {
+  for (const source of [todayWidgetSource, monthWidgetSource]) {
+    assert.match(source, /updateWidgetSafely/);
+    assert.match(source, /aerea_widget_fallback/);
+    assert.match(source, /onAppWidgetOptionsChanged/);
+  }
+  assert.match(todayWidgetSource, /No events yet ♡/);
+  assert.match(manifestSource, /AereaTodayWidget/);
+  assert.match(manifestSource, /AereaMonthWidget/);
+});
+
+test("uses the central plus for universal Inbox capture", () => {
+  assert.match(pageSource, /className="nav-item quick-capture-nav"/);
+  assert.match(pageSource, /aria-label="Open Quick Capture"/);
+  assert.match(pageSource, /Keep in Inbox/);
+  for (const kind of ["photo", "pdf", "file", "link"]) {
+    assert.match(featureSource, new RegExp(`\\| "${kind}"`));
+  }
+  for (const destination of ["event", "task", "post-it", "note", "library"]) {
+    assert.match(pageSource, new RegExp(`"${destination}"`));
+  }
+});
+
+test("keeps reversible history, archive and a 30-day Trash", () => {
+  assert.match(pageSource, /undoStackRef/);
+  assert.match(pageSource, /redoStackRef/);
+  assert.match(pageSource, /const undoGlobal/);
+  assert.match(pageSource, /const redoGlobal/);
+  assert.match(featureSource, /purgeAt/);
+  assert.match(featureSource, /getDate\(\) \+ 30/);
+  assert.match(pageSource, /Archive keeps things for later/);
+});
+
+test("draws edge-to-edge and handles the Android auth callback in every lifecycle", () => {
+  assert.match(mainActivitySource, /setDecorFitsSystemWindows\(getWindow\(\), false\)/);
+  assert.match(mainActivitySource, /Color\.TRANSPARENT/);
+  assert.match(mainActivitySource, /onNewIntent/);
+  assert.match(mainActivitySource, /getDataString/);
+  assert.match(manifestSource, /android:scheme="aerea"/);
+  assert.match(manifestSource, /android:host="auth"/);
+  assert.match(syncSource, /aerea:\/\/auth\/callback/);
+  assert.match(syncSource, /exchangeCodeForSession/);
+  assert.match(cssSource, /html\[data-native="true"\] \.phone-canvas/);
+});
+
+test("keeps sports provider secrets behind a normalized Supabase model", () => {
+  for (const table of [
+    "sports",
+    "teams",
+    "competitions",
+    "sports_events",
+    "user_followed_teams",
+  ]) {
+    assert.match(sportsMigrationSource, new RegExp(`public\\.${table}`));
+  }
+  assert.match(sportsFunctionSource, /Deno\.env\.get\("SPORTS_API_KEY"\)/);
+  assert.match(sportsFunctionSource, /provider_external_id/);
+  assert.match(sportsFunctionSource, /resolution=merge-duplicates/);
+  assert.doesNotMatch(pageSource, /x-apisports-key/);
+  assert.match(pageSource, /MATCH DAY/);
 });
 
 test("keeps Safe Place light enough for mobile typing", () => {

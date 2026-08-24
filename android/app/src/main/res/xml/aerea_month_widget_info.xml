@@ -6,7 +6,7 @@
     android:minResizeHeight="260dp"
     android:minResizeWidth="250dp"
     android:minWidth="250dp"
-    android:previewLayout="@layout/aerea_month_widget"
+    android:previewLayout="@layout/aerea_widget_preview_month"
     android:resizeMode="horizontal|vertical"
     android:targetCellHeight="5"
     android:targetCellWidth="4"

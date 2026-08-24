@@ -6,7 +6,7 @@
     android:minResizeHeight="140dp"
     android:minResizeWidth="180dp"
     android:minWidth="250dp"
-    android:previewLayout="@layout/aerea_today_widget"
+    android:previewLayout="@layout/aerea_widget_preview_today"
     android:resizeMode="horizontal|vertical"
     android:targetCellHeight="3"
     android:targetCellWidth="4"
