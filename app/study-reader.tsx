@@ -24,6 +24,7 @@ export type PdfInkStroke = {
 
 export type EpubReadingState = {
   chapter: number;
+  scrollOffset?: number;
   fontSize: number;
   lineHeight: number;
   bookmarks: number[];
@@ -41,6 +42,12 @@ export type EpubTextHighlight = {
 
 type SelectionMenuPosition = { left: number; top: number };
 
+type PdfOutlineLink = {
+  title: string;
+  page?: number;
+  depth: number;
+};
+
 const pastelHighlightColors = [
   { name: "Blush", value: "#f8c8dc" },
   { name: "Butter", value: "#f3dda4" },
@@ -55,12 +62,26 @@ function useReaderDarkMode() {
   const [readerDark, setReaderDark] = useState(false);
 
   useEffect(() => {
-    try {
-      setReaderDark(window.localStorage.getItem(readerDarkModeStorageKey) === "dark");
-    } catch {
-      // Reading preferences still work for this session when storage is unavailable.
-    }
+    const restorePreference = window.setTimeout(() => {
+      try {
+        setReaderDark(window.localStorage.getItem(readerDarkModeStorageKey) === "dark");
+      } catch {
+        // Reading preferences still work for this session when storage is unavailable.
+      }
+    }, 0);
+    return () => window.clearTimeout(restorePreference);
   }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("aereaReaderColorMode", { detail: { dark: readerDark } }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("aereaReaderColorMode", { detail: { dark: null } }),
+      );
+    };
+  }, [readerDark]);
 
   const toggleReaderDark = () => {
     setReaderDark((current) => {
@@ -240,6 +261,10 @@ export function PdfStudyReader({
   source,
   annotations,
   onAnnotationsChange,
+  pageNotes,
+  onPageNotesChange,
+  initialLocation,
+  onLocationChange,
   onClose,
 }: {
   fileId: string;
@@ -247,6 +272,20 @@ export function PdfStudyReader({
   source: string;
   annotations: PdfInkStroke[];
   onAnnotationsChange: (strokes: PdfInkStroke[]) => void;
+  pageNotes: Record<string, string>;
+  onPageNotesChange: (notes: Record<string, string>) => void;
+  initialLocation?: {
+    page?: number;
+    offset?: number;
+    zoom?: number;
+    bookmarks?: number[];
+  };
+  onLocationChange?: (location: {
+    page: number;
+    offset: number;
+    zoom: number;
+    bookmarks: number[];
+  }) => void;
   onClose: () => void;
 }) {
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -257,9 +296,22 @@ export function PdfStudyReader({
   const pdfRef = useRef<import("pdfjs-dist").PDFDocumentProxy | null>(null);
   const activeTextLayerRef = useRef<{ cancel: () => void } | null>(null);
   const draftRef = useRef<PdfInkStroke | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Math.max(1, initialLocation?.page ?? 1));
   const [pages, setPages] = useState(1);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(() => initialLocation?.zoom ?? 1);
+  const [pageOffset, setPageOffset] = useState(
+    () => initialLocation?.offset ?? 0,
+  );
+  const pendingPageOffsetRef = useRef(initialLocation?.offset ?? 0);
+  const currentPageRef = useRef(page);
+  const [bookmarks, setBookmarks] = useState<number[]>(
+    () => initialLocation?.bookmarks ?? [],
+  );
+  const [navigationPanel, setNavigationPanel] = useState<
+    "contents" | "pages" | "bookmarks" | "highlights" | "notes" | null
+  >(null);
+  const [pdfOutline, setPdfOutline] = useState<PdfOutlineLink[]>([]);
+  const locationChangeRef = useRef(onLocationChange);
   const [tool, setTool] = useState<PdfInkTool>("hand");
   const [color, setColor] = useState("#25272b");
   const [size, setSize] = useState(4);
@@ -283,6 +335,21 @@ export function PdfStudyReader({
   );
 
   useEffect(() => {
+    locationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
+
+  useEffect(() => {
+    locationChangeRef.current?.({ page, offset: pageOffset, zoom, bookmarks });
+  }, [bookmarks, page, pageOffset, zoom]);
+
+  useEffect(() => {
+    if (currentPageRef.current === page) return;
+    currentPageRef.current = page;
+    pendingPageOffsetRef.current = 0;
+    setPageOffset(0);
+  }, [page]);
+
+  useEffect(() => {
     let cancelled = false;
     let task: import("pdfjs-dist").PDFDocumentLoadingTask | null = null;
     async function loadPdf() {
@@ -301,8 +368,60 @@ export function PdfStudyReader({
         }
         pdfRef.current = document;
         setPages(document.numPages);
+        setPage((current) => Math.min(document.numPages, Math.max(1, current)));
         setLoading("");
         setRenderVersion((value) => value + 1);
+        const rawOutline = (await document.getOutline()) as unknown as
+          | Array<{
+              title?: string;
+              dest?: string | unknown[] | null;
+              items?: unknown[];
+            }>
+          | null;
+        const outlineLinks: PdfOutlineLink[] = [];
+        const collectOutline = async (
+          entries: NonNullable<typeof rawOutline>,
+          depth = 0,
+        ) => {
+          for (const entry of entries) {
+            let pageNumber: number | undefined;
+            try {
+              const destination =
+                typeof entry.dest === "string"
+                  ? await document.getDestination(entry.dest)
+                  : entry.dest;
+              const reference = Array.isArray(destination)
+                ? destination[0]
+                : null;
+              if (
+                reference &&
+                typeof reference === "object" &&
+                "num" in reference &&
+                "gen" in reference
+              ) {
+                pageNumber =
+                  (await document.getPageIndex(
+                    reference as Parameters<typeof document.getPageIndex>[0],
+                  )) + 1;
+              }
+            } catch {
+              // Keep the title even when a malformed PDF destination cannot resolve.
+            }
+            outlineLinks.push({
+              title: entry.title?.trim() || "Untitled section",
+              page: pageNumber,
+              depth,
+            });
+            if (Array.isArray(entry.items) && entry.items.length > 0) {
+              await collectOutline(
+                entry.items as NonNullable<typeof rawOutline>,
+                depth + 1,
+              );
+            }
+          }
+        };
+        if (rawOutline) await collectOutline(rawOutline);
+        if (!cancelled) setPdfOutline(outlineLinks);
         setPdfPageTexts([]);
         setIndexedPages(0);
         const searchablePages: string[] = [];
@@ -395,6 +514,11 @@ export function PdfStudyReader({
       if (!cancelled) {
         drawInk(inkCanvas, pageStrokes);
         setTextLayerVersion((value) => value + 1);
+        window.requestAnimationFrame(() => {
+          if (cancelled) return;
+          const maxScroll = Math.max(0, wrap.scrollHeight - wrap.clientHeight);
+          wrap.scrollTop = pendingPageOffsetRef.current * maxScroll;
+        });
       }
     }
     void renderPage();
@@ -607,6 +731,20 @@ export function PdfStudyReader({
     draftRef.current = null;
   };
 
+  const editPageNote = (pageNumber: number) => {
+    const key = String(pageNumber);
+    const response = window.prompt(
+      `Note for page ${pageNumber}`,
+      pageNotes[key] ?? "",
+    );
+    if (response === null) return;
+    const next = { ...pageNotes };
+    const note = response.trim();
+    if (note) next[key] = note;
+    else delete next[key];
+    onPageNotesChange(next);
+  };
+
   return (
     <section
       className={`study-reader pdf-study-reader${readerDark ? " reader-dark" : ""}`}
@@ -628,6 +766,11 @@ export function PdfStudyReader({
             <span>{icon}</span><small>{label}</small>
           </button>
         ))}
+        <button
+          type="button"
+          className={navigationPanel === "contents" ? "active" : ""}
+          onClick={() => setNavigationPanel((current) => current === "contents" ? null : "contents")}
+        ><span>☰</span><small>Contents</small></button>
         <button
           type="button"
           className={`reader-dark-toggle${readerDark ? " active" : ""}`}
@@ -687,8 +830,186 @@ export function PdfStudyReader({
             if (lastId) onAnnotationsChange(annotations.filter((stroke) => stroke.id !== lastId));
           }}
         ><span>↶</span><small>Undo</small></button>
+        <button
+          type="button"
+          className={navigationPanel === "pages" ? "active" : ""}
+          onClick={() => setNavigationPanel((current) => current === "pages" ? null : "pages")}
+        ><span>▦</span><small>Pages</small></button>
+        <button
+          type="button"
+          className={bookmarks.includes(page) ? "active" : ""}
+          onClick={() =>
+            setBookmarks((current) =>
+              current.includes(page)
+                ? current.filter((item) => item !== page)
+                : [...current, page].sort((a, b) => a - b),
+            )
+          }
+          aria-label={bookmarks.includes(page) ? "Remove page bookmark" : "Bookmark page"}
+        ><span>{bookmarks.includes(page) ? "◆" : "◇"}</span><small>Bookmark</small></button>
+        <button
+          type="button"
+          className={navigationPanel === "bookmarks" ? "active" : ""}
+          onClick={() => setNavigationPanel((current) => current === "bookmarks" ? null : "bookmarks")}
+        ><span>☷</span><small>Bookmarks</small></button>
+        <button
+          type="button"
+          className={navigationPanel === "highlights" ? "active" : ""}
+          onClick={() => setNavigationPanel((current) => current === "highlights" ? null : "highlights")}
+        ><span>▰</span><small>Highlights</small></button>
+        <button
+          type="button"
+          className={pageNotes[String(page)] ? "active" : ""}
+          onClick={() => editPageNote(page)}
+        ><span>✎</span><small>Note</small></button>
+        <button
+          type="button"
+          className={navigationPanel === "notes" ? "active" : ""}
+          onClick={() => setNavigationPanel((current) => current === "notes" ? null : "notes")}
+        ><span>▤</span><small>Notes</small></button>
       </nav>
-      <div className="pdf-page-wrap" ref={pageWrapRef} data-tool={tool}>
+      {navigationPanel && (
+        <aside className="pdf-navigation-panel" aria-label={`${navigationPanel} panel`}>
+          <header>
+            <strong>{navigationPanel}</strong>
+            <button type="button" onClick={() => setNavigationPanel(null)}>×</button>
+          </header>
+          <div>
+            {navigationPanel === "contents" &&
+              pdfOutline.map((item, index) => (
+                <button
+                  type="button"
+                  key={`${item.title}-${index}`}
+                  className={item.page === page ? "active pdf-outline-link" : "pdf-outline-link"}
+                  style={{ "--outline-depth": item.depth } as CSSProperties}
+                  disabled={!item.page}
+                  onClick={() => {
+                    if (!item.page) return;
+                    setPage(item.page);
+                    setNavigationPanel(null);
+                  }}
+                >
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{item.title}</strong>
+                  {item.page && <small>Page {item.page}</small>}
+                </button>
+              ))}
+            {navigationPanel === "contents" && pdfOutline.length === 0 && (
+              <p>This PDF does not include a table of contents.</p>
+            )}
+            {(navigationPanel === "pages" || navigationPanel === "bookmarks") &&
+              (navigationPanel === "pages"
+                ? Array.from({ length: pages }, (_, index) => index + 1)
+                : bookmarks
+              ).map((pageNumber) => (
+                <button
+                  type="button"
+                  key={pageNumber}
+                  className={pageNumber === page ? "active" : ""}
+                  onClick={() => {
+                    setPage(pageNumber);
+                    setNavigationPanel(null);
+                  }}
+                >
+                  <span className="pdf-page-thumbnail">{pageNumber}</span>
+                  <strong>Page {pageNumber}</strong>
+                  <small>
+                    {[
+                      bookmarks.includes(pageNumber) ? "◆ bookmark" : "",
+                      annotations.some((stroke) => stroke.page === pageNumber)
+                        ? "highlight"
+                        : "",
+                      pageNotes[String(pageNumber)] ? "note" : "",
+                    ].filter(Boolean).join(" · ")}
+                  </small>
+                </button>
+              ))}
+            {navigationPanel === "bookmarks" && bookmarks.length === 0 && (
+              <p>Nothing saved here yet.</p>
+            )}
+            {navigationPanel === "highlights" &&
+              annotations
+                .filter((stroke) => stroke.tool === "highlighter")
+                .map((stroke, index) => (
+                  <div className="pdf-navigation-row" key={stroke.id}>
+                    <button
+                      type="button"
+                      className={stroke.page === page ? "active" : ""}
+                      onClick={() => {
+                        setPage(stroke.page);
+                        setNavigationPanel(null);
+                      }}
+                    >
+                      <span
+                        className="pdf-highlight-swatch"
+                        style={{ backgroundColor: stroke.color }}
+                      />
+                      <strong>Highlight {index + 1}</strong>
+                      <small>Page {stroke.page}</small>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete highlight ${index + 1}`}
+                      onClick={() =>
+                        onAnnotationsChange(
+                          annotations.filter((item) => item.id !== stroke.id),
+                        )
+                      }
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+            {navigationPanel === "highlights" &&
+              !annotations.some((stroke) => stroke.tool === "highlighter") && (
+                <p>Nothing saved here yet.</p>
+              )}
+            {navigationPanel === "notes" &&
+              Object.entries(pageNotes)
+                .filter(([, note]) => note.trim())
+                .sort(([first], [second]) => Number(first) - Number(second))
+                .map(([pageNumber, note]) => (
+                  <div className="pdf-navigation-row" key={pageNumber}>
+                    <button
+                      type="button"
+                      className={Number(pageNumber) === page ? "active" : ""}
+                      onClick={() => {
+                        setPage(Number(pageNumber));
+                        setNavigationPanel(null);
+                      }}
+                    >
+                      <span className="pdf-page-thumbnail">{pageNumber}</span>
+                      <strong>{note}</strong>
+                      <small>Page {pageNumber}</small>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Edit note for page ${pageNumber}`}
+                      onClick={() => editPageNote(Number(pageNumber))}
+                    >
+                      ✎
+                    </button>
+                  </div>
+                ))}
+            {navigationPanel === "notes" &&
+              !Object.values(pageNotes).some((note) => note.trim()) && (
+                <p>Nothing saved here yet.</p>
+              )}
+          </div>
+        </aside>
+      )}
+      <div
+        className="pdf-page-wrap"
+        ref={pageWrapRef}
+        data-tool={tool}
+        onScroll={(event) => {
+          const target = event.currentTarget;
+          const maxScroll = Math.max(1, target.scrollHeight - target.clientHeight);
+          const offset = Math.max(0, Math.min(1, target.scrollTop / maxScroll));
+          pendingPageOffsetRef.current = offset;
+          setPageOffset(offset);
+        }}
+      >
         {loading && <div className="study-reader-loading">{loading}</div>}
         {pdfSearchOpen && pdfSearch.trim() && (
           <aside className="pdf-search-results" aria-label="PDF search results">
@@ -776,7 +1097,10 @@ export function EpubStudyReader({
   fileName: string;
   book: EpubBook;
   readingState: EpubReadingState;
-  onReadingStateChange: (state: EpubReadingState) => void;
+  onReadingStateChange: (
+    state: EpubReadingState,
+    changeKind?: "location" | "content",
+  ) => void;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
@@ -786,9 +1110,15 @@ export function EpubStudyReader({
     query: string;
   } | null>(null);
   const [outlineOpen, setOutlineOpen] = useState(true);
+  const [epubPanel, setEpubPanel] = useState<
+    "contents" | "bookmarks" | "highlights" | "notes"
+  >("contents");
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuPosition | null>(null);
   const epubArticleRef = useRef<HTMLElement | null>(null);
   const epubPaperRef = useRef<HTMLElement | null>(null);
+  const epubScrollFrameRef = useRef<number | null>(null);
+  const readingStateRef = useRef(readingState);
+  const activeEpubSearchRef = useRef(activeEpubSearch);
   const { readerDark, toggleReaderDark } = useReaderDarkMode();
   const chapterIndex = Math.min(book.chapters.length - 1, Math.max(0, readingState.chapter));
   const chapter = book.chapters[chapterIndex];
@@ -814,10 +1144,38 @@ export function EpubStudyReader({
     }).slice(0, 40);
   }, [book.chapters, search]);
 
-  const update = (patch: Partial<EpubReadingState>) => {
-    onReadingStateChange({ ...readingState, ...patch });
+  const update = (
+    patch: Partial<EpubReadingState>,
+    changeKind: "location" | "content" = "content",
+  ) => {
+    onReadingStateChange({ ...readingState, ...patch }, changeKind);
   };
   const bookmarked = readingState.bookmarks.includes(chapterIndex);
+
+  useEffect(() => {
+    readingStateRef.current = readingState;
+    activeEpubSearchRef.current = activeEpubSearch;
+  }, [activeEpubSearch, readingState]);
+
+  useEffect(
+    () => () => {
+      if (epubScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(epubScrollFrameRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (activeEpubSearchRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const paper = epubPaperRef.current;
+      if (!paper) return;
+      const maxScroll = Math.max(0, paper.scrollHeight - paper.clientHeight);
+      paper.scrollTop = (readingStateRef.current.scrollOffset ?? 0) * maxScroll;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [chapter.id]);
 
   const openEpubSearchResults = () => {
     if (!normalizeReaderSearch(search)) return;
@@ -1000,7 +1358,7 @@ export function EpubStudyReader({
         >{bookmarked ? "◆" : "◇"}</button>
       </header>
       <nav className="epub-tool-ribbon" aria-label="EPUB reading tools">
-        <button onClick={() => setOutlineOpen((value) => !value)}>☰ <span>Chapters</span></button>
+        <button onClick={() => setOutlineOpen((value) => !value)}>☰ <span>Reader panel</span></button>
         <label>
           <span>Search book</span>
           <input
@@ -1022,9 +1380,9 @@ export function EpubStudyReader({
             aria-label="Search this book"
           />
         </label>
-        <button onClick={() => update({ fontSize: Math.max(14, readingState.fontSize - 1) })}>A−</button>
-        <button onClick={() => update({ fontSize: Math.min(30, readingState.fontSize + 1) })}>A＋</button>
-        <button onClick={() => update({ lineHeight: readingState.lineHeight === 1.7 ? 2 : 1.7 })}>↕ <span>Spacing</span></button>
+        <button onClick={() => update({ fontSize: Math.max(14, readingState.fontSize - 1) }, "location")}>A−</button>
+        <button onClick={() => update({ fontSize: Math.min(30, readingState.fontSize + 1) }, "location")}>A＋</button>
+        <button onClick={() => update({ lineHeight: readingState.lineHeight === 1.7 ? 2 : 1.7 }, "location")}>↕ <span>Spacing</span></button>
         <button
           type="button"
           className={`reader-dark-toggle${readerDark ? " active" : ""}`}
@@ -1037,15 +1395,142 @@ export function EpubStudyReader({
       </nav>
       <div className={outlineOpen ? "epub-reading-layout outline-open" : "epub-reading-layout"}>
         <aside className="epub-outline">
-          <small>CONTENTS</small>
-          {book.chapters.map((item, index) => (
-            <button key={item.id} className={index === chapterIndex ? "active" : ""} onClick={() => update({ chapter: index })}>
-              <span>{String(index + 1).padStart(2, "0")}</span>{item.title}
-              {readingState.bookmarks.includes(index) && <i>◆</i>}
-            </button>
-          ))}
+          <nav className="epub-panel-tabs" aria-label="EPUB navigation">
+            {(["contents", "bookmarks", "highlights", "notes"] as const).map(
+              (panel) => (
+                <button
+                  type="button"
+                  key={panel}
+                  className={epubPanel === panel ? "active" : ""}
+                  onClick={() => setEpubPanel(panel)}
+                >
+                  {panel}
+                </button>
+              ),
+            )}
+          </nav>
+          <small>{epubPanel.toUpperCase()}</small>
+          {(epubPanel === "contents" || epubPanel === "bookmarks") &&
+            book.chapters
+              .map((item, index) => ({ item, index }))
+              .filter(({ index }) =>
+                epubPanel === "contents"
+                  ? true
+                  : readingState.bookmarks.includes(index),
+              )
+              .map(({ item, index }) => (
+                <button
+                  key={item.id}
+                  className={index === chapterIndex ? "active" : ""}
+                  onClick={() => {
+                    update({ chapter: index, scrollOffset: 0 }, "location");
+                    setOutlineOpen(false);
+                  }}
+                >
+                  <span>{String(index + 1).padStart(2, "0")}</span>{item.title}
+                  {readingState.bookmarks.includes(index) && <i>◆</i>}
+                </button>
+              ))}
+          {epubPanel === "bookmarks" && readingState.bookmarks.length === 0 && (
+            <p>Nothing saved here yet.</p>
+          )}
+          {epubPanel === "highlights" &&
+            (readingState.highlights ?? []).map((highlight) => {
+              const index = book.chapters.findIndex(
+                (item) => item.id === highlight.chapterId,
+              );
+              return (
+                <div className="epub-panel-row" key={highlight.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (index < 0) return;
+                      setActiveEpubSearch({
+                        chapterId: highlight.chapterId,
+                        query: highlight.text,
+                      });
+                      update({ chapter: index, scrollOffset: 0 }, "location");
+                      setOutlineOpen(false);
+                    }}
+                  >
+                    <span
+                      className="epub-highlight-swatch"
+                      style={{ backgroundColor: highlight.color }}
+                    />
+                    <strong>{highlight.text}</strong>
+                    <small>{index >= 0 ? book.chapters[index].title : "Highlight"}</small>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete highlight ${highlight.text}`}
+                    onClick={() =>
+                      update({
+                        highlights: (readingState.highlights ?? []).filter(
+                          (item) => item.id !== highlight.id,
+                        ),
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          {epubPanel === "highlights" &&
+            (readingState.highlights ?? []).length === 0 && (
+              <p>Nothing saved here yet.</p>
+            )}
+          {epubPanel === "notes" &&
+            Object.entries(readingState.chapterNotes)
+              .filter(([, note]) => note.trim())
+              .map(([chapterId, note]) => {
+                const index = book.chapters.findIndex(
+                  (item) => item.id === chapterId,
+                );
+                return (
+                  <button
+                    type="button"
+                    key={chapterId}
+                    onClick={() => {
+                      if (index < 0) return;
+                      update({ chapter: index, scrollOffset: 0 }, "location");
+                      setOutlineOpen(false);
+                    }}
+                  >
+                    <span>✎</span>
+                    <strong>{note}</strong>
+                    <small>{index >= 0 ? book.chapters[index].title : "Note"}</small>
+                  </button>
+                );
+              })}
+          {epubPanel === "notes" &&
+            !Object.values(readingState.chapterNotes).some((note) => note.trim()) && (
+              <p>Nothing saved here yet.</p>
+            )}
         </aside>
-        <main className="epub-paper" ref={epubPaperRef}>
+        <main
+          className="epub-paper"
+          ref={epubPaperRef}
+          onScroll={(event) => {
+            if (epubScrollFrameRef.current !== null) {
+              window.cancelAnimationFrame(epubScrollFrameRef.current);
+            }
+            const target = event.currentTarget;
+            epubScrollFrameRef.current = window.requestAnimationFrame(() => {
+              const maxScroll = Math.max(1, target.scrollHeight - target.clientHeight);
+              const scrollOffset = Math.max(
+                0,
+                Math.min(1, target.scrollTop / maxScroll),
+              );
+              if (
+                Math.abs(scrollOffset - (readingState.scrollOffset ?? 0)) > 0.002
+              ) {
+                update({ scrollOffset }, "location");
+              }
+              epubScrollFrameRef.current = null;
+            });
+          }}
+        >
           {searchResultsOpen && results.length > 0 && (
             <section className="epub-search-results">
               <header>
@@ -1069,7 +1554,7 @@ export function EpubStudyReader({
                       chapterId: book.chapters[result.index].id,
                       query: search,
                     });
-                    update({ chapter: result.index });
+                    update({ chapter: result.index, scrollOffset: 0 }, "location");
                   }}
                 >
                   <strong>{result.title}</strong><span>{result.preview}</span><small>{result.matches}</small>
@@ -1112,9 +1597,9 @@ export function EpubStudyReader({
         />
       )}
       <footer className="study-reader-footer">
-        <button disabled={chapterIndex <= 0} onClick={() => update({ chapter: chapterIndex - 1 })}>← Previous chapter</button>
+        <button disabled={chapterIndex <= 0} onClick={() => update({ chapter: chapterIndex - 1, scrollOffset: 0 }, "location")}>← Previous chapter</button>
         <span>{chapterIndex + 1} of {book.chapters.length}</span>
-        <button disabled={chapterIndex >= book.chapters.length - 1} onClick={() => update({ chapter: chapterIndex + 1 })}>Next chapter →</button>
+        <button disabled={chapterIndex >= book.chapters.length - 1} onClick={() => update({ chapter: chapterIndex + 1, scrollOffset: 0 }, "location")}>Next chapter →</button>
       </footer>
     </section>
   );

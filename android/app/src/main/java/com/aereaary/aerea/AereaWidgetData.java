@@ -13,6 +13,31 @@ import java.util.Locale;
 final class AereaWidgetData {
     private AereaWidgetData() {}
 
+    static String safeString(
+        SharedPreferences preferences,
+        String key,
+        String fallback
+    ) {
+        try {
+            String value = preferences.getString(key, fallback);
+            return value == null ? fallback : value;
+        } catch (ClassCastException ignored) {
+            return fallback;
+        }
+    }
+
+    static int safeInt(
+        SharedPreferences preferences,
+        String key,
+        int fallback
+    ) {
+        try {
+            return preferences.getInt(key, fallback);
+        } catch (ClassCastException ignored) {
+            return fallback;
+        }
+    }
+
     static String dateKey(Calendar date) {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date.getTime());
     }
@@ -20,7 +45,9 @@ final class AereaWidgetData {
     static JSONObject day(SharedPreferences preferences, Calendar date) {
         String target = dateKey(date);
         try {
-            JSONArray days = new JSONArray(preferences.getString("daysJson", "[]"));
+            JSONArray days = new JSONArray(
+                safeString(preferences, "daysJson", "[]")
+            );
             for (int index = 0; index < days.length(); index++) {
                 JSONObject day = days.optJSONObject(index);
                 if (day != null && target.equals(day.optString("date"))) {

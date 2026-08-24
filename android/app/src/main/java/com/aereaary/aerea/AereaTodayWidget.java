@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -33,8 +34,30 @@ public class AereaTodayWidget extends AppWidgetProvider {
         int[] appWidgetIds
     ) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            updateWidgetSafely(context, appWidgetManager, appWidgetId);
         }
+    }
+
+    @Override
+    public void onEnabled(Context context) {
+        super.onEnabled(context);
+        updateAll(context);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(
+        Context context,
+        AppWidgetManager appWidgetManager,
+        int appWidgetId,
+        Bundle newOptions
+    ) {
+        super.onAppWidgetOptionsChanged(
+            context,
+            appWidgetManager,
+            appWidgetId,
+            newOptions
+        );
+        updateWidgetSafely(context, appWidgetManager, appWidgetId);
     }
 
     @Override
@@ -60,12 +83,16 @@ public class AereaTodayWidget extends AppWidgetProvider {
             Context.MODE_PRIVATE
         );
         String offsetKey = "agendaOffset_" + widgetId;
-        int offset = preferences.getInt(offsetKey, 0);
+        int offset = AereaWidgetData.safeInt(preferences, offsetKey, 0);
         if (ACTION_PREVIOUS.equals(action)) offset -= 1;
         if (ACTION_NEXT.equals(action)) offset += 1;
         if (ACTION_TODAY.equals(action)) offset = 0;
         preferences.edit().putInt(offsetKey, offset).apply();
-        updateWidget(context, AppWidgetManager.getInstance(context), widgetId);
+        updateWidgetSafely(
+            context,
+            AppWidgetManager.getInstance(context),
+            widgetId
+        );
     }
 
     static void updateAll(Context context) {
@@ -73,7 +100,39 @@ public class AereaTodayWidget extends AppWidgetProvider {
         ComponentName component = new ComponentName(context, AereaTodayWidget.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
-            updateWidget(context, manager, id);
+            updateWidgetSafely(context, manager, id);
+        }
+    }
+
+    private static void updateWidgetSafely(
+        Context context,
+        AppWidgetManager manager,
+        int appWidgetId
+    ) {
+        try {
+            updateWidget(context, manager, appWidgetId);
+        } catch (RuntimeException ignored) {
+            showFallback(context, manager, appWidgetId);
+        }
+    }
+
+    private static void showFallback(
+        Context context,
+        AppWidgetManager manager,
+        int appWidgetId
+    ) {
+        try {
+            RemoteViews fallback = new RemoteViews(
+                context.getPackageName(),
+                R.layout.aerea_widget_fallback
+            );
+            fallback.setOnClickPendingIntent(
+                R.id.widget_fallback_root,
+                openAppIntent(context, appWidgetId)
+            );
+            manager.updateAppWidget(appWidgetId, fallback);
+        } catch (RuntimeException ignored) {
+            // A launcher failure must never bring down the host process.
         }
     }
 
@@ -86,11 +145,19 @@ public class AereaTodayWidget extends AppWidgetProvider {
             AereaWidgetPlugin.PREFERENCES,
             Context.MODE_PRIVATE
         );
-        int offset = preferences.getInt("agendaOffset_" + appWidgetId, 0);
+        int offset = AereaWidgetData.safeInt(
+            preferences,
+            "agendaOffset_" + appWidgetId,
+            0
+        );
         Calendar selectedDate = AereaWidgetData.shiftedToday(Calendar.DAY_OF_MONTH, offset);
         JSONObject day = AereaWidgetData.day(preferences, selectedDate);
         JSONArray events = AereaWidgetData.events(day);
-        String theme = preferences.getString("theme", "storybook");
+        String theme = AereaWidgetData.safeString(
+            preferences,
+            "theme",
+            "storybook"
+        );
 
         RemoteViews views = new RemoteViews(
             context.getPackageName(),
@@ -114,12 +181,18 @@ public class AereaTodayWidget extends AppWidgetProvider {
         );
         views.setTextViewText(
             R.id.widget_temperature,
-            offset == 0 ? preferences.getString("temperature", "—°") : ""
+            offset == 0
+                ? AereaWidgetData.safeString(preferences, "temperature", "—°")
+                : ""
         );
         views.setTextViewText(
             R.id.widget_progress,
             offset == 0
-                ? preferences.getString("progress", "0/3 recordatorios")
+                ? AereaWidgetData.safeString(
+                    preferences,
+                    "progress",
+                    "No events yet ♡"
+                )
                 : day.optBoolean("complete", false)
                     ? "día completado ✓"
                     : ""

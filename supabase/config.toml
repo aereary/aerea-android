@@ -1,0 +1,6 @@
+project_id = "aerea-android"
+
+# The Supabase gateway lets the scheduler reach this function; the function
+# itself still requires either SPORTS_SYNC_SECRET or the service-role token.
+[functions.sync-sports-events]
+verify_jwt = false

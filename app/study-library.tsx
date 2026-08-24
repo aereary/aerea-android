@@ -57,6 +57,24 @@ export type StudyFileItem = {
   createdAt: string;
   updatedAt: string;
   dataUrl?: string;
+  favorite?: boolean;
+  collectionIds?: string[];
+  lastOpenedAt?: string;
+  readerLocation?: {
+    page?: number;
+    offset?: number;
+    zoom?: number;
+    chapter?: number;
+    percentage?: number;
+    bookmarks?: number[];
+  };
+};
+
+export type StudyCollection = {
+  id: string;
+  name: string;
+  order: number;
+  createdAt: string;
 };
 
 type LibraryFilter = "all" | "notes" | "files";
@@ -75,23 +93,35 @@ export function StudyLibrary({
   notes,
   files,
   onNotesChange,
+  onDeleteNote,
   onOpenFile,
   onDeleteFile,
   onImportFiles,
+  collections,
+  onCollectionsChange,
+  onFilesChange,
+  usedInForFile,
   onBack,
 }: {
   notes: StudyNote[];
   files: StudyFileItem[];
   onNotesChange: (notes: StudyNote[]) => void;
+  onDeleteNote: (note: StudyNote) => void;
   onOpenFile: (file: StudyFileItem) => void;
   onDeleteFile: (file: StudyFileItem) => void;
   onImportFiles: (files: File[]) => Promise<void>;
+  collections: StudyCollection[];
+  onCollectionsChange: (collections: StudyCollection[]) => void;
+  onFilesChange: (files: StudyFileItem[]) => void;
+  usedInForFile: (fileId: string) => string[];
   onBack: () => void;
 }) {
   const [filter, setFilter] = useState<LibraryFilter>("all");
   const [search, setSearch] = useState("");
   const [noteEditor, setNoteEditor] = useState<StudyNote | null>(null);
   const [message, setMessage] = useState("");
+  const [collectionFilter, setCollectionFilter] = useState<string | null>(null);
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -101,9 +131,119 @@ export function StudyLibrary({
     [notes, query],
   );
   const visibleFiles = useMemo(
-    () => files.filter((item) => item.name.toLowerCase().includes(query)),
-    [files, query],
+    () =>
+      files.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) &&
+          (!collectionFilter || item.collectionIds?.includes(collectionFilter)),
+      ),
+    [collectionFilter, files, query],
   );
+  const favoriteFiles = files.filter((item) => item.favorite);
+  const recentFiles = [...files]
+    .filter((item) => item.lastOpenedAt)
+    .sort((first, second) =>
+      (second.lastOpenedAt ?? "").localeCompare(first.lastOpenedAt ?? ""),
+    )
+    .slice(0, 6);
+
+  const createCollection = () => {
+    const name = window.prompt("Collection name", "University")?.trim();
+    if (!name) return;
+    onCollectionsChange([
+      ...collections,
+      {
+        id: crypto.randomUUID(),
+        name,
+        order: collections.length,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  };
+
+  const moveCollection = (collectionId: string, direction: -1 | 1) => {
+    const ordered = [...collections].sort(
+      (first, second) => first.order - second.order,
+    );
+    const index = ordered.findIndex((item) => item.id === collectionId);
+    const destination = index + direction;
+    if (index < 0 || destination < 0 || destination >= ordered.length) return;
+    [ordered[index], ordered[destination]] = [
+      ordered[destination],
+      ordered[index],
+    ];
+    onCollectionsChange(
+      ordered.map((item, order) => ({ ...item, order })),
+    );
+  };
+
+  const toggleFavorite = (file: StudyFileItem) => {
+    onFilesChange(
+      files.map((item) =>
+        item.id === file.id ? { ...item, favorite: !item.favorite } : item,
+      ),
+    );
+  };
+
+  const toggleCollection = (file: StudyFileItem, collectionId: string) => {
+    const attached = file.collectionIds?.includes(collectionId) ?? false;
+    onFilesChange(
+      files.map((item) =>
+        item.id === file.id
+          ? {
+              ...item,
+              collectionIds: attached
+                ? (item.collectionIds ?? []).filter((id) => id !== collectionId)
+                : Array.from(new Set([...(item.collectionIds ?? []), collectionId])),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const addSelectedToCollection = (collectionId: string) => {
+    if (!collectionId || selectedFileIds.length === 0) return;
+    onFilesChange(
+      files.map((item) =>
+        selectedFileIds.includes(item.id)
+          ? {
+              ...item,
+              collectionIds: Array.from(
+                new Set([...(item.collectionIds ?? []), collectionId]),
+              ),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const removeSelectedFromCollection = () => {
+    if (!collectionFilter || selectedFileIds.length === 0) return;
+    onFilesChange(
+      files.map((item) =>
+        selectedFileIds.includes(item.id)
+          ? {
+              ...item,
+              collectionIds: (item.collectionIds ?? []).filter(
+                (id) => id !== collectionFilter,
+              ),
+            }
+          : item,
+      ),
+    );
+    setSelectedFileIds([]);
+  };
+
+  const openFile = (file: StudyFileItem) => {
+    onFilesChange(
+      files.map((item) =>
+        item.id === file.id
+          ? { ...item, lastOpenedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    onOpenFile(file);
+  };
 
   const makeNote = () => {
     const now = new Date().toISOString();
@@ -181,6 +321,110 @@ export function StudyLibrary({
         </button>
       </div>
 
+      {(filter === "all" || filter === "files") && (
+        <section className="study-library-organize card">
+          <header>
+            <div>
+              <p className="tiny-label">COLLECTIONS</p>
+              <h2>One file can live in many places</h2>
+            </div>
+            <button type="button" onClick={createCollection}>＋ Collection</button>
+          </header>
+          <div className="study-collection-list">
+            <button
+              type="button"
+              className={collectionFilter === null ? "active" : ""}
+              onClick={() => setCollectionFilter(null)}
+            >
+              All files
+            </button>
+            {[...collections]
+              .sort((first, second) => first.order - second.order)
+              .map((collection) => (
+                <span key={collection.id}>
+                  <button
+                    type="button"
+                    className={collectionFilter === collection.id ? "active" : ""}
+                    onClick={() => setCollectionFilter(collection.id)}
+                  >
+                    {collection.name}
+                  </button>
+                  <button type="button" onClick={() => moveCollection(collection.id, -1)} aria-label={`Move ${collection.name} earlier`}>↑</button>
+                  <button type="button" onClick={() => moveCollection(collection.id, 1)} aria-label={`Move ${collection.name} later`}>↓</button>
+                  <button
+                    type="button"
+                    aria-label={`Edit ${collection.name}`}
+                    onClick={() => {
+                      const response = window.prompt(
+                        "Rename collection. Leave empty to delete it.",
+                        collection.name,
+                      );
+                      if (response === null) return;
+                      const nextName = response.trim();
+                      if (nextName) {
+                        onCollectionsChange(
+                          collections.map((item) =>
+                            item.id === collection.id ? { ...item, name: nextName } : item,
+                          ),
+                        );
+                        return;
+                      }
+                      if (window.confirm(`Delete “${collection.name}”? Files will stay in Library.`)) {
+                        onCollectionsChange(
+                          collections.filter((item) => item.id !== collection.id),
+                        );
+                        onFilesChange(
+                          files.map((file) => ({
+                            ...file,
+                            collectionIds: (file.collectionIds ?? []).filter(
+                              (id) => id !== collection.id,
+                            ),
+                          })),
+                        );
+                        if (collectionFilter === collection.id) setCollectionFilter(null);
+                      }
+                    }}
+                  >
+                    ···
+                  </button>
+                </span>
+              ))}
+          </div>
+          {(favoriteFiles.length > 0 || recentFiles.length > 0) && (
+            <div className="study-library-shelves">
+              {favoriteFiles.length > 0 && (
+                <div>
+                  <strong>Favorites</strong>
+                  {favoriteFiles.slice(0, 5).map((file) => (
+                    <button type="button" key={file.id} onClick={() => openFile(file)}>
+                      ◆ {file.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {recentFiles.length > 0 && (
+                <div>
+                  <strong>Recently opened</strong>
+                  {recentFiles.map((file) => (
+                    <button type="button" key={file.id} onClick={() => openFile(file)}>
+                      Continue · {file.readerLocation?.page
+                        ? `page ${file.readerLocation.page}`
+                        : file.readerLocation?.chapter !== undefined
+                          ? `Chapter ${file.readerLocation.chapter + 1}${
+                              typeof file.readerLocation.percentage === "number"
+                                ? ` · ${Math.round(file.readerLocation.percentage * 100)}%`
+                                : ""
+                            }`
+                          : file.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       {(filter === "all" || filter === "notes") && (
         <section className="study-library-section">
           <header><div><p className="tiny-label">QUICK THOUGHTS</p><h2>Notes</h2></div></header>
@@ -206,18 +450,128 @@ export function StudyLibrary({
       {(filter === "all" || filter === "files") && (
         <section className="study-library-section">
           <header><div><p className="tiny-label">READ & ANNOTATE</p><h2>Files</h2></div></header>
+          {selectedFileIds.length > 0 && (
+            <div className="study-file-batch-actions" aria-label="Selected file actions">
+              <strong>{selectedFileIds.length} selected</strong>
+              {collections.length > 0 && (
+                <select
+                  defaultValue=""
+                  aria-label="Add selected files to collection"
+                  onChange={(event) => {
+                    addSelectedToCollection(event.target.value);
+                    event.target.value = "";
+                  }}
+                >
+                  <option value="" disabled>Add to collection…</option>
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>{collection.name}</option>
+                  ))}
+                </select>
+              )}
+              {collectionFilter && (
+                <button type="button" onClick={removeSelectedFromCollection}>
+                  Remove from this collection
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onFilesChange(
+                    files.map((file) =>
+                      selectedFileIds.includes(file.id)
+                        ? { ...file, favorite: true }
+                        : file,
+                    ),
+                  );
+                }}
+              >
+                Favorite
+              </button>
+              <button type="button" onClick={() => setSelectedFileIds([])}>Done</button>
+            </div>
+          )}
           <div className="study-file-grid">
             <button type="button" className="study-library-new study-new-file" onClick={() => fileInputRef.current?.click()}>
               <span>⇣</span><strong>Import a file</strong><small>PDF · EPUB · images · documents</small>
             </button>
             {visibleFiles.map((file) => (
-              <article className={`study-file-card ${file.kind}`} key={file.id}>
-                <button type="button" className="study-file-open" onClick={() => onOpenFile(file)}>
+              <article
+                className={`study-file-card ${file.kind} ${selectedFileIds.includes(file.id) ? "selected" : ""}`}
+                key={file.id}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setSelectedFileIds((current) =>
+                    current.includes(file.id)
+                      ? current
+                      : [...current, file.id],
+                  );
+                }}
+              >
+                <button
+                  type="button"
+                  className="study-file-select"
+                  onClick={() =>
+                    setSelectedFileIds((current) =>
+                      current.includes(file.id)
+                        ? current.filter((id) => id !== file.id)
+                        : [...current, file.id],
+                    )
+                  }
+                  aria-label={selectedFileIds.includes(file.id) ? `Unselect ${file.name}` : `Select ${file.name}`}
+                >
+                  {selectedFileIds.includes(file.id) ? "✓" : "○"}
+                </button>
+                <button type="button" className="study-file-open" onClick={() => openFile(file)}>
                   <span>{file.kind === "pdf" ? "PDF" : file.kind === "epub" ? "EPUB" : "FILE"}</span>
                   <strong>{file.name}</strong>
                   <small>{readableFileSize(file.size)} · {new Date(file.createdAt).toLocaleDateString()}</small>
-                  <em>{file.kind === "pdf" ? "Open & annotate" : file.kind === "epub" ? "Open reader" : "Open file"} →</em>
+                  <em>
+                    {file.readerLocation?.page
+                      ? `Continue · page ${file.readerLocation.page}`
+                      : file.readerLocation?.chapter !== undefined
+                        ? `Continue · Chapter ${file.readerLocation.chapter + 1}${
+                            typeof file.readerLocation.percentage === "number"
+                              ? ` · ${Math.round(file.readerLocation.percentage * 100)}%`
+                              : ""
+                          }`
+                        : file.kind === "pdf"
+                          ? "Open & annotate"
+                          : file.kind === "epub"
+                            ? "Open reader"
+                            : "Open file"} →
+                  </em>
                 </button>
+                <button
+                  type="button"
+                  className={file.favorite ? "study-file-favorite active" : "study-file-favorite"}
+                  onClick={() => toggleFavorite(file)}
+                  aria-label={file.favorite ? `Remove ${file.name} from favorites` : `Favorite ${file.name}`}
+                >
+                  {file.favorite ? "◆" : "◇"}
+                </button>
+                {collections.length > 0 && (
+                  <details className="study-file-collections">
+                    <summary>Collections</summary>
+                    {collections.map((collection) => (
+                      <label key={collection.id}>
+                        <input
+                          type="checkbox"
+                          checked={file.collectionIds?.includes(collection.id) ?? false}
+                          onChange={() => toggleCollection(file, collection.id)}
+                        />
+                        {collection.name}
+                      </label>
+                    ))}
+                  </details>
+                )}
+                {usedInForFile(file.id).length > 0 && (
+                  <div className="study-file-used-in">
+                    <small>Used in:</small>
+                    {usedInForFile(file.id).map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                )}
                 <button
                   type="button"
                   className="study-card-menu"
@@ -259,7 +613,19 @@ export function StudyLibrary({
             <textarea value={noteEditor.body} onChange={(event) => setNoteEditor({ ...noteEditor, body: event.target.value })} placeholder="Write anything…" />
             <label className="study-pin-toggle"><input type="checkbox" checked={noteEditor.pinned} onChange={(event) => setNoteEditor({ ...noteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
             <footer>
-              {hasNote(noteEditor.id) ? <button type="button" className="danger" onClick={() => { onNotesChange(notes.filter((item) => item.id !== noteEditor.id)); setNoteEditor(null); }}>Delete</button> : <span />}
+              {hasNote(noteEditor.id) ? (
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => {
+                    if (!window.confirm(`Move “${noteEditor.title || "Untitled note"}” to Trash for 30 days?`)) return;
+                    onDeleteNote(noteEditor);
+                    setNoteEditor(null);
+                  }}
+                >
+                  Delete
+                </button>
+              ) : <span />}
               <span />
               <button type="button" onClick={() => setNoteEditor(null)}>Cancel</button>
               <button

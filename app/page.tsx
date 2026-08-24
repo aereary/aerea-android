@@ -1,22 +1,55 @@
 "use client";
 
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import {
+  Capacitor,
+  registerPlugin,
+  SystemBars,
+  SystemBarsStyle,
+} from "@capacitor/core";
 import {
   AEREA_ACCOUNT,
   currentAereaEmail,
+  deleteAereaLibraryFile,
+  downloadAereaLibraryFile,
+  fetchSportsFixtures,
+  handleAereaAuthCallback,
   pushCloudState,
   readBrowserSketches,
   readBrowserState,
   reconcileCloudState,
   requestAereaCode,
   supabase,
+  syncFollowedSportsTeams,
+  uploadAereaLibraryFile,
   verifyAereaCode,
   writeBrowserSketches,
   writeBrowserState,
 } from "./supabase-sync";
 import {
+  DEFAULT_RESET_PREFERENCES,
+  DEFAULT_SPORTS_SETTINGS,
+  INITIAL_SPORTS_TEAMS,
+  addDays,
+  createTrashItem,
+  fileKind,
+  inferInboxKind,
+  rangesOverlap,
+  trashDaysRemaining,
+  type EntityLink,
+  type InboxItem,
+  type LibraryCollection,
+  type LibraryItem,
+  type PostItGroup,
+  type ResetPreferences,
+  type SportsEvent,
+  type SportsSettings,
+  type TaskItem,
+  type TrashItem,
+} from "./aerea-features";
+import {
   ChangeEvent,
   CSSProperties,
+  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   TouchEvent as ReactTouchEvent,
   useEffect,
@@ -56,7 +89,14 @@ import {
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 type PrimaryNavId = Tab | "add";
-type Space = "menu" | "classes" | "library" | "sketchbook";
+type Space =
+  | "menu"
+  | "inbox"
+  | "classes"
+  | "library"
+  | "postit-archive"
+  | "sketchbook"
+  | "trash";
 type MetricsPeriod = "week" | "month" | "year" | "all";
 type AppTheme =
   | "storybook"
@@ -97,6 +137,23 @@ type AereaWidgetPlugin = {
 
 const AereaWidget = registerPlugin<AereaWidgetPlugin>("AereaWidget");
 
+type AereaAuthPlugin = {
+  getPendingLink(): Promise<{ url: string | null }>;
+};
+
+type AereaSportsNotificationsPlugin = {
+  requestPermissions(): Promise<{ notifications?: string }>;
+  sync(options: {
+    eventsJson: string;
+    enabled: boolean;
+    leadMinutes: number;
+  }): Promise<void>;
+};
+
+const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
+const AereaSportsNotifications =
+  registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
+
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
@@ -116,6 +173,17 @@ type AereaStoragePlugin = {
   }): Promise<{ file: StudyFileItem }>;
   getDocument(options: { id: string }): Promise<{ dataUrl: string }>;
   deleteDocument(options: { id: string }): Promise<void>;
+  saveFile(options: {
+    name: string;
+    mimeType: string;
+    dataUrl: string;
+  }): Promise<{ id: string }>;
+  readFile(options: { id: string }): Promise<{
+    name: string;
+    mimeType: string;
+    dataUrl: string;
+  }>;
+  deleteFile(options: { id: string }): Promise<void>;
 };
 
 const AereaStorage = registerPlugin<AereaStoragePlugin>("AereaStorage");
@@ -128,6 +196,82 @@ async function blobAsDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+async function purgeExpiredTrashFiles(items: TrashItem[]) {
+  await Promise.allSettled(
+    items.flatMap((trashItem) => {
+      if (
+        trashItem.kind !== "file" ||
+        !trashItem.payload ||
+        typeof trashItem.payload !== "object"
+      ) {
+        return [];
+      }
+
+      const file = trashItem.payload as LibraryItem | StudyFileItem;
+      if ("mediaType" in file) {
+        return [
+          isNative()
+            ? AereaStorage.deleteDocument({ id: file.id })
+            : fetch(`/api/files/${file.id}`, { method: "DELETE" }).then(
+                (response) => {
+                  if (!response.ok && response.status !== 404) {
+                    throw new Error("Could not purge an expired Library file.");
+                  }
+                },
+              ),
+        ];
+      }
+
+      const deletions: Promise<unknown>[] = [];
+      if (file.nativeFileId && isNative()) {
+        deletions.push(AereaStorage.deleteFile({ id: file.nativeFileId }));
+      }
+      if (file.cloudPath) {
+        deletions.push(deleteAereaLibraryFile(file.cloudPath));
+      }
+      return deletions;
+    }),
+  );
+}
+
+function libraryItemAsStudyFile(item: LibraryItem): StudyFileItem {
+  return {
+    id: item.id,
+    name: item.name,
+    mediaType: item.mimeType || "application/octet-stream",
+    kind:
+      item.kind === "pdf"
+        ? "pdf"
+        : item.kind === "epub"
+          ? "epub"
+          : "file",
+    size: item.size ?? 0,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    dataUrl: item.dataUrl,
+    favorite: item.favorite,
+    collectionIds: item.collectionIds,
+    lastOpenedAt: item.lastOpenedAt,
+    readerLocation: {
+      page: item.readerLocation?.page,
+      offset: item.readerLocation?.offset,
+      zoom: item.readerLocation?.zoom,
+      chapter:
+        item.readerLocation?.chapter !== undefined
+          ? Number(item.readerLocation.chapter)
+          : undefined,
+      percentage: item.readerLocation?.percentage,
+      bookmarks: (item.annotations ?? [])
+        .filter(
+          (annotation) =>
+            annotation.type === "bookmark" &&
+            typeof annotation.location.page === "number",
+        )
+        .map((annotation) => annotation.location.page as number),
+    },
+  };
 }
 
 function joinBytes(parts: Uint8Array[]) {
@@ -290,6 +434,18 @@ type CalendarEvent = {
   todos?: string[];
   todoStates?: ("pending" | "done" | "missed")[];
   files?: string[];
+  attachmentIds?: string[];
+  attachedNoteIds?: Array<number | string>;
+  attachedRecordingIds?: number[];
+  tags?: string[];
+  priority?: "gentle" | "important" | "urgent";
+  eventType?: "personal" | "sports_event";
+  sportsEventId?: string;
+  sportsCardStyle?: boolean;
+  sportsPrimary?: string;
+  sportsSecondary?: string;
+  sportsIcon?: string;
+  sourceInboxId?: string;
 };
 
 type EventColor =
@@ -342,9 +498,12 @@ type PostItPage =
   | "focus"
   | "journal"
   | "spaces:menu"
+  | "spaces:inbox"
   | "spaces:classes"
   | "spaces:library"
-  | "spaces:sketchbook";
+  | "spaces:postit-archive"
+  | "spaces:sketchbook"
+  | "spaces:trash";
 
 type PostItNote = {
   id: string;
@@ -354,6 +513,16 @@ type PostItNote = {
   x: number;
   y: number;
   rotation: number;
+  width?: number;
+  height?: number;
+  zIndex?: number;
+  pinned?: boolean;
+  locked?: boolean;
+  groupId?: string;
+  archived?: boolean;
+  style?: "plain" | "lined" | "checklist";
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type PostItDraft = Pick<PostItNote, "text" | "color">;
@@ -399,6 +568,36 @@ type CalendarCategory = {
   id: string;
   name: string;
   color: EventColor;
+};
+
+type AereaHistorySnapshot = {
+  reminders: Reminder[];
+  reminderHistory: Record<string, number[]>;
+  calendarEvents: CalendarEvent[];
+  entries: JournalEntry[];
+  tasks: TaskItem[];
+  inboxItems: InboxItem[];
+  postIts: PostItNote[];
+  postItGroups: PostItGroup[];
+  libraryItems: LibraryItem[];
+  libraryCollections: LibraryCollection[];
+  entityLinks: EntityLink[];
+  trashItems: TrashItem[];
+  classItems: ClassItem[];
+  recordings: Recording[];
+  selectedClass: string;
+  studyNotes: StudyNote[];
+  studyTasks: StudyTask[];
+  studyFiles: StudyFileItem[];
+  calendarMemos: CalendarMemo[];
+  pdfAnnotations: Record<string, PdfInkStroke[]>;
+  pdfPageNotes: Record<string, Record<string, string>>;
+  epubReadingStates: Record<string, EpubReadingState>;
+};
+
+type AereaHistoryEntry = {
+  label: string;
+  snapshot: AereaHistorySnapshot;
 };
 
 const themeOptions: {
@@ -681,40 +880,7 @@ const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
 
-const starterHabits: Habit[] = [
-  {
-    id: 1,
-    title: "Drink 6 glasses of water",
-    icon: "💧",
-    color: "habit-blue",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 2,
-    title: "Study for at least 25 minutes",
-    icon: "📚",
-    color: "habit-lilac",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 3,
-    title: "Write one gentle thought",
-    icon: "🪶",
-    color: "habit-pink",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-  {
-    id: 4,
-    title: "Stretch and breathe",
-    icon: "🌿",
-    color: "habit-sage",
-    days: [false, false, false, false, false, false, false],
-    streak: 0,
-  },
-];
+const starterHabits: Habit[] = [];
 
 const habitColorOptions = [
   { value: "habit-blue", label: "Sky blue", hex: "#bdeaff" },
@@ -861,14 +1027,13 @@ function makeEventDraft(date: string): EventDraft {
     todos: [],
     todoStates: [],
     files: [],
+    attachmentIds: [],
+    attachedNoteIds: [],
+    attachedRecordingIds: [],
   };
 }
 
-const starterClasses: ClassItem[] = [
-  { id: "differential-equations", name: "Differential Equations", icon: "∫", color: "#ddd8ff" },
-  { id: "ethical-hacking", name: "Ethical Hacking", icon: "⌘", color: "#cceeff" },
-  { id: "intellectual-property", name: "Intellectual Property", icon: "§", color: "#f7dec7" },
-];
+const starterClasses: ClassItem[] = [];
 
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -1038,12 +1203,29 @@ function eventCompactTimeLabel(event: CalendarEvent) {
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
 
+function eventTimeLabel(event: CalendarEvent) {
+  return eventCompactTimeLabel(event);
+}
+
 function eventStartTimeLabel(event: CalendarEvent) {
   if (event.allDay) return "All day";
   const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return event.time;
   const hour = Number(match[1]);
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function withToggledEventTodoState(
+  event: CalendarEvent,
+  eventId: string,
+  todoIndex: number,
+  nextState: "done" | "missed",
+) {
+  if (event.id !== eventId) return event;
+  const todoStates = [...(event.todoStates ?? [])];
+  todoStates[todoIndex] =
+    todoStates[todoIndex] === nextState ? "pending" : nextState;
+  return { ...event, todoStates };
 }
 
 function eventEndTimeLabel(event: CalendarEvent) {
@@ -1243,6 +1425,18 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
   return placed;
 }
 
+function matchCountdownLabel(event: CalendarEvent) {
+  const start = new Date(`${event.date}T${event.time || "00:00"}:00`);
+  const difference = start.getTime() - Date.now();
+  const hours = Math.ceil(difference / 3_600_000);
+  const days = Math.ceil(difference / 86_400_000);
+  if (difference <= 0) return "Today ♡";
+  if (hours <= 1) return "In 1 hour ♡";
+  if (hours < 24) return `In ${hours} hours ♡`;
+  if (days === 1) return "Tomorrow ♡";
+  return `In ${days} days ♡`;
+}
+
 function eventRepeatLabel(event: CalendarEvent) {
   if (!event.repeat || event.repeat === "Never") return "Does not repeat";
   if (event.repeat !== "Custom") return event.repeat;
@@ -1324,13 +1518,62 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
+  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
+  const [quickCaptureText, setQuickCaptureText] = useState("");
+  const [quickCaptureFile, setQuickCaptureFile] = useState<File | null>(null);
+  const [quickCaptureSaving, setQuickCaptureSaving] = useState(false);
   const [postIts, setPostIts] = useState<PostItNote[]>([]);
+  const [postItGroups, setPostItGroups] = useState<PostItGroup[]>([]);
+  const [selectedPostItIds, setSelectedPostItIds] = useState<string[]>([]);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [libraryCollections, setLibraryCollections] = useState<
+    LibraryCollection[]
+  >([]);
+  const [selectedLibraryItem, setSelectedLibraryItem] =
+    useState<LibraryItem | null>(null);
+  const [libraryPanel, setLibraryPanel] = useState<
+    "contents" | "pages" | "bookmarks" | "highlights" | "notes"
+  >("contents");
+  const [entityLinks, setEntityLinks] = useState<EntityLink[]>([]);
+  const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
+  const [resetPreferences, setResetPreferences] = useState<ResetPreferences>(
+    DEFAULT_RESET_PREFERENCES,
+  );
+  const [resetExperience, setResetExperience] = useState<
+    "morning" | "night" | null
+  >(null);
+  const [resetCategory, setResetCategory] = useState<
+    "events" | "tasks" | "reminders" | null
+  >(null);
+  const [sportsSettings, setSportsSettings] = useState<SportsSettings>(
+    DEFAULT_SPORTS_SETTINGS,
+  );
+  const [sportsEvents, setSportsEvents] = useState<SportsEvent[]>([]);
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [calendarMultiSelect, setCalendarMultiSelect] = useState(false);
+  const [jumpDate, setJumpDate] = useState(todayKey);
+  const [draggingCalendarEventId, setDraggingCalendarEventId] = useState<
+    string | null
+  >(null);
+  const [calendarDragTarget, setCalendarDragTarget] = useState<string | null>(
+    null,
+  );
+  const [scheduleEventDragPreview, setScheduleEventDragPreview] = useState<{
+    id: string;
+    minute: number;
+  } | null>(null);
+  const [historyMessage, setHistoryMessage] = useState("");
   const [studyNotebooks, setStudyNotebooks] = useState<StudyNotebook[]>([]);
   const [studyNotes, setStudyNotes] = useState<StudyNote[]>([]);
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [calendarMemos, setCalendarMemos] = useState<CalendarMemo[]>([]);
   const [studyFiles, setStudyFiles] = useState<StudyFileItem[]>([]);
   const [pdfAnnotations, setPdfAnnotations] = useState<Record<string, PdfInkStroke[]>>({});
+  const [pdfPageNotes, setPdfPageNotes] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [epubReadingStates, setEpubReadingStates] = useState<Record<string, EpubReadingState>>({});
   const [activeStudyFile, setActiveStudyFile] = useState<StudyFileItem | null>(null);
   const [activeEpubBook, setActiveEpubBook] = useState<EpubBook | null>(null);
@@ -1350,6 +1593,10 @@ export default function Home() {
   const [syncCode, setSyncCode] = useState("");
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
   const [syncCodeSent, setSyncCodeSent] = useState(false);
+  const [authCallbackStatus, setAuthCallbackStatus] = useState<{
+    kind: "working" | "success" | "error";
+    message: string;
+  } | null>(null);
   const [isNight, setIsNight] = useState(false);
   const [scheduleNow, setScheduleNow] = useState(() => new Date());
   const [appTheme, setAppTheme] = useState<AppTheme>("storybook");
@@ -1370,7 +1617,9 @@ export default function Home() {
     color: "habit-sage",
   });
   const [classItems, setClassItems] = useState<ClassItem[]>(starterClasses);
-  const [selectedClass, setSelectedClass] = useState(starterClasses[0].name);
+  const [selectedClass, setSelectedClass] = useState(
+    starterClasses[0]?.name ?? "",
+  );
   const [classEditorOpen, setClassEditorOpen] = useState(false);
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [classDraft, setClassDraft] = useState({
@@ -1394,6 +1643,13 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const consumedAuthLinksRef = useRef(new Set<string>());
+  const undoStackRef = useRef<AereaHistoryEntry[]>([]);
+  const redoStackRef = useRef<AereaHistoryEntry[]>([]);
+  const [globalHistoryDepth, setGlobalHistoryDepth] = useState({
+    undo: 0,
+    redo: 0,
+  });
   const [pageStyle, setPageStyle] = useState<PageStyle>(DEFAULT_SKETCH_PAPER.style);
   const [sketchPageColor, setSketchPageColor] = useState(DEFAULT_SKETCH_PAPER.color);
   const [sketchPageSize, setSketchPageSize] = useState<SketchPageSizeId>(DEFAULT_SKETCH_PAPER.size);
@@ -1469,8 +1725,39 @@ export default function Home() {
     offsetY: number;
     startX: number;
     startY: number;
+    startPostItX: number;
+    startPostItY: number;
+    historyRecorded: boolean;
+    groupPositions: Array<{ id: string; x: number; y: number }>;
   } | null>(null);
   const postItLongPressRef = useRef<number | null>(null);
+  const postItResizeRef = useRef<{
+    id: string;
+    pointerId: number;
+    target: HTMLElement;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    historyRecorded: boolean;
+  } | null>(null);
+  const calendarEventDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    timer: number;
+  } | null>(null);
+  const suppressCalendarEventClickRef = useRef(false);
+  const scheduleEventDragRef = useRef<{
+    id: string;
+    pointerId: number;
+    timer: number;
+    active: boolean;
+    duration: number;
+    dayTop: number;
+    dayHeight: number;
+    targetMinute: number;
+  } | null>(null);
+  const suppressScheduleEventClickRef = useRef(false);
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1493,6 +1780,147 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.dataset.native = String(
+      Capacitor.isNativePlatform(),
+    );
+    return () => {
+      delete document.documentElement.dataset.native;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const defaultStyle =
+      colorMode === "dark" ? SystemBarsStyle.Dark : SystemBarsStyle.Light;
+    const setSystemBarStyle = (style: SystemBarsStyle) => {
+      void SystemBars.setStyle({ style }).catch(() => undefined);
+    };
+    const onReaderColorMode = (event: Event) => {
+      const dark = (event as CustomEvent<{ dark: boolean | null }>).detail?.dark;
+      setSystemBarStyle(
+        dark === null
+          ? defaultStyle
+          : dark
+            ? SystemBarsStyle.Dark
+            : SystemBarsStyle.Light,
+      );
+    };
+    setSystemBarStyle(defaultStyle);
+    window.addEventListener("aereaReaderColorMode", onReaderColorMode);
+    return () => {
+      window.removeEventListener("aereaReaderColorMode", onReaderColorMode);
+    };
+  }, [appTheme, colorMode]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    let active = true;
+    const refresh = () => {
+      void fetchSportsFixtures()
+        .then((fixtures) => {
+          if (active && fixtures) setSportsEvents(fixtures);
+        })
+        .catch(() => {
+          // Cached fixtures remain visible while the device is offline.
+        });
+    };
+    refresh();
+    window.addEventListener("online", refresh);
+    const interval = window.setInterval(refresh, 6 * 60 * 60 * 1000);
+    return () => {
+      active = false;
+      window.removeEventListener("online", refresh);
+      window.clearInterval(interval);
+    };
+  }, [stateReady]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    const timer = window.setTimeout(() => {
+      void syncFollowedSportsTeams(sportsSettings).catch(() => undefined);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [sportsSettings, stateReady]);
+
+  useEffect(() => {
+    if (!stateReady || !isNative()) return;
+    const followedEvents = sportsEvents.filter((event) =>
+      sportsSettings.followedTeamIds.includes(event.teamId),
+    );
+    const sync = async () => {
+      if (sportsSettings.notifyBeforeMatches) {
+        await AereaSportsNotifications.requestPermissions().catch(
+          () => undefined,
+        );
+      }
+      await AereaSportsNotifications.sync({
+        enabled: sportsSettings.notifyBeforeMatches,
+        leadMinutes: sportsSettings.notificationLeadMinutes,
+        eventsJson: JSON.stringify(
+          followedEvents.map((event) => {
+            const team = INITIAL_SPORTS_TEAMS.find(
+              (candidate) => candidate.id === event.teamId,
+            );
+            return {
+              externalId: event.externalId,
+              startsAt: new Date(event.startsAtUtc).getTime(),
+              status: event.status,
+              team: team?.shortName ?? "Your team",
+              icon: team?.icon ?? "♡",
+              opponent: event.opponent,
+              time: event.localTime,
+            };
+          }),
+        ),
+      });
+    };
+    void sync().catch(() => undefined);
+  }, [sportsEvents, sportsSettings, stateReady]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let active = true;
+    const processLink = async (url: string | null) => {
+      if (!active || !url || consumedAuthLinksRef.current.has(url)) return;
+      consumedAuthLinksRef.current.add(url);
+      setSyncMessage("Confirming your email…");
+      setAuthCallbackStatus({
+        kind: "working",
+        message: "Confirming your email…",
+      });
+      try {
+        const message = await handleAereaAuthCallback(url);
+        if (!active) return;
+        const email = await currentAereaEmail();
+        setSyncEmail(email);
+        setSyncCodeSent(false);
+        setSyncMessage(message);
+        setAuthCallbackStatus({ kind: "success", message });
+      } catch (error) {
+        if (!active) return;
+        const message =
+          error instanceof Error
+            ? `${error.message} You can request another email below.`
+            : "This confirmation link could not be completed.";
+        setSyncMessage(message);
+        setAuthCallbackStatus({ kind: "error", message });
+      }
+    };
+    const onAuthLink = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail;
+      void processLink(detail?.url ?? null);
+    };
+    window.addEventListener("aereaAuthLink", onAuthLink);
+    void AereaAuth.getPendingLink()
+      .then(({ url }) => processLink(url))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      window.removeEventListener("aereaAuthLink", onAuthLink);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadState() {
@@ -1508,7 +1936,17 @@ export default function Home() {
             moodHistory?: Record<string, string>;
             completedDays?: Record<string, boolean>;
             calendarEvents?: CalendarEvent[];
+            tasks?: TaskItem[];
+            inboxItems?: InboxItem[];
             postIts?: PostItNote[];
+            postItGroups?: PostItGroup[];
+            libraryItems?: LibraryItem[];
+            libraryCollections?: LibraryCollection[];
+            entityLinks?: EntityLink[];
+            trashItems?: TrashItem[];
+            resetPreferences?: ResetPreferences;
+            sportsSettings?: SportsSettings;
+            sportsEvents?: SportsEvent[];
             calendarCategories?: CalendarCategory[];
             focusSessions?: number;
             appTheme?: AppTheme;
@@ -1521,8 +1959,10 @@ export default function Home() {
             studyNotebooks?: StudyNotebook[];
             studyNotes?: StudyNote[];
             studyTasks?: StudyTask[];
+            studyFiles?: StudyFileItem[];
             calendarMemos?: CalendarMemo[];
             pdfAnnotations?: Record<string, PdfInkStroke[]>;
+            pdfPageNotes?: Record<string, Record<string, string>>;
             epubReadingStates?: Record<string, EpubReadingState>;
             cleanStartVersion?: string;
           } | null;
@@ -1532,86 +1972,133 @@ export default function Home() {
 
         if (payload.state) {
           const state = payload.state;
-          if (state.cleanStartVersion === CLEAN_START_VERSION) {
-            if (state.reminderHistory) setReminderHistory(state.reminderHistory);
-            if (state.reminders) setReminders(state.reminders);
-            if (state.habits) setHabits(state.habits);
-            if (state.entries) setEntries(state.entries);
-            if (state.moodHistory) setMoodHistory(state.moodHistory);
-            if (state.completedDays) setCompletedDays(state.completedDays);
-            if (state.calendarEvents) setCalendarEvents(state.calendarEvents);
-            if (Array.isArray(state.postIts)) {
-              setPostIts(
-                state.postIts.map((note) => ({
-                  ...note,
-                  page: note.page || "today",
-                })),
-              );
-            }
-            if (Array.isArray(state.calendarCategories) && state.calendarCategories.length) {
-              setCalendarCategories(state.calendarCategories);
-            } else if (state.calendarEvents?.length) {
-              const restoredCategories = [...starterCalendarCategories];
-              state.calendarEvents.forEach((event) => {
-                const name = event.calendar?.trim();
-                if (
-                  name &&
-                  !restoredCategories.some(
-                    (category) => category.name.toLowerCase() === name.toLowerCase(),
-                  )
-                ) {
-                  restoredCategories.push({
-                    id: `restored-${restoredCategories.length}`,
-                    name,
-                    color: event.color,
-                  });
-                }
-              });
-              setCalendarCategories(restoredCategories);
-            }
-            if (typeof state.focusSessions === "number") {
-              setFocusSessions(state.focusSessions);
-            }
-            if (Array.isArray(state.studyNotebooks)) {
-              setStudyNotebooks(state.studyNotebooks);
-            }
-            if (Array.isArray(state.studyNotes)) {
-              setStudyNotes(state.studyNotes);
-            }
-            if (Array.isArray(state.studyTasks)) {
-              setStudyTasks(state.studyTasks);
-            }
-            if (Array.isArray(state.calendarMemos)) {
-              setCalendarMemos(state.calendarMemos);
-            }
-            if (state.pdfAnnotations && typeof state.pdfAnnotations === "object") {
-              setPdfAnnotations(state.pdfAnnotations);
-            }
-            if (state.epubReadingStates && typeof state.epubReadingStates === "object") {
-              setEpubReadingStates(state.epubReadingStates);
-            }
-          } else {
-            setReminderHistory({});
-            setReminders(starterReminders);
-            setHabits(starterHabits);
-            setEntries([]);
-            setMoodHistory({});
-            setCompletedDays({});
-            setCalendarEvents([]);
-            setPostIts([]);
-            setCalendarCategories(starterCalendarCategories);
-            setFocusSessions(0);
-            setRecordings([]);
-            setStudyNotebooks([]);
-            setStudyNotes([]);
-            setStudyTasks([]);
-            setCalendarMemos([]);
-            setPdfAnnotations({});
-            setEpubReadingStates({});
-            window.localStorage.removeItem("aerea-reminders");
-            window.localStorage.removeItem("aerea-habits");
-            window.localStorage.removeItem("aerea-journal");
-            window.localStorage.removeItem("aerea-mood");
+          const expiredTrashFileIds = new Set<string>();
+          // Older payloads are migrated in place. An APK update must never
+          // interpret a missing version marker as permission to erase data.
+          if (state.reminderHistory) setReminderHistory(state.reminderHistory);
+          if (Array.isArray(state.reminders)) setReminders(state.reminders);
+          if (Array.isArray(state.habits)) setHabits(state.habits);
+          if (Array.isArray(state.entries)) setEntries(state.entries);
+          if (state.moodHistory) setMoodHistory(state.moodHistory);
+          if (state.completedDays) setCompletedDays(state.completedDays);
+          if (Array.isArray(state.calendarEvents)) {
+            setCalendarEvents(state.calendarEvents);
+          }
+          if (Array.isArray(state.tasks)) setTasks(state.tasks);
+          if (Array.isArray(state.inboxItems)) setInboxItems(state.inboxItems);
+          if (Array.isArray(state.postIts)) {
+            setPostIts(
+              state.postIts.map((note) => ({
+                ...note,
+                page: note.page || "today",
+              })),
+            );
+          }
+          if (Array.isArray(state.postItGroups)) {
+            setPostItGroups(state.postItGroups);
+          }
+          if (Array.isArray(state.libraryItems)) {
+            setLibraryItems(state.libraryItems);
+          }
+          if (Array.isArray(state.libraryCollections)) {
+            setLibraryCollections(state.libraryCollections);
+          }
+          if (Array.isArray(state.entityLinks)) setEntityLinks(state.entityLinks);
+          if (Array.isArray(state.trashItems)) {
+            const now = Date.now();
+            const expiredTrash = state.trashItems.filter(
+              (item) => new Date(item.purgeAt).getTime() <= now,
+            );
+            expiredTrash.forEach((item) => {
+              if (
+                item.kind === "file" &&
+                item.payload &&
+                typeof item.payload === "object" &&
+                "id" in item.payload
+              ) {
+                expiredTrashFileIds.add(String(item.payload.id));
+              }
+            });
+            const activeTrash = state.trashItems.filter(
+              (item) => new Date(item.purgeAt).getTime() > now,
+            );
+            await purgeExpiredTrashFiles(expiredTrash);
+            setTrashItems(activeTrash);
+          }
+          if (state.resetPreferences) {
+            setResetPreferences({
+              ...DEFAULT_RESET_PREFERENCES,
+              ...state.resetPreferences,
+            });
+          }
+          if (state.sportsSettings) {
+            setSportsSettings({
+              ...DEFAULT_SPORTS_SETTINGS,
+              ...state.sportsSettings,
+            });
+          }
+          if (Array.isArray(state.sportsEvents)) {
+            setSportsEvents(state.sportsEvents);
+          }
+          if (Array.isArray(state.calendarCategories) && state.calendarCategories.length) {
+            setCalendarCategories(state.calendarCategories);
+          } else if (state.calendarEvents?.length) {
+            const restoredCategories = [...starterCalendarCategories];
+            state.calendarEvents.forEach((event) => {
+              const name = event.calendar?.trim();
+              if (
+                name &&
+                !restoredCategories.some(
+                  (category) => category.name.toLowerCase() === name.toLowerCase(),
+                )
+              ) {
+                restoredCategories.push({
+                  id: `restored-${restoredCategories.length}`,
+                  name,
+                  color: event.color,
+                });
+              }
+            });
+            setCalendarCategories(restoredCategories);
+          }
+          if (typeof state.focusSessions === "number") {
+            setFocusSessions(state.focusSessions);
+          }
+          if (Array.isArray(state.studyNotebooks)) {
+            setStudyNotebooks(state.studyNotebooks);
+          }
+          if (Array.isArray(state.studyNotes)) setStudyNotes(state.studyNotes);
+          if (Array.isArray(state.studyTasks)) setStudyTasks(state.studyTasks);
+          if (Array.isArray(state.studyFiles)) setStudyFiles(state.studyFiles);
+          if (Array.isArray(state.calendarMemos)) {
+            setCalendarMemos(state.calendarMemos);
+          }
+          if (state.pdfAnnotations && typeof state.pdfAnnotations === "object") {
+            setPdfAnnotations(
+              Object.fromEntries(
+                Object.entries(state.pdfAnnotations).filter(
+                  ([fileId]) => !expiredTrashFileIds.has(fileId),
+                ),
+              ),
+            );
+          }
+          if (state.pdfPageNotes && typeof state.pdfPageNotes === "object") {
+            setPdfPageNotes(
+              Object.fromEntries(
+                Object.entries(state.pdfPageNotes).filter(
+                  ([fileId]) => !expiredTrashFileIds.has(fileId),
+                ),
+              ),
+            );
+          }
+          if (state.epubReadingStates && typeof state.epubReadingStates === "object") {
+            setEpubReadingStates(
+              Object.fromEntries(
+                Object.entries(state.epubReadingStates).filter(
+                  ([fileId]) => !expiredTrashFileIds.has(fileId),
+                ),
+              ),
+            );
           }
           const savedTheme = state.appTheme;
           if (
@@ -1676,16 +2163,26 @@ export default function Home() {
               return (await response.json()) as { files?: StudyFileItem[] };
             });
         if (!cancelled && Array.isArray(payload.files)) {
-          setStudyFiles(payload.files);
+          setStudyFiles((current) =>
+            payload.files!.map((file) => {
+              const metadata = current.find((item) => item.id === file.id);
+              return {
+                ...file,
+                favorite: metadata?.favorite,
+                collectionIds: metadata?.collectionIds,
+                lastOpenedAt: metadata?.lastOpenedAt,
+                readerLocation: metadata?.readerLocation,
+              };
+            }),
+          );
         }
       } catch {
         // The library remains available for notes and notebooks while files reconnect.
       }
     }
 
-    void loadState();
     void loadSketches();
-    void loadStudyFiles();
+    void loadState().then(loadStudyFiles);
     return () => {
       cancelled = true;
     };
@@ -1694,16 +2191,19 @@ export default function Home() {
   useEffect(() => {
     if (!stateReady || !simplifiedCalendarMode) return;
 
-    const today = dateFromKey(todayKey);
-    setSelectedHomeDate(todayKey);
-    setSelectedCalendarDate(todayKey);
-    setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    setEventEditorOpen(false);
-    setCalendarScheduleOpen(false);
-    setCalendarSearchOpen(false);
-    setMonthPickerOpen(false);
-    setCalendarExpanded(false);
-    setCalendarOpen(false);
+    const resetCalendar = window.setTimeout(() => {
+      const today = dateFromKey(todayKey);
+      setSelectedHomeDate(todayKey);
+      setSelectedCalendarDate(todayKey);
+      setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+      setEventEditorOpen(false);
+      setCalendarScheduleOpen(false);
+      setCalendarSearchOpen(false);
+      setMonthPickerOpen(false);
+      setCalendarExpanded(false);
+      setCalendarOpen(false);
+    }, 0);
+    return () => window.clearTimeout(resetCalendar);
   }, [simplifiedCalendarMode, stateReady, todayKey]);
 
   useEffect(() => {
@@ -1716,8 +2216,11 @@ export default function Home() {
       return;
     }
 
-    setCalendarExpanded(false);
-    setCalendarOpen(false);
+    const closeSimplifiedCalendar = window.setTimeout(() => {
+      setCalendarExpanded(false);
+      setCalendarOpen(false);
+    }, 0);
+    return () => window.clearTimeout(closeSimplifiedCalendar);
   }, [
     calendarOpen,
     calendarScheduleOpen,
@@ -1757,7 +2260,17 @@ export default function Home() {
               moodHistory,
               completedDays,
               calendarEvents,
+              tasks,
+              inboxItems,
               postIts,
+              postItGroups,
+              libraryItems,
+              libraryCollections,
+              entityLinks,
+              trashItems,
+              resetPreferences,
+              sportsSettings,
+              sportsEvents,
               calendarCategories,
               focusSessions,
               appTheme,
@@ -1770,8 +2283,10 @@ export default function Home() {
               studyNotebooks,
               studyNotes,
               studyTasks,
+              studyFiles,
               calendarMemos,
               pdfAnnotations,
+              pdfPageNotes,
               epubReadingStates,
               cleanStartVersion: CLEAN_START_VERSION,
             };
@@ -1801,22 +2316,34 @@ export default function Home() {
     completedDays,
     customTheme,
     entries,
+    entityLinks,
     focusSessions,
     habits,
+    inboxItems,
+    libraryCollections,
+    libraryItems,
     moodHistory,
+    postItGroups,
     postIts,
     profilePhoto,
     reminderHistory,
     reminders,
+    resetPreferences,
     recordings,
+    sportsEvents,
+    sportsSettings,
     studyNotebooks,
     studyNotes,
     studyTasks,
+    studyFiles,
     calendarMemos,
     pdfAnnotations,
+    pdfPageNotes,
     epubReadingStates,
     stateReady,
     syncEmail,
+    tasks,
+    trashItems,
   ]);
 
   useEffect(() => {
@@ -1865,20 +2392,109 @@ export default function Home() {
 
   const pending = useMemo(
     () => reminders.filter((item) => !doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
   );
   const completed = useMemo(
     () => reminders.filter((item) => doneIds.includes(item.id)),
-    [doneIds],
+    [doneIds, reminders],
+  );
+  const overdueTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          !task.completed && !task.skipped && task.dueDate < todayKey,
+      ),
+    [tasks, todayKey],
+  );
+  const todayTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) => !task.skipped && task.dueDate === todayKey,
+      ),
+    [tasks, todayKey],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
   const classRecordings = recordings.filter(
     (recording) => recording.className === selectedClass,
   );
+  const selectedClassItem = classItems.find(
+    (item) => item.name === selectedClass,
+  );
+  const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
+    if (!sportsSettings.addAutomatically) return [];
+    return sportsEvents
+      .filter((event) => sportsSettings.followedTeamIds.includes(event.teamId))
+      .map((event) => {
+        const team = INITIAL_SPORTS_TEAMS.find(
+          (candidate) => candidate.id === event.teamId,
+        );
+        const teamName = team?.name ?? "Your team";
+        const matchup =
+          event.homeAway === "away"
+            ? `${event.opponent} vs ${teamName}`
+            : `${teamName} vs ${event.opponent}`;
+        const showScore =
+          (event.status === "finished" && sportsSettings.showFinalScore) ||
+          (event.status === "live" && sportsSettings.showLiveScore);
+        const score =
+          showScore &&
+          typeof event.homeScore === "number" &&
+          typeof event.awayScore === "number"
+            ? ` · ${event.homeScore}—${event.awayScore}`
+            : "";
+        const statusPrefix =
+          event.status === "finished"
+            ? "FINAL · "
+            : event.status === "live"
+              ? "LIVE · "
+              : event.status === "postponed"
+                ? "POSTPONED · "
+                : event.status === "cancelled"
+                  ? "CANCELLED · "
+                  : "";
+        const startMinutes = minutesFromTime(event.localTime || "00:00");
+        return {
+          id: `sports:${event.id}`,
+          date: event.localDate,
+          title: `${statusPrefix}${matchup}${score}`,
+          time: event.localTime || "00:00",
+          endDate: event.localDate,
+          endTime: timeFromMinutes(
+            Math.min(23 * 60 + 45, startMinutes + 120),
+          ),
+          allDay: false,
+          calendar: "Sports",
+          color: "blue",
+          reminder: sportsSettings.notifyBeforeMatches
+            ? `${sportsSettings.notificationLeadMinutes} minutes before`
+            : "None",
+          repeat: "Never",
+          location: event.venue,
+          note: `${event.competition} · ${event.status}${
+            event.homeAway === "home" ? " · Home" : " · Away"
+          }`,
+          eventType: "sports_event",
+          sportsEventId: event.id,
+          sportsCardStyle: sportsSettings.showSpecialCards,
+          sportsPrimary: team?.primaryColor,
+          sportsSecondary: team?.secondaryColor,
+          sportsIcon: team?.icon,
+        };
+      });
+  }, [sportsEvents, sportsSettings]);
+  const allCalendarEvents = useMemo(
+    () => [...calendarEvents, ...sportsCalendarEvents],
+    [calendarEvents, sportsCalendarEvents],
+  );
   const currentPostItPage: PostItPage =
     activeTab === "spaces" ? `spaces:${space}` : activeTab;
   const visiblePostIts = postIts.filter(
-    (note) => (note.page || "today") === currentPostItPage,
+    (note) =>
+      (note.page || "today") === currentPostItPage && !note.archived,
+  ).sort(
+    (first, second) =>
+      Number(second.pinned) - Number(first.pinned) ||
+      (first.zIndex ?? 0) - (second.zIndex ?? 0),
   );
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
@@ -1928,9 +2544,9 @@ export default function Home() {
     const sources = new Set<string>(
       calendarCategories.map((category) => category.name),
     );
-    calendarEvents.forEach((event) => sources.add(event.calendar || "Personal"));
+    allCalendarEvents.forEach((event) => sources.add(event.calendar || "Personal"));
     return Array.from(sources);
-  }, [calendarCategories, calendarEvents]);
+  }, [allCalendarEvents, calendarCategories]);
   const scheduleDays = useMemo(
     () => scheduleDatesFor(selectedCalendarDate, 7),
     [selectedCalendarDate],
@@ -1943,7 +2559,7 @@ export default function Home() {
     [],
   );
   const currentScheduleMinute = scheduleNow.getHours() * 60 + scheduleNow.getMinutes();
-  const selectedDateEvents = calendarEvents
+  const selectedDateEvents = allCalendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const eventDraftRangeIsValid = eventDraftHasValidRange(eventDraft);
@@ -2080,15 +2696,15 @@ export default function Home() {
   });
   const selectedDayComplete = completedDays[selectedCalendarDate] === true;
   const homeWeek = useMemo(() => weekForDate(todayKey), [todayKey]);
-  const selectedHomeEvents = calendarEvents
+  const selectedHomeEvents = allCalendarEvents
     .filter((event) => eventOccursOn(event, selectedHomeDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const todayWidgetEvents = useMemo(
     () =>
-      calendarEvents
+      allCalendarEvents
         .filter((event) => eventOccursOn(event, todayKey))
         .sort((a, b) => a.time.localeCompare(b.time)),
-    [calendarEvents, todayKey],
+    [allCalendarEvents, todayKey],
   );
   const widgetDaysJson = useMemo(() => {
     const start = dateFromKey(todayKey);
@@ -2102,7 +2718,7 @@ export default function Home() {
         const mood = moods.find(
           (item) => item.label === moodHistory[dateKey],
         );
-        const events = calendarEvents
+        const events = allCalendarEvents
           .filter((event) => eventOccursOn(event, dateKey))
           .sort((a, b) => a.time.localeCompare(b.time))
           .slice(0, 3)
@@ -2120,7 +2736,7 @@ export default function Home() {
         };
       }),
     );
-  }, [calendarEvents, completedDays, moodHistory, todayKey]);
+  }, [allCalendarEvents, completedDays, moodHistory, todayKey]);
   const hydrationReminderIds = useMemo(
     () =>
       reminders
@@ -2317,6 +2933,677 @@ export default function Home() {
       : undefined;
   const canUndo = historyDepth.undo > 0;
   const canRedo = historyDepth.redo > 0;
+  const canUndoSketch = canUndo;
+  const canRedoSketch = canRedo;
+  const captureHistorySnapshot = (): AereaHistorySnapshot =>
+    structuredClone({
+      reminders,
+      reminderHistory,
+      calendarEvents,
+      entries,
+      tasks,
+      inboxItems,
+      postIts,
+      postItGroups,
+      libraryItems,
+      libraryCollections,
+      entityLinks,
+      trashItems,
+      classItems,
+      recordings,
+      selectedClass,
+      studyNotes,
+      studyTasks,
+      studyFiles,
+      calendarMemos,
+      pdfAnnotations,
+      pdfPageNotes,
+      epubReadingStates,
+    });
+
+  const restoreHistorySnapshot = (snapshot: AereaHistorySnapshot) => {
+    setReminders(snapshot.reminders);
+    setReminderHistory(snapshot.reminderHistory);
+    setCalendarEvents(snapshot.calendarEvents);
+    setEntries(snapshot.entries);
+    setTasks(snapshot.tasks);
+    setInboxItems(snapshot.inboxItems);
+    setPostIts(snapshot.postIts);
+    setPostItGroups(snapshot.postItGroups);
+    setLibraryItems(snapshot.libraryItems);
+    setLibraryCollections(snapshot.libraryCollections);
+    setEntityLinks(snapshot.entityLinks);
+    setTrashItems(snapshot.trashItems);
+    setClassItems(snapshot.classItems);
+    setRecordings(snapshot.recordings);
+    setSelectedClass(snapshot.selectedClass);
+    setStudyNotes(snapshot.studyNotes);
+    setStudyTasks(snapshot.studyTasks);
+    setStudyFiles(snapshot.studyFiles);
+    setCalendarMemos(snapshot.calendarMemos);
+    setPdfAnnotations(snapshot.pdfAnnotations);
+    setPdfPageNotes(snapshot.pdfPageNotes);
+    setEpubReadingStates(snapshot.epubReadingStates);
+    setSelectedEventDetail(null);
+    setSelectedJournalEntry(null);
+    setSelectedLibraryItem(null);
+  };
+
+  const syncGlobalHistoryDepth = () => {
+    setGlobalHistoryDepth({
+      undo: undoStackRef.current.length,
+      redo: redoStackRef.current.length,
+    });
+  };
+
+  const recordAction = (label: string) => {
+    undoStackRef.current.push({
+      label,
+      snapshot: captureHistorySnapshot(),
+    });
+    if (undoStackRef.current.length > 30) undoStackRef.current.shift();
+    redoStackRef.current = [];
+    setHistoryMessage(`${label} · Undo`);
+    syncGlobalHistoryDepth();
+  };
+
+  const hasEntityLink = (
+    fromType: EntityLink["fromType"],
+    fromId: string,
+    toType: EntityLink["toType"],
+    toId: string,
+  ) =>
+    entityLinks.some(
+      (link) =>
+        link.fromType === fromType &&
+        link.fromId === fromId &&
+        link.toType === toType &&
+        link.toId === toId,
+    );
+
+  const toggleEntityLink = (
+    fromType: EntityLink["fromType"],
+    fromId: string,
+    toType: EntityLink["toType"],
+    toId: string,
+    label: string,
+  ) => {
+    recordAction(label);
+    const alreadyLinked = hasEntityLink(fromType, fromId, toType, toId);
+    setEntityLinks((current) =>
+      alreadyLinked
+        ? current.filter(
+            (link) =>
+              !(
+                link.fromType === fromType &&
+                link.fromId === fromId &&
+                link.toType === toType &&
+                link.toId === toId
+              ),
+          )
+        : [
+            ...current,
+            {
+              id: crypto.randomUUID(),
+              fromType,
+              fromId,
+              toType,
+              toId,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+    );
+  };
+
+  const undoGlobal = () => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current.push({
+      label: previous.label,
+      snapshot: captureHistorySnapshot(),
+    });
+    restoreHistorySnapshot(previous.snapshot);
+    setHistoryMessage(`Undid ${previous.label}`);
+    syncGlobalHistoryDepth();
+  };
+
+  const redoGlobal = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push({
+      label: next.label,
+      snapshot: captureHistorySnapshot(),
+    });
+    restoreHistorySnapshot(next.snapshot);
+    setHistoryMessage(`Redid ${next.label}`);
+    syncGlobalHistoryDepth();
+  };
+
+  const markInboxProcessed = (id: string, destination: string) => {
+    setInboxItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              processedAs: Array.from(
+                new Set([...(item.processedAs ?? []), destination]),
+              ),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const saveQuickCapture = async () => {
+    const text = quickCaptureText.trim();
+    if (!text && !quickCaptureFile) return;
+    setQuickCaptureSaving(true);
+    try {
+      const id = crypto.randomUUID();
+      const createdAt = new Date().toISOString();
+      let dataUrl: string | undefined;
+      let nativeFileId: string | undefined;
+      let cloudPath: string | undefined;
+      if (quickCaptureFile) {
+        dataUrl = await blobAsDataUrl(quickCaptureFile);
+        if (isNative()) {
+          const stored = await AereaStorage.saveFile({
+            name: quickCaptureFile.name,
+            mimeType: quickCaptureFile.type || "application/octet-stream",
+            dataUrl,
+          });
+          nativeFileId = stored.id;
+          dataUrl = undefined;
+        }
+        cloudPath =
+          (await uploadAereaLibraryFile(id, quickCaptureFile).catch(
+            () => null,
+          )) ?? undefined;
+      }
+      const item: InboxItem = {
+        id,
+        kind: inferInboxKind(text, quickCaptureFile),
+        text: text || quickCaptureFile?.name || "Captured item",
+        createdAt,
+        originalName: quickCaptureFile?.name,
+        mimeType: quickCaptureFile?.type,
+        size: quickCaptureFile?.size,
+        dataUrl,
+        nativeFileId,
+        cloudPath,
+      };
+      recordAction("Captured to Inbox");
+      setInboxItems((current) => [item, ...current]);
+      setQuickCaptureText("");
+      setQuickCaptureFile(null);
+      setQuickCaptureOpen(false);
+      setHistoryMessage("Saved to Inbox ♡");
+    } catch (error) {
+      setHistoryMessage(
+        error instanceof Error
+          ? `Capture is still here · ${error.message}`
+          : "Capture is still here. Please try again.",
+      );
+    } finally {
+      setQuickCaptureSaving(false);
+    }
+  };
+
+  const ensureInboxLibraryItem = (
+    item: InboxItem,
+    now: string,
+    includeText = false,
+  ) => {
+    const hasFile = Boolean(
+      item.dataUrl || item.nativeFileId || item.cloudPath || item.originalName,
+    );
+    if (!hasFile && !includeText) return undefined;
+    const id = item.libraryItemId ?? crypto.randomUUID();
+    const libraryItem: LibraryItem = {
+      id,
+      name: item.originalName || item.text || "Inbox item",
+      kind:
+        item.kind === "pdf"
+          ? "pdf"
+          : item.kind === "photo"
+            ? "image"
+            : item.kind === "file"
+              ? "file"
+              : "note",
+      mimeType: item.mimeType,
+      size: item.size,
+      dataUrl: item.dataUrl,
+      nativeFileId: item.nativeFileId,
+      cloudPath: item.cloudPath,
+      textContent:
+        item.kind === "text" || item.kind === "link" ? item.text : undefined,
+      createdAt: now,
+      updatedAt: now,
+      favorite: false,
+      collectionIds: [],
+      annotations: [],
+    };
+    setLibraryItems((current) => [
+      libraryItem,
+      ...current.filter((candidate) => candidate.id !== id),
+    ]);
+    setInboxItems((current) =>
+      current.map((candidate) =>
+        candidate.id === item.id
+          ? { ...candidate, libraryItemId: id }
+          : candidate,
+      ),
+    );
+    return id;
+  };
+
+  const convertInboxItem = (
+    item: InboxItem,
+    destination: "event" | "task" | "post-it" | "note" | "library",
+  ) => {
+    const now = new Date().toISOString();
+    recordAction(`Converted Inbox item to ${destination}`);
+    if (destination === "event") {
+      const draft = makeEventDraft(todayKey);
+      const eventId = crypto.randomUUID();
+      const attachmentId = ensureInboxLibraryItem(item, now);
+      setCalendarEvents((current) => [
+        ...current,
+        {
+          ...draft,
+          id: eventId,
+          title: item.text || item.originalName || "Inbox item",
+          sourceInboxId: item.id,
+          attachmentIds: attachmentId ? [attachmentId] : [],
+          url: item.kind === "link" ? item.text : "",
+        },
+      ]);
+      if (attachmentId) {
+        setEntityLinks((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            fromType: "event",
+            fromId: eventId,
+            toType: "file",
+            toId: attachmentId,
+            createdAt: now,
+          },
+        ]);
+      }
+    }
+    if (destination === "task") {
+      const attachmentId = ensureInboxLibraryItem(item, now);
+      const task: TaskItem = {
+        id: crypto.randomUUID(),
+        title: item.text || item.originalName || "Inbox task",
+        dueDate: todayKey,
+        completed: false,
+        notes: "Captured in Inbox",
+        attachmentIds: attachmentId ? [attachmentId] : [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      setTasks((current) => [task, ...current]);
+      setStudyTasks((current) => [
+        {
+          id: task.id,
+          title: task.title,
+          detail: task.notes ?? "",
+          dueDate: task.dueDate,
+          dueTime: "",
+          priority: "gentle",
+          calendar: "Personal",
+          reminder: "None",
+          repeat: "Never",
+          completed: false,
+          createdAt: now,
+        },
+        ...current.filter((candidate) => candidate.id !== task.id),
+      ]);
+      if (attachmentId) {
+        setEntityLinks((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            fromType: "task",
+            fromId: task.id,
+            toType: "file",
+            toId: attachmentId,
+            createdAt: now,
+          },
+        ]);
+      }
+    }
+    if (destination === "post-it") {
+      setPostIts((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          text: item.text || item.originalName || "Inbox note",
+          color: "butter",
+          page: "today",
+          x: 54,
+          y: 28,
+          rotation: 1,
+          width: 184,
+          height: 174,
+          zIndex: current.length + 1,
+          pinned: false,
+          locked: false,
+          archived: false,
+          style: "plain",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+    }
+    if (destination === "note") {
+      setStudyNotes((current) => [
+        {
+          id: crypto.randomUUID(),
+          title: item.originalName || "Inbox note",
+          body: item.text,
+          pinned: false,
+          createdAt: now,
+          updatedAt: now,
+        },
+        ...current,
+      ]);
+    }
+    if (destination === "library") {
+      ensureInboxLibraryItem(item, now, true);
+    }
+    markInboxProcessed(item.id, destination);
+  };
+
+  const discardInboxItem = (item: InboxItem) => {
+    recordAction("Discarded Inbox item");
+    setInboxItems((current) =>
+      current.filter((candidate) => candidate.id !== item.id),
+    );
+  };
+
+  const importLibraryFile = async (file: File) => {
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const dataUrl = await blobAsDataUrl(file);
+    const nativeFile = isNative()
+      ? await AereaStorage.saveFile({
+          name: file.name,
+          mimeType: file.type || "application/octet-stream",
+          dataUrl,
+        })
+      : null;
+    const cloudPath = await uploadAereaLibraryFile(id, file).catch(() => null);
+    recordAction("Imported Library file");
+    const item: LibraryItem = {
+      id,
+      name: file.name,
+      kind: fileKind(file),
+      mimeType: file.type,
+      size: file.size,
+      dataUrl: nativeFile ? undefined : dataUrl,
+      nativeFileId: nativeFile?.id,
+      cloudPath: cloudPath ?? undefined,
+      createdAt: now,
+      updatedAt: now,
+      favorite: false,
+      collectionIds: [],
+      annotations: [],
+    };
+    setLibraryItems((current) => [item, ...current]);
+    return item;
+  };
+
+  const openLibraryItem = async (item: LibraryItem) => {
+    const lastOpenedAt = new Date().toISOString();
+    let dataUrl = item.dataUrl;
+    let mimeType = item.mimeType;
+    if (item.nativeFileId && isNative()) {
+      try {
+        const stored = await AereaStorage.readFile({ id: item.nativeFileId });
+        dataUrl = stored.dataUrl;
+        mimeType ||= stored.mimeType;
+      } catch {
+        // A cloud-backed copy may still be available below.
+      }
+    }
+    if (!dataUrl && item.cloudPath) {
+      try {
+        const downloaded = await downloadAereaLibraryFile(item.cloudPath);
+        dataUrl = await blobAsDataUrl(downloaded);
+        mimeType ||= downloaded.type;
+      } catch {
+        setHistoryMessage("This file is temporarily unavailable offline.");
+      }
+    }
+    const opened = { ...item, dataUrl, mimeType, lastOpenedAt };
+    setLibraryItems((current) =>
+      current.map((candidate) =>
+        candidate.id === item.id ? opened : candidate,
+      ),
+    );
+    if (opened.kind === "pdf" && opened.dataUrl) {
+      setSelectedLibraryItem(null);
+      setActiveEpubBook(null);
+      setActiveStudyFile(libraryItemAsStudyFile(opened));
+      return;
+    }
+    if (opened.kind === "epub" && opened.dataUrl) {
+      try {
+        const blob = await fetch(opened.dataUrl).then((response) => response.blob());
+        const book = await readEpub(
+          new File([blob], opened.name, {
+            type: opened.mimeType || "application/epub+zip",
+          }),
+        );
+        setSelectedLibraryItem(null);
+        setActiveStudyFile(libraryItemAsStudyFile(opened));
+        setActiveEpubBook(book);
+        return;
+      } catch (error) {
+        setHistoryMessage(
+          error instanceof Error
+            ? error.message
+            : "This EPUB could not be opened.",
+        );
+      }
+    }
+    setSelectedLibraryItem(opened);
+  };
+
+  const moveToTrash = (
+    kind: TrashItem["kind"],
+    label: string,
+    payload: unknown,
+  ) => {
+    recordAction(`Moved ${label} to Trash`);
+    setTrashItems((current) => [createTrashItem(kind, label, payload), ...current]);
+    const id = (payload as { id?: string | number })?.id;
+    if (kind === "event") {
+      setCalendarEvents((current) => current.filter((item) => item.id !== id));
+    } else if (kind === "task") {
+      setTasks((current) => current.filter((item) => item.id !== id));
+      setStudyTasks((current) => current.filter((item) => item.id !== id));
+    } else if (kind === "post-it") {
+      setPostIts((current) => current.filter((item) => item.id !== id));
+    } else if (kind === "file") {
+      setLibraryItems((current) => current.filter((item) => item.id !== id));
+    } else if (kind === "note") {
+      if (typeof id === "number") {
+        setEntries((current) => current.filter((item) => item.id !== id));
+      } else {
+        setStudyNotes((current) => current.filter((item) => item.id !== id));
+      }
+    }
+  };
+
+  const restoreTrashItem = (trashItem: TrashItem) => {
+    recordAction(`Restored ${trashItem.label}`);
+    if (trashItem.kind === "event") {
+      setCalendarEvents((current) => [...current, trashItem.payload as CalendarEvent]);
+    } else if (trashItem.kind === "task") {
+      const task = trashItem.payload as TaskItem;
+      setTasks((current) => [...current, task]);
+      setStudyTasks((current) => [
+        ...current.filter((item) => item.id !== task.id),
+        {
+          id: task.id,
+          title: task.title,
+          detail: task.notes ?? "",
+          dueDate: task.dueDate,
+          dueTime: "",
+          priority: task.priority ?? "gentle",
+          calendar: "Personal",
+          reminder: "None",
+          repeat: "Never",
+          completed: task.completed,
+          createdAt: task.createdAt,
+        },
+      ]);
+    } else if (trashItem.kind === "post-it") {
+      setPostIts((current) => [...current, trashItem.payload as PostItNote]);
+    } else if (trashItem.kind === "file") {
+      const file = trashItem.payload as LibraryItem | StudyFileItem;
+      if ("mediaType" in file) {
+        setStudyFiles((current) => [...current, file]);
+      } else {
+        setLibraryItems((current) => [...current, file]);
+      }
+    } else if (trashItem.kind === "note") {
+      const note = trashItem.payload as JournalEntry | StudyNote;
+      if (typeof note.id === "number") {
+        setEntries((current) => [...current, note as JournalEntry]);
+      } else {
+        setStudyNotes((current) => [...current, note as StudyNote]);
+      }
+    }
+    setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
+  };
+
+  const deleteTrashItemForever = async (trashItem: TrashItem) => {
+    if (
+      !window.confirm(
+        `Delete “${trashItem.label}” permanently? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    const file =
+      trashItem.kind === "file"
+        ? (trashItem.payload as LibraryItem | StudyFileItem)
+        : null;
+    if (file && "mediaType" in file) {
+      if (isNative()) {
+        await AereaStorage.deleteDocument({ id: file.id }).catch(() => undefined);
+      } else {
+        await fetch(`/api/files/${file.id}`, { method: "DELETE" }).catch(
+          () => undefined,
+        );
+      }
+    } else if (file) {
+      if (file.nativeFileId && isNative()) {
+        await AereaStorage.deleteFile({ id: file.nativeFileId }).catch(
+          () => undefined,
+        );
+      }
+      if (file.cloudPath) {
+        await deleteAereaLibraryFile(file.cloudPath).catch(() => undefined);
+      }
+    }
+    if (file) {
+      setPdfAnnotations((current) => {
+        const next = { ...current };
+        delete next[file.id];
+        return next;
+      });
+      setPdfPageNotes((current) => {
+        const next = { ...current };
+        delete next[file.id];
+        return next;
+      });
+      setEpubReadingStates((current) => {
+        const next = { ...current };
+        delete next[file.id];
+        return next;
+      });
+    }
+    setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
+  };
+
+  const rescheduleTask = (task: TaskItem, dueDate: string | null) => {
+    recordAction(dueDate ? "Rescheduled task" : "Skipped task");
+    setTasks((current) =>
+      current.map((candidate) =>
+        candidate.id === task.id
+          ? {
+              ...candidate,
+              dueDate: dueDate ?? candidate.dueDate,
+              skipped: dueDate === null,
+              updatedAt: new Date().toISOString(),
+              rescheduleHistory: dueDate
+                ? [
+                    ...(candidate.rescheduleHistory ?? []),
+                    {
+                      from: candidate.dueDate,
+                      to: dueDate,
+                      at: new Date().toISOString(),
+                    },
+                  ]
+                : candidate.rescheduleHistory,
+            }
+          : candidate,
+      ),
+    );
+    if (dueDate) {
+      setStudyTasks((current) =>
+        current.map((candidate) =>
+          candidate.id === task.id
+            ? { ...candidate, dueDate }
+            : candidate,
+        ),
+      );
+    }
+  };
+
+  const toggleTaskCompleted = (taskId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    recordAction(task.completed ? "Reopened task" : "Completed task");
+    const completed = !task.completed;
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === taskId
+          ? { ...item, completed, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    setStudyTasks((current) =>
+      current.map((item) =>
+        item.id === taskId ? { ...item, completed } : item,
+      ),
+    );
+  };
+
+  const closeResetExperience = () => {
+    if (!resetExperience) return;
+    setResetPreferences((current) => ({
+      ...current,
+      [resetExperience === "morning" ? "lastMorningDate" : "lastNightDate"]:
+        todayKey,
+    }));
+    setResetCategory(null);
+    setResetExperience(null);
+  };
+
+  const goToCalendarDate = (dateKey: string) => {
+    const date = dateFromKey(dateKey);
+    setSelectedCalendarDate(dateKey);
+    setSelectedHomeDate(dateKey);
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    setJumpDate(dateKey);
+  };
   const sketchPaperSettings = {
     style: pageStyle,
     color: sketchPageColor,
@@ -2342,7 +3629,11 @@ export default function Home() {
   );
   useEffect(() => {
     if (!calendarOpen || !calendarScheduleOpen) {
-      setScheduleFocusOpen(false);
+      const closeFocusedSchedule = window.setTimeout(
+        () => setScheduleFocusOpen(false),
+        0,
+      );
+      return () => window.clearTimeout(closeFocusedSchedule);
     }
   }, [calendarScheduleOpen, calendarOpen]);
 
@@ -2357,7 +3648,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!calendarOpen || !calendarScheduleOpen) return;
-    const datedEvents = calendarEvents.filter((event) =>
+    const datedEvents = allCalendarEvents.filter((event) =>
       eventOccursOn(event, selectedCalendarDate),
     );
     if (datedEvents.length === 0) return;
@@ -2379,7 +3670,33 @@ export default function Home() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [calendarEvents, calendarOpen, calendarScheduleOpen, selectedCalendarDate, todayKey]);
+  }, [allCalendarEvents, calendarOpen, calendarScheduleOpen, selectedCalendarDate, todayKey]);
+
+  useEffect(() => {
+    if (!stateReady || resetExperience) return;
+    const hour = new Date().getHours();
+    let nextExperience: "morning" | "night" | null = null;
+    if (
+      resetPreferences.morningEnabled &&
+      hour >= 5 &&
+      hour < 12 &&
+      resetPreferences.lastMorningDate !== todayKey
+    ) {
+      nextExperience = "morning";
+    } else if (
+      resetPreferences.nightEnabled &&
+      (hour >= 19 || hour < 2) &&
+      resetPreferences.lastNightDate !== todayKey
+    ) {
+      nextExperience = "night";
+    }
+    if (!nextExperience) return;
+    const timer = window.setTimeout(
+      () => setResetExperience(nextExperience),
+      0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [resetExperience, resetPreferences, stateReady, todayKey]);
 
   useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
@@ -2397,7 +3714,7 @@ export default function Home() {
         ? "Todo el día"
         : nextEvent?.time || "Abre aérea para planear",
       temperature: activeTheme.icon,
-      progress: `${doneIds.length}/${reminders.length} recordatorios`,
+      progress: `${doneIds.length}/${reminders.length} recordatorios · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tareas`,
       theme: widgetTheme,
       daysJson: widgetDaysJson,
     }).catch(() => {
@@ -2407,8 +3724,10 @@ export default function Home() {
     appTheme,
     activeTheme.icon,
     doneIds.length,
+    reminders.length,
     stateReady,
     todayKey,
+    todayTasks,
     todayWidgetEvents,
     widgetDaysJson,
   ]);
@@ -2565,11 +3884,15 @@ export default function Home() {
   const savePostIt = () => {
     const text = postItDraft.text.trim();
     if (!text) return;
+    recordAction(editingPostItId ? "Edited post-it" : "Created post-it");
+    const updatedAt = new Date().toISOString();
 
     if (editingPostItId) {
       setPostIts((current) =>
         current.map((note) =>
-          note.id === editingPostItId ? { ...note, ...postItDraft, text } : note,
+          note.id === editingPostItId
+            ? { ...note, ...postItDraft, text, updatedAt }
+            : note,
         ),
       );
       setSelectedPostItId(editingPostItId);
@@ -2584,6 +3907,15 @@ export default function Home() {
         x: [24, 73, 68, 31][slot],
         y: [16, 26, 58, 77][slot],
         rotation: [-5, 5, 3, -4][slot],
+        width: 184,
+        height: 174,
+        zIndex: postIts.length + 1,
+        pinned: false,
+        locked: false,
+        archived: false,
+        style: "plain",
+        createdAt: updatedAt,
+        updatedAt,
       };
       setPostIts((current) => [...current, newPostIt]);
       setSelectedPostItId(id);
@@ -2592,16 +3924,339 @@ export default function Home() {
   };
 
   const deletePostIt = (id: string) => {
-    setPostIts((current) => current.filter((note) => note.id !== id));
+    const note = postIts.find((candidate) => candidate.id === id);
+    if (note) moveToTrash("post-it", "Post-it", note);
     setSelectedPostItId((current) => (current === id ? null : current));
     setPostItEditorOpen(false);
+  };
+
+  const updatePostIt = (
+    id: string,
+    label: string,
+    update: (postIt: PostItNote) => PostItNote,
+  ) => {
+    recordAction(label);
+    setPostIts((current) =>
+      current.map((postIt) =>
+        postIt.id === id
+          ? { ...update(postIt), updatedAt: new Date().toISOString() }
+          : postIt,
+      ),
+    );
+  };
+
+  const duplicatePostIt = (postIt: PostItNote) => {
+    recordAction("Duplicated post-it");
+    const now = new Date().toISOString();
+    const copy: PostItNote = {
+      ...postIt,
+      id: crypto.randomUUID(),
+      x: Math.min(91, postIt.x + 5),
+      y: Math.min(97, postIt.y + 5),
+      zIndex: Math.max(0, ...postIts.map((item) => item.zIndex ?? 0)) + 1,
+      pinned: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setPostIts((current) => [...current, copy]);
+    setSelectedPostItId(copy.id);
+  };
+
+  const updateSelectedPostIts = (
+    label: string,
+    update: (postIt: PostItNote) => PostItNote,
+  ) => {
+    if (selectedPostItIds.length === 0) return;
+    recordAction(label);
+    setPostIts((current) =>
+      current.map((postIt) =>
+        selectedPostItIds.includes(postIt.id)
+          ? { ...update(postIt), updatedAt: new Date().toISOString() }
+          : postIt,
+      ),
+    );
+  };
+
+  const setSelectedPostItLock = (locked: boolean) => {
+    if (selectedPostItIds.length === 0) return;
+    const selectedGroupIds = new Set(
+      postIts
+        .filter((item) => selectedPostItIds.includes(item.id))
+        .map((item) => item.groupId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    updateSelectedPostIts(
+      locked ? "Locked post-its" : "Unlocked post-its",
+      (item) => ({ ...item, locked }),
+    );
+    setPostItGroups((current) =>
+      current.map((group) =>
+        selectedGroupIds.has(group.id) ? { ...group, locked } : group,
+      ),
+    );
+  };
+
+  const togglePostItLock = (postIt: PostItNote) => {
+    const locked = !postIt.locked;
+    recordAction(locked ? "Locked post-it" : "Unlocked post-it");
+    setPostIts((current) =>
+      current.map((item) =>
+        item.id === postIt.id ||
+        (postIt.groupId && item.groupId === postIt.groupId)
+          ? { ...item, locked, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    if (postIt.groupId) {
+      setPostItGroups((current) =>
+        current.map((group) =>
+          group.id === postIt.groupId ? { ...group, locked } : group,
+        ),
+      );
+    }
+  };
+
+  const groupSelectedPostIts = () => {
+    if (selectedPostItIds.length < 2) return;
+    const name = window.prompt("Optional group name", "Ideas")?.trim() || "Group";
+    const group: PostItGroup = {
+      id: crypto.randomUUID(),
+      name,
+      locked: false,
+      archived: false,
+      createdAt: new Date().toISOString(),
+    };
+    recordAction("Grouped post-its");
+    setPostItGroups((current) => [...current, group]);
+    setPostIts((current) =>
+      current.map((postIt) =>
+        selectedPostItIds.includes(postIt.id)
+          ? { ...postIt, groupId: group.id }
+          : postIt,
+      ),
+    );
+    setSelectedPostItIds([]);
+  };
+
+  const ungroupSelectedPostIts = () => {
+    const groupIds = new Set(
+      postIts
+        .filter((postIt) => selectedPostItIds.includes(postIt.id))
+        .map((postIt) => postIt.groupId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    if (groupIds.size === 0) return;
+    recordAction("Ungrouped post-its");
+    setPostIts((current) =>
+      current.map((postIt) =>
+        postIt.groupId && groupIds.has(postIt.groupId)
+          ? { ...postIt, groupId: undefined }
+          : postIt,
+      ),
+    );
+    setPostItGroups((current) =>
+      current.filter((group) => !groupIds.has(group.id)),
+    );
+    setSelectedPostItIds([]);
+  };
+
+  const archiveSelectedPostIts = () => {
+    if (selectedPostItIds.length === 0) return;
+    const selectedGroupIds = new Set(
+      postIts
+        .filter((item) => selectedPostItIds.includes(item.id))
+        .map((item) => item.groupId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    updateSelectedPostIts("Archived post-its", (item) => ({
+      ...item,
+      archived: true,
+    }));
+    setPostItGroups((current) =>
+      current.map((group) =>
+        selectedGroupIds.has(group.id) ? { ...group, archived: true } : group,
+      ),
+    );
+    setSelectedPostItIds([]);
+  };
+
+  const archivePostIt = (postIt: PostItNote) => {
+    recordAction(postIt.groupId ? "Archived post-it group" : "Archived post-it");
+    setPostIts((current) =>
+      current.map((item) =>
+        item.id === postIt.id ||
+        (postIt.groupId && item.groupId === postIt.groupId)
+          ? { ...item, archived: true, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    if (postIt.groupId) {
+      setPostItGroups((current) =>
+        current.map((group) =>
+          group.id === postIt.groupId ? { ...group, archived: true } : group,
+        ),
+      );
+    }
+  };
+
+  const restoreArchivedPostIt = (postIt: PostItNote) => {
+    recordAction(postIt.groupId ? "Restored post-it group" : "Restored post-it");
+    setPostIts((current) =>
+      current.map((item) =>
+        item.id === postIt.id ||
+        (postIt.groupId && item.groupId === postIt.groupId)
+          ? { ...item, archived: false, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
+    if (postIt.groupId) {
+      setPostItGroups((current) =>
+        current.map((group) =>
+          group.id === postIt.groupId ? { ...group, archived: false } : group,
+        ),
+      );
+    }
+  };
+
+  const trashSelectedPostIts = () => {
+    const selected = postIts.filter((item) => selectedPostItIds.includes(item.id));
+    if (selected.length === 0) return;
+    if (!window.confirm(`Move ${selected.length} post-its to Trash?`)) return;
+    recordAction("Deleted selected post-its");
+    setTrashItems((current) => [
+      ...selected.map((item) => createTrashItem("post-it", "Post-it", item)),
+      ...current,
+    ]);
+    setPostIts((current) =>
+      current.filter((item) => !selectedPostItIds.includes(item.id)),
+    );
+    setSelectedPostItIds([]);
+  };
+
+  const changePostItLayer = (
+    id: string,
+    direction: "front" | "back" | "forward" | "backward",
+  ) => {
+    recordAction(
+      direction === "front"
+        ? "Brought post-it to front"
+        : direction === "back"
+          ? "Sent post-it to back"
+          : direction === "forward"
+            ? "Brought post-it forward"
+            : "Sent post-it backward",
+    );
+    setPostIts((current) => {
+      const ordered = [...current].sort(
+        (first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0),
+      );
+      const currentIndex = ordered.findIndex((item) => item.id === id);
+      if (currentIndex < 0) return current;
+      const [postIt] = ordered.splice(currentIndex, 1);
+      const targetIndex =
+        direction === "front"
+          ? ordered.length
+          : direction === "back"
+            ? 0
+            : direction === "forward"
+              ? Math.min(ordered.length, currentIndex + 1)
+              : Math.max(0, currentIndex - 1);
+      ordered.splice(targetIndex, 0, postIt);
+      const layers = new Map(
+        ordered.map((item, index) => [item.id, index + 1]),
+      );
+      return current.map((item) => ({
+        ...item,
+        zIndex: layers.get(item.id) ?? item.zIndex,
+        updatedAt: item.id === id ? new Date().toISOString() : item.updatedAt,
+      }));
+    });
+  };
+
+  const startPostItResize = (
+    event: ReactPointerEvent<HTMLElement>,
+    postIt: PostItNote,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (
+      postIt.locked ||
+      (postIt.groupId &&
+        postIts.some(
+          (item) => item.groupId === postIt.groupId && item.locked,
+        ))
+    ) return;
+    postItResizeRef.current = {
+      id: postIt.id,
+      pointerId: event.pointerId,
+      target: event.currentTarget,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: postIt.width ?? 184,
+      startHeight: postIt.height ?? 174,
+      historyRecorded: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const resizePostIt = (event: ReactPointerEvent<HTMLElement>) => {
+    const resize = postItResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!resize.historyRecorded) {
+      recordAction("Resized post-it");
+      resize.historyRecorded = true;
+    }
+    const width = Math.max(
+      120,
+      Math.min(360, resize.startWidth + event.clientX - resize.startX),
+    );
+    const height = Math.max(
+      100,
+      Math.min(340, resize.startHeight + event.clientY - resize.startY),
+    );
+    setPostIts((current) =>
+      current.map((item) =>
+        item.id === resize.id
+          ? {
+              ...item,
+              width: Math.round(width),
+              height: Math.round(height),
+              updatedAt: new Date().toISOString(),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const finishPostItResize = (event: ReactPointerEvent<HTMLElement>) => {
+    const resize = postItResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (resize.target.hasPointerCapture(event.pointerId)) {
+      resize.target.releasePointerCapture(event.pointerId);
+    }
+    postItResizeRef.current = null;
   };
 
   const startPostItDrag = (
     event: ReactPointerEvent<HTMLElement>,
     postIt: PostItNote,
   ) => {
-    if ((event.target as HTMLElement).closest("button")) return;
+    if (
+      (event.target as HTMLElement).closest(
+        "button, summary, input, textarea, select, .post-it-resize-handle",
+      )
+    ) return;
+    if (
+      postIt.locked ||
+      (postIt.groupId &&
+        postIts.some(
+          (item) => item.groupId === postIt.groupId && item.locked,
+        ))
+    ) return;
     const canvas = phoneCanvasRef.current;
     if (!canvas) return;
     const bounds = canvas.getBoundingClientRect();
@@ -2615,6 +4270,14 @@ export default function Home() {
       offsetY: event.clientY - centerY,
       startX: event.clientX,
       startY: event.clientY,
+      startPostItX: postIt.x,
+      startPostItY: postIt.y,
+      historyRecorded: false,
+      groupPositions: postIt.groupId
+        ? postIts
+            .filter((item) => item.groupId === postIt.groupId)
+            .map((item) => ({ id: item.id, x: item.x, y: item.y }))
+        : [{ id: postIt.id, x: postIt.x, y: postIt.y }],
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedPostItId(postIt.id);
@@ -2641,6 +4304,10 @@ export default function Home() {
       postItLongPressRef.current = null;
     }
     const bounds = canvas.getBoundingClientRect();
+    if (!drag.historyRecorded) {
+      recordAction("Moved post-it");
+      drag.historyRecorded = true;
+    }
     const x = Math.max(
       9,
       Math.min(91, ((event.clientX - bounds.left - drag.offsetX) / bounds.width) * 100),
@@ -2649,8 +4316,19 @@ export default function Home() {
       3,
       Math.min(97, ((event.clientY - bounds.top - drag.offsetY) / bounds.height) * 100),
     );
+    const deltaX = x - drag.startPostItX;
+    const deltaY = y - drag.startPostItY;
     setPostIts((current) =>
-      current.map((note) => (note.id === drag.id ? { ...note, x, y } : note)),
+      current.map((note) => {
+        const origin = drag.groupPositions.find((item) => item.id === note.id);
+        if (!origin) return note;
+        return {
+          ...note,
+          x: Math.max(9, Math.min(91, origin.x + deltaX)),
+          y: Math.max(3, Math.min(97, origin.y + deltaY)),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
     );
   };
 
@@ -2912,6 +4590,7 @@ export default function Home() {
   const saveClass = () => {
     const nextName = classDraft.name.trim();
     if (!nextName) return;
+    recordAction(editingClassId ? "Edited class" : "Created class");
 
     if (editingClassId) {
       const previous = classItems.find((item) => item.id === editingClassId);
@@ -2960,10 +4639,17 @@ export default function Home() {
       return;
     }
 
+    recordAction("Deleted class");
     const remaining = classItems.filter((item) => item.id !== editingClassId);
     setClassItems(remaining);
     setRecordings((current) =>
       current.filter((recording) => recording.className !== removed.name),
+    );
+    setEntityLinks((current) =>
+      current.filter(
+        (link) =>
+          !(link.fromType === "class" && link.fromId === removed.id),
+      ),
     );
     if (selectedClass === removed.name) {
       setSelectedClass(remaining[0]?.name ?? "");
@@ -2987,6 +4673,61 @@ export default function Home() {
         typeof update === "function" ? update(currentDay) : update;
       return { ...current, [todayKey]: nextDay };
     });
+  };
+
+  const saveReminderItem = (reminder: Reminder) => {
+    recordAction(
+      reminders.some((item) => item.id === reminder.id)
+        ? "Edited reminder"
+        : "Created reminder",
+    );
+    setReminders((current) =>
+      current.some((item) => item.id === reminder.id)
+        ? current.map((item) => (item.id === reminder.id ? reminder : item))
+        : [...current, reminder],
+    );
+  };
+
+  const completeReminderItem = (id: number) => {
+    recordAction("Completed reminder");
+    updateDoneIds((current) => Array.from(new Set([...current, id])));
+  };
+
+  const restoreReminderItem = (id: number) => {
+    recordAction("Restored reminder");
+    updateDoneIds((current) => current.filter((item) => item !== id));
+  };
+
+  const createReminder = () => {
+    const title = window.prompt("What should aérea remind you about?")?.trim();
+    if (!title) return;
+    const detail = window.prompt("Optional gentle detail", "")?.trim() ?? "";
+    recordAction("Created reminder");
+    setReminders((current) => [
+      ...current,
+      {
+        id: Date.now(),
+        title,
+        detail,
+        icon: "♡",
+        tint: ["blue", "yellow", "lilac"][current.length % 3],
+      },
+    ]);
+  };
+
+  const deleteReminder = (id: number) => {
+    const reminder = reminders.find((item) => item.id === id);
+    if (!reminder || !window.confirm(`Delete “${reminder.title}”?`)) return;
+    recordAction("Deleted reminder");
+    setReminders((current) => current.filter((item) => item.id !== id));
+    setReminderHistory((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([date, ids]) => [
+          date,
+          ids.filter((itemId) => itemId !== id),
+        ]),
+      ),
+    );
   };
 
   const chooseMood = (dateKey: string, mood: string) => {
@@ -3104,6 +4845,28 @@ export default function Home() {
       title: eventDraft.title.trim(),
       endDate: eventDraft.endDate || eventDraft.date,
     };
+    const conflict = allCalendarEvents.find(
+      (candidate) =>
+        candidate.id !== savedEvent.id &&
+        !candidate.allDay &&
+        !savedEvent.allDay &&
+        eventOccursOn(candidate, savedEvent.date) &&
+        rangesOverlap(
+          savedEvent.time,
+          savedEvent.endTime,
+          candidate.time,
+          candidate.endTime,
+        ),
+    );
+    if (
+      conflict &&
+      !window.confirm(
+        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Keep it anyway?`,
+      )
+    ) {
+      return;
+    }
+    recordAction(editingEventId ? "Edited event" : "Created event");
     setCalendarEvents((current) =>
       editingEventId
         ? current.map((item) =>
@@ -3111,7 +4874,52 @@ export default function Home() {
           )
         : [...current, savedEvent],
     );
+    setEntityLinks((current) => {
+      const withoutOldAttachments = current.filter(
+        (link) => !(link.fromType === "event" && link.fromId === savedEvent.id),
+      );
+      const createdAt = new Date().toISOString();
+      const attachments: EntityLink[] = (savedEvent.attachmentIds ?? []).map(
+        (fileId) => ({
+          id: crypto.randomUUID(),
+          fromType: "event",
+          fromId: savedEvent.id,
+          toType: "file",
+          toId: fileId,
+          createdAt,
+        }),
+      );
+      const noteLinks: EntityLink[] = (savedEvent.attachedNoteIds ?? []).map(
+        (noteId) => ({
+          id: crypto.randomUUID(),
+          fromType: "event",
+          fromId: savedEvent.id,
+          toType: "note",
+          toId: String(noteId),
+          createdAt,
+        }),
+      );
+      const recordingLinks: EntityLink[] = (
+        savedEvent.attachedRecordingIds ?? []
+      ).map((recordingId) => ({
+        id: crypto.randomUUID(),
+        fromType: "event",
+        fromId: savedEvent.id,
+        toType: "recording",
+        toId: String(recordingId),
+        createdAt,
+      }));
+      return [
+        ...withoutOldAttachments,
+        ...attachments,
+        ...noteLinks,
+        ...recordingLinks,
+      ];
+    });
     setSelectedCalendarDate(savedEvent.date);
+    if (savedEvent.sourceInboxId) {
+      markInboxProcessed(savedEvent.sourceInboxId, "event");
+    }
     setEventEditorOpen(false);
     setEditingEventId(null);
   };
@@ -3149,9 +4957,8 @@ export default function Home() {
   const deleteWholeEvent = () => {
     if (!eventDeleteRequest) return;
     const deletedId = eventDeleteRequest.eventId;
-    setCalendarEvents((current) =>
-      current.filter((event) => event.id !== deletedId),
-    );
+    const event = calendarEvents.find((candidate) => candidate.id === deletedId);
+    if (event) moveToTrash("event", event.title, event);
     setSelectedEventDetail((current) =>
       current?.id === deletedId ? null : current,
     );
@@ -3160,6 +4967,7 @@ export default function Home() {
 
   const deleteOnlyOccurrence = () => {
     if (!eventDeleteRequest) return;
+    recordAction("Deleted event occurrence");
     const { eventId, occurrenceDate } = eventDeleteRequest;
     setCalendarEvents((current) =>
       current.map((event) => {
@@ -3177,6 +4985,7 @@ export default function Home() {
 
   const deleteThisAndFutureOccurrences = () => {
     if (!eventDeleteRequest) return;
+    recordAction("Deleted future event occurrences");
     const { eventId, occurrenceDate } = eventDeleteRequest;
     setCalendarEvents((current) =>
       current.flatMap((event) => {
@@ -3195,23 +5004,428 @@ export default function Home() {
     setEventDraft((current) => ({ ...current, [key]: value }));
   };
 
-  const setEventTodoState = (
-    eventId: string,
-    todoIndex: number,
-    nextState: "done" | "missed",
-  ) => {
-    const updateEvent = (event: CalendarEvent) => {
-      if (event.id !== eventId) return event;
-      const todoStates = [...(event.todoStates ?? [])];
-      todoStates[todoIndex] =
-        todoStates[todoIndex] === nextState ? "pending" : nextState;
-      return { ...event, todoStates };
-    };
+  const duplicateCalendarEvent = (event: CalendarEvent) => {
+    if (event.eventType === "sports_event") return;
+    setEditingEventId(null);
+    setEventDraft({
+      ...makeEventDraft(event.date),
+      ...event,
+      title: `${event.title} (copy)`,
+      sourceInboxId: undefined,
+    });
+    setTodoDraft("");
+    setSelectedEventDetail(null);
+    setCalendarOpen(true);
+    setEventEditorOpen(true);
+  };
 
-    setCalendarEvents((current) => current.map(updateEvent));
-    setSelectedEventDetail((current) =>
-      current ? updateEvent(current) : current,
+  const toggleCalendarEventSelection = (event: CalendarEvent) => {
+    if (event.eventType === "sports_event") return;
+    setCalendarMultiSelect(true);
+    setSelectedEventIds((current) =>
+      current.includes(event.id)
+        ? current.filter((id) => id !== event.id)
+        : [...current, event.id],
     );
+  };
+
+  const moveCalendarEvent = (eventId: string, destinationDate: string) => {
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (!event || event.date === destinationDate) return;
+    const conflict = allCalendarEvents.find(
+      (candidate) =>
+        candidate.id !== event.id &&
+        !candidate.allDay &&
+        !event.allDay &&
+        eventOccursOn(candidate, destinationDate) &&
+        rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
+    );
+    if (
+      conflict &&
+      !window.confirm(
+        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Move it anyway?`,
+      )
+    ) {
+      return;
+    }
+    recordAction("Moved event");
+    setCalendarEvents((current) =>
+      current.map((candidate) =>
+        candidate.id === eventId
+          ? {
+              ...candidate,
+              date: destinationDate,
+              endDate:
+                candidate.endDate && candidate.endDate !== candidate.date
+                  ? addDays(
+                      destinationDate,
+                      Math.max(
+                        0,
+                        Math.round(
+                          (dateFromKey(candidate.endDate).getTime() -
+                            dateFromKey(candidate.date).getTime()) /
+                            86_400_000,
+                        ),
+                      ),
+                    )
+                  : destinationDate,
+            }
+          : candidate,
+      ),
+    );
+    setSelectedCalendarDate(destinationDate);
+  };
+
+  const startCalendarEventDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    calendarEvent: CalendarEvent,
+  ) => {
+    if (calendarEvent.eventType === "sports_event") return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const timer = window.setTimeout(() => {
+      suppressCalendarEventClickRef.current = true;
+      setDraggingCalendarEventId(calendarEvent.id);
+      setCalendarDragTarget(calendarEvent.date);
+    }, 360);
+    calendarEventDragRef.current = {
+      id: calendarEvent.id,
+      pointerId: event.pointerId,
+      timer,
+    };
+  };
+
+  const updateCalendarEventDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (!draggingCalendarEventId) return;
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-calendar-date]")
+      ?.dataset.calendarDate;
+    if (target) setCalendarDragTarget(target);
+  };
+
+  const finishCalendarEventDrag = () => {
+    const drag = calendarEventDragRef.current;
+    if (drag) window.clearTimeout(drag.timer);
+    if (draggingCalendarEventId && calendarDragTarget) {
+      moveCalendarEvent(draggingCalendarEventId, calendarDragTarget);
+    }
+    if (suppressCalendarEventClickRef.current) {
+      window.setTimeout(() => {
+        suppressCalendarEventClickRef.current = false;
+      }, 0);
+    }
+    calendarEventDragRef.current = null;
+    setDraggingCalendarEventId(null);
+    setCalendarDragTarget(null);
+  };
+
+  const moveCalendarEventTime = (
+    eventId: string,
+    destinationMinute: number,
+    duration: number,
+  ) => {
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (!event || event.allDay || event.eventType === "sports_event") return;
+
+    const latestMinute = 23 * 60 + 45;
+    const safeDuration = Math.max(15, Math.min(duration, latestMinute));
+    const start = Math.max(
+      0,
+      Math.min(latestMinute - safeDuration, destinationMinute),
+    );
+    const nextTime = timeFromMinutes(start);
+    const nextEndTime = timeFromMinutes(start + safeDuration);
+    if (event.time === nextTime && event.endTime === nextEndTime) return;
+
+    const conflict = allCalendarEvents.find(
+      (candidate) =>
+        candidate.id !== event.id &&
+        !candidate.allDay &&
+        eventOccursOn(candidate, selectedCalendarDate) &&
+        rangesOverlap(nextTime, nextEndTime, candidate.time, candidate.endTime),
+    );
+    if (
+      conflict &&
+      !window.confirm(
+        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Keep the new time anyway?`,
+      )
+    ) {
+      return;
+    }
+
+    recordAction("Changed event time");
+    setCalendarEvents((current) =>
+      current.map((candidate) =>
+        candidate.id === eventId
+          ? { ...candidate, time: nextTime, endTime: nextEndTime }
+          : candidate,
+      ),
+    );
+    setHistoryMessage(`Moved to ${nextTime}–${nextEndTime}`);
+  };
+
+  const startScheduleEventDrag = (
+    pointerEvent: ReactPointerEvent<HTMLButtonElement>,
+    event: CalendarEvent,
+    start: number,
+    end: number,
+  ) => {
+    if (event.eventType === "sports_event") return;
+    pointerEvent.stopPropagation();
+    pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
+    const dayBounds = pointerEvent.currentTarget
+      .closest<HTMLElement>(".agenda-v2-day")
+      ?.getBoundingClientRect();
+    if (!dayBounds) return;
+
+    const timer = window.setTimeout(() => {
+      const drag = scheduleEventDragRef.current;
+      if (!drag || drag.id !== event.id) return;
+      drag.active = true;
+      suppressScheduleEventClickRef.current = true;
+      setScheduleEventDragPreview({ id: drag.id, minute: drag.targetMinute });
+      navigator.vibrate?.(18);
+    }, 320);
+    scheduleEventDragRef.current = {
+      id: event.id,
+      pointerId: pointerEvent.pointerId,
+      timer,
+      active: false,
+      duration: Math.max(15, end - start),
+      dayTop: dayBounds.top,
+      dayHeight: Math.max(1, dayBounds.height),
+      targetMinute: start,
+    };
+  };
+
+  const updateScheduleEventDrag = (
+    pointerEvent: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const drag = scheduleEventDragRef.current;
+    if (!drag || drag.pointerId !== pointerEvent.pointerId || !drag.active) return;
+    pointerEvent.preventDefault();
+    pointerEvent.stopPropagation();
+    const ratio = (pointerEvent.clientY - drag.dayTop) / drag.dayHeight;
+    const latestMinute = 23 * 60 + 45;
+    drag.targetMinute = Math.max(
+      0,
+      Math.min(
+        latestMinute - drag.duration,
+        Math.round((ratio * SCHEDULE_TOTAL_MINUTES) / 15) * 15,
+      ),
+    );
+    setScheduleEventDragPreview({ id: drag.id, minute: drag.targetMinute });
+  };
+
+  const finishScheduleEventDrag = (
+    pointerEvent: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const drag = scheduleEventDragRef.current;
+    if (!drag || drag.pointerId !== pointerEvent.pointerId) return;
+    pointerEvent.stopPropagation();
+    window.clearTimeout(drag.timer);
+    if (drag.active && pointerEvent.type === "pointerup") {
+      moveCalendarEventTime(drag.id, drag.targetMinute, drag.duration);
+    }
+    if (drag.active) {
+      window.setTimeout(() => {
+        suppressScheduleEventClickRef.current = false;
+      }, 0);
+    }
+    if (pointerEvent.currentTarget.hasPointerCapture(pointerEvent.pointerId)) {
+      pointerEvent.currentTarget.releasePointerCapture(pointerEvent.pointerId);
+    }
+    scheduleEventDragRef.current = null;
+    setScheduleEventDragPreview(null);
+  };
+
+  const copyCurrentWeek = () => {
+    const destination = window.prompt(
+      "Choose any date in the destination week (YYYY-MM-DD)",
+      addDays(selectedCalendarDate, 7),
+    );
+    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
+    const sourceWeek = weekForDate(selectedCalendarDate).map((day) => day.key);
+    const destinationWeek = weekForDate(destination).map((day) => day.key);
+    const sourceEvents = calendarEvents.filter(
+      (event) => event.repeat === "Never" && sourceWeek.includes(event.date),
+    );
+    if (sourceEvents.length === 0) {
+      setHistoryMessage("There are no one-time events to copy this week.");
+      return;
+    }
+    const selectedSourceEvents = sourceEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    const eventsToCopy =
+      selectedSourceEvents.length > 0 ? selectedSourceEvents : sourceEvents;
+    const planned = eventsToCopy.map((event) => {
+      const dayIndex = sourceWeek.indexOf(event.date);
+      const date = destinationWeek[dayIndex];
+      const endDayOffset = event.endDate
+        ? Math.max(
+            0,
+            Math.round(
+              (dateFromKey(event.endDate).getTime() -
+                dateFromKey(event.date).getTime()) /
+                86_400_000,
+            ),
+          )
+        : 0;
+      const duplicate = calendarEvents.some(
+        (candidate) =>
+          candidate.date === date &&
+          candidate.time === event.time &&
+          candidate.title.trim().toLowerCase() ===
+            event.title.trim().toLowerCase(),
+      );
+      const conflict = !event.allDay
+        ? allCalendarEvents.find(
+            (candidate) =>
+              !candidate.allDay &&
+              eventOccursOn(candidate, date) &&
+              rangesOverlap(
+                event.time,
+                event.endTime,
+                candidate.time,
+                candidate.endTime,
+              ),
+          )
+        : undefined;
+      return {
+        event,
+        date,
+        endDate: addDays(date, endDayOffset),
+        duplicate,
+        conflict,
+      };
+    });
+    const preview = planned
+      .map(({ event, duplicate, conflict }) =>
+        `${event.title} · ${eventTimeLabel(event)}${
+          duplicate
+            ? " · duplicate (skip)"
+            : conflict
+              ? ` · overlaps ${conflict.title}`
+              : ""
+        }`,
+      )
+      .join("\n");
+    if (
+      !window.confirm(
+        `Copy ${eventsToCopy.length} ${
+          selectedSourceEvents.length > 0 ? "selected " : ""
+        }events?\n\n${preview}`,
+      )
+    ) return;
+    recordAction("Copied week");
+    setCalendarEvents((current) => [
+      ...current,
+      ...planned
+        .filter((item) => !item.duplicate)
+        .map(({ event, date, endDate }) => ({
+          ...event,
+          id: crypto.randomUUID(),
+          date,
+          endDate,
+          sourceInboxId: undefined,
+        })),
+    ]);
+    setSelectedCalendarDate(destination);
+    setSelectedEventIds([]);
+  };
+
+  const deleteSelectedEvents = () => {
+    const events = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (events.length === 0) return;
+    if (!window.confirm(`Move ${events.length} events to Trash?`)) return;
+    recordAction("Deleted selected events");
+    setTrashItems((current) => [
+      ...events.map((event) => createTrashItem("event", event.title, event)),
+      ...current,
+    ]);
+    setCalendarEvents((current) =>
+      current.filter((event) => !selectedEventIds.includes(event.id)),
+    );
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
+  };
+
+  const moveSelectedEvents = () => {
+    const selected = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (selected.length === 0) return;
+    const firstDate = [...selected].sort((a, b) => a.date.localeCompare(b.date))[0].date;
+    const destination = window.prompt(
+      "Move the first selected event to (YYYY-MM-DD)",
+      addDays(firstDate, 1),
+    );
+    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
+    const offset = Math.round(
+      (dateFromKey(destination).getTime() - dateFromKey(firstDate).getTime()) /
+        86_400_000,
+    );
+    const hasConflict = selected.some((event) => {
+      const targetDate = addDays(event.date, offset);
+      return allCalendarEvents.some(
+        (candidate) =>
+          !selectedEventIds.includes(candidate.id) &&
+          !candidate.allDay &&
+          !event.allDay &&
+          eventOccursOn(candidate, targetDate) &&
+          rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
+      );
+    });
+    if (hasConflict && !window.confirm("One or more moved events overlap another event. Keep them anyway?")) return;
+    recordAction("Moved selected events");
+    setCalendarEvents((current) =>
+      current.map((event) =>
+        selectedEventIds.includes(event.id)
+          ? {
+              ...event,
+              date: addDays(event.date, offset),
+              endDate: addDays(event.endDate || event.date, offset),
+            }
+          : event,
+      ),
+    );
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
+    goToCalendarDate(destination);
+  };
+
+  const recolorSelectedEvents = (color: EventColor) => {
+    if (selectedEventIds.length === 0) return;
+    recordAction("Changed selected event colors");
+    setCalendarEvents((current) =>
+      current.map((event) =>
+        selectedEventIds.includes(event.id) ? { ...event, color } : event,
+      ),
+    );
+  };
+
+  const duplicateSelectedEvents = () => {
+    const selected = calendarEvents.filter((event) =>
+      selectedEventIds.includes(event.id),
+    );
+    if (selected.length === 0) return;
+    recordAction("Duplicated selected events");
+    setCalendarEvents((current) => [
+      ...current,
+      ...selected.map((event) => ({
+        ...event,
+        id: crypto.randomUUID(),
+        title: `${event.title} (copy)`,
+        sourceInboxId: undefined,
+      })),
+    ]);
+    setSelectedEventIds([]);
+    setCalendarMultiSelect(false);
   };
 
   const toggleHabit = (habitId: number, dayIndex = 3) => {
@@ -3229,8 +5443,41 @@ export default function Home() {
     );
   };
 
+  const handleEventTodoClick = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ) => {
+    const eventId = event.currentTarget.dataset.eventId;
+    const todoIndex = Number(event.currentTarget.dataset.todoIndex);
+    const nextState = event.currentTarget.dataset.todoState;
+    if (
+      !eventId ||
+      !Number.isInteger(todoIndex) ||
+      (nextState !== "done" && nextState !== "missed")
+    ) {
+      return;
+    }
+
+    recordAction("Changed event checklist");
+    setCalendarEvents((current) =>
+      current.map((calendarEvent) =>
+        withToggledEventTodoState(
+          calendarEvent,
+          eventId,
+          todoIndex,
+          nextState,
+        ),
+      ),
+    );
+    setSelectedEventDetail((current) =>
+      current
+        ? withToggledEventTodoState(current, eventId, todoIndex, nextState)
+        : current,
+    );
+  };
+
   const saveJournalEntry = () => {
     if (!journalText.trim()) return;
+    recordAction("Created note");
     const mood =
       moods.find((item) => item.label === moodHistory[todayKey])?.face ??
       journalFaces[entries.length % journalFaces.length];
@@ -3247,7 +5494,9 @@ export default function Home() {
   };
 
   const deleteJournalEntry = (id: number) => {
-    setEntries((current) => current.filter((entry) => entry.id !== id));
+    const entry = entries.find((candidate) => candidate.id === id);
+    if (!entry) return;
+    moveToTrash("note", `Note · ${entry.date}`, entry);
     setSelectedJournalEntry((current) =>
       current?.id === id ? null : current,
     );
@@ -3278,6 +5527,7 @@ export default function Home() {
           type: recorder.mimeType || "audio/webm",
         });
         const url = isNative() ? await blobAsDataUrl(blob) : URL.createObjectURL(blob);
+        recordAction("Created class recording");
         setRecordings((current) => [
           {
             id: Date.now(),
@@ -3323,6 +5573,7 @@ export default function Home() {
     if (editingRecordingId === null) return;
     const nextName = recordingEditDraft.name.trim();
     if (!nextName) return;
+    recordAction("Edited class recording");
     setRecordings((current) =>
       current.map((recording) =>
         recording.id === editingRecordingId
@@ -3339,6 +5590,7 @@ export default function Home() {
 
   const deleteRecording = (recording: Recording) => {
     if (!window.confirm(`Delete “${recording.name}”?`)) return;
+    recordAction("Deleted class recording");
     if (recording.url?.startsWith("blob:")) {
       URL.revokeObjectURL(recording.url);
     }
@@ -3859,7 +6111,7 @@ export default function Home() {
       size: penSize,
       points: [point],
     };
-    sketchStrokeStartedAtRef.current = performance.now();
+    sketchStrokeStartedAtRef.current = event.timeStamp;
     activeSketchPointerRef.current = event.pointerId;
     sketchRedoRef.current = [];
   };
@@ -4002,6 +6254,10 @@ export default function Home() {
       activeStrokeRef.current
     ) {
       const stroke = activeStrokeRef.current;
+      const gestureDuration = Math.max(
+        0,
+        event.timeStamp - sketchStrokeStartedAtRef.current,
+      );
       if (stroke.tool === "lasso") {
         const box = strokeBounds(stroke);
         const ids = sketchStrokesRef.current
@@ -4021,7 +6277,7 @@ export default function Home() {
       if (
         scratchToErase &&
         ["pen", "pencil"].includes(stroke.tool) &&
-        performance.now() - sketchStrokeStartedAtRef.current < 1800 &&
+        gestureDuration < 1800 &&
         isScratchGesture(stroke)
       ) {
         const box = strokeBounds(stroke);
@@ -4043,7 +6299,7 @@ export default function Home() {
         straightenOnHold &&
         stroke.tool === "pen" &&
         stroke.points.length > 1 &&
-        performance.now() - sketchStrokeStartedAtRef.current >= 520
+        gestureDuration >= 520
       ) {
         stroke.points = [stroke.points[0], stroke.points[stroke.points.length - 1]];
         redrawSketch();
@@ -4287,10 +6543,22 @@ export default function Home() {
           if (!response.ok) throw new Error("Could not refresh your study files.");
           return (await response.json()) as { files: StudyFileItem[] };
         });
-    setStudyFiles(payload.files || []);
+    setStudyFiles((current) =>
+      (payload.files || []).map((file) => {
+        const metadata = current.find((item) => item.id === file.id);
+        return {
+          ...file,
+          favorite: metadata?.favorite,
+          collectionIds: metadata?.collectionIds,
+          lastOpenedAt: metadata?.lastOpenedAt,
+          readerLocation: metadata?.readerLocation,
+        };
+      }),
+    );
   };
 
   const importStudyFiles = async (files: File[]) => {
+    if (files.length > 0) recordAction("Imported Library files");
     for (const file of files) {
       if (file.size === 0) continue;
       if (file.size > 40 * 1024 * 1024) {
@@ -4332,30 +6600,22 @@ export default function Home() {
   };
 
   const deleteStudyFile = async (file: StudyFileItem) => {
-    if (!window.confirm(`Delete “${file.name}” and its stored file?`)) return;
-    if (isNative()) {
-      await AereaStorage.deleteDocument({ id: file.id });
-    } else {
-      const response = await fetch(`/api/files/${file.id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Could not delete this file.");
-    }
+    if (!window.confirm(`Move “${file.name}” to Trash for 30 days?`)) return;
+    recordAction("Moved Library file to Trash");
+    setTrashItems((current) => [createTrashItem("file", file.name, file), ...current]);
     setStudyFiles((current) => current.filter((item) => item.id !== file.id));
-    setPdfAnnotations((current) => {
-      const next = { ...current };
-      delete next[file.id];
-      return next;
-    });
-    setEpubReadingStates((current) => {
-      const next = { ...current };
-      delete next[file.id];
-      return next;
-    });
   };
 
   const studyFileSource = (file: StudyFileItem) =>
     file.dataUrl || `/api/files/${file.id}`;
 
   const openStudyFile = async (file: StudyFileItem) => {
+    const lastOpenedAt = new Date().toISOString();
+    setStudyFiles((current) =>
+      current.map((item) =>
+        item.id === file.id ? { ...item, lastOpenedAt } : item,
+      ),
+    );
     setStudyReaderMessage("");
     setActiveEpubBook(null);
     let readableFile = file;
@@ -4363,7 +6623,7 @@ export default function Home() {
       try {
         setStudyReaderMessage("Opening your private file…");
         const payload = await AereaStorage.getDocument({ id: file.id });
-        readableFile = { ...file, dataUrl: payload.dataUrl };
+        readableFile = { ...file, dataUrl: payload.dataUrl, lastOpenedAt };
         setStudyReaderMessage("");
       } catch (error) {
         setStudyReaderMessage(
@@ -4705,7 +6965,7 @@ export default function Home() {
             {extendedCalendarDays.map((calendarDay) => {
               const { date, currentMonth } = calendarDay;
               const dayKey = localDateKey(date);
-              const dayEvents = calendarEvents
+              const dayEvents = allCalendarEvents
                 .filter(
                   (calendarEvent) =>
                     eventOccursOn(calendarEvent, dayKey) &&
@@ -4947,36 +7207,10 @@ export default function Home() {
               pending={pending}
               completed={completed}
               reminders={reminders}
-              saveReminder={(reminder) =>
-                setReminders((current) =>
-                  current.some((item) => item.id === reminder.id)
-                    ? current.map((item) =>
-                        item.id === reminder.id ? reminder : item,
-                      )
-                    : [...current, reminder],
-                )
-              }
-              deleteReminder={(reminderId) => {
-                setReminders((current) =>
-                  current.filter((item) => item.id !== reminderId),
-                );
-                setReminderHistory((current) =>
-                  Object.fromEntries(
-                    Object.entries(current).map(([dateKey, ids]) => [
-                      dateKey,
-                      ids.filter((id) => id !== reminderId),
-                    ]),
-                  ),
-                );
-              }}
-              completeReminder={(id) =>
-                updateDoneIds((current) => [...current, id])
-              }
-              restoreReminder={(id) =>
-                updateDoneIds((current) =>
-                  current.filter((item) => item !== id),
-                )
-              }
+              saveReminder={saveReminderItem}
+              deleteReminder={deleteReminder}
+              completeReminder={completeReminderItem}
+              restoreReminder={restoreReminderItem}
               openCalendar={openCalendarAtToday}
               yesterdayDoneCount={yesterdayDoneCount}
               selectedDate={selectedHomeDate}
@@ -5010,7 +7244,9 @@ export default function Home() {
                 <div>
                   <p className="tiny-label">TODAY&apos;S PROGRESS</p>
                   <h3>
-                    {habitCompletions === habits.length
+                    {habits.length === 0
+                      ? "Your first habit can start softly."
+                      : habitCompletions === habits.length
                       ? "Every little promise kept!"
                       : "You are growing gently."}
                   </h3>
@@ -5214,11 +7450,19 @@ export default function Home() {
                   />
                   <div className="spaces-grid">
                     <SpaceCard
+                      title="Inbox"
+                      subtitle="Quick captures to process later"
+                      color="space-peach"
+                      icon="＋"
+                      note={`${inboxItems.filter((item) => !(item.processedAs?.length)).length} waiting`}
+                      onClick={() => setSpace("inbox")}
+                    />
+                    <SpaceCard
                       title="Library"
                       subtitle="Notes, PDFs & books"
                       color="space-lilac"
                       icon="▥"
-                      note={`${studyNotes.length + studyFiles.length} saved items`}
+                      note={`${studyNotes.length + studyFiles.length + libraryItems.length} saved items`}
                       onClick={() => setSpace("library")}
                     />
                     <SpaceCard
@@ -5237,6 +7481,22 @@ export default function Home() {
                       note="Android + aérea"
                       onClick={openCalendarAtToday}
                     />
+                    <SpaceCard
+                      title="Trash"
+                      subtitle="Recoverable for 30 days"
+                      color="space-lilac"
+                      icon="♲"
+                      note={`${trashItems.length} items`}
+                      onClick={() => setSpace("trash")}
+                    />
+                    <SpaceCard
+                      title="Post-it Archive"
+                      subtitle="Saved for later, never deleted"
+                      color="space-blue"
+                      icon="▱"
+                      note={`${postIts.filter((item) => item.archived).length} archived`}
+                      onClick={() => setSpace("postit-archive")}
+                    />
                   </div>
                 </>
               )}
@@ -5244,13 +7504,240 @@ export default function Home() {
               {space === "library" && (
                 <StudyLibrary
                   notes={studyNotes}
-                  files={studyFiles}
-                  onNotesChange={setStudyNotes}
-                  onOpenFile={(file) => void openStudyFile(file)}
-                  onDeleteFile={(file) => void deleteStudyFile(file)}
+                  files={[
+                    ...studyFiles,
+                    ...libraryItems.map(libraryItemAsStudyFile),
+                  ]}
+                  onNotesChange={(notes) => {
+                    recordAction("Edited Library notes");
+                    setStudyNotes(notes);
+                  }}
+                  onDeleteNote={(note) =>
+                    moveToTrash("note", note.title || "Library note", note)
+                  }
+                  onOpenFile={(file) => {
+                    const capturedFile = libraryItems.find(
+                      (item) => item.id === file.id,
+                    );
+                    if (capturedFile) {
+                      void openLibraryItem(capturedFile);
+                    } else {
+                      void openStudyFile(file);
+                    }
+                  }}
+                  onDeleteFile={(file) => {
+                    const capturedFile = libraryItems.find(
+                      (item) => item.id === file.id,
+                    );
+                    if (capturedFile) {
+                      if (
+                        window.confirm(
+                          `Move “${capturedFile.name}” to Trash for 30 days?`,
+                        )
+                      ) {
+                        moveToTrash("file", capturedFile.name, capturedFile);
+                      }
+                    } else {
+                      void deleteStudyFile(file);
+                    }
+                  }}
                   onImportFiles={importStudyFiles}
+                  collections={libraryCollections}
+                  onCollectionsChange={(collections) => {
+                    recordAction("Updated Library collections");
+                    setLibraryCollections(collections);
+                  }}
+                  onFilesChange={(files) => {
+                    const capturedIds = new Set(
+                      libraryItems.map((item) => item.id),
+                    );
+                    setStudyFiles(
+                      files.filter((file) => !capturedIds.has(file.id)),
+                    );
+                    const byId = new Map(files.map((file) => [file.id, file]));
+                    setLibraryItems((current) =>
+                      current.map((item) => {
+                        const file = byId.get(item.id);
+                        if (!file) return item;
+                        return {
+                          ...item,
+                          favorite: file.favorite,
+                          collectionIds: file.collectionIds,
+                          lastOpenedAt: file.lastOpenedAt,
+                          readerLocation: {
+                            ...item.readerLocation,
+                            page: file.readerLocation?.page,
+                            offset: file.readerLocation?.offset,
+                            zoom: file.readerLocation?.zoom,
+                            chapter:
+                              file.readerLocation?.chapter !== undefined
+                                ? String(file.readerLocation.chapter)
+                                : item.readerLocation?.chapter,
+                            percentage: file.readerLocation?.percentage,
+                          },
+                          updatedAt: file.updatedAt,
+                        };
+                      }),
+                    );
+                  }}
+                  usedInForFile={(fileId) =>
+                    entityLinks
+                      .filter((link) => link.toType === "file" && link.toId === fileId)
+                      .map((link) => {
+                        if (link.fromType === "event") {
+                          return calendarEvents.find((event) => event.id === link.fromId)?.title;
+                        }
+                        if (link.fromType === "task") {
+                          return tasks.find((task) => task.id === link.fromId)?.title;
+                        }
+                        if (link.fromType === "class") {
+                          return classItems.find((item) => item.id === link.fromId)?.name;
+                        }
+                        return undefined;
+                      })
+                      .filter((label): label is string => Boolean(label))
+                  }
                   onBack={() => setSpace("menu")}
                 />
+              )}
+
+              {space === "inbox" && (
+                <section className="feature-space inbox-space">
+                  <InnerHeader
+                    label="CAPTURE NOW · ORGANIZE LATER"
+                    title="Inbox"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <div className="feature-space-toolbar">
+                    <div>
+                      <strong>Nothing gets lost.</strong>
+                      <p>The original capture stays here after you convert it.</p>
+                    </div>
+                    <button type="button" onClick={() => setQuickCaptureOpen(true)}>
+                      ＋ Quick Capture
+                    </button>
+                  </div>
+                  <div className="inbox-list">
+                    {inboxItems.map((item) => (
+                      <article className="inbox-item" key={item.id}>
+                        <span className="inbox-kind">{item.kind}</span>
+                        <div>
+                          <strong>{item.originalName || item.text}</strong>
+                          {item.originalName && item.text !== item.originalName && (
+                            <p>{item.text}</p>
+                          )}
+                          <small>
+                            {new Date(item.createdAt).toLocaleString()}
+                            {item.processedAs?.length
+                              ? ` · ${item.processedAs.join(", ")}`
+                              : " · unclassified"}
+                          </small>
+                        </div>
+                        <div className="inbox-convert-actions" aria-label="Convert capture">
+                          {(["event", "task", "post-it", "note", "library"] as const).map(
+                            (destination) => (
+                              <button
+                                type="button"
+                                key={destination}
+                                onClick={() => convertInboxItem(item, destination)}
+                              >
+                                {destination}
+                              </button>
+                            ),
+                          )}
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => discardInboxItem(item)}
+                          >
+                            discard
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                    {inboxItems.length === 0 && (
+                      <p className="empty-feature-space">Inbox is clear ♡</p>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {space === "trash" && (
+                <section className="feature-space trash-space">
+                  <InnerHeader
+                    label="RECOVERABLE FOR 30 DAYS"
+                    title="Trash"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <p className="trash-explainer">
+                    Archive keeps things for later. Trash is for deleted items and
+                    removes them automatically after 30 days.
+                  </p>
+                  <div className="trash-list">
+                    {trashItems.map((item) => (
+                      <article key={item.id}>
+                        <span>{item.kind}</span>
+                        <div>
+                          <strong>{item.label}</strong>
+                          <small>{trashDaysRemaining(item)} days remaining</small>
+                        </div>
+                        <button type="button" onClick={() => restoreTrashItem(item)}>
+                          Restore
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={() => void deleteTrashItemForever(item)}
+                        >
+                          Delete forever
+                        </button>
+                      </article>
+                    ))}
+                    {trashItems.length === 0 && (
+                      <p className="empty-feature-space">Trash is empty ♡</p>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {space === "postit-archive" && (
+                <section className="feature-space postit-archive-space">
+                  <InnerHeader
+                    label="ARCHIVE · NOT TRASH"
+                    title="Archived post-its"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <p className="trash-explainer">
+                    These notes are hidden from their pages but keep their original
+                    position, color and content.
+                  </p>
+                  <div className="trash-list">
+                    {postIts.filter((item) => item.archived).map((postIt) => (
+                      <article key={postIt.id}>
+                        <span>post-it</span>
+                        <div>
+                          <strong>{notePreview(postIt.text, 60)}</strong>
+                          <small>{postIt.page}</small>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => restoreArchivedPostIt(postIt)}
+                        >
+                          Restore
+                        </button>
+                        <button type="button" onClick={() => duplicatePostIt({ ...postIt, archived: false })}>
+                          Duplicate
+                        </button>
+                        <button type="button" className="danger" onClick={() => deletePostIt(postIt.id)}>
+                          Trash
+                        </button>
+                      </article>
+                    ))}
+                    {postIts.every((item) => !item.archived) && (
+                      <p className="empty-feature-space">Archive is empty ♡</p>
+                    )}
+                  </div>
+                </section>
               )}
 
               {space === "classes" && (
@@ -5371,6 +7858,163 @@ export default function Home() {
                           <p className="record-error">{recordingError}</p>
                         )}
                       </article>
+                      {selectedClassItem && (
+                        <article className="class-materials card">
+                          <div className="section-heading">
+                            <div>
+                              <p className="tiny-label">ATTACHED</p>
+                              <h3>Files & notes for {selectedClass}</h3>
+                            </div>
+                          </div>
+                          <div className="class-attached-items">
+                            {entityLinks
+                              .filter(
+                                (link) =>
+                                  link.fromType === "class" &&
+                                  link.fromId === selectedClassItem.id,
+                              )
+                              .map((link) => {
+                                const file =
+                                  link.toType === "file"
+                                    ? libraryItems.find(
+                                        (item) => item.id === link.toId,
+                                      )
+                                    : null;
+                                const studyFile =
+                                  link.toType === "file"
+                                    ? studyFiles.find((item) => item.id === link.toId)
+                                    : null;
+                                const note =
+                                  link.toType === "note"
+                                    ? entries.find(
+                                        (entry) => String(entry.id) === link.toId,
+                                      )
+                                    : null;
+                                if (file) {
+                                  return (
+                                    <button
+                                      key={link.id}
+                                      onClick={() => void openLibraryItem(file)}
+                                    >
+                                      {file.kind === "pdf" ? "📄" : "▤"} {file.name}
+                                    </button>
+                                  );
+                                }
+                                if (studyFile) {
+                                  return (
+                                    <button
+                                      key={link.id}
+                                      onClick={() => void openStudyFile(studyFile)}
+                                    >
+                                      {studyFile.kind === "pdf" ? "📄" : "▤"} {studyFile.name}
+                                    </button>
+                                  );
+                                }
+                                if (note) {
+                                  return (
+                                    <button
+                                      key={link.id}
+                                      onClick={() => setSelectedJournalEntry(note)}
+                                    >
+                                      📝 {notePreview(note.text, 42)}
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })}
+                            {classRecordings.map((recording) => (
+                              <span key={`recording-${recording.id}`}>
+                                🎙 {recording.name}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="class-material-pickers">
+                            <details>
+                              <summary>Attach from Library</summary>
+                              <div className="entity-attachment-picker">
+                                {[
+                                  ...libraryItems
+                                    .filter((item) => !item.archived)
+                                    .map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
+                                  ...studyFiles.map((item) => ({
+                                    id: item.id,
+                                    name: item.name,
+                                    kind: item.kind,
+                                  })),
+                                ]
+                                  .map((item) => {
+                                    const checked = hasEntityLink(
+                                      "class",
+                                      selectedClassItem.id,
+                                      "file",
+                                      item.id,
+                                    );
+                                    return (
+                                      <label key={item.id}>
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() =>
+                                            toggleEntityLink(
+                                              "class",
+                                              selectedClassItem.id,
+                                              "file",
+                                              item.id,
+                                              checked
+                                                ? "Detached file from class"
+                                                : "Attached file to class",
+                                            )
+                                          }
+                                        />
+                                        {item.kind === "pdf" ? "📄" : "▤"} {item.name}
+                                      </label>
+                                    );
+                                  })}
+                                {libraryItems.length + studyFiles.length === 0 && (
+                                  <small>Your Library is empty.</small>
+                                )}
+                              </div>
+                            </details>
+                            <details>
+                              <summary>Attach a note</summary>
+                              <div className="entity-attachment-picker">
+                                {entries.map((entry) => {
+                                  const noteId = String(entry.id);
+                                  const checked = hasEntityLink(
+                                    "class",
+                                    selectedClassItem.id,
+                                    "note",
+                                    noteId,
+                                  );
+                                  return (
+                                    <label key={entry.id}>
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() =>
+                                          toggleEntityLink(
+                                            "class",
+                                            selectedClassItem.id,
+                                            "note",
+                                            noteId,
+                                            checked
+                                              ? "Detached note from class"
+                                              : "Attached note to class",
+                                          )
+                                        }
+                                      />
+                                      📝 {notePreview(entry.text, 44)}
+                                    </label>
+                                  );
+                                })}
+                                {entries.length === 0 && (
+                                  <small>No notes yet.</small>
+                                )}
+                              </div>
+                            </details>
+                          </div>
+                        </article>
+                      )}
                       <div className="recording-list">
                         <div className="section-heading">
                           <div>
@@ -5551,14 +8195,14 @@ export default function Home() {
                         <div className="sketch-history-controls">
                           <button
                             onClick={undoDrawing}
-                            disabled={!canUndo}
+                            disabled={!canUndoSketch}
                             aria-label="Undo last stroke"
                           >
                             <span>↶</span> Undo
                           </button>
                           <button
                             onClick={redoDrawing}
-                            disabled={!canRedo}
+                            disabled={!canRedoSketch}
                             aria-label="Redo stroke"
                           >
                             <span>↷</span> Redo
@@ -5826,14 +8470,14 @@ export default function Home() {
                         <div className="sketch-fullscreen-actions">
                           <button
                             onClick={undoDrawing}
-                            disabled={!canUndo}
+                            disabled={!canUndoSketch}
                             aria-label="Undo last stroke"
                           >
                             ↶
                           </button>
                           <button
                             onClick={redoDrawing}
-                            disabled={!canRedo}
+                            disabled={!canRedoSketch}
                             aria-label="Redo stroke"
                           >
                             ↷
@@ -6079,7 +8723,11 @@ export default function Home() {
           >
             {visiblePostIts.map((postIt) => (
               <article
-                className={`movable-post-it ${postIt.color}`}
+                className={`movable-post-it ${postIt.color} ${
+                  postIt.locked ? "locked" : ""
+                } ${postIt.pinned ? "pinned" : ""} ${
+                  selectedPostItIds.includes(postIt.id) ? "multi-selected" : ""
+                }`}
                 key={postIt.id}
                 style={
                   {
@@ -6087,6 +8735,9 @@ export default function Home() {
                     "--post-it-x": `${postIt.x}%`,
                     "--post-it-y": `${postIt.y}%`,
                     "--post-it-rotation": `${postIt.rotation}deg`,
+                    "--post-it-width": `${postIt.width ?? 184}px`,
+                    "--post-it-height": `${postIt.height ?? 174}px`,
+                    zIndex: postIt.zIndex ?? 1,
                   } as CSSProperties
                 }
                 onPointerDown={(event) => startPostItDrag(event, postIt)}
@@ -6106,6 +8757,79 @@ export default function Home() {
               >
                 <span className="post-it-tape" aria-hidden="true" />
                 <p>{postIt.text}</p>
+                {selectedPostItId === postIt.id && (
+                  <div className="post-it-mini-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedPostItIds((current) => {
+                          const relatedIds = postIt.groupId
+                            ? postIts
+                                .filter((item) => item.groupId === postIt.groupId)
+                                .map((item) => item.id)
+                            : [postIt.id];
+                          const allSelected = relatedIds.every((id) =>
+                            current.includes(id),
+                          );
+                          return allSelected
+                            ? current.filter((id) => !relatedIds.includes(id))
+                            : Array.from(new Set([...current, ...relatedIds]));
+                        })
+                      }
+                      title="Select multiple"
+                    >
+                      {selectedPostItIds.includes(postIt.id) ? "✓" : "○"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updatePostIt(postIt.id, postIt.pinned ? "Unpinned post-it" : "Pinned post-it", (item) => ({
+                          ...item,
+                          pinned: !item.pinned,
+                        }))
+                      }
+                      title={postIt.pinned ? "Unpin" : "Pin"}
+                    >
+                      {postIt.pinned ? "◇" : "◆"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePostItLock(postIt)}
+                      title={postIt.locked ? "Unlock position" : "Lock position"}
+                    >
+                      {postIt.locked ? "🔒" : "♙"}
+                    </button>
+                    <button type="button" onClick={() => duplicatePostIt(postIt)} title="Duplicate">⧉</button>
+                    <details className="post-it-layer-menu">
+                      <summary title="Layer order">↕</summary>
+                      <div>
+                        <button type="button" onClick={() => changePostItLayer(postIt.id, "front")}>Bring to front</button>
+                        <button type="button" onClick={() => changePostItLayer(postIt.id, "forward")}>Bring forward</button>
+                        <button type="button" onClick={() => changePostItLayer(postIt.id, "backward")}>Send backward</button>
+                        <button type="button" onClick={() => changePostItLayer(postIt.id, "back")}>Send to back</button>
+                      </div>
+                    </details>
+                    <button
+                      type="button"
+                      onClick={() => archivePostIt(postIt)}
+                      title="Archive"
+                    >
+                      ▱
+                    </button>
+                  </div>
+                )}
+                {!postIt.locked && (
+                  <button
+                    type="button"
+                    className="post-it-resize-handle"
+                    aria-label="Resize post-it"
+                    title="Drag to resize"
+                    onPointerDown={(event) => startPostItResize(event, postIt)}
+                    onPointerMove={resizePostIt}
+                    onPointerUp={finishPostItResize}
+                    onPointerCancel={finishPostItResize}
+                  />
+                )}
               </article>
             ))}
           </div>
@@ -6118,11 +8842,12 @@ export default function Home() {
               className={[
                 "nav-item",
                 activeTab === tab.id ? "active" : "",
-                tab.id === "add" ? "nav-add-event" : "",
+                tab.id === "add" ? "quick-capture-nav" : "",
               ].filter(Boolean).join(" ")}
+              aria-label={tab.id === "add" ? "Open Quick Capture" : tab.label}
               onClick={() => {
                 if (tab.id === "add") {
-                  openNewEventFromNavigation();
+                  setQuickCaptureOpen(true);
                   return;
                 }
                 changeTab(tab.id);
@@ -6135,18 +8860,427 @@ export default function Home() {
         </nav>}
       </section>
 
+      {quickCaptureOpen && (
+        <div
+          className="modal-backdrop quick-capture-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget && !quickCaptureSaving) {
+              setQuickCaptureOpen(false);
+            }
+          }}
+        >
+          <section
+            className="quick-capture-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quick Capture"
+          >
+            <header>
+              <div>
+                <p className="tiny-label">INBOX · TWO-SECOND CAPTURE</p>
+                <h2>What do you want to keep?</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickCaptureOpen(false)}
+                aria-label="Close Quick Capture"
+              >
+                ×
+              </button>
+            </header>
+            <textarea
+              autoFocus
+              value={quickCaptureText}
+              onChange={(event) => setQuickCaptureText(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void saveQuickCapture();
+                }
+              }}
+              placeholder="entregar tarea martes…"
+              aria-label="Quick Capture text"
+            />
+            <div className="quick-capture-file">
+              <label>
+                <span>＋ Photo, PDF or file</span>
+                <input
+                  type="file"
+                  accept="image/*,.pdf,.epub,audio/*,text/*,*/*"
+                  onChange={(event) =>
+                    setQuickCaptureFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              </label>
+              {quickCaptureFile && (
+                <button type="button" onClick={() => setQuickCaptureFile(null)}>
+                  {quickCaptureFile.name} ×
+                </button>
+              )}
+            </div>
+            <footer>
+              <small>You can decide where it belongs later.</small>
+              <button
+                type="button"
+                disabled={
+                  quickCaptureSaving ||
+                  (!quickCaptureText.trim() && !quickCaptureFile)
+                }
+                onClick={() => void saveQuickCapture()}
+              >
+                {quickCaptureSaving ? "Saving…" : "Keep in Inbox"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {resetExperience && (
+        <div className="modal-backdrop reset-backdrop" role="presentation">
+          <section
+            className="reset-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={resetExperience === "morning" ? "Morning Reset" : "Night Reset"}
+          >
+            <button
+              type="button"
+              className="reset-close"
+              onClick={closeResetExperience}
+              aria-label="Close daily reset"
+            >
+              ×
+            </button>
+            {resetExperience === "morning" ? (
+              <>
+                <p className="tiny-label">MORNING RESET ♡</p>
+                <h2>
+                  {dateFromKey(todayKey).toLocaleDateString("en", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </h2>
+                <div className="reset-summary-categories" aria-label="Today summary">
+                  {([
+                    ["events", todayWidgetEvents.length, "events"],
+                    ["tasks", todayTasks.length, "tasks"],
+                    ["reminders", pending.length, "reminders"],
+                  ] as const).map(([category, count, label]) => (
+                    <button
+                      type="button"
+                      key={category}
+                      className={resetCategory === category ? "active" : ""}
+                      onClick={() =>
+                        setResetCategory((current) =>
+                          current === category ? null : category,
+                        )
+                      }
+                    >
+                      <strong>{count}</strong>
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+                {resetCategory && (
+                  <div className="reset-category-list">
+                    {resetCategory === "events" &&
+                      todayWidgetEvents.map((event) => (
+                        <button
+                          type="button"
+                          key={event.id}
+                          onClick={() => {
+                            closeResetExperience();
+                            openEventDetail(event);
+                          }}
+                        >
+                          <span>{eventStartTimeLabel(event)}</span>
+                          <strong>{event.title}</strong>
+                        </button>
+                      ))}
+                    {resetCategory === "tasks" &&
+                      todayTasks.map((task) => (
+                        <div className="reset-category-task" key={task.id}>
+                          <button
+                            type="button"
+                            className={task.completed ? "completed" : ""}
+                            onClick={() => toggleTaskCompleted(task.id)}
+                          >
+                            <span>{task.completed ? "✓" : "○"}</span>
+                            <strong>{task.title}</strong>
+                          </button>
+                          <button
+                            type="button"
+                            className="reset-category-delete"
+                            aria-label={`Move ${task.title} to Trash`}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Move “${task.title}” to Trash for 30 days?`,
+                                )
+                              ) {
+                                moveToTrash("task", task.title, task);
+                              }
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    {resetCategory === "reminders" &&
+                      pending.map((reminder) => (
+                        <button
+                          type="button"
+                          key={reminder.id}
+                          onClick={() => completeReminderItem(reminder.id)}
+                        >
+                          <span>{reminder.icon}</span>
+                          <strong>{reminder.title}</strong>
+                        </button>
+                      ))}
+                    {((resetCategory === "events" && todayWidgetEvents.length === 0) ||
+                      (resetCategory === "tasks" && todayTasks.length === 0) ||
+                      (resetCategory === "reminders" && pending.length === 0)) && (
+                      <p>Nothing waiting here ♡</p>
+                    )}
+                  </div>
+                )}
+                {overdueTasks.length > 0 && (
+                  <div className="reset-overdue">
+                    <strong>Still waiting from yesterday</strong>
+                    {overdueTasks.map((task) => (
+                      <article key={task.id}>
+                        <span>You didn’t finish “{task.title}”.</span>
+                        <div>
+                          <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
+                          <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const date = window.prompt("Move to date (YYYY-MM-DD)", todayKey);
+                              if (date) rescheduleTask(task, date);
+                            }}
+                          >
+                            Pick date
+                          </button>
+                          <button type="button" onClick={() => rescheduleTask(task, null)}>Dismiss</button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="tiny-label">NIGHT RESET ♡</p>
+                <h2>
+                  You finished {todayTasks.filter((task) => task.completed).length} of {todayTasks.length} things today ♡
+                </h2>
+                <p>Move unfinished things to tomorrow?</p>
+                <div className="night-unfinished">
+                  {todayTasks.filter((task) => !task.completed).map((task) => (
+                    <article key={task.id}>
+                      <span>{task.title}</span>
+                      <div>
+                        <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const date = window.prompt(
+                              "Move to date (YYYY-MM-DD)",
+                              addDays(todayKey, 1),
+                            );
+                            if (date) rescheduleTask(task, date);
+                          }}
+                        >
+                          Pick date
+                        </button>
+                        <button type="button" onClick={() => rescheduleTask(task, null)}>Dismiss</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+            <button type="button" className="reset-done" onClick={closeResetExperience}>
+              Done for now
+            </button>
+          </section>
+        </div>
+      )}
+
+      {authCallbackStatus && (
+        <div className="modal-backdrop auth-callback-backdrop" role="presentation">
+          <section className="auth-callback-modal" role="dialog" aria-modal="true">
+            <span>{authCallbackStatus.kind === "success" ? "♡" : authCallbackStatus.kind === "error" ? "!" : "…"}</span>
+            <h2>
+              {authCallbackStatus.kind === "success"
+                ? "Email confirmed"
+                : authCallbackStatus.kind === "error"
+                  ? "This link needs attention"
+                  : "Confirming your email"}
+            </h2>
+            <p>{authCallbackStatus.message}</p>
+            {authCallbackStatus.kind !== "working" && (
+              <div>
+                {authCallbackStatus.kind === "error" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthCallbackStatus(null);
+                      setSettingsOpen(true);
+                    }}
+                  >
+                    Resend email
+                  </button>
+                )}
+                <button type="button" onClick={() => setAuthCallbackStatus(null)}>
+                  Continue
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {selectedLibraryItem && (
+        <div className="modal-backdrop library-reader-backdrop" role="presentation">
+          <section className="library-reader" role="dialog" aria-modal="true">
+            <header>
+              <div>
+                <p className="tiny-label">LIBRARY</p>
+                <h2>{selectedLibraryItem.name}</h2>
+              </div>
+              <button type="button" onClick={() => setSelectedLibraryItem(null)} aria-label="Close file">×</button>
+            </header>
+            <nav aria-label="Reader tools">
+              {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
+                <button
+                  type="button"
+                  key={panel}
+                  className={libraryPanel === panel ? "active" : ""}
+                  onClick={() => setLibraryPanel(panel)}
+                >
+                  {panel}
+                </button>
+              ))}
+            </nav>
+            <div className="library-reader-layout">
+              <div className="library-document-stage">
+                {selectedLibraryItem.dataUrl ? (
+                  <iframe src={selectedLibraryItem.dataUrl} title={selectedLibraryItem.name} />
+                ) : (
+                  <p>{selectedLibraryItem.textContent || "This file is saved safely and will reopen when it is available."}</p>
+                )}
+              </div>
+              <aside className="library-reader-panel">
+                <p className="tiny-label">{libraryPanel.toUpperCase()}</p>
+                <p>Reader locations, bookmarks, highlights and notes stay attached to this original file.</p>
+              </aside>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedPostItIds.length > 0 && (
+        <div className="postit-multi-toolbar" aria-label="Selected post-it actions">
+          <strong>{selectedPostItIds.length} selected</strong>
+          <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group</button>
+          <button type="button" onClick={ungroupSelectedPostIts}>Ungroup</button>
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedPostItLock(
+                !postIts
+                  .filter((item) => selectedPostItIds.includes(item.id))
+                  .every((item) => item.locked),
+              )
+            }
+          >
+            {postIts
+              .filter((item) => selectedPostItIds.includes(item.id))
+              .every((item) => item.locked)
+              ? "Unlock"
+              : "Lock"}
+          </button>
+          <button
+            type="button"
+            onClick={() => updateSelectedPostIts("Changed post-it colors", (item) => ({ ...item, color: "lavender" }))}
+          >
+            Color
+          </button>
+          <button
+            type="button"
+            onClick={archiveSelectedPostIts}
+          >
+            Archive
+          </button>
+          <button type="button" className="danger" onClick={trashSelectedPostIts}>Trash</button>
+          <button type="button" onClick={() => setSelectedPostItIds([])}>Done</button>
+        </div>
+      )}
+
+      {(globalHistoryDepth.undo > 0 || globalHistoryDepth.redo > 0 || historyMessage) && (
+        <div className="global-history-controls" aria-live="polite">
+          {historyMessage && <span>{historyMessage}</span>}
+          <button type="button" onClick={undoGlobal} disabled={globalHistoryDepth.undo === 0} aria-label="Undo">↶</button>
+          <button type="button" onClick={redoGlobal} disabled={globalHistoryDepth.redo === 0} aria-label="Redo">↷</button>
+        </div>
+      )}
+
       {activeStudyFile?.kind === "pdf" && (
         <PdfStudyReader
           fileId={activeStudyFile.id}
           fileName={activeStudyFile.name}
           source={studyFileSource(activeStudyFile)}
           annotations={pdfAnnotations[activeStudyFile.id] || []}
-          onAnnotationsChange={(strokes) =>
+          onAnnotationsChange={(strokes) => {
+            recordAction("Changed PDF annotations");
             setPdfAnnotations((current) => ({
               ...current,
               [activeStudyFile.id]: strokes,
-            }))
-          }
+            }));
+          }}
+          pageNotes={pdfPageNotes[activeStudyFile.id] || {}}
+          onPageNotesChange={(notes) => {
+            recordAction("Changed PDF notes");
+            setPdfPageNotes((current) => ({
+              ...current,
+              [activeStudyFile.id]: notes,
+            }));
+          }}
+          initialLocation={activeStudyFile.readerLocation}
+          onLocationChange={(location) => {
+            setStudyFiles((current) =>
+              current.map((file) =>
+                file.id === activeStudyFile.id
+                  ? { ...file, readerLocation: { ...file.readerLocation, ...location } }
+                  : file,
+              ),
+            );
+            setActiveStudyFile((current) =>
+              current
+                ? { ...current, readerLocation: { ...current.readerLocation, ...location } }
+                : current,
+            );
+            setLibraryItems((current) =>
+              current.map((file) =>
+                file.id === activeStudyFile.id
+                  ? {
+                      ...file,
+                      readerLocation: {
+                        ...file.readerLocation,
+                        page: location.page,
+                        offset: location.offset,
+                        zoom: location.zoom,
+                      },
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : file,
+              ),
+            );
+          }}
           onClose={() => setActiveStudyFile(null)}
         />
       )}
@@ -6165,12 +9299,56 @@ export default function Home() {
               highlights: [],
             }
           }
-          onReadingStateChange={(readingState) =>
+          onReadingStateChange={(readingState, changeKind) => {
+            if (changeKind === "content") {
+              recordAction("Changed EPUB annotations");
+            }
             setEpubReadingStates((current) => ({
               ...current,
               [activeStudyFile.id]: readingState,
-            }))
-          }
+            }));
+            setStudyFiles((current) =>
+              current.map((file) =>
+                file.id === activeStudyFile.id
+                  ? {
+                      ...file,
+                      readerLocation: {
+                        ...file.readerLocation,
+                        chapter: readingState.chapter,
+                        percentage:
+                          activeEpubBook.chapters.length > 0
+                            ? (readingState.chapter +
+                                (readingState.scrollOffset ?? 0)) /
+                              activeEpubBook.chapters.length
+                            : 0,
+                        offset: readingState.scrollOffset,
+                      },
+                    }
+                : file,
+              ),
+            );
+            setLibraryItems((current) =>
+              current.map((file) =>
+                file.id === activeStudyFile.id
+                  ? {
+                      ...file,
+                      readerLocation: {
+                        ...file.readerLocation,
+                        chapter: String(readingState.chapter),
+                        offset: readingState.scrollOffset,
+                        percentage:
+                          activeEpubBook.chapters.length > 0
+                            ? (readingState.chapter +
+                                (readingState.scrollOffset ?? 0)) /
+                              activeEpubBook.chapters.length
+                            : 0,
+                      },
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : file,
+              ),
+            );
+          }}
           onClose={() => {
             setActiveStudyFile(null);
             setActiveEpubBook(null);
@@ -6650,23 +9828,148 @@ export default function Home() {
                     </div>
 
                     <label className="event-file-field">
-                      <span>⌕ Files</span>
+                      <span>⌕ Add new files</span>
                       <input
                         type="file"
                         multiple
-                        onChange={(event) =>
-                          updateEventDraft(
-                            "files",
-                            Array.from(event.target.files ?? []).map(
-                              (file) => file.name,
-                            ),
-                          )
-                        }
+                        onChange={(event) => {
+                          const files = Array.from(event.target.files ?? []);
+                          event.target.value = "";
+                          void Promise.all(files.map(importLibraryFile)).then(
+                            (items) => {
+                              updateEventDraft("files", [
+                                ...(eventDraft.files ?? []),
+                                ...items.map((item) => item.name),
+                              ]);
+                              updateEventDraft("attachmentIds", Array.from(new Set([
+                                ...(eventDraft.attachmentIds ?? []),
+                                ...items.map((item) => item.id),
+                              ])));
+                            },
+                          );
+                        }}
                       />
                       {(eventDraft.files ?? []).length > 0 && (
                         <small>{eventDraft.files?.join(" · ")}</small>
                       )}
                     </label>
+
+                    {libraryItems.length + studyFiles.length > 0 && (
+                      <div className="event-existing-attachments">
+                        <span>Attached · choose from Library</span>
+                        <div>
+                          {[
+                            ...libraryItems
+                              .filter((item) => !item.archived)
+                              .map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
+                            ...studyFiles.map((item) => ({
+                              id: item.id,
+                              name: item.name,
+                              kind: item.kind,
+                            })),
+                          ].map((item) => {
+                            const attached = eventDraft.attachmentIds?.includes(item.id) ?? false;
+                            return (
+                              <label key={item.id}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) => {
+                                    const ids = eventDraft.attachmentIds ?? [];
+                                    updateEventDraft(
+                                      "attachmentIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...ids, item.id]))
+                                        : ids.filter((id) => id !== item.id),
+                                    );
+                                    const names = eventDraft.files ?? [];
+                                    updateEventDraft(
+                                      "files",
+                                      event.target.checked
+                                        ? Array.from(new Set([...names, item.name]))
+                                        : names.filter((name) => name !== item.name),
+                                    );
+                                  }}
+                                />
+                                <span>{item.kind === "pdf" ? "📄" : "▤"}</span>
+                                <strong>{item.name}</strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(entries.length > 0 || studyNotes.length > 0 || recordings.length > 0) && (
+                      <div className="event-existing-attachments related-content-picker">
+                        <span>Related notes & recordings</span>
+                        <div>
+                          {entries.map((note) => {
+                            const attached = eventDraft.attachedNoteIds?.includes(note.id) ?? false;
+                            return (
+                              <label key={`note-${note.id}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) =>
+                                    updateEventDraft(
+                                      "attachedNoteIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...(eventDraft.attachedNoteIds ?? []), note.id]))
+                                        : (eventDraft.attachedNoteIds ?? []).filter((id) => id !== note.id),
+                                    )
+                                  }
+                                />
+                                <span>📝</span>
+                                <strong>{notePreview(note.text, 42)}</strong>
+                              </label>
+                            );
+                          })}
+                          {studyNotes.map((note) => {
+                            const attached = eventDraft.attachedNoteIds?.includes(note.id) ?? false;
+                            return (
+                              <label key={`study-note-${note.id}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) =>
+                                    updateEventDraft(
+                                      "attachedNoteIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...(eventDraft.attachedNoteIds ?? []), note.id]))
+                                        : (eventDraft.attachedNoteIds ?? []).filter((id) => id !== note.id),
+                                    )
+                                  }
+                                />
+                                <span>📝</span>
+                                <strong>{note.title || notePreview(note.body, 42)}</strong>
+                              </label>
+                            );
+                          })}
+                          {recordings.map((recording) => {
+                            const attached = eventDraft.attachedRecordingIds?.includes(recording.id) ?? false;
+                            return (
+                              <label key={`recording-${recording.id}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={attached}
+                                  onChange={(event) =>
+                                    updateEventDraft(
+                                      "attachedRecordingIds",
+                                      event.target.checked
+                                        ? Array.from(new Set([...(eventDraft.attachedRecordingIds ?? []), recording.id]))
+                                        : (eventDraft.attachedRecordingIds ?? []).filter((id) => id !== recording.id),
+                                    )
+                                  }
+                                />
+                                <span>🎙</span>
+                                <strong>{recording.name}</strong>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <button
@@ -6886,7 +10189,7 @@ export default function Home() {
                       {extendedCalendarDays.map((calendarDay) => {
                         const { date, currentMonth, previousMonth, nextMonth } = calendarDay;
                         const dayKey = localDateKey(date);
-                        const dayEvents = calendarEvents
+                        const dayEvents = allCalendarEvents
                           .filter(
                             (calendarEvent) =>
                               eventOccursOn(calendarEvent, dayKey) &&
@@ -6897,6 +10200,7 @@ export default function Home() {
                           .sort((first, second) => first.time.localeCompare(second.time));
                         return (
                           <div
+                            data-calendar-date={dayKey}
                             className={[
                               "extended-calendar-cell",
                               currentMonth ? "" : "outside-month",
@@ -6907,6 +10211,7 @@ export default function Home() {
                               date.getDay() === 0 ? "sunday" : "",
                               date.getDay() === 6 ? "saturday" : "",
                               dayKey === todayKey ? "today" : "",
+                              calendarDragTarget === dayKey ? "drag-target" : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
@@ -6931,14 +10236,27 @@ export default function Home() {
                               {dayEvents.slice(0, 3).map((calendarEvent) => (
                                 <button
                                   type="button"
-                                  className={`extended-event-pill ${calendarEvent.color}`}
+                                  className={`extended-event-pill ${calendarEvent.color} ${
+                                    selectedEventIds.includes(calendarEvent.id)
+                                      ? "selected"
+                                      : ""
+                                  }`}
                                   key={`${calendarEvent.id}-${dayKey}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     setSelectedCalendarDate(dayKey);
+                                    if (calendarMultiSelect) {
+                                      toggleCalendarEventSelection(calendarEvent);
+                                      return;
+                                    }
                                     openEventDetail(
                                       calendarEventAtOccurrence(calendarEvent, dayKey),
                                     );
+                                  }}
+                                  onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    toggleCalendarEventSelection(calendarEvent);
                                   }}
                                   title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
                                 >
@@ -7036,6 +10354,45 @@ export default function Home() {
                       </div>
                     </div>
                     <button className="calendar-date-menu-done" onClick={() => setMonthPickerOpen(false)}>Done</button>
+                  </div>
+                )}
+                {!calendarScheduleOpen && (
+                  <div className="calendar-power-tools" aria-label="Calendar power tools">
+                    <label>
+                      <span>Jump to date</span>
+                      <input
+                        type="date"
+                        value={jumpDate}
+                        onChange={(event) => setJumpDate(event.target.value)}
+                      />
+                      <button type="button" onClick={() => goToCalendarDate(jumpDate)}>
+                        Go
+                      </button>
+                    </label>
+                    {selectedCalendarDate !== todayKey && (
+                      <button type="button" onClick={() => goToCalendarDate(todayKey)}>
+                        Today
+                      </button>
+                    )}
+                    <button type="button" onClick={copyCurrentWeek}>Copy week</button>
+                    <button
+                      type="button"
+                      className={calendarMultiSelect ? "active" : ""}
+                      onClick={() => {
+                        setCalendarMultiSelect((current) => !current);
+                        setSelectedEventIds([]);
+                      }}
+                    >
+                      {calendarMultiSelect ? "Cancel selection" : "Select events"}
+                    </button>
+                    {calendarMultiSelect && selectedEventIds.length > 0 && (
+                      <div className="calendar-bulk-actions">
+                        <button type="button" onClick={moveSelectedEvents}>Move</button>
+                        <button type="button" onClick={duplicateSelectedEvents}>Duplicate</button>
+                        <button type="button" onClick={() => recolorSelectedEvents("lilac")}>Color</button>
+                        <button type="button" className="danger" onClick={deleteSelectedEvents}>Delete</button>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="calendar-sources">
@@ -7157,7 +10514,28 @@ export default function Home() {
                       {calendarSearchQuery.trim() && (
                         <small>title · calendar · notes · place</small>
                       )}
+                      {calendarSearchQuery.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCalendarMultiSelect((current) => !current);
+                            setSelectedEventIds([]);
+                          }}
+                        >
+                          {calendarMultiSelect ? "Cancel selection" : "Select"}
+                        </button>
+                      )}
                     </div>
+
+                    {calendarMultiSelect && selectedEventIds.length > 0 && (
+                      <div className="calendar-bulk-actions calendar-search-bulk-actions">
+                        <span>{selectedEventIds.length} selected</span>
+                        <button type="button" onClick={moveSelectedEvents}>Move</button>
+                        <button type="button" onClick={duplicateSelectedEvents}>Duplicate</button>
+                        <button type="button" onClick={() => recolorSelectedEvents("lilac")}>Color</button>
+                        <button type="button" className="danger" onClick={deleteSelectedEvents}>Delete</button>
+                      </div>
+                    )}
 
                     <div className="calendar-search-results">
                       {!calendarSearchQuery.trim() ? (
@@ -7201,7 +10579,11 @@ export default function Home() {
                             <div>
                               {group.occurrences.map(({ event, date }) => (
                                 <button
-                                  className="calendar-search-result"
+                                  className={`calendar-search-result ${
+                                    selectedEventIds.includes(event.id)
+                                      ? "selected"
+                                      : ""
+                                  }`}
                                   type="button"
                                   key={`${event.id}-${date}`}
                                   style={
@@ -7212,11 +10594,19 @@ export default function Home() {
                                         )?.hex ?? "#ae96d8",
                                     } as CSSProperties
                                   }
-                                  onClick={() =>
+                                  onClick={() => {
+                                    if (calendarMultiSelect) {
+                                      toggleCalendarEventSelection(event);
+                                      return;
+                                    }
                                     openEventDetail(
                                       calendarEventAtOccurrence(event, date),
-                                    )
-                                  }
+                                    );
+                                  }}
+                                  onContextMenu={(pointerEvent) => {
+                                    pointerEvent.preventDefault();
+                                    toggleCalendarEventSelection(event);
+                                  }}
                                 >
                                   <i aria-hidden="true" />
                                   <span className="calendar-search-result-copy">
@@ -7457,9 +10847,13 @@ export default function Home() {
                                     />
                                   )}
                                   {selectedTimedScheduleEvents.map(({ event, start, end, lane, laneCount }) => {
-                                    const visibleStart = Math.max(SCHEDULE_START_MINUTE, start);
-                                    const visibleEnd = Math.min(SCHEDULE_END_MINUTE, end);
-                                    const duration = visibleEnd - visibleStart;
+                                    const previewMinute =
+                                      scheduleEventDragPreview?.id === event.id
+                                        ? scheduleEventDragPreview.minute
+                                        : null;
+                                    const displayStart = previewMinute ?? start;
+                                    const visibleStart = Math.max(SCHEDULE_START_MINUTE, displayStart);
+                                    const duration = Math.max(15, end - start);
                                     const densityClass = duration < 30
                                       ? "is-short"
                                       : duration < 60
@@ -7468,18 +10862,38 @@ export default function Home() {
                                     return (
                                       <button
                                         key={event.id}
-                                        className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""}`.trim()}
+                                        className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""} ${previewMinute !== null ? "is-dragging" : ""}`.trim()}
                                         style={{
                                           top: `${((visibleStart - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%`,
                                           height: `${(duration / SCHEDULE_TOTAL_MINUTES) * 100}%`,
                                           left: `calc(${(lane / laneCount) * 100}% + 6px)`,
                                           width: `calc(${100 / laneCount}% - 12px)`,
                                         }}
-                                        onClick={(pointerEvent) => {
-                                          pointerEvent.stopPropagation();
+                                        onPointerDown={(pointerEvent) =>
+                                          startScheduleEventDrag(
+                                            pointerEvent,
+                                            event,
+                                            start,
+                                            end,
+                                          )
+                                        }
+                                        onPointerMove={updateScheduleEventDrag}
+                                        onPointerUp={finishScheduleEventDrag}
+                                        onPointerCancel={finishScheduleEventDrag}
+                                        onClick={(clickEvent) => {
+                                          clickEvent.stopPropagation();
+                                          if (suppressScheduleEventClickRef.current) {
+                                            suppressScheduleEventClickRef.current = false;
+                                            return;
+                                          }
                                           openEventDetail(event);
                                         }}
                                       >
+                                        {previewMinute !== null && (
+                                          <em className="agenda-v2-drag-time">
+                                            {timeFromMinutes(previewMinute)}
+                                          </em>
+                                        )}
                                         {duration < 30 ? (
                                           <span className="agenda-v2-event-shortline">
                                             <time>{eventStartTimeLabel(event)}</time>
@@ -7533,12 +10947,13 @@ export default function Home() {
                           className={[
                             "nav-item",
                             tab.id === activeTab ? "active" : "",
-                            tab.id === "add" ? "nav-add-event" : "",
+                            tab.id === "add" ? "quick-capture-nav" : "",
                           ].filter(Boolean).join(" ")}
                           type="button"
+                          aria-label={tab.id === "add" ? "Open Quick Capture" : tab.label}
                           onClick={() => {
                             if (tab.id === "add") {
-                              openNewEvent(selectedCalendarDate);
+                              setQuickCaptureOpen(true);
                               return;
                             }
                             setCalendarScheduleOpen(false);
@@ -7578,7 +10993,7 @@ export default function Home() {
                   {calendarDays.map(({ date, currentMonth }) => {
                     const day = date.getDate();
                     const dayKey = localDateKey(date);
-                    const dayEvents = calendarEvents.filter((event) =>
+                    const dayEvents = allCalendarEvents.filter((event) =>
                       eventOccursOn(event, dayKey),
                     );
                     const dayMood = moods.find(
@@ -7588,6 +11003,7 @@ export default function Home() {
                     return (
                       <button
                         key={dayKey}
+                        data-calendar-date={dayKey}
                         className={[
                           currentMonth ? "" : "outside-month",
                           selectedCalendarDate === dayKey ? "selected" : "",
@@ -7596,6 +11012,7 @@ export default function Home() {
                           dayComplete ? "day-complete" : "",
                           date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
                           dayKey === todayKey ? "today" : "",
+                          calendarDragTarget === dayKey ? "drag-target" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
@@ -7637,7 +11054,9 @@ export default function Home() {
                             </span>
                             <small className="calendar-compact-event-label">
                               {dayEvents.length === 1
-                                ? dayEvents[0].title
+                                ? dayEvents[0].sportsCardStyle
+                                  ? `${dayEvents[0].sportsIcon ?? "♡"} MATCH DAY`
+                                  : dayEvents[0].title
                                 : `${dayEvents.length} plans`}
                             </small>
                           </>
@@ -7767,16 +11186,49 @@ export default function Home() {
                     <div className="selected-day-events">
                       {selectedDateEvents.map((calendarEvent) => (
                         <article
-                          className={`event-chip ${calendarEvent.color}`}
+                          className={`event-chip ${calendarEvent.color} ${
+                            calendarEvent.eventType === "sports_event"
+                              ? "sports-event"
+                              : ""
+                          } ${selectedEventIds.includes(calendarEvent.id) ? "selected" : ""}`}
                           key={calendarEvent.id}
+                          onPointerDown={(event) =>
+                            calendarEvent.eventType !== "sports_event" &&
+                            startCalendarEventDrag(event, calendarEvent)
+                          }
+                          onPointerMove={updateCalendarEventDrag}
+                          onPointerUp={finishCalendarEventDrag}
+                          onPointerCancel={finishCalendarEventDrag}
                         >
                           <span>{eventCompactTimeLabel(calendarEvent)}</span>
                           <button
                             type="button"
                             className="event-chip-main"
-                            onClick={() => openEventEditor(calendarEvent)}
-                            aria-label={`Edit ${calendarEvent.title}`}
+                            onClick={() => {
+                              if (suppressCalendarEventClickRef.current) {
+                                suppressCalendarEventClickRef.current = false;
+                                return;
+                              }
+                              if (calendarMultiSelect) {
+                                if (calendarEvent.eventType === "sports_event") return;
+                                setSelectedEventIds((current) =>
+                                  current.includes(calendarEvent.id)
+                                    ? current.filter((id) => id !== calendarEvent.id)
+                                    : [...current, calendarEvent.id],
+                                );
+                                return;
+                              }
+                              if (calendarEvent.eventType === "sports_event") {
+                                setSelectedEventDetail(calendarEvent);
+                              } else {
+                                openEventEditor(calendarEvent);
+                              }
+                            }}
+                            aria-label={`Open ${calendarEvent.title}`}
                           >
+                            {calendarEvent.sportsCardStyle && (
+                              <i>{calendarEvent.sportsIcon ?? "♡"} MATCH DAY</i>
+                            )}
                             <strong>{calendarEvent.title}</strong>
                             <small>
                               {calendarEvent.calendar ?? "Personal"}
@@ -7788,19 +11240,21 @@ export default function Home() {
                                 : ""}
                             </small>
                           </button>
-                          <button
-                            type="button"
-                            className="event-chip-delete"
-                            onClick={() =>
-                              setEventDeleteRequest({
-                                eventId: calendarEvent.id,
-                                occurrenceDate: selectedCalendarDate,
-                              })
-                            }
-                            aria-label={`Delete ${calendarEvent.title}`}
-                          >
-                            ×
-                          </button>
+                          {calendarEvent.eventType !== "sports_event" && (
+                            <button
+                              type="button"
+                              className="event-chip-delete"
+                              onClick={() =>
+                                setEventDeleteRequest({
+                                  eventId: calendarEvent.id,
+                                  occurrenceDate: selectedCalendarDate,
+                                })
+                              }
+                              aria-label={`Delete ${calendarEvent.title}`}
+                            >
+                              ×
+                            </button>
+                          )}
                         </article>
                       ))}
                     </div>
@@ -7946,7 +11400,7 @@ export default function Home() {
       )}
 
       {daySummaryDate && (() => {
-        const summaryEvents = calendarEvents.filter((event) =>
+        const summaryEvents = allCalendarEvents.filter((event) =>
           eventOccursOn(event, daySummaryDate),
         );
         return (
@@ -8047,7 +11501,81 @@ export default function Home() {
           face={selectedJournalEntry.mood || "♡"}
           label="A FULL LITTLE MOMENT"
           text={selectedJournalEntry.text}
+          usedIn={[
+            ...calendarEvents
+              .filter((event) =>
+                event.attachedNoteIds?.includes(selectedJournalEntry.id),
+              )
+              .map((event) => ({
+                id: `event-${event.id}`,
+                label: `▦ ${event.title}`,
+                onClick: () => {
+                  setSelectedJournalEntry(null);
+                  setSelectedEventDetail(event);
+                },
+              })),
+            ...entityLinks
+              .filter(
+                (link) =>
+                  link.toType === "note" &&
+                  link.toId === String(selectedJournalEntry.id) &&
+                  link.fromType === "task",
+              )
+              .flatMap((link) => {
+                const task = tasks.find((item) => item.id === link.fromId);
+                return task
+                  ? [
+                      {
+                        id: `task-${task.id}`,
+                        label: `✓ ${task.title}`,
+                        onClick: () => {
+                          setSelectedJournalEntry(null);
+                          setActiveTab("spaces");
+                          setSpace("inbox");
+                        },
+                      },
+                    ]
+                  : [];
+              }),
+            ...entityLinks
+              .filter(
+                (link) =>
+                  link.toType === "note" &&
+                  link.toId === String(selectedJournalEntry.id) &&
+                  link.fromType === "class",
+              )
+              .flatMap((link) => {
+                const classItem = classItems.find(
+                  (item) => item.id === link.fromId,
+                );
+                return classItem
+                  ? [
+                      {
+                        id: `class-${classItem.id}`,
+                        label: `${classItem.icon} ${classItem.name}`,
+                        onClick: () => {
+                          setSelectedJournalEntry(null);
+                          setSelectedClass(classItem.name);
+                          setActiveTab("spaces");
+                          setSpace("classes");
+                        },
+                      },
+                    ]
+                  : [];
+              }),
+          ]}
           onClose={() => setSelectedJournalEntry(null)}
+          onSave={(text) => {
+            recordAction("Edited note");
+            setEntries((current) =>
+              current.map((entry) =>
+                entry.id === selectedJournalEntry.id ? { ...entry, text } : entry,
+              ),
+            );
+            setSelectedJournalEntry((current) =>
+              current ? { ...current, text } : current,
+            );
+          }}
           onDelete={() => deleteJournalEntry(selectedJournalEntry.id)}
         />
       )}
@@ -8224,13 +11752,10 @@ export default function Home() {
                               ? "selected done"
                               : "done"
                           }
-                          onClick={() =>
-                            setEventTodoState(
-                              selectedEventDetail.id,
-                              index,
-                              "done",
-                            )
-                          }
+                          data-event-id={selectedEventDetail.id}
+                          data-todo-index={index}
+                          data-todo-state="done"
+                          onClick={handleEventTodoClick}
                           aria-label={`Mark ${todo} as done`}
                           aria-pressed={
                             selectedEventDetail.todoStates?.[index] === "done"
@@ -8245,13 +11770,10 @@ export default function Home() {
                               ? "selected missed"
                               : "missed"
                           }
-                          onClick={() =>
-                            setEventTodoState(
-                              selectedEventDetail.id,
-                              index,
-                              "missed",
-                            )
-                          }
+                          data-event-id={selectedEventDetail.id}
+                          data-todo-index={index}
+                          data-todo-state="missed"
+                          onClick={handleEventTodoClick}
                           aria-label={`Mark ${todo} as not done`}
                           aria-pressed={
                             selectedEventDetail.todoStates?.[index] === "missed"
@@ -8266,13 +11788,80 @@ export default function Home() {
               </section>
             )}
 
-            {(selectedEventDetail.files ?? []).length > 0 && (
+            {((selectedEventDetail.files ?? []).length > 0 ||
+              (selectedEventDetail.attachmentIds ?? []).length > 0 ||
+              (selectedEventDetail.attachedNoteIds ?? []).length > 0 ||
+              (selectedEventDetail.attachedRecordingIds ?? []).length > 0) && (
               <section className="event-detail-section">
-                <p className="tiny-label">ATTACHED FILES</p>
+                <p className="tiny-label">ATTACHED</p>
                 <div className="event-detail-files">
-                  {selectedEventDetail.files?.map((file) => (
-                    <span key={file}>⌕ {file}</span>
-                  ))}
+                  {(selectedEventDetail.attachmentIds ?? []).map((fileId) => {
+                    const item = libraryItems.find((candidate) => candidate.id === fileId);
+                    if (item) {
+                      return (
+                        <button key={fileId} onClick={() => void openLibraryItem(item)}>
+                          {item.kind === "pdf" ? "📄" : "▤"} {item.name} ↗
+                        </button>
+                      );
+                    }
+                    const studyFile = studyFiles.find((candidate) => candidate.id === fileId);
+                    return studyFile ? (
+                      <button key={fileId} onClick={() => void openStudyFile(studyFile)}>
+                        {studyFile.kind === "pdf" ? "📄" : studyFile.kind === "epub" ? "📘" : "▤"} {studyFile.name} ↗
+                      </button>
+                    ) : null;
+                  })}
+                  {(selectedEventDetail.files ?? [])
+                    .filter(
+                      (name) =>
+                        !libraryItems.some(
+                          (item) =>
+                            selectedEventDetail.attachmentIds?.includes(item.id) &&
+                            item.name === name,
+                        ),
+                    )
+                    .map((file) => <span key={file}>⌕ {file}</span>)}
+                  {(selectedEventDetail.attachedNoteIds ?? []).map((noteId) => {
+                    const note = entries.find((candidate) => candidate.id === noteId);
+                    if (note) {
+                      return (
+                        <button
+                          key={`note-${noteId}`}
+                          onClick={() => {
+                            setSelectedEventDetail(null);
+                            setSelectedJournalEntry(note);
+                          }}
+                        >📝 {notePreview(note.text, 48)} ↗</button>
+                      );
+                    }
+                    const studyNote = studyNotes.find((candidate) => candidate.id === noteId);
+                    return studyNote ? (
+                      <button
+                        key={`study-note-${noteId}`}
+                        onClick={() => {
+                          setSelectedEventDetail(null);
+                          setActiveTab("spaces");
+                          setSpace("library");
+                        }}
+                      >📝 {studyNote.title || notePreview(studyNote.body, 48)} ↗</button>
+                    ) : null;
+                  })}
+                  {(selectedEventDetail.attachedRecordingIds ?? []).map((recordingId) => {
+                    const recording = recordings.find((candidate) => candidate.id === recordingId);
+                    if (!recording) return null;
+                    return (
+                      <button
+                        key={`recording-${recordingId}`}
+                        onClick={() => {
+                          setSelectedEventDetail(null);
+                          setSelectedClass(recording.className);
+                          changeTab("spaces");
+                          setSpace("classes");
+                          openRecordingEditor(recording);
+                        }}
+                      >🎙 {recording.name} ↗</button>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -8288,34 +11877,49 @@ export default function Home() {
               </a>
             )}
 
-                <button
-                  className="event-detail-edit"
-                  onClick={() => {
-                    const event =
-                      calendarEvents.find(
-                        (calendarEvent) =>
-                          calendarEvent.id === selectedEventDetail.id,
-                      ) ?? selectedEventDetail;
-                    const eventDate = dateFromKey(event.date);
-                    setSelectedCalendarDate(event.date);
-                    setViewMonth(
-                      new Date(
-                        eventDate.getFullYear(),
-                        eventDate.getMonth(),
-                        1,
-                      ),
-                    );
-                    closeEventDetail();
-                    setCalendarSearchOpen(false);
-                    setCalendarSearchQuery("");
-                    setCalendarOpen(true);
-                    openEventEditor(event);
-                  }}
-                >
-                  <span aria-hidden="true">✎</span>
-                  Edit this event
-                  <i aria-hidden="true">✦</i>
-                </button>
+                <div className="event-detail-primary-actions">
+                  {selectedEventDetail.eventType !== "sports_event" && (
+                    <button
+                      className="event-detail-duplicate"
+                      type="button"
+                      onClick={() => duplicateCalendarEvent(selectedEventDetail)}
+                    >
+                      <span aria-hidden="true">⧉</span>
+                      Duplicate
+                    </button>
+                  )}
+                  {selectedEventDetail.eventType !== "sports_event" && (
+                    <button
+                      className="event-detail-edit"
+                      type="button"
+                      onClick={() => {
+                        const event =
+                          calendarEvents.find(
+                            (calendarEvent) =>
+                              calendarEvent.id === selectedEventDetail.id,
+                          ) ?? selectedEventDetail;
+                        const eventDate = dateFromKey(event.date);
+                        setSelectedCalendarDate(event.date);
+                        setViewMonth(
+                          new Date(
+                            eventDate.getFullYear(),
+                            eventDate.getMonth(),
+                            1,
+                          ),
+                        );
+                        closeEventDetail();
+                        setCalendarSearchOpen(false);
+                        setCalendarSearchQuery("");
+                        setCalendarOpen(true);
+                        openEventEditor(event);
+                      }}
+                    >
+                      <span aria-hidden="true">✎</span>
+                      Edit this event
+                      <i aria-hidden="true">✦</i>
+                    </button>
+                  )}
+                </div>
               </section>
             </div>
           );
@@ -8771,6 +12375,191 @@ export default function Home() {
                     Remove
                   </button>
                 )}
+              </div>
+            </section>
+
+            <section className="reset-settings-card" aria-label="Daily resets">
+              <div>
+                <p className="tiny-label">BEGIN & END GENTLY</p>
+                <h3>Morning and Night Reset</h3>
+                <p>Small daily check-ins, never another statistics page.</p>
+              </div>
+              <label>
+                <span>
+                  <strong>Morning Reset</strong>
+                  <small>Only what matters today</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={resetPreferences.morningEnabled}
+                  onChange={(event) =>
+                    setResetPreferences((current) => ({
+                      ...current,
+                      morningEnabled: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                <span>
+                  <strong>Night Reset</strong>
+                  <small>Decide what happens to unfinished things</small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={resetPreferences.nightEnabled}
+                  onChange={(event) =>
+                    setResetPreferences((current) => ({
+                      ...current,
+                      nightEnabled: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+            </section>
+
+            <section className="sports-settings-card" aria-label="Sports settings">
+              <div className="sports-settings-heading">
+                <div>
+                  <p className="tiny-label">SETTINGS → SPORTS</p>
+                  <h3>Teams you follow</h3>
+                  <p>Automatic fixtures stay separate from your personal events.</p>
+                </div>
+                <span>💙💛</span>
+              </div>
+              {INITIAL_SPORTS_TEAMS.map((team) => {
+                const followed = sportsSettings.followedTeamIds.includes(team.id);
+                return (
+                  <label className="follow-team-row" key={team.id}>
+                    <span className="team-colors" style={{
+                      "--team-primary": team.primaryColor,
+                      "--team-secondary": team.secondaryColor,
+                    } as CSSProperties} />
+                    <span>
+                      <strong>{team.name} {team.icon}</strong>
+                      <small>{followed ? "Matches are visible" : "Available to follow"}</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={followed}
+                      onChange={(event) =>
+                        setSportsSettings((current) => ({
+                          ...current,
+                          followedTeamIds: event.target.checked
+                            ? Array.from(new Set([...current.followedTeamIds, team.id]))
+                            : current.followedTeamIds.filter((id) => id !== team.id),
+                        }))
+                      }
+                    />
+                  </label>
+                );
+              })}
+              <div className="sports-toggle-grid">
+                <label>
+                  <span>Add matches automatically</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.addAutomatically}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        addAutomatically: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Show special match cards</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.showSpecialCards}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        showSpecialCards: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Notify me before matches</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.notifyBeforeMatches}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        notifyBeforeMatches: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Notification time</span>
+                  <select
+                    value={sportsSettings.notificationLeadMinutes}
+                    onChange={(event) => {
+                      const selected = Number(event.target.value);
+                      if (selected === -1) {
+                        const custom = Number(
+                          window.prompt(
+                            "Minutes before the match",
+                            String(sportsSettings.notificationLeadMinutes),
+                          ),
+                        );
+                        if (!Number.isFinite(custom) || custom < 0) return;
+                        setSportsSettings((current) => ({
+                          ...current,
+                          notificationLeadMinutes: Math.round(custom),
+                        }));
+                        return;
+                      }
+                      setSportsSettings((current) => ({
+                        ...current,
+                        notificationLeadMinutes: selected,
+                      }));
+                    }}
+                  >
+                    {![30, 60, 180, 1440].includes(
+                      sportsSettings.notificationLeadMinutes,
+                    ) && (
+                      <option value={sportsSettings.notificationLeadMinutes}>
+                        Custom · {sportsSettings.notificationLeadMinutes} min
+                      </option>
+                    )}
+                    <option value={30}>30 min</option>
+                    <option value={60}>1 hour</option>
+                    <option value={180}>3 hours</option>
+                    <option value={1440}>1 day</option>
+                    <option value={-1}>Custom…</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Show live score</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.showLiveScore}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        showLiveScore: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Show final score</span>
+                  <input
+                    type="checkbox"
+                    checked={sportsSettings.showFinalScore}
+                    onChange={(event) =>
+                      setSportsSettings((current) => ({
+                        ...current,
+                        showFinalScore: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
               </div>
             </section>
 
@@ -9555,7 +13344,19 @@ function TodayScreen({
             selectedDateEvents.map((event) => (
               <button
                 type="button"
-                className={`schedule-card ${event.color}-card`}
+                className={[
+                  "schedule-card",
+                  `${event.color}-card`,
+                  event.sportsCardStyle ? "match-day-schedule-card" : "",
+                ].filter(Boolean).join(" ")}
+                style={
+                  event.sportsCardStyle
+                    ? ({
+                        "--sports-primary": event.sportsPrimary,
+                        "--sports-secondary": event.sportsSecondary,
+                      } as CSSProperties)
+                    : undefined
+                }
                 key={event.id}
                 onPointerDown={(pointerEvent) =>
                   beginScheduleLongPress(pointerEvent, event)
@@ -9574,11 +13375,18 @@ function TodayScreen({
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">
-                  <p className="card-tag">{event.calendar ?? "AÉREA"}</p>
+                  <p className="card-tag">
+                    {event.sportsCardStyle
+                      ? `${event.sportsIcon ?? "♡"} MATCH DAY`
+                      : event.calendar ?? "AÉREA"}
+                  </p>
                   <h4>{event.title}</h4>
                   <span>
                     {event.location || event.note || "Saved in your calendar"}
                   </span>
+                  {event.eventType === "sports_event" && (
+                    <small className="match-countdown">{matchCountdownLabel(event)}</small>
+                  )}
                 </div>
                 <div className="mini-people">
                   {isNoirRest ? "•••" : "✦"}
@@ -9622,9 +13430,15 @@ function TodayScreen({
           <div className="reminder-card">
             {pending.length === 0 ? (
               <div className="all-done">
-                <span>🌈</span>
-                <strong>Everything is complete!</strong>
-                <p>Your little list is resting for the day.</p>
+                <span>{completed.length === 0 ? "♡" : "🌈"}</span>
+                <strong>
+                  {completed.length === 0 ? "No reminders yet" : "Everything is complete!"}
+                </strong>
+                <p>
+                  {completed.length === 0
+                    ? "Add only what would genuinely help today."
+                    : "Your little list is resting for the day."}
+                </p>
               </div>
             ) : (
               pending.map((item) => (
@@ -9659,7 +13473,7 @@ function TodayScreen({
           <div className="completed-wrap">
             <div className="completed-history-line">
               <p className="completed-title">COMPLETED TODAY</p>
-              <span>Yesterday {yesterdayDoneCount}/{reminders.length}</span>
+              <span>Yesterday {yesterdayDoneCount}/{pending.length + completed.length}</span>
             </div>
             {completed.length === 0 ? (
               <p className="empty-completed">
@@ -9811,15 +13625,21 @@ function NoteDetailDialog({
   label,
   text,
   onClose,
+  onSave,
   onDelete,
+  usedIn = [],
 }: {
   date: string;
   face: string;
   label: string;
   text: string;
   onClose: () => void;
+  onSave?: (text: string) => void;
   onDelete: () => void;
+  usedIn?: { id: string; label: string; onClick: () => void }[];
 }) {
+  const [draft, setDraft] = useState(text);
+  const [editing, setEditing] = useState(false);
   return (
     <div className="modal-backdrop note-detail-backdrop" role="presentation">
       <section
@@ -9838,7 +13658,28 @@ function NoteDetailDialog({
             ×
           </button>
         </header>
-        <p className="note-detail-text">{text}</p>
+        {editing ? (
+          <textarea
+            className="note-detail-editor"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            autoFocus
+          />
+        ) : (
+          <p className="note-detail-text">{draft}</p>
+        )}
+        {usedIn.length > 0 && (
+          <aside className="note-used-in">
+            <p className="tiny-label">USED IN</p>
+            <div>
+              {usedIn.map((item) => (
+                <button key={item.id} onClick={item.onClick}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
         <footer>
           <small>Your words, fully here.</small>
           <button onClick={onDelete}>Delete note</button>
