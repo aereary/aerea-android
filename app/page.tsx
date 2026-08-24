@@ -39,7 +39,6 @@ import {
   inferInboxKind,
   isBocaSportsEvent,
   isBocaSportsTeam,
-  rangesOverlap,
   trashDaysRemaining,
   type EntityLink,
   type InboxItem,
@@ -473,14 +472,6 @@ type FootballVisualEvent = CalendarEvent & {
   timePending: boolean;
   kickoffTimestamp: number | null;
   footballMatch: FootballMatch;
-};
-
-type CalendarConflictRequest = {
-  conflict: CalendarEvent;
-  message: string;
-  keepLabel: string;
-  onKeep: () => void;
-  onChange: () => void;
 };
 
 type EventColor =
@@ -1418,10 +1409,6 @@ function eventCompactTimeLabel(event: CalendarEvent) {
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
 
-function eventTimeLabel(event: CalendarEvent) {
-  return eventCompactTimeLabel(event);
-}
-
 function eventStartTimeLabel(event: CalendarEvent) {
   if (event.timePending) return "Hora por confirmar";
   if (event.allDay) return "All day";
@@ -1754,8 +1741,6 @@ export default function Home() {
     useState<string | null>(null);
   const [eventDeleteRequest, setEventDeleteRequest] =
     useState<EventDeleteRequest | null>(null);
-  const [calendarConflictRequest, setCalendarConflictRequest] =
-    useState<CalendarConflictRequest | null>(null);
   const [
     eventTemplateSuggestionsDismissed,
     setEventTemplateSuggestionsDismissed,
@@ -3548,24 +3533,6 @@ export default function Home() {
     return Array.from(new Set([...directLabels, ...linkedLabels]));
   };
 
-  const calendarEventHasConflictOnDate = (
-    event: CalendarEvent,
-    date: string,
-  ) =>
-    !event.allDay &&
-    allCalendarEvents.some(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        eventOccursOn(candidate, date) &&
-        rangesOverlap(
-          event.time,
-          event.endTime,
-          candidate.time,
-          candidate.endTime,
-        ),
-    );
-
   const toggleTaskFileAttachment = (task: TaskItem, fileId: string) => {
     const linked =
       task.attachmentIds?.includes(fileId) ||
@@ -5335,19 +5302,6 @@ export default function Home() {
       title: eventDraft.title.trim(),
       endDate: eventDraft.endDate || eventDraft.date,
     };
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== savedEvent.id &&
-        !candidate.allDay &&
-        !savedEvent.allDay &&
-        eventOccursOn(candidate, savedEvent.date) &&
-        rangesOverlap(
-          savedEvent.time,
-          savedEvent.endTime,
-          candidate.time,
-          candidate.endTime,
-        ),
-    );
     const commitSavedEvent = () => {
       recordAction(editingEventId ? "Edited event" : "Created event");
       setCalendarEvents((current) =>
@@ -5406,16 +5360,6 @@ export default function Home() {
       setEventEditorOpen(false);
       setEditingEventId(null);
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Keep it",
-        onKeep: commitSavedEvent,
-        onChange: () => setEventEditorOpen(true),
-      });
-      return;
-    }
     commitSavedEvent();
   };
 
@@ -5518,14 +5462,6 @@ export default function Home() {
       date: destinationDate,
       endDate: addDays(destinationDate, endDayOffset),
     };
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        !event.allDay &&
-        eventOccursOn(candidate, destinationDate) &&
-        rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
-    );
     const commitMove = () => {
       recordAction("Moved event");
       setCalendarEvents((current) =>
@@ -5535,16 +5471,6 @@ export default function Home() {
       );
       setSelectedCalendarDate(destinationDate);
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Move anyway",
-        onKeep: commitMove,
-        onChange: () => openEventEditor(movedEvent),
-      });
-      return;
-    }
     commitMove();
   };
 
@@ -5613,13 +5539,6 @@ export default function Home() {
     const nextEndTime = timeFromMinutes(start + safeDuration);
     if (event.time === nextTime && event.endTime === nextEndTime) return;
 
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        eventOccursOn(candidate, selectedCalendarDate) &&
-        rangesOverlap(nextTime, nextEndTime, candidate.time, candidate.endTime),
-    );
     const movedEvent = { ...event, time: nextTime, endTime: nextEndTime };
     const commitTimeMove = () => {
       recordAction("Changed event time");
@@ -5630,16 +5549,6 @@ export default function Home() {
       );
       setHistoryMessage(`Moved to ${nextTime}–${nextEndTime}`);
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Keep new time",
-        onKeep: commitTimeMove,
-        onChange: () => openEventEditor(movedEvent),
-      });
-      return;
-    }
     commitTimeMove();
   };
 
@@ -11594,13 +11503,6 @@ export default function Home() {
                             isFootballVisualEvent(calendarEvent)
                               ? "canonical-boca-match"
                               : ""
-                          } ${
-                            calendarEventHasConflictOnDate(
-                              calendarEvent,
-                              selectedCalendarDate,
-                            )
-                              ? "has-conflict"
-                              : ""
                           }`}
                           key={calendarEvent.id}
                           onPointerDown={(event) =>
@@ -12371,33 +12273,23 @@ export default function Home() {
                 <div className="event-detail-primary-actions">
                   {selectedEventDetail.eventType !== "sports_event" && (
                     <button
-                      className="event-detail-edit"
+                      className="day-summary-add event-detail-add"
                       type="button"
                       onClick={() => {
-                        const event =
-                          calendarEvents.find(
-                            (calendarEvent) =>
-                              calendarEvent.id === selectedEventDetail.id,
-                          ) ?? selectedEventDetail;
-                        const eventDate = dateFromKey(event.date);
-                        setSelectedCalendarDate(event.date);
-                        setViewMonth(
-                          new Date(
-                            eventDate.getFullYear(),
-                            eventDate.getMonth(),
-                            1,
-                          ),
-                        );
+                        const eventDate = selectedEventDetail.date;
                         closeEventDetail();
-                        setCalendarSearchOpen(false);
-                        setCalendarSearchQuery("");
-                        setCalendarOpen(true);
-                        openEventEditor(event);
+                        openNewEvent(eventDate);
                       }}
                     >
-                      <span aria-hidden="true">✎</span>
-                      Edit this event
-                      <i aria-hidden="true">✦</i>
+                      <span className="day-summary-add-icon" aria-hidden="true">
+                        <svg viewBox="0 0 42 42" focusable="false">
+                          <rect x="5" y="8" width="32" height="28" rx="7" />
+                          <path d="M13 4v9M29 4v9M5 16h32" />
+                          <path d="M21 21v10M16 26h10" />
+                        </svg>
+                      </span>
+                      <strong>+ Add event</strong>
+                      <span className="day-summary-add-spacer" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -12405,63 +12297,6 @@ export default function Home() {
             </div>
           );
         })()}
-
-      {calendarConflictRequest && (
-        <div
-          className="modal-backdrop calendar-conflict-backdrop"
-          role="presentation"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setCalendarConflictRequest(null);
-            }
-          }}
-        >
-          <section
-            className="calendar-conflict-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Schedule conflict"
-          >
-            <p className="tiny-label">SCHEDULE CONFLICT</p>
-            <h2>These plans overlap</h2>
-            <p>{calendarConflictRequest.message}</p>
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  const request = calendarConflictRequest;
-                  setCalendarConflictRequest(null);
-                  request.onChange();
-                }}
-              >
-                Change time
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const conflict = calendarConflictRequest.conflict;
-                  setCalendarConflictRequest(null);
-                  setSelectedEventDetail(conflict);
-                }}
-              >
-                View conflicting event
-              </button>
-              <button
-                type="button"
-                className="primary"
-                onClick={() => {
-                  const request = calendarConflictRequest;
-                  setCalendarConflictRequest(null);
-                  request.onKeep();
-                }}
-              >
-                {calendarConflictRequest.keepLabel}
-              </button>
-            </div>
-            <small>Overlaps are allowed; the warning is only here to help.</small>
-          </section>
-        </div>
-      )}
 
       {eventDeleteRequest &&
         (() => {

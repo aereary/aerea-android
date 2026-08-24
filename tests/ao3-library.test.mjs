@@ -82,6 +82,30 @@ test("preserves the full AO3 card, series, search, filter and download experienc
   assert.match(ao3Source, /openExternalUrl\(directDownloadUrl/);
 });
 
+test("hides the AO3 search tools by scroll direction and restores them on the way up", () => {
+  assert.match(ao3Source, /const handleLibraryScroll = useCallback/);
+  assert.match(ao3Source, /delta >= 8[\s\S]*setSearchToolsHidden\(true\)/);
+  assert.match(ao3Source, /delta <= -8[\s\S]*setSearchToolsHidden\(false\)/);
+  assert.match(ao3Source, /onScroll=\{handleLibraryScroll\}/);
+  assert.match(ao3Source, /ao3-search-tools-hidden/);
+  assert.match(
+    ao3Source,
+    /\.ao3-library-layer\.ao3-search-tools-hidden \.ao3-library-tools[\s\S]*translateY/,
+  );
+});
+
+test("highlights AO3 searches and turns every tag into an exact search", () => {
+  assert.match(ao3Source, /function HighlightText/);
+  assert.match(ao3Source, /<mark className="ao3-highlight"/);
+  assert.match(ao3Source, /const searchByTag = useCallback/);
+  assert.match(ao3Source, /setQuery\(tag\)/);
+  assert.match(ao3Source, /setActiveTag\(tag\)/);
+  assert.match(ao3Source, /normalized\(tag\) === tagNeedle/);
+  assert.match(ao3Source, /onClick=\{\(\) => onTagSearch\(tag\)\}/);
+  assert.match(ao3Source, /className={`ao3-tag \$\{selected \? "is-searching" : ""\}`}/);
+  assert.match(ao3Source, /\.ao3-highlight[\s\S]*background: #fff0a8/);
+});
+
 test("retains the standalone AO3 visual language on phone, tablet and dark mode", () => {
   assert.match(ao3Source, /\.ao3-card-header \{[\s\S]{0,120}background: var\(--ao3-plum-dark\)/);
   assert.match(ao3Source, /\.ao3-card-meta[\s\S]{0,180}background: var\(--ao3-rose\)/);

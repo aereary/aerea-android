@@ -304,7 +304,10 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
   assert.match(pageSource, /className=\{`agenda-v2-event[\s\S]*openEventDetail\(event\)/);
-  assert.match(pageSource, /className="event-detail-edit"[\s\S]*openEventEditor\(event\)/);
+  assert.match(
+    pageSource,
+    /className="day-summary-add event-detail-add"[\s\S]*openNewEvent\(eventDate\)/,
+  );
   assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /scheduleMarks/);
   assert.match(pageSource, /flushOverlapGroup/);
@@ -455,7 +458,10 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-reminder,[\s\S]*background:#fff9ea;[\s\S]*border-color:#f1dfad/);
   assert.match(cssSource, /\.event-detail-header > button svg \{[\s\S]*stroke:currentColor/);
   assert.match(pageSource, /range: `\$\{startLabel\} – \$\{endLabel\}`/);
-  assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
+  assert.match(
+    cssSource,
+    /\.event-detail-note \.event-detail-add[\s\S]*background:linear-gradient\(180deg,#ff8b93,#ff737a\)/,
+  );
 });
 
 test("matches the clean event-note language in Day Pocket", () => {
@@ -477,6 +483,7 @@ test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /`pocket-tone-\$\{index % 4\}`/);
   assert.doesNotMatch(pageSource, /className="day-summary-event-category"/);
   assert.match(pageSource, /className="day-summary-add-spacer"/);
+  assert.match(cssSource, /\.day-summary-card \.day-summary-divider \{ margin:18px 2px; \}/);
   assert.match(cssSource, /Clean reference card shared visually with the event note/);
   assert.match(cssSource, /\.day-summary-backdrop \.day-summary-card[\s\S]*max-width:450px;[\s\S]*width:min\(86vw,450px\)/);
   assert.match(cssSource, /\.day-summary-event\.yellow \{ --pocket-color:#ffe9a9; \}/);
@@ -647,7 +654,7 @@ test("keeps reversible history, archive and a 30-day Trash", () => {
   assert.doesNotMatch(pageSource, /className="global-history-controls"/);
 });
 
-test("keeps calendar drag and conflict checks without the rejected power tools", () => {
+test("keeps calendar drag without conflict warnings or rejected power tools", () => {
   assert.match(pageSource, /data-calendar-date=\{dayKey\}/);
   assert.match(pageSource, /startCalendarEventDrag\(event, calendarEvent\)/);
   assert.match(pageSource, /event\.stopPropagation\(\);\s*cancelCalendarLongPress\(\)/);
@@ -661,10 +668,9 @@ test("keeps calendar drag and conflict checks without the rejected power tools",
   assert.doesNotMatch(pageSource, /Jump to date/);
   assert.doesNotMatch(pageSource, /Select events/);
   assert.match(pageSource, /className="agenda-v2-all-day-list"/);
-  assert.match(pageSource, /This overlaps with \$\{conflict\.title\}/);
-  assert.match(pageSource, /View conflicting event/);
-  assert.match(pageSource, /Change time/);
-  assert.match(pageSource, /calendarEventHasConflictOnDate/);
+  assert.doesNotMatch(pageSource, /Schedule conflict|These plans overlap|View conflicting event/);
+  assert.doesNotMatch(pageSource, /calendarConflictRequest|calendarEventHasConflictOnDate/);
+  assert.doesNotMatch(cssSource, /calendar-conflict|event-chip\.has-conflict/);
   assert.match(cssSource, /\.agenda-v2-event\.is-dragging/);
 });
 
