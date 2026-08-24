@@ -1463,6 +1463,7 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [space, setSpace] = useState<Space>("menu");
+  const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
@@ -2567,11 +2568,7 @@ export default function Home() {
   const visiblePostIts = postIts.filter(
     (note) =>
       (note.page || "today") === currentPostItPage && !note.archived,
-  ).sort(
-    (first, second) =>
-      Number(second.pinned) - Number(first.pinned) ||
-      (first.zIndex ?? 0) - (second.zIndex ?? 0),
-  );
+  ).sort((first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0));
   const calendarYear = viewMonth.getFullYear();
   const calendarMonth = viewMonth.getMonth();
   const daysInViewMonth = new Date(
@@ -4137,91 +4134,6 @@ export default function Home() {
     setPostItEditorOpen(false);
   };
 
-  const updatePostIt = (
-    id: string,
-    label: string,
-    update: (postIt: PostItNote) => PostItNote,
-  ) => {
-    recordAction(label);
-    setPostIts((current) =>
-      current.map((postIt) =>
-        postIt.id === id
-          ? { ...update(postIt), updatedAt: new Date().toISOString() }
-          : postIt,
-      ),
-    );
-  };
-
-  const duplicatePostIt = (postIt: PostItNote) => {
-    recordAction("Duplicated post-it");
-    const now = new Date().toISOString();
-    const copy: PostItNote = {
-      ...postIt,
-      id: crypto.randomUUID(),
-      x: Math.min(91, postIt.x + 5),
-      y: Math.min(97, postIt.y + 5),
-      zIndex: Math.max(0, ...postIts.map((item) => item.zIndex ?? 0)) + 1,
-      pinned: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-    setPostIts((current) => [...current, copy]);
-  };
-
-  const updateSelectedPostIts = (
-    label: string,
-    update: (postIt: PostItNote) => PostItNote,
-  ) => {
-    if (selectedPostItIds.length === 0) return;
-    recordAction(label);
-    setPostIts((current) =>
-      current.map((postIt) =>
-        selectedPostItIds.includes(postIt.id)
-          ? { ...update(postIt), updatedAt: new Date().toISOString() }
-          : postIt,
-      ),
-    );
-  };
-
-  const setSelectedPostItLock = (locked: boolean) => {
-    if (selectedPostItIds.length === 0) return;
-    const selectedGroupIds = new Set(
-      postIts
-        .filter((item) => selectedPostItIds.includes(item.id))
-        .map((item) => item.groupId)
-        .filter((id): id is string => Boolean(id)),
-    );
-    updateSelectedPostIts(
-      locked ? "Locked post-its" : "Unlocked post-its",
-      (item) => ({ ...item, locked }),
-    );
-    setPostItGroups((current) =>
-      current.map((group) =>
-        selectedGroupIds.has(group.id) ? { ...group, locked } : group,
-      ),
-    );
-  };
-
-  const togglePostItLock = (postIt: PostItNote) => {
-    const locked = !postIt.locked;
-    recordAction(locked ? "Locked post-it" : "Unlocked post-it");
-    setPostIts((current) =>
-      current.map((item) =>
-        item.id === postIt.id ||
-        (postIt.groupId && item.groupId === postIt.groupId)
-          ? { ...item, locked, updatedAt: new Date().toISOString() }
-          : item,
-      ),
-    );
-    if (postIt.groupId) {
-      setPostItGroups((current) =>
-        current.map((group) =>
-          group.id === postIt.groupId ? { ...group, locked } : group,
-        ),
-      );
-    }
-  };
-
   const groupSelectedPostIts = () => {
     if (selectedPostItIds.length < 2) return;
     const name = window.prompt("Optional group name", "Ideas")?.trim() || "Group";
@@ -4268,67 +4180,6 @@ export default function Home() {
     setPostItEditorOpen(false);
   };
 
-  const ungroupSelectedPostIts = () => {
-    const groupIds = new Set(
-      postIts
-        .filter((postIt) => selectedPostItIds.includes(postIt.id))
-        .map((postIt) => postIt.groupId)
-        .filter((id): id is string => Boolean(id)),
-    );
-    if (groupIds.size === 0) return;
-    recordAction("Ungrouped post-its");
-    setPostIts((current) =>
-      current.map((postIt) =>
-        postIt.groupId && groupIds.has(postIt.groupId)
-          ? { ...postIt, groupId: undefined }
-          : postIt,
-      ),
-    );
-    setPostItGroups((current) =>
-      current.filter((group) => !groupIds.has(group.id)),
-    );
-    setSelectedPostItIds([]);
-  };
-
-  const archiveSelectedPostIts = () => {
-    if (selectedPostItIds.length === 0) return;
-    const selectedGroupIds = new Set(
-      postIts
-        .filter((item) => selectedPostItIds.includes(item.id))
-        .map((item) => item.groupId)
-        .filter((id): id is string => Boolean(id)),
-    );
-    updateSelectedPostIts("Archived post-its", (item) => ({
-      ...item,
-      archived: true,
-    }));
-    setPostItGroups((current) =>
-      current.map((group) =>
-        selectedGroupIds.has(group.id) ? { ...group, archived: true } : group,
-      ),
-    );
-    setSelectedPostItIds([]);
-  };
-
-  const archivePostIt = (postIt: PostItNote) => {
-    recordAction(postIt.groupId ? "Archived post-it group" : "Archived post-it");
-    setPostIts((current) =>
-      current.map((item) =>
-        item.id === postIt.id ||
-        (postIt.groupId && item.groupId === postIt.groupId)
-          ? { ...item, archived: true, updatedAt: new Date().toISOString() }
-          : item,
-      ),
-    );
-    if (postIt.groupId) {
-      setPostItGroups((current) =>
-        current.map((group) =>
-          group.id === postIt.groupId ? { ...group, archived: true } : group,
-        ),
-      );
-    }
-  };
-
   const restoreArchivedPostIt = (postIt: PostItNote) => {
     recordAction(postIt.groupId ? "Restored post-it group" : "Restored post-it");
     setPostIts((current) =>
@@ -4346,21 +4197,6 @@ export default function Home() {
         ),
       );
     }
-  };
-
-  const trashSelectedPostIts = () => {
-    const selected = postIts.filter((item) => selectedPostItIds.includes(item.id));
-    if (selected.length === 0) return;
-    if (!window.confirm(`Move ${selected.length} post-its to Trash?`)) return;
-    recordAction("Deleted selected post-its");
-    setTrashItems((current) => [
-      ...selected.map((item) => createTrashItem("post-it", "Post-it", item)),
-      ...current,
-    ]);
-    setPostIts((current) =>
-      current.filter((item) => !selectedPostItIds.includes(item.id)),
-    );
-    setSelectedPostItIds([]);
   };
 
   const raisePostItOnTouch = (postIt: PostItNote) => {
@@ -4470,13 +4306,6 @@ export default function Home() {
       )
     ) return;
     raisePostItOnTouch(postIt);
-    const locked = Boolean(
-      postIt.locked ||
-        (postIt.groupId &&
-          postIts.some(
-            (item) => item.groupId === postIt.groupId && item.locked,
-          )),
-    );
     const canvas = phoneCanvasRef.current;
     if (!canvas) return;
     const bounds = canvas.getBoundingClientRect();
@@ -4492,7 +4321,7 @@ export default function Home() {
       startY: event.clientY,
       startPostItX: postIt.x,
       startPostItY: postIt.y,
-      locked,
+      locked:false,
       historyRecorded: false,
       groupPositions: postIt.groupId
         ? postIts
@@ -7211,7 +7040,12 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
-          <div className="brand-wrap">
+          <button
+            className="brand-wrap"
+            type="button"
+            onClick={() => setAereaHubOpen(true)}
+            aria-label="Open aérea spaces"
+          >
             <span className="brand-mark profile-mark">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="" />
@@ -7223,7 +7057,7 @@ export default function Home() {
               <span className="eyebrow">MY LITTLE DAY</span>
               <strong className="wordmark">aérea</strong>
             </span>
-          </div>
+          </button>
           <div className="header-actions">
             <button
               className="post-it-create-button"
@@ -7502,14 +7336,6 @@ export default function Home() {
                   />
                   <div className="spaces-grid">
                     <SpaceCard
-                      title="Inbox"
-                      subtitle="Quick captures to process later"
-                      color="space-peach"
-                      icon="＋"
-                      note={`${inboxItems.filter((item) => !(item.processedAs?.length)).length} waiting`}
-                      onClick={() => setSpace("inbox")}
-                    />
-                    <SpaceCard
                       title="Library"
                       subtitle="Notes, PDFs & books"
                       color="space-lilac"
@@ -7532,22 +7358,6 @@ export default function Home() {
                       icon="▦"
                       note="Android + aérea"
                       onClick={openCalendarAtToday}
-                    />
-                    <SpaceCard
-                      title="Trash"
-                      subtitle="Recoverable for 30 days"
-                      color="space-lilac"
-                      icon="♲"
-                      note={`${trashItems.length} items`}
-                      onClick={() => setSpace("trash")}
-                    />
-                    <SpaceCard
-                      title="Post-it Archive"
-                      subtitle="Saved for later, never deleted"
-                      color="space-blue"
-                      icon="▱"
-                      note={`${postIts.filter((item) => item.archived).length} archived`}
-                      onClick={() => setSpace("postit-archive")}
                     />
                   </div>
                 </>
@@ -7762,9 +7572,6 @@ export default function Home() {
                           onClick={() => restoreArchivedPostIt(postIt)}
                         >
                           Restore
-                        </button>
-                        <button type="button" onClick={() => duplicatePostIt({ ...postIt, archived: false })}>
-                          Duplicate
                         </button>
                         <button type="button" className="danger" onClick={() => deletePostIt(postIt.id)}>
                           Trash
@@ -8762,8 +8569,6 @@ export default function Home() {
             {visiblePostIts.map((postIt) => (
               <article
                 className={`movable-post-it ${postIt.color} ${
-                  postIt.locked ? "locked" : ""
-                } ${postIt.pinned ? "pinned" : ""} ${
                   selectedPostItIds.includes(postIt.id) ? "multi-selected" : ""
                 }`}
                 key={postIt.id}
@@ -8795,18 +8600,16 @@ export default function Home() {
               >
                 <span className="post-it-tape" aria-hidden="true" />
                 <p>{postIt.text}</p>
-                {!postIt.locked && (
-                  <button
-                    type="button"
-                    className="post-it-resize-handle"
-                    aria-label="Resize post-it"
-                    title="Drag to resize"
-                    onPointerDown={(event) => startPostItResize(event, postIt)}
-                    onPointerMove={resizePostIt}
-                    onPointerUp={finishPostItResize}
-                    onPointerCancel={finishPostItResize}
-                  />
-                )}
+                <button
+                  type="button"
+                  className="post-it-resize-handle"
+                  aria-label="Resize post-it"
+                  title="Drag to resize"
+                  onPointerDown={(event) => startPostItResize(event, postIt)}
+                  onPointerMove={resizePostIt}
+                  onPointerUp={finishPostItResize}
+                  onPointerCancel={finishPostItResize}
+                />
               </article>
             ))}
           </div>
@@ -8836,6 +8639,72 @@ export default function Home() {
           ))}
         </nav>}
       </section>
+
+      {aereaHubOpen && (
+        <div
+          className="modal-backdrop aerea-hub-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setAereaHubOpen(false);
+          }}
+        >
+          <section
+            className="aerea-hub-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="aérea spaces"
+          >
+            <header>
+              <div>
+                <p className="tiny-label">MY LITTLE DAY</p>
+                <h2>aérea</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAereaHubOpen(false)}
+                aria-label="Close aérea spaces"
+              >
+                ×
+              </button>
+            </header>
+            <div className="aerea-hub-links">
+              <button
+                type="button"
+                onClick={() => {
+                  setAereaHubOpen(false);
+                  setActiveTab("spaces");
+                  setSpace("inbox");
+                }}
+              >
+                <span>＋</span>
+                <span><strong>Inbox</strong><small>{inboxItems.filter((item) => !(item.processedAs?.length)).length} waiting</small></span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAereaHubOpen(false);
+                  setActiveTab("spaces");
+                  setSpace("postit-archive");
+                }}
+              >
+                <span>▱</span>
+                <span><strong>Archive</strong><small>{postIts.filter((item) => item.archived).length} post-its</small></span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAereaHubOpen(false);
+                  setActiveTab("spaces");
+                  setSpace("trash");
+                }}
+              >
+                <span>♲</span>
+                <span><strong>Trash</strong><small>{trashItems.length} items</small></span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {quickCaptureOpen && (
         <div
@@ -9317,36 +9186,6 @@ export default function Home() {
         <div className="postit-multi-toolbar" aria-label="Selected post-it actions">
           <strong>{selectedPostItIds.length} selected</strong>
           <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group</button>
-          <button type="button" onClick={ungroupSelectedPostIts}>Ungroup</button>
-          <button
-            type="button"
-            onClick={() =>
-              setSelectedPostItLock(
-                !postIts
-                  .filter((item) => selectedPostItIds.includes(item.id))
-                  .every((item) => item.locked),
-              )
-            }
-          >
-            {postIts
-              .filter((item) => selectedPostItIds.includes(item.id))
-              .every((item) => item.locked)
-              ? "Unlock"
-              : "Lock"}
-          </button>
-          <button
-            type="button"
-            onClick={() => updateSelectedPostIts("Changed post-it colors", (item) => ({ ...item, color: "lavender" }))}
-          >
-            Color
-          </button>
-          <button
-            type="button"
-            onClick={archiveSelectedPostIts}
-          >
-            Archive
-          </button>
-          <button type="button" className="danger" onClick={trashSelectedPostIts}>Trash</button>
           <button type="button" onClick={() => setSelectedPostItIds([])}>Done</button>
         </div>
       )}
@@ -10155,7 +9994,12 @@ export default function Home() {
                       )}
                     </div>
                     <header className="topbar agenda-v2-homebar">
-                      <div className="brand-wrap">
+                      <button
+                        className="brand-wrap"
+                        type="button"
+                        onClick={() => setAereaHubOpen(true)}
+                        aria-label="Open aérea spaces"
+                      >
                         <span className="brand-mark profile-mark">
                           {profilePhoto ? (
                             <img src={profilePhoto} alt="" />
@@ -10167,7 +10011,7 @@ export default function Home() {
                           <span className="eyebrow">MY LITTLE DAY</span>
                           <strong className="wordmark">aérea</strong>
                         </span>
-                      </div>
+                      </button>
                       <div className="header-actions">
                         <button
                           className="calendar-button"
@@ -11481,32 +11325,27 @@ export default function Home() {
           <div className="modal-backdrop day-summary-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setDaySummaryDate(null); }}>
             <section className="day-summary-card" role="dialog" aria-modal="true" aria-label={`Plans for ${readableDate(daySummaryDate)}`}>
               <header>
-                <p className="day-summary-date-eyebrow">
-                  {eventDetailHeadingDate(daySummaryDate)}
-                </p>
+                <div className="day-summary-heading">
+                  <p className="day-summary-category">DAY POCKET</p>
+                  <h2>{readableDate(daySummaryDate)}</h2>
+                </div>
                 <button className="day-summary-close" onClick={() => setDaySummaryDate(null)} aria-label="Close day summary">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M7 7 17 17M17 7 7 17" />
                   </svg>
                 </button>
               </header>
-
-              <div className="day-summary-heading">
-                <p className="day-summary-category">DAY POCKET</p>
-                <h2>{summaryEvents.length === 0 ? "A quiet day" : "Your plans"}</h2>
-              </div>
               {summaryEvents.length === 0 ? (
                 <div className="day-summary-empty"><strong>Nothing planned yet</strong><p>This little page is completely yours.</p></div>
               ) : (
                 <div className="day-summary-events">
-                  {summaryEvents.map((event, index) => {
+                  {summaryEvents.map((event) => {
                     const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
                     return (
                       <article
                         className={[
                           "day-summary-event",
                           event.color,
-                          `pocket-tone-${index % 4}`,
                           hasDetails ? "expanded" : "compact",
                           event.sportsCardStyle ? "match-day-pocket-card" : "",
                         ].filter(Boolean).join(" ")}
@@ -11542,10 +11381,9 @@ export default function Home() {
                         }}
                       >
                         <div className="day-summary-event-heading">
-                          <span className="day-summary-event-icon" aria-hidden="true">
+                          <span className="day-summary-event-heart" aria-hidden="true">
                             <svg viewBox="0 0 24 24" focusable="false">
-                              <circle cx="12" cy="12" r="8" />
-                              <path d="M12 7v5l3 2" />
+                              <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
                             </svg>
                           </span>
                           <div>
@@ -11554,9 +11392,6 @@ export default function Home() {
                                 {event.sportsIcon ?? "♡"} MATCH DAY
                               </span>
                             )}
-                            <span className="day-summary-event-category">
-                              {event.calendar ?? "PERSONAL"}
-                            </span>
                             <strong>{event.title}</strong>
                             <small className="day-summary-event-time">
                               {eventStartTimeLabel(event)}
@@ -12428,56 +12263,6 @@ export default function Home() {
                   ? "Ungroup these post-its"
                   : "Group with other post-its…"}
               </button>
-            )}
-
-            {editingPostItId && (
-              <div className="post-it-editor-secondary-actions" aria-label="Post-it options">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const postIt = postIts.find((item) => item.id === editingPostItId);
-                    if (!postIt) return;
-                    updatePostIt(
-                      postIt.id,
-                      postIt.pinned ? "Unpinned post-it" : "Pinned post-it",
-                      (item) => ({ ...item, pinned: !item.pinned }),
-                    );
-                  }}
-                >
-                  {postIts.find((item) => item.id === editingPostItId)?.pinned ? "Unpin" : "Pin"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const postIt = postIts.find((item) => item.id === editingPostItId);
-                    if (postIt) togglePostItLock(postIt);
-                  }}
-                >
-                  {postIts.find((item) => item.id === editingPostItId)?.locked ? "Unlock" : "Lock"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const postIt = postIts.find((item) => item.id === editingPostItId);
-                    if (!postIt) return;
-                    duplicatePostIt(postIt);
-                    setPostItEditorOpen(false);
-                  }}
-                >
-                  Duplicate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const postIt = postIts.find((item) => item.id === editingPostItId);
-                    if (!postIt) return;
-                    archivePostIt(postIt);
-                    setPostItEditorOpen(false);
-                  }}
-                >
-                  Archive
-                </button>
-              </div>
             )}
 
             <footer>

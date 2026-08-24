@@ -20683,25 +20683,6 @@ body {
   padding:9px 14px;
 }
 
-.post-it-editor-secondary-actions {
-  display:flex;
-  flex-wrap:wrap;
-  gap:7px;
-  justify-content:center;
-  margin-top:2px;
-}
-
-.post-it-editor-secondary-actions button {
-  background:color-mix(in srgb,var(--paper) 78%,var(--lilac));
-  border:1px solid color-mix(in srgb,var(--hero) 18%,var(--line));
-  border-radius:999px;
-  color:var(--ink);
-  font:inherit;
-  font-size:.68rem;
-  font-weight:850;
-  padding:8px 12px;
-}
-
 .post-it-editor-modal > footer {
   align-items:center;
   display:grid;
@@ -27955,4 +27936,271 @@ html[data-native="true"] .simplified-calendar-screen {
   background:#2c3037;
   border-color:#424750;
   color:#d4d1cc;
+}
+
+/* Compact reference notes and the discreet aérea utility hub. */
+button.brand-wrap {
+  appearance:none;
+  color:inherit;
+  cursor:pointer;
+  font:inherit;
+}
+
+.aerea-hub-backdrop {
+  align-items:center;
+  backdrop-filter:blur(8px) saturate(.86);
+  -webkit-backdrop-filter:blur(8px) saturate(.86);
+  background:rgba(38,43,73,.48);
+  display:flex;
+  justify-content:center;
+  padding:20px;
+  z-index:525;
+}
+
+.aerea-hub-modal {
+  background:var(--paper);
+  border:2px solid color-mix(in srgb,var(--paper) 80%,white);
+  border-radius:30px;
+  box-shadow:0 26px 72px rgba(24,30,57,.32);
+  color:var(--ink);
+  max-width:380px;
+  padding:24px;
+  width:min(88vw,380px);
+}
+
+.aerea-hub-modal > header {
+  align-items:center;
+  display:flex;
+  justify-content:space-between;
+}
+
+.aerea-hub-modal > header :is(h2,p) { margin:0; }
+.aerea-hub-modal > header h2 { font-size:31px; letter-spacing:-.05em; }
+.aerea-hub-modal > header > button {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 66%,var(--paper));
+  border:3px solid var(--paper);
+  border-radius:50%;
+  color:var(--ink);
+  display:flex;
+  font-size:28px;
+  height:46px;
+  justify-content:center;
+  padding:0 0 4px;
+  width:46px;
+}
+
+.aerea-hub-links {
+  display:grid;
+  gap:9px;
+  margin-top:20px;
+}
+
+.aerea-hub-links > button {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 20%,var(--paper));
+  border:1px solid var(--line);
+  border-radius:19px;
+  color:var(--ink);
+  display:grid;
+  gap:12px;
+  grid-template-columns:42px minmax(0,1fr);
+  min-height:68px;
+  padding:11px 14px;
+  text-align:left;
+}
+
+.aerea-hub-links > button > span:first-child {
+  align-items:center;
+  background:var(--paper);
+  border-radius:14px;
+  display:flex;
+  font-size:22px;
+  height:42px;
+  justify-content:center;
+  width:42px;
+}
+
+.aerea-hub-links strong,
+.aerea-hub-links small { display:block; }
+.aerea-hub-links strong { font-size:15px; }
+.aerea-hub-links small { color:var(--muted); font-size:10px; margin-top:3px; }
+
+.app-shell[data-theme] .event-detail-note {
+  border-radius:32px;
+  max-height:min(82dvh,720px);
+  max-width:450px;
+  padding:28px 25px 24px;
+  width:min(84vw,450px);
+}
+
+.app-shell[data-theme] .event-detail-heading-copy { margin-top:12px; }
+.app-shell[data-theme] .event-detail-category { margin:0 0 12px; }
+.app-shell[data-theme] .event-detail-title {
+  font-size:clamp(31px,7vw,42px);
+  margin:0;
+}
+
+.app-shell[data-theme] .event-detail-divider,
+.day-summary-card .day-summary-divider {
+  background:color-mix(in srgb,var(--detail-tint,var(--pocket-color,#d8c8f2)) 82%,#aa8ad1);
+  border:0;
+  border-radius:999px;
+  height:6px;
+  margin:18px 2px;
+  width:38px;
+}
+
+.app-shell[data-theme] .event-detail-divider::before { display:none; }
+
+.app-shell[data-theme] .event-detail-time {
+  background:color-mix(in srgb,var(--detail-tint,#e5daf9) 76%,#fff);
+  border-radius:20px;
+  gap:11px;
+  grid-template-columns:44px minmax(0,1fr);
+  margin-bottom:12px;
+  min-height:72px;
+  padding:11px 13px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon {
+  background:color-mix(in srgb,var(--detail-tint,#d9cdf8) 84%,#c8b4e9);
+  border-radius:14px;
+  height:44px;
+  width:44px;
+}
+
+.app-shell[data-theme] .event-detail-time-icon svg { height:26px; width:26px; }
+.app-shell[data-theme] .event-detail-time strong { font-size:18px; }
+
+.app-shell[data-theme] .event-detail-reminder {
+  background:color-mix(in srgb,var(--detail-tint,#e5daf9) 48%,#fff);
+  border-color:color-mix(in srgb,var(--detail-tint,#e5daf9) 78%,#cdbddd);
+  border-radius:19px;
+  gap:10px;
+  grid-template-columns:42px minmax(0,1fr);
+  margin-bottom:14px;
+  padding:10px 12px;
+}
+
+.app-shell[data-theme] .event-detail-reminder-icon {
+  background:color-mix(in srgb,var(--detail-tint,#e5daf9) 78%,#fff);
+  border-radius:13px;
+  height:42px;
+  width:42px;
+}
+
+.app-shell[data-theme] .event-detail-reminder-icon svg {
+  height:27px;
+  stroke:#66618b;
+  width:27px;
+}
+
+.day-summary-backdrop .day-summary-card {
+  border-radius:32px;
+  grid-template-rows:auto minmax(0,1fr) auto auto auto;
+  max-height:min(82dvh,720px);
+  max-width:450px;
+  padding:28px 25px 24px;
+  width:min(86vw,450px);
+}
+
+.day-summary-card > header {
+  align-items:flex-start;
+  gap:15px;
+}
+
+.day-summary-card .day-summary-heading { margin:0; }
+.day-summary-card .day-summary-category { font-size:10px; padding:8px 15px; }
+.day-summary-card .day-summary-heading h2 {
+  font-size:clamp(28px,7vw,38px);
+  line-height:1;
+  margin:12px 0 0;
+}
+
+.day-summary-card > header .day-summary-close {
+  flex-basis:46px;
+  height:46px;
+  width:46px;
+}
+
+.day-summary-card > header .day-summary-close svg { height:23px; width:23px; }
+
+.day-summary-card .day-summary-events {
+  gap:10px;
+  margin-top:20px;
+  padding-bottom:7px;
+}
+
+.day-summary-card .day-summary-event {
+  background:linear-gradient(112deg,color-mix(in srgb,var(--pocket-color) 90%,#fff),color-mix(in srgb,var(--pocket-color) 70%,#fff));
+  border-radius:21px;
+  min-height:78px;
+  padding:13px 14px;
+}
+
+.day-summary-card .day-summary-event.black { --pocket-color:#dedde3; }
+.day-summary-card .day-summary-event-heading {
+  gap:12px;
+  grid-template-columns:48px minmax(0,1fr);
+}
+
+.day-summary-card .day-summary-event-heart {
+  align-items:center;
+  background:rgba(255,255,255,.78);
+  border-radius:50%;
+  color:#5e6197;
+  display:flex;
+  height:48px;
+  justify-content:center;
+  width:48px;
+}
+
+.day-summary-card .day-summary-event-heart svg {
+  fill:none;
+  height:28px;
+  stroke:currentColor;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:1.9;
+  width:28px;
+}
+
+.day-summary-card .day-summary-event-heading strong { font-size:18px; }
+.day-summary-card .day-summary-event-time { font-size:13px; }
+.day-summary-card .day-summary-memo,
+.day-summary-card .day-summary-event ul { margin-left:60px; }
+.day-summary-card .day-summary-divider { margin:16px 2px; }
+
+.day-summary-card .day-summary-event.match-day-pocket-card .day-summary-event-heart {
+  background:color-mix(in srgb,var(--sports-secondary,#f6cf2f) 34%,white);
+  color:var(--sports-primary,#0b2f78);
+}
+
+.app-shell[data-theme="ao3night"] .event-detail-time,
+.app-shell[data-theme="ao3night"] .event-detail-reminder {
+  background:color-mix(in srgb,var(--detail-tint,#8a719f) 24%,#26372f);
+  border-color:rgba(248,200,220,.14);
+}
+.app-shell[data-theme="ao3night"] .event-detail-time-icon,
+.app-shell[data-theme="ao3night"] .event-detail-reminder-icon,
+.app-shell[data-theme="ao3night"] .day-summary-event-heart { background:#35483f; }
+.app-shell[data-theme="ao3night"] .day-summary-event {
+  background:color-mix(in srgb,var(--pocket-color,#8a719f) 24%,#26372f);
+}
+
+@media (max-width:520px) {
+  .app-shell[data-theme] .event-detail-note {
+    border-radius:30px;
+    max-height:calc(100dvh - 44px);
+    padding:24px 21px 22px;
+    width:min(84vw,450px);
+  }
+
+  .day-summary-backdrop .day-summary-card {
+    border-radius:30px;
+    max-height:calc(100dvh - 44px);
+    padding:24px 21px 22px;
+    width:min(86vw,450px);
+  }
 }
