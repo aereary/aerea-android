@@ -10930,9 +10930,8 @@ export default function Home() {
                                     } as CSSProperties
                                   }
                                   onClick={() => {
-                                    openEventDetail(
-                                      calendarEventAtOccurrence(event, date),
-                                    );
+                                    setSelectedCalendarDate(date);
+                                    openEventEditor(event);
                                   }}
                                 >
                                   <i aria-hidden="true" />
@@ -10963,7 +10962,7 @@ export default function Home() {
                     </div>
 
                     <footer className="calendar-search-footer">
-                      ♡ Tap a result to open its full note
+                      ♡ Tap a result to edit the event
                     </footer>
                   </section>
                 )}

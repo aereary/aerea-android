@@ -371,7 +371,11 @@ test("searches every event from the compact calendar", () => {
   assert.match(pageSource, /aria-label="Search calendar events"/);
   assert.match(pageSource, /placeholder="Search events"/);
   assert.match(pageSource, /title · calendar · notes · place/);
-  assert.match(pageSource, /setSelectedEventDetail\([\s\S]*calendarEventAtOccurrence/);
+  assert.match(
+    pageSource,
+    /className="calendar-search-result"[\s\S]{0,900}setSelectedCalendarDate\(date\);[\s\S]{0,120}openEventEditor\(event\)/,
+  );
+  assert.match(pageSource, /♡ Tap a result to edit the event/);
   assert.match(cssSource, /\.calendar-search-trigger/);
   assert.match(cssSource, /\.calendar-search-screen/);
   assert.match(cssSource, /\.calendar-search-result/);
