@@ -212,6 +212,8 @@ test("keeps notes, searchable readers, pastel highlights, and private files in L
   assert.match(librarySource, /READ & ANNOTATE/);
   assert.match(librarySource, /COLLECTIONS/);
   assert.match(librarySource, /favoriteFiles/);
+  assert.match(librarySource, /favoriteNotes/);
+  assert.match(librarySource, /favoriteRecordings/);
   assert.match(librarySource, /recentFiles/);
   assert.match(librarySource, /Recently opened/);
   assert.match(librarySource, /Continue ·/);
@@ -224,6 +226,11 @@ test("keeps notes, searchable readers, pastel highlights, and private files in L
   assert.match(readerSource, /epub-saved-highlight/);
   assert.match(readerSource, /EPUB reading tools/);
   assert.match(readerSource, /document\.getOutline\(\)/);
+  assert.match(readerSource, /function PdfPageThumbnail/);
+  assert.match(readerSource, /<canvas ref=\{canvasRef\}/);
+  assert.match(readerSource, /bookmarkNames/);
+  assert.match(readerSource, /Filter by color/);
+  assert.match(readerSource, /stroke\.excerpt/);
   assert.match(readerSource, /pageNotes/);
   assert.match(readerSource, /Note for page/);
   assert.match(librarySource, /onDeleteNote/);
@@ -610,22 +617,27 @@ test("keeps reversible history, archive and a 30-day Trash", () => {
   assert.match(pageSource, /deleteDocument\(\{ id: file\.id \}\)/);
   assert.match(pageSource, /moveToTrash\("note"/);
   assert.match(pageSource, /archiveSelectedPostIts/);
+  assert.doesNotMatch(pageSource, /className="global-history-controls"/);
 });
 
-test("wires calendar drag, duplicate, selection and conflict checks to the UI", () => {
+test("keeps calendar drag and conflict checks without the rejected power tools", () => {
   assert.match(pageSource, /data-calendar-date=\{dayKey\}/);
   assert.match(pageSource, /startCalendarEventDrag\(event, calendarEvent\)/);
+  assert.match(pageSource, /event\.stopPropagation\(\);\s*cancelCalendarLongPress\(\)/);
   assert.match(pageSource, /startScheduleEventDrag/);
   assert.match(pageSource, /moveCalendarEventTime/);
   assert.match(pageSource, /agenda-v2-drag-time/);
-  assert.match(pageSource, /className="event-detail-duplicate"/);
-  assert.match(pageSource, /duplicateCalendarEvent\(selectedEventDetail\)/);
-  assert.match(pageSource, /toggleCalendarEventSelection/);
-  assert.match(pageSource, /copyCurrentWeek/);
   assert.match(pageSource, /goToScheduleToday/);
-  assert.match(pageSource, /Jump to date/);
+  assert.doesNotMatch(pageSource, /className="event-detail-duplicate"/);
+  assert.doesNotMatch(pageSource, /toggleCalendarEventSelection/);
+  assert.doesNotMatch(pageSource, /copyCurrentWeek/);
+  assert.doesNotMatch(pageSource, /Jump to date/);
+  assert.doesNotMatch(pageSource, /Select events/);
   assert.match(pageSource, /className="agenda-v2-all-day-list"/);
   assert.match(pageSource, /This overlaps with \$\{conflict\.title\}/);
+  assert.match(pageSource, /View conflicting event/);
+  assert.match(pageSource, /Change time/);
+  assert.match(pageSource, /calendarEventHasConflictOnDate/);
   assert.match(cssSource, /\.agenda-v2-event\.is-dragging/);
 });
 
@@ -636,11 +648,18 @@ test("keeps Library links and backlinks bidirectional without duplicating conten
   assert.match(pageSource, /fromType: "event",[\s\S]{0,140}toType: "file"/);
   assert.match(pageSource, /fromType: "event",[\s\S]{0,140}toType: "recording"/);
   assert.match(pageSource, /fromType: "task",[\s\S]{0,140}toType: "file"/);
+  assert.match(pageSource, /toggleTaskFileAttachment/);
+  assert.match(pageSource, /New attached note/);
+  assert.match(pageSource, /Removing a link never deletes the original file or note/);
   assert.match(pageSource, /toggleEntityLink\([\s\S]{0,180}"class",[\s\S]{0,180}"note"/);
   assert.match(pageSource, /Attach from Library/);
   assert.match(pageSource, /Related notes & recordings/);
-  assert.match(pageSource, /usedInForFile=\{\(fileId\) =>/);
+  assert.match(pageSource, /const fileUsedInLabels = \(fileId: string\) =>/);
+  assert.match(pageSource, /usedInForFile=\{fileUsedInLabels\}/);
+  assert.match(pageSource, /usedIn=\{fileUsedInLabels\(activeStudyFile\.id\)\}/);
   assert.match(librarySource, /Used in:/);
+  assert.match(librarySource, /className="study-card-actions"/);
+  assert.match(cssSource, /\.study-reader\.reader-dark \.pdf-navigation-panel/);
   assert.match(pageSource, /const alreadyLinked = hasEntityLink/);
   assert.match(pageSource, /alreadyLinked[\s\S]{0,220}current\.filter/);
 });
@@ -679,6 +698,8 @@ test("keeps sports provider secrets behind a normalized Supabase model", () => {
   assert.match(sportsFunctionSource, /x-sports-sync-secret/);
   assert.doesNotMatch(pageSource, /x-apisports-key/);
   assert.match(pageSource, /MATCH DAY/);
+  assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
+  assert.match(pageSource, /match-day-pocket-card/);
 });
 
 test("keeps morning, night and smart rescheduling small but actionable", () => {
@@ -704,16 +725,19 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /visiblePostIts\.map/);
   assert.match(pageSource, /className="post-it-layer"/);
   assert.match(pageSource, /startPostItDrag/);
+  assert.match(pageSource, /if \(drag\.locked\) return/);
   assert.match(pageSource, /startPostItResize/);
-  assert.match(pageSource, /changePostItLayer/);
+  assert.match(pageSource, /raisePostItOnTouch/);
   assert.match(pageSource, /pinned: !item\.pinned/);
   assert.match(pageSource, /togglePostItLock/);
   assert.match(pageSource, /duplicatePostIt/);
   assert.match(pageSource, /groupSelectedPostIts/);
+  assert.match(pageSource, /choosePostItGroupAction/);
   assert.match(pageSource, /ungroupSelectedPostIts/);
   assert.match(pageSource, /archiveSelectedPostIts/);
-  assert.match(pageSource, /Bring forward/);
-  assert.match(pageSource, /Send backward/);
+  assert.doesNotMatch(pageSource, /Bring forward/);
+  assert.doesNotMatch(pageSource, /Send backward/);
+  assert.match(cssSource, /\.post-it-resize-handle\s*\{[\s\S]{0,100}background:\s*transparent/);
   assert.match(pageSource, /postItLongPressRef/);
   assert.match(pageSource, /Movable post-it\. Hold to edit\./);
   assert.doesNotMatch(pageSource, /className="post-it-edit"/);
@@ -831,8 +855,10 @@ test("shows Coming up next dynamically on today across every theme", () => {
   assert.match(pageSource, /selectedIsToday\s*\?\s*findComingUpEvent/);
   assert.match(pageSource, /selectedIsToday && comingUpEvent &&/);
   assert.doesNotMatch(pageSource, /Nothing else is waiting for you today/);
-  assert.match(pageSource, /className=\{`schedule-card \$\{comingUpEvent\.color\}-card`\}/);
-  assert.match(pageSource, /<strong>\{comingUpEvent\.time\}<\/strong>/);
+  assert.match(pageSource, /comingUpEvent\.sportsCardStyle \? "match-day-schedule-card"/);
+  assert.match(pageSource, /`\$\{comingUpEvent\.color\}-card`/);
+  assert.match(pageSource, /comingUpEvent\.allDay \? "ALL" : comingUpEvent\.time/);
+  assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
   assert.match(pageSource, /<div className="schedule-line" \/>/);
   assert.match(pageSource, /<div className="mini-people">/);
   assert.match(cssSource, /Coming up reuses the exact schedule-card anatomy/);

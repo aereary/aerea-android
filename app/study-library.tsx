@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, useMemo, useRef, useState } from "react";
 
 export type StudyNotebook = {
   id: string;
@@ -19,8 +19,22 @@ export type StudyNote = {
   body: string;
   notebookId?: string;
   pinned: boolean;
+  favorite?: boolean;
+  collectionIds?: string[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type StudyRecordingItem = {
+  id: number;
+  className: string;
+  name: string;
+  notes: string;
+  duration: number;
+  url?: string;
+  favorite?: boolean;
+  collectionIds?: string[];
+  lastOpenedAt?: string;
 };
 
 export type StudyTask = {
@@ -67,6 +81,7 @@ export type StudyFileItem = {
     chapter?: number;
     percentage?: number;
     bookmarks?: number[];
+    bookmarkNames?: Record<string, string>;
   };
 };
 
@@ -77,7 +92,7 @@ export type StudyCollection = {
   createdAt: string;
 };
 
-type LibraryFilter = "all" | "notes" | "files";
+type LibraryFilter = "all" | "notes" | "files" | "recordings";
 
 function readableFileSize(size: number) {
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -89,9 +104,15 @@ function notePreview(body: string) {
   return normalized.length > 132 ? `${normalized.slice(0, 132).trimEnd()}…` : normalized;
 }
 
+function readableRecordingDuration(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(Math.max(0, seconds % 60)).padStart(2, "0")}`;
+}
+
 export function StudyLibrary({
   notes,
   files,
+  recordings,
   onNotesChange,
   onDeleteNote,
   onOpenFile,
@@ -100,11 +121,13 @@ export function StudyLibrary({
   collections,
   onCollectionsChange,
   onFilesChange,
+  onRecordingsChange,
   usedInForFile,
   onBack,
 }: {
   notes: StudyNote[];
   files: StudyFileItem[];
+  recordings: StudyRecordingItem[];
   onNotesChange: (notes: StudyNote[]) => void;
   onDeleteNote: (note: StudyNote) => void;
   onOpenFile: (file: StudyFileItem) => void;
@@ -113,6 +136,7 @@ export function StudyLibrary({
   collections: StudyCollection[];
   onCollectionsChange: (collections: StudyCollection[]) => void;
   onFilesChange: (files: StudyFileItem[]) => void;
+  onRecordingsChange: (recordings: StudyRecordingItem[]) => void;
   usedInForFile: (fileId: string) => string[];
   onBack: () => void;
 }) {
@@ -127,8 +151,13 @@ export function StudyLibrary({
 
   const query = search.trim().toLowerCase();
   const visibleNotes = useMemo(
-    () => notes.filter((item) => `${item.title} ${item.body}`.toLowerCase().includes(query)),
-    [notes, query],
+    () =>
+      notes.filter(
+        (item) =>
+          `${item.title} ${item.body}`.toLowerCase().includes(query) &&
+          (!collectionFilter || item.collectionIds?.includes(collectionFilter)),
+      ),
+    [collectionFilter, notes, query],
   );
   const visibleFiles = useMemo(
     () =>
@@ -140,6 +169,17 @@ export function StudyLibrary({
     [collectionFilter, files, query],
   );
   const favoriteFiles = files.filter((item) => item.favorite);
+  const favoriteNotes = notes.filter((item) => item.favorite);
+  const visibleRecordings = useMemo(
+    () =>
+      recordings.filter(
+        (item) =>
+          `${item.name} ${item.className} ${item.notes}`.toLowerCase().includes(query) &&
+          (!collectionFilter || item.collectionIds?.includes(collectionFilter)),
+      ),
+    [collectionFilter, query, recordings],
+  );
+  const favoriteRecordings = recordings.filter((item) => item.favorite);
   const recentFiles = [...files]
     .filter((item) => item.lastOpenedAt)
     .sort((first, second) =>
@@ -185,6 +225,16 @@ export function StudyLibrary({
     );
   };
 
+  const toggleRecordingFavorite = (recording: StudyRecordingItem) => {
+    onRecordingsChange(
+      recordings.map((item) =>
+        item.id === recording.id
+          ? { ...item, favorite: !item.favorite }
+          : item,
+      ),
+    );
+  };
+
   const toggleCollection = (file: StudyFileItem, collectionId: string) => {
     const attached = file.collectionIds?.includes(collectionId) ?? false;
     onFilesChange(
@@ -195,6 +245,27 @@ export function StudyLibrary({
               collectionIds: attached
                 ? (item.collectionIds ?? []).filter((id) => id !== collectionId)
                 : Array.from(new Set([...(item.collectionIds ?? []), collectionId])),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const toggleRecordingCollection = (
+    recording: StudyRecordingItem,
+    collectionId: string,
+  ) => {
+    const attached = recording.collectionIds?.includes(collectionId) ?? false;
+    onRecordingsChange(
+      recordings.map((item) =>
+        item.id === recording.id
+          ? {
+              ...item,
+              collectionIds: attached
+                ? (item.collectionIds ?? []).filter((id) => id !== collectionId)
+                : Array.from(
+                    new Set([...(item.collectionIds ?? []), collectionId]),
+                  ),
             }
           : item,
       ),
@@ -252,6 +323,8 @@ export function StudyLibrary({
       title: "",
       body: "",
       pinned: false,
+      favorite: false,
+      collectionIds: [],
       createdAt: now,
       updatedAt: now,
     });
@@ -290,6 +363,7 @@ export function StudyLibrary({
         <div className="study-library-stats" aria-label="Library totals">
           <span><strong>{notes.length}</strong><small>notes</small></span>
           <span><strong>{files.length}</strong><small>files</small></span>
+          <span><strong>{recordings.length}</strong><small>recordings</small></span>
         </div>
       </header>
 
@@ -305,7 +379,7 @@ export function StudyLibrary({
           {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search">×</button>}
         </label>
         <nav aria-label="Library filters">
-          {(["all", "notes", "files"] as LibraryFilter[]).map((item) => (
+          {(["all", "notes", "files", "recordings"] as LibraryFilter[]).map((item) => (
             <button
               type="button"
               key={item}
@@ -321,12 +395,11 @@ export function StudyLibrary({
         </button>
       </div>
 
-      {(filter === "all" || filter === "files") && (
-        <section className="study-library-organize card">
+      <section className="study-library-organize card">
           <header>
             <div>
               <p className="tiny-label">COLLECTIONS</p>
-              <h2>One file can live in many places</h2>
+              <h2>One item can live in many places</h2>
             </div>
             <button type="button" onClick={createCollection}>＋ Collection</button>
           </header>
@@ -336,7 +409,7 @@ export function StudyLibrary({
               className={collectionFilter === null ? "active" : ""}
               onClick={() => setCollectionFilter(null)}
             >
-              All files
+              All items
             </button>
             {[...collections]
               .sort((first, second) => first.order - second.order)
@@ -369,7 +442,7 @@ export function StudyLibrary({
                         );
                         return;
                       }
-                      if (window.confirm(`Delete “${collection.name}”? Files will stay in Library.`)) {
+                      if (window.confirm(`Delete “${collection.name}”? Its items will stay in Library.`)) {
                         onCollectionsChange(
                           collections.filter((item) => item.id !== collection.id),
                         );
@@ -377,6 +450,22 @@ export function StudyLibrary({
                           files.map((file) => ({
                             ...file,
                             collectionIds: (file.collectionIds ?? []).filter(
+                              (id) => id !== collection.id,
+                            ),
+                          })),
+                        );
+                        onNotesChange(
+                          notes.map((note) => ({
+                            ...note,
+                            collectionIds: (note.collectionIds ?? []).filter(
+                              (id) => id !== collection.id,
+                            ),
+                          })),
+                        );
+                        onRecordingsChange(
+                          recordings.map((recording) => ({
+                            ...recording,
+                            collectionIds: (recording.collectionIds ?? []).filter(
                               (id) => id !== collection.id,
                             ),
                           })),
@@ -390,14 +479,32 @@ export function StudyLibrary({
                 </span>
               ))}
           </div>
-          {(favoriteFiles.length > 0 || recentFiles.length > 0) && (
+          {(favoriteFiles.length > 0 || favoriteNotes.length > 0 || favoriteRecordings.length > 0 || recentFiles.length > 0) && (
             <div className="study-library-shelves">
-              {favoriteFiles.length > 0 && (
+              {(favoriteFiles.length > 0 || favoriteNotes.length > 0 || favoriteRecordings.length > 0) && (
                 <div>
                   <strong>Favorites</strong>
                   {favoriteFiles.slice(0, 5).map((file) => (
                     <button type="button" key={file.id} onClick={() => openFile(file)}>
                       ◆ {file.name}
+                    </button>
+                  ))}
+                  {favoriteNotes.slice(0, 5).map((note) => (
+                    <button type="button" key={note.id} onClick={() => setNoteEditor({ ...note })}>
+                      ◆ {note.title}
+                    </button>
+                  ))}
+                  {favoriteRecordings.slice(0, 5).map((recording) => (
+                    <button
+                      type="button"
+                      key={recording.id}
+                      onClick={() =>
+                        document
+                          .getElementById(`library-recording-${recording.id}`)
+                          ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                      }
+                    >
+                      ◆ {recording.name}
                     </button>
                   ))}
                 </div>
@@ -422,8 +529,7 @@ export function StudyLibrary({
               )}
             </div>
           )}
-        </section>
-      )}
+      </section>
 
       {(filter === "all" || filter === "notes") && (
         <section className="study-library-section">
@@ -507,22 +613,25 @@ export function StudyLibrary({
                   );
                 }}
               >
-                <button
-                  type="button"
-                  className="study-file-select"
-                  onClick={() =>
-                    setSelectedFileIds((current) =>
-                      current.includes(file.id)
-                        ? current.filter((id) => id !== file.id)
-                        : [...current, file.id],
-                    )
-                  }
-                  aria-label={selectedFileIds.includes(file.id) ? `Unselect ${file.name}` : `Select ${file.name}`}
-                >
-                  {selectedFileIds.includes(file.id) ? "✓" : "○"}
-                </button>
                 <button type="button" className="study-file-open" onClick={() => openFile(file)}>
-                  <span>{file.kind === "pdf" ? "PDF" : file.kind === "epub" ? "EPUB" : "FILE"}</span>
+                  <span className="study-file-cover">
+                    {file.mediaType.startsWith("image/") && file.dataUrl ? (
+                      <i
+                        aria-hidden="true"
+                        style={
+                          { "--study-cover-image": `url("${file.dataUrl}")` } as CSSProperties
+                        }
+                      />
+                    ) : file.mediaType.startsWith("audio/") ? (
+                      "AUDIO"
+                    ) : file.kind === "pdf" ? (
+                      "PDF"
+                    ) : file.kind === "epub" ? (
+                      "EPUB"
+                    ) : (
+                      "FILE"
+                    )}
+                  </span>
                   <strong>{file.name}</strong>
                   <small>{readableFileSize(file.size)} · {new Date(file.createdAt).toLocaleDateString()}</small>
                   <em>
@@ -541,29 +650,48 @@ export function StudyLibrary({
                             : "Open file"} →
                   </em>
                 </button>
-                <button
-                  type="button"
-                  className={file.favorite ? "study-file-favorite active" : "study-file-favorite"}
-                  onClick={() => toggleFavorite(file)}
-                  aria-label={file.favorite ? `Remove ${file.name} from favorites` : `Favorite ${file.name}`}
-                >
-                  {file.favorite ? "◆" : "◇"}
-                </button>
-                {collections.length > 0 && (
-                  <details className="study-file-collections">
-                    <summary>Collections</summary>
-                    {collections.map((collection) => (
-                      <label key={collection.id}>
-                        <input
-                          type="checkbox"
-                          checked={file.collectionIds?.includes(collection.id) ?? false}
-                          onChange={() => toggleCollection(file, collection.id)}
-                        />
-                        {collection.name}
-                      </label>
-                    ))}
-                  </details>
-                )}
+                <details className="study-card-actions">
+                  <summary aria-label={`Actions for ${file.name}`}>···</summary>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedFileIds((current) =>
+                          current.includes(file.id)
+                            ? current.filter((id) => id !== file.id)
+                            : [...current, file.id],
+                        )
+                      }
+                    >
+                      {selectedFileIds.includes(file.id) ? "Unselect" : "Select"}
+                    </button>
+                    <button type="button" onClick={() => toggleFavorite(file)}>
+                      {file.favorite ? "Remove from Favorites" : "Add to Favorites"}
+                    </button>
+                    {collections.length > 0 && (
+                      <fieldset>
+                        <legend>Collections</legend>
+                        {collections.map((collection) => (
+                          <label key={collection.id}>
+                            <input
+                              type="checkbox"
+                              checked={file.collectionIds?.includes(collection.id) ?? false}
+                              onChange={() => toggleCollection(file, collection.id)}
+                            />
+                            {collection.name}
+                          </label>
+                        ))}
+                      </fieldset>
+                    )}
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => onDeleteFile(file)}
+                    >
+                      Move to Trash
+                    </button>
+                  </div>
+                </details>
                 {usedInForFile(file.id).length > 0 && (
                   <div className="study-file-used-in">
                     <small>Used in:</small>
@@ -572,14 +700,6 @@ export function StudyLibrary({
                     ))}
                   </div>
                 )}
-                <button
-                  type="button"
-                  className="study-card-menu"
-                  onClick={() => onDeleteFile(file)}
-                  aria-label={`Delete ${file.name}`}
-                >
-                  ×
-                </button>
               </article>
             ))}
           </div>
@@ -587,10 +707,94 @@ export function StudyLibrary({
         </section>
       )}
 
+      {(filter === "all" || filter === "recordings") && (
+        <section className="study-library-section">
+          <header>
+            <div>
+              <p className="tiny-label">CLASS AUDIO</p>
+              <h2>Recordings</h2>
+            </div>
+          </header>
+          <div className="study-recording-grid">
+            {visibleRecordings.map((recording) => (
+              <article
+                className="study-recording-card"
+                id={`library-recording-${recording.id}`}
+                key={recording.id}
+              >
+                <header>
+                  <span>🎙</span>
+                  <div>
+                    <strong>{recording.name}</strong>
+                    <small>
+                      {recording.className} · {readableRecordingDuration(recording.duration)}
+                    </small>
+                  </div>
+                  <details className="study-card-actions recording-actions">
+                    <summary aria-label={`Actions for ${recording.name}`}>···</summary>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => toggleRecordingFavorite(recording)}
+                      >
+                        {recording.favorite
+                          ? "Remove from Favorites"
+                          : "Add to Favorites"}
+                      </button>
+                      {collections.length > 0 && (
+                        <fieldset>
+                          <legend>Collections</legend>
+                          {collections.map((collection) => (
+                            <label key={collection.id}>
+                              <input
+                                type="checkbox"
+                                checked={recording.collectionIds?.includes(collection.id) ?? false}
+                                onChange={() =>
+                                  toggleRecordingCollection(recording, collection.id)
+                                }
+                              />
+                              {collection.name}
+                            </label>
+                          ))}
+                        </fieldset>
+                      )}
+                    </div>
+                  </details>
+                </header>
+                {recording.notes && <p>{recording.notes}</p>}
+                {recording.url ? (
+                  <audio
+                    controls
+                    preload="metadata"
+                    src={recording.url}
+                    onPlay={() =>
+                      onRecordingsChange(
+                        recordings.map((item) =>
+                          item.id === recording.id
+                            ? { ...item, lastOpenedAt: new Date().toISOString() }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                ) : (
+                  <small>This recording is temporarily unavailable.</small>
+                )}
+              </article>
+            ))}
+          </div>
+          {visibleRecordings.length === 0 && (
+            <p className="study-library-empty">
+              {query ? `No recordings match “${search}”.` : "Class recordings will also appear here."}
+            </p>
+          )}
+        </section>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.epub,application/pdf,application/epub+zip,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+        accept=".pdf,.epub,application/pdf,application/epub+zip,image/*,audio/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
         multiple
         hidden
         onChange={importDocuments}
@@ -612,6 +816,36 @@ export function StudyLibrary({
             <input className="study-note-title" autoFocus value={noteEditor.title} onChange={(event) => setNoteEditor({ ...noteEditor, title: event.target.value })} placeholder="Note title" />
             <textarea value={noteEditor.body} onChange={(event) => setNoteEditor({ ...noteEditor, body: event.target.value })} placeholder="Write anything…" />
             <label className="study-pin-toggle"><input type="checkbox" checked={noteEditor.pinned} onChange={(event) => setNoteEditor({ ...noteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
+            <label className="study-pin-toggle"><input type="checkbox" checked={noteEditor.favorite ?? false} onChange={(event) => setNoteEditor({ ...noteEditor, favorite: event.target.checked })} /><span>♡ Keep in Favorites</span></label>
+            {collections.length > 0 && (
+              <fieldset className="study-note-collections">
+                <legend>Collections</legend>
+                {collections.map((collection) => (
+                  <label key={collection.id}>
+                    <input
+                      type="checkbox"
+                      checked={noteEditor.collectionIds?.includes(collection.id) ?? false}
+                      onChange={(event) =>
+                        setNoteEditor({
+                          ...noteEditor,
+                          collectionIds: event.target.checked
+                            ? Array.from(
+                                new Set([
+                                  ...(noteEditor.collectionIds ?? []),
+                                  collection.id,
+                                ]),
+                              )
+                            : (noteEditor.collectionIds ?? []).filter(
+                                (id) => id !== collection.id,
+                              ),
+                        })
+                      }
+                    />
+                    {collection.name}
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <footer>
               {hasNote(noteEditor.id) ? (
                 <button

@@ -38,6 +38,19 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  border:0;
+  clip:rect(0 0 0 0);
+  clip-path:inset(50%);
+  height:1px;
+  margin:-1px;
+  overflow:hidden;
+  padding:0;
+  position:absolute;
+  white-space:nowrap;
+  width:1px;
+}
+
 html {
   background: #eaf4c6;
 }
@@ -20391,6 +20404,19 @@ body {
 .post-it-editor-options button > span { background:var(--post-it-swatch); border-radius:50%; height:22px; width:22px; }
 .post-it-editor-options button.active { border-color:#7964be; box-shadow:0 0 0 2px rgba(121,100,190,.13); }
 
+.post-it-group-action {
+  align-self:center;
+  background:color-mix(in srgb,var(--lilac) 52%,var(--paper));
+  border:1px solid color-mix(in srgb,var(--hero) 22%,var(--line));
+  border-radius:999px;
+  color:var(--ink);
+  font:inherit;
+  font-size:.72rem;
+  font-weight:850;
+  justify-self:center;
+  padding:9px 14px;
+}
+
 .post-it-editor-modal > footer {
   align-items:center;
   display:grid;
@@ -26894,6 +26920,21 @@ html[data-native="true"] .simplified-calendar-screen {
   gap: 5px;
   grid-template-columns: minmax(0, 1fr) auto;
 }
+.pdf-navigation-row.pdf-highlight-row {
+  grid-template-columns:minmax(0,1fr) 34px 34px;
+}
+.pdf-navigation-row.pdf-highlight-row > button:not(:first-child),
+.epub-panel-row.epub-highlight-row > button:not(:first-child) {
+  background:color-mix(in srgb,var(--lilac) 28%,var(--paper));
+  border:0;
+  border-radius:12px;
+  color:var(--ink);
+  min-width:30px;
+}
+.pdf-navigation-row.pdf-highlight-row > button:last-child,
+.epub-panel-row.epub-highlight-row > button:last-child {
+  background:color-mix(in srgb,var(--coral) 22%,var(--paper));
+}
 
 .pdf-navigation-row > button:first-child {
   align-items: center;
@@ -26938,6 +26979,54 @@ html[data-native="true"] .simplified-calendar-screen {
   display: flex;
   grid-row: 1 / span 2;
   justify-content: center;
+  min-height:62px;
+  overflow:hidden;
+  position:relative;
+  width:46px;
+}
+.pdf-page-thumbnail canvas {
+  display:block;
+  height:100%!important;
+  object-fit:contain;
+  width:100%!important;
+}
+.pdf-page-thumbnail small {
+  background:rgba(20,22,25,.72);
+  border-radius:999px;
+  bottom:2px;
+  color:#fff;
+  font-size:.52rem;
+  line-height:1;
+  padding:2px 4px;
+  position:absolute;
+  right:2px;
+}
+.reader-highlight-filter {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 20%,var(--paper));
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--ink-soft);
+  display:flex;
+  font-size:.65rem;
+  font-weight:850;
+  gap:7px;
+  justify-content:space-between;
+  padding:7px 9px;
+}
+.reader-highlight-filter select {
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:9px;
+  color:var(--ink);
+  font-size:.65rem;
+  padding:5px;
+}
+.epub-panel-row.epub-highlight-row {
+  grid-template-columns:minmax(0,1fr) 30px 30px;
+}
+.epub-bookmark-row > button:first-child {
+  grid-template-columns:25px minmax(0,1fr);
 }
 
 .post-it-mini-actions button {
@@ -26954,62 +27043,97 @@ html[data-native="true"] .simplified-calendar-screen {
   width: 25px;
 }
 
-.post-it-layer-menu {
-  position: relative;
-}
-
-.post-it-layer-menu > summary {
-  align-items: center;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  font-size: 0.68rem;
-  height: 25px;
-  justify-content: center;
-  list-style: none;
-  width: 25px;
-}
-
-.post-it-layer-menu > summary::-webkit-details-marker {
-  display: none;
-}
-
-.post-it-layer-menu > div {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 13px;
-  box-shadow: 0 12px 28px rgba(28, 35, 44, 0.2);
-  display: grid;
-  min-width: 132px;
-  padding: 5px;
-  position: absolute;
-  right: -8px;
-  top: 30px;
-}
-
-.post-it-layer-menu > div button {
-  border-radius: 9px;
-  font-size: 0.64rem;
-  height: auto;
-  justify-content: flex-start;
-  padding: 7px 8px;
-  white-space: nowrap;
-  width: 100%;
-}
-
 .post-it-resize-handle {
-  background: linear-gradient(135deg, transparent 48%, color-mix(in srgb, var(--ink) 48%, transparent) 49% 56%, transparent 57% 65%, color-mix(in srgb, var(--ink) 48%, transparent) 66% 73%, transparent 74%);
+  background: transparent;
   border: 0;
-  bottom: 5px;
+  bottom: 0;
   cursor: nwse-resize;
-  height: 24px;
+  height: 30px;
   padding: 0;
   position: absolute;
-  right: 5px;
+  right: 0;
   touch-action: none;
-  width: 24px;
+  width: 30px;
   z-index: 3;
 }
+
+/* Library cards keep secondary actions in the same quiet overflow menu. */
+.study-card-actions {
+  position:absolute;
+  right:10px;
+  top:10px;
+  z-index:8;
+}
+.study-card-actions > summary {
+  align-items:center;
+  background:color-mix(in srgb,var(--paper) 88%,var(--cream));
+  border:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+  border-radius:50%;
+  color:var(--ink);
+  cursor:pointer;
+  display:flex;
+  font-size:.86rem;
+  font-weight:900;
+  height:30px;
+  justify-content:center;
+  list-style:none;
+  width:30px;
+}
+.study-card-actions > summary::-webkit-details-marker { display:none; }
+.study-card-actions > div {
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:15px;
+  box-shadow:0 14px 34px color-mix(in srgb,var(--ink) 22%,transparent);
+  color:var(--ink);
+  display:grid;
+  gap:3px;
+  min-width:190px;
+  padding:7px;
+  position:absolute;
+  right:0;
+  top:35px;
+}
+.study-card-actions :is(button,label) {
+  align-items:center;
+  background:transparent;
+  border:0;
+  border-radius:10px;
+  color:var(--ink);
+  display:flex;
+  font:inherit;
+  font-size:.7rem;
+  gap:7px;
+  padding:8px 9px;
+  text-align:left;
+  width:100%;
+}
+.study-card-actions button:hover,
+.study-card-actions label:hover {
+  background:color-mix(in srgb,var(--lilac) 24%,var(--paper));
+}
+.study-card-actions button.danger { color:color-mix(in srgb,#d45f69 78%,var(--ink)); }
+.study-card-actions fieldset {
+  border:0;
+  border-block:1px solid var(--line);
+  display:grid;
+  margin:2px 0;
+  padding:6px 0;
+}
+.study-card-actions legend {
+  color:var(--muted);
+  font-size:.6rem;
+  font-weight:900;
+  padding:0 8px 3px;
+  text-transform:uppercase;
+}
+.study-card-actions input { accent-color:var(--hero); }
+.study-card-actions.recording-actions {
+  position:relative;
+  right:auto;
+  top:auto;
+}
+.study-card-actions.recording-actions > div { top:34px; }
 
 .study-file-card.selected {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 58%, transparent);
@@ -27231,4 +27355,326 @@ html[data-native="true"] .simplified-calendar-screen {
   .postit footer {
     opacity: 1;
   }
+}
+
+/* Cross-linking stays compact so it can be reached from a reset without
+   turning the reset itself into another task-management screen. */
+.reset-category-task {
+  grid-template-columns:minmax(0,1fr) auto auto;
+}
+.reset-category-task .reset-task-attachments {
+  color:var(--ink-soft);
+  display:block;
+  font-size:.68rem;
+  font-weight:900;
+  padding-inline:10px;
+}
+.task-link-backdrop { z-index:270; }
+.task-link-modal {
+  background:var(--paper);
+  border:1px solid color-mix(in srgb,var(--hero) 28%,var(--line));
+  border-radius:28px;
+  box-shadow:0 28px 90px color-mix(in srgb,var(--ink) 24%,transparent);
+  display:grid;
+  gap:16px;
+  max-height:min(760px,calc(100dvh - 30px));
+  max-width:720px;
+  overflow:auto;
+  padding:22px;
+  width:100%;
+}
+.task-link-modal > header {
+  align-items:start;
+  display:flex;
+  justify-content:space-between;
+}
+.task-link-modal > header :is(h2,p) { margin:0; }
+.task-link-modal > header > button {
+  background:transparent;
+  border:0;
+  color:var(--ink);
+  font-size:26px;
+}
+.task-linked-items {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.task-linked-items > button,
+.task-link-create {
+  background:color-mix(in srgb,var(--lilac) 35%,var(--paper));
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--ink);
+  cursor:pointer;
+  font:inherit;
+  font-size:.75rem;
+  font-weight:850;
+  padding:8px 11px;
+  text-align:left;
+}
+.task-link-columns {
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.task-link-columns fieldset {
+  border:1px solid var(--line);
+  border-radius:20px;
+  display:grid;
+  gap:7px;
+  margin:0;
+  max-height:330px;
+  overflow:auto;
+  padding:13px;
+}
+.task-link-columns legend {
+  color:var(--ink);
+  font-size:.78rem;
+  font-weight:950;
+  padding-inline:6px;
+}
+.task-link-columns fieldset > label:not(.task-link-create) {
+  align-items:center;
+  background:color-mix(in srgb,var(--cream) 66%,transparent);
+  border-radius:12px;
+  color:var(--ink);
+  display:flex;
+  font-size:.74rem;
+  gap:8px;
+  padding:8px;
+}
+.task-link-columns input[type="checkbox"] { accent-color:var(--hero); }
+.task-link-hint { color:var(--muted); font-size:.72rem; margin:0; }
+
+.reader-used-in {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 20%,var(--paper));
+  border-bottom:1px solid var(--line);
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:7px 14px;
+}
+.reader-used-in small {
+  color:var(--muted);
+  font-size:.58rem;
+  font-weight:950;
+  letter-spacing:.14em;
+  margin-right:3px;
+}
+.reader-used-in span {
+  background:color-mix(in srgb,var(--paper) 82%,transparent);
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--ink-soft);
+  font-size:.65rem;
+  font-weight:800;
+  padding:4px 8px;
+}
+
+.day-summary-card .day-summary-event.match-day-pocket-card {
+  --pocket-color:color-mix(in srgb,var(--sports-primary,#0b2f78) 78%,var(--paper));
+  background:linear-gradient(118deg,color-mix(in srgb,var(--sports-primary,#0b2f78) 90%,var(--paper)),color-mix(in srgb,var(--sports-secondary,#f6cf2f) 70%,var(--paper)));
+  border-color:color-mix(in srgb,var(--sports-secondary,#f6cf2f) 58%,transparent);
+}
+.day-summary-card .day-summary-event.match-day-pocket-card :is(strong,small,.day-summary-event-heading > i) {
+  color:#fff;
+}
+.day-summary-card .day-summary-event.match-day-pocket-card .day-summary-event-heart {
+  background:color-mix(in srgb,var(--sports-secondary,#f6cf2f) 34%,white);
+  color:var(--sports-primary,#0b2f78);
+}
+.day-summary-match-label {
+  color:#fff;
+  display:block;
+  font-size:.55rem;
+  font-weight:950;
+  letter-spacing:.1em;
+  margin-bottom:2px;
+}
+
+@media (max-width:620px) {
+  .task-link-backdrop { align-items:flex-end; }
+  .task-link-modal {
+    border-radius:25px 25px 0 0;
+    grid-template-columns:1fr;
+    margin-bottom:calc(-1 * max(10px,var(--safe-area-inset-bottom)));
+  }
+  .task-link-columns { grid-template-columns:1fr; }
+}
+
+.study-note-collections {
+  border:1px solid var(--line);
+  border-radius:16px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:0;
+  padding:10px;
+}
+.study-note-collections legend {
+  color:var(--muted);
+  font-size:.7rem;
+  font-weight:900;
+  padding-inline:5px;
+}
+.study-note-collections label {
+  align-items:center;
+  background:color-mix(in srgb,var(--lilac) 24%,var(--paper));
+  border-radius:999px;
+  display:flex;
+  font-size:.72rem;
+  gap:5px;
+  padding:6px 8px;
+}
+.study-note-collections input { accent-color:var(--hero); }
+.study-recording-grid {
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+}
+.study-recording-card {
+  background:color-mix(in srgb,var(--paper) 90%,var(--blue));
+  border:1px solid var(--line);
+  border-radius:22px;
+  display:grid;
+  gap:10px;
+  padding:14px;
+}
+.study-recording-card > header {
+  align-items:center;
+  display:grid;
+  gap:9px;
+  grid-template-columns:auto minmax(0,1fr) auto;
+}
+.study-recording-card > header > span {
+  background:color-mix(in srgb,var(--blue) 54%,var(--paper));
+  border-radius:50%;
+  display:grid;
+  height:38px;
+  place-items:center;
+  width:38px;
+}
+.study-recording-card > header > div { display:grid; }
+.study-recording-card > header small,
+.study-recording-card > p { color:var(--muted); }
+.study-recording-card > header > button {
+  background:transparent;
+  border:0;
+  color:var(--muted);
+  font-size:1rem;
+}
+.study-recording-card > header > button.active { color:var(--hero); }
+.study-recording-card audio { width:100%; }
+.study-recording-card details:not(.study-card-actions) {
+  border-top:1px solid var(--line);
+  color:var(--ink-soft);
+  display:grid;
+  font-size:.72rem;
+  gap:6px;
+  padding-top:8px;
+}
+.study-recording-card details:not(.study-card-actions) label {
+  align-items:center;
+  display:flex;
+  gap:6px;
+  padding:4px;
+}
+.study-file-cover { overflow:hidden; }
+.study-file-cover > i {
+  background-image:var(--study-cover-image);
+  background-position:center;
+  background-size:cover;
+  display:block;
+  height:100%;
+  width:100%;
+}
+
+.calendar-conflict-backdrop { z-index:285; }
+.calendar-conflict-dialog {
+  background:var(--paper);
+  border:1px solid color-mix(in srgb,#e89a72 45%,var(--line));
+  border-radius:26px;
+  box-shadow:0 28px 90px color-mix(in srgb,var(--ink) 25%,transparent);
+  display:grid;
+  gap:12px;
+  max-width:520px;
+  padding:22px;
+  width:100%;
+}
+.calendar-conflict-dialog :is(h2,p) { margin:0; }
+.calendar-conflict-dialog > p:not(.tiny-label),
+.calendar-conflict-dialog > small { color:var(--muted); }
+.calendar-conflict-dialog > div {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.calendar-conflict-dialog > div > button {
+  background:color-mix(in srgb,var(--cream) 72%,var(--paper));
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--ink);
+  font-weight:850;
+  padding:9px 12px;
+}
+.calendar-conflict-dialog > div > button.primary {
+  background:var(--hero);
+  border-color:transparent;
+  color:#fff;
+}
+
+/* Reader additions use the same surfaces as the original controls in night mode. */
+.study-reader.reader-dark {
+  --paper:#272b31;
+  --cream:#20242a;
+  --ink:#efede9;
+  --ink-soft:#c8c7c5;
+  --muted:#9da1a7;
+  --line:#3b4048;
+  --hero:#75658c;
+  --lilac:#554b69;
+  --coral:#68494c;
+}
+.study-reader.reader-dark .pdf-navigation-panel {
+  background:#191c21;
+  border-color:#30343b;
+  box-shadow:14px 0 34px rgba(0,0,0,.42);
+  color:var(--ink);
+}
+.study-reader.reader-dark :is(
+  .pdf-navigation-panel > div > button,
+  .pdf-navigation-row > button:first-child,
+  .epub-panel-row > button:first-child
+) {
+  background:#272b31;
+  border-color:#3b4048;
+  color:#efede9;
+}
+.study-reader.reader-dark :is(
+  .pdf-navigation-row > button:not(:first-child),
+  .epub-panel-row > button:not(:first-child)
+) {
+  background:#30343b;
+  color:#e5e1dc;
+}
+.study-reader.reader-dark .reader-highlight-filter {
+  background:#24282e;
+  border-color:#3b4048;
+  color:#c8c7c5;
+}
+.study-reader.reader-dark .reader-highlight-filter select {
+  background:#30343b;
+  border-color:#454b54;
+  color:#efede9;
+}
+.study-reader.reader-dark .reader-used-in {
+  background:#20242a;
+  border-color:#353a42;
+}
+.study-reader.reader-dark .reader-used-in span {
+  background:#2c3037;
+  border-color:#424750;
+  color:#d4d1cc;
 }

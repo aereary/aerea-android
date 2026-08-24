@@ -63,6 +63,7 @@ import {
   StudyLibrary,
   StudyNotebook,
   StudyNote,
+  StudyRecordingItem,
   StudyTask,
 } from "./study-library";
 import { EpubBook, readEpub } from "./epub-reader";
@@ -270,6 +271,19 @@ function libraryItemAsStudyFile(item: LibraryItem): StudyFileItem {
             typeof annotation.location.page === "number",
         )
         .map((annotation) => annotation.location.page as number),
+      bookmarkNames: Object.fromEntries(
+        (item.annotations ?? [])
+          .filter(
+            (annotation) =>
+              annotation.type === "bookmark" &&
+              typeof annotation.location.page === "number" &&
+              Boolean(annotation.name),
+          )
+          .map((annotation) => [
+            String(annotation.location.page),
+            annotation.name as string,
+          ]),
+      ),
     },
   };
 }
@@ -393,14 +407,7 @@ type JournalEntry = {
 };
 
 
-type Recording = {
-  id: number;
-  className: string;
-  name: string;
-  notes: string;
-  duration: number;
-  url?: string;
-};
+type Recording = StudyRecordingItem;
 
 type ClassItem = {
   id: string;
@@ -446,6 +453,14 @@ type CalendarEvent = {
   sportsSecondary?: string;
   sportsIcon?: string;
   sourceInboxId?: string;
+};
+
+type CalendarConflictRequest = {
+  conflict: CalendarEvent;
+  message: string;
+  keepLabel: string;
+  onKeep: () => void;
+  onChange: () => void;
 };
 
 type EventColor =
@@ -1508,6 +1523,8 @@ export default function Home() {
     useState<string | null>(null);
   const [eventDeleteRequest, setEventDeleteRequest] =
     useState<EventDeleteRequest | null>(null);
+  const [calendarConflictRequest, setCalendarConflictRequest] =
+    useState<CalendarConflictRequest | null>(null);
   const [
     eventTemplateSuggestionsDismissed,
     setEventTemplateSuggestionsDismissed,
@@ -1519,6 +1536,7 @@ export default function Home() {
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [quickCaptureText, setQuickCaptureText] = useState("");
@@ -1551,9 +1569,6 @@ export default function Home() {
     DEFAULT_SPORTS_SETTINGS,
   );
   const [sportsEvents, setSportsEvents] = useState<SportsEvent[]>([]);
-  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
-  const [calendarMultiSelect, setCalendarMultiSelect] = useState(false);
-  const [jumpDate, setJumpDate] = useState(todayKey);
   const [draggingCalendarEventId, setDraggingCalendarEventId] = useState<
     string | null
   >(null);
@@ -1646,7 +1661,7 @@ export default function Home() {
   const consumedAuthLinksRef = useRef(new Set<string>());
   const undoStackRef = useRef<AereaHistoryEntry[]>([]);
   const redoStackRef = useRef<AereaHistoryEntry[]>([]);
-  const [globalHistoryDepth, setGlobalHistoryDepth] = useState({
+  const [, setGlobalHistoryDepth] = useState({
     undo: 0,
     redo: 0,
   });
@@ -1727,6 +1742,7 @@ export default function Home() {
     startY: number;
     startPostItX: number;
     startPostItY: number;
+    locked: boolean;
     historyRecorded: boolean;
     groupPositions: Array<{ id: string; x: number; y: number }>;
   } | null>(null);
@@ -1791,8 +1807,16 @@ export default function Home() {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    const themeNeedsLightSystemBarContent = [
+      "ao3night",
+      "noirrest",
+      "blueberrynight",
+      "moonquilt",
+    ].includes(appTheme);
     const defaultStyle =
-      colorMode === "dark" ? SystemBarsStyle.Dark : SystemBarsStyle.Light;
+      colorMode === "dark" || themeNeedsLightSystemBarContent
+        ? SystemBarsStyle.Dark
+        : SystemBarsStyle.Light;
     const setSystemBarStyle = (style: SystemBarsStyle) => {
       void SystemBars.setStyle({ style }).catch(() => undefined);
     };
@@ -2413,6 +2437,61 @@ export default function Home() {
         (task) => !task.skipped && task.dueDate === todayKey,
       ),
     [tasks, todayKey],
+  );
+  const taskLinkEditor = useMemo(
+    () => tasks.find((item) => item.id === taskLinkEditorId) ?? null,
+    [taskLinkEditorId, tasks],
+  );
+  const taskLinkAvailableFiles = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [
+            ...libraryItems
+              .filter((item) => !item.archived)
+              .map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
+            ...studyFiles.map((item) => ({
+              id: item.id,
+              name: item.name,
+              kind: item.kind,
+            })),
+          ].map((item) => [item.id, item]),
+        ).values(),
+      ),
+    [libraryItems, studyFiles],
+  );
+  const taskAttachedFileIds = useMemo(
+    () =>
+      taskLinkEditor
+        ? Array.from(
+            new Set([
+              ...(taskLinkEditor.attachmentIds ?? []),
+              ...entityLinks
+                .filter(
+                  (link) =>
+                    link.fromType === "task" &&
+                    link.fromId === taskLinkEditor.id &&
+                    link.toType === "file",
+                )
+                .map((link) => link.toId),
+            ]),
+          )
+        : [],
+    [entityLinks, taskLinkEditor],
+  );
+  const taskAttachedNoteIds = useMemo(
+    () =>
+      taskLinkEditor
+        ? entityLinks
+            .filter(
+              (link) =>
+                link.fromType === "task" &&
+                link.fromId === taskLinkEditor.id &&
+                link.toType === "note",
+            )
+            .map((link) => link.toId)
+        : [],
+    [entityLinks, taskLinkEditor],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
   const classRecordings = recordings.filter(
@@ -3056,6 +3135,141 @@ export default function Home() {
     );
   };
 
+  const entityLabel = (type: EntityLink["fromType"], id: string) => {
+    if (type === "event") {
+      return calendarEvents.find((event) => event.id === id)?.title;
+    }
+    if (type === "task") {
+      return tasks.find((task) => task.id === id)?.title;
+    }
+    if (type === "class") {
+      return classItems.find((item) => item.id === id)?.name;
+    }
+    if (type === "recording") {
+      return recordings.find((item) => String(item.id) === id)?.name;
+    }
+    if (type === "note") {
+      return (
+        entries.find((item) => String(item.id) === id)?.text ||
+        studyNotes.find((item) => item.id === id)?.title
+      );
+    }
+    if (type === "file") {
+      return (
+        libraryItems.find((item) => item.id === id)?.name ||
+        studyFiles.find((item) => item.id === id)?.name
+      );
+    }
+    return undefined;
+  };
+
+  const fileUsedInLabels = (fileId: string) => {
+    const directLabels = [
+      ...calendarEvents
+        .filter((event) => event.attachmentIds?.includes(fileId))
+        .map((event) => `Calendar · ${event.title}`),
+      ...tasks
+        .filter((task) => task.attachmentIds?.includes(fileId))
+        .map((task) => `Task · ${task.title}`),
+    ];
+    const linkedLabels = entityLinks.flatMap((link) => {
+      if (link.toType === "file" && link.toId === fileId) {
+        const label = entityLabel(link.fromType, link.fromId);
+        return label ? [`${link.fromType} · ${label}`] : [];
+      }
+      if (link.fromType === "file" && link.fromId === fileId) {
+        const label = entityLabel(link.toType, link.toId);
+        return label ? [`${link.toType} · ${label}`] : [];
+      }
+      return [];
+    });
+    return Array.from(new Set([...directLabels, ...linkedLabels]));
+  };
+
+  const calendarEventHasConflictOnDate = (
+    event: CalendarEvent,
+    date: string,
+  ) =>
+    !event.allDay &&
+    allCalendarEvents.some(
+      (candidate) =>
+        candidate.id !== event.id &&
+        !candidate.allDay &&
+        eventOccursOn(candidate, date) &&
+        rangesOverlap(
+          event.time,
+          event.endTime,
+          candidate.time,
+          candidate.endTime,
+        ),
+    );
+
+  const toggleTaskFileAttachment = (task: TaskItem, fileId: string) => {
+    const linked =
+      task.attachmentIds?.includes(fileId) ||
+      hasEntityLink("task", task.id, "file", fileId);
+    recordAction(linked ? "Detached file from task" : "Attached file to task");
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              attachmentIds: linked
+                ? (item.attachmentIds ?? []).filter((id) => id !== fileId)
+                : Array.from(new Set([...(item.attachmentIds ?? []), fileId])),
+              updatedAt: new Date().toISOString(),
+            }
+          : item,
+      ),
+    );
+    setEntityLinks((current) =>
+      linked
+        ? current.filter(
+            (link) =>
+              !(
+                link.fromType === "task" &&
+                link.fromId === task.id &&
+                link.toType === "file" &&
+                link.toId === fileId
+              ),
+          )
+        : [
+            ...current,
+            {
+              id: crypto.randomUUID(),
+              fromType: "task",
+              fromId: task.id,
+              toType: "file",
+              toId: fileId,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+    );
+  };
+
+  const createTaskAttachedNote = (task: TaskItem) => {
+    const text = window.prompt("New note attached to this task", "")?.trim();
+    if (!text) return;
+    const id = Math.max(0, ...entries.map((entry) => entry.id)) + 1;
+    const now = new Date().toISOString();
+    recordAction("Created note from task attachments");
+    setEntries((current) => [
+      { id, date: todayKey, mood: "♡", text },
+      ...current,
+    ]);
+    setEntityLinks((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        fromType: "task",
+        fromId: task.id,
+        toType: "note",
+        toId: String(id),
+        createdAt: now,
+      },
+    ]);
+  };
+
   const undoGlobal = () => {
     const previous = undoStackRef.current.pop();
     if (!previous) return;
@@ -3603,7 +3817,6 @@ export default function Home() {
     setSelectedCalendarDate(dateKey);
     setSelectedHomeDate(dateKey);
     setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    setJumpDate(dateKey);
   };
   const sketchPaperSettings = {
     style: pageStyle,
@@ -4039,6 +4252,31 @@ export default function Home() {
     setSelectedPostItIds([]);
   };
 
+  const choosePostItGroupAction = (postItId: string) => {
+    const postIt = postIts.find((item) => item.id === postItId);
+    if (!postIt) return;
+    if (postIt.groupId) {
+      const groupId = postIt.groupId;
+      recordAction("Ungrouped post-its");
+      setPostIts((current) =>
+        current.map((item) =>
+          item.groupId === groupId
+            ? { ...item, groupId: undefined, updatedAt: new Date().toISOString() }
+            : item,
+        ),
+      );
+      setPostItGroups((current) =>
+        current.filter((group) => group.id !== groupId),
+      );
+      setSelectedPostItIds([]);
+    } else {
+      setSelectedPostItIds([postItId]);
+      setSelectedPostItId(postItId);
+      setHistoryMessage("Tap the other post-its, then choose Group.");
+    }
+    setPostItEditorOpen(false);
+  };
+
   const ungroupSelectedPostIts = () => {
     const groupIds = new Set(
       postIts
@@ -4134,43 +4372,32 @@ export default function Home() {
     setSelectedPostItIds([]);
   };
 
-  const changePostItLayer = (
-    id: string,
-    direction: "front" | "back" | "forward" | "backward",
-  ) => {
-    recordAction(
-      direction === "front"
-        ? "Brought post-it to front"
-        : direction === "back"
-          ? "Sent post-it to back"
-          : direction === "forward"
-            ? "Brought post-it forward"
-            : "Sent post-it backward",
-    );
+  const raisePostItOnTouch = (postIt: PostItNote) => {
     setPostIts((current) => {
-      const ordered = [...current].sort(
-        (first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0),
+      const visible = current.filter(
+        (item) => !item.archived && item.page === postIt.page,
       );
-      const currentIndex = ordered.findIndex((item) => item.id === id);
-      if (currentIndex < 0) return current;
-      const [postIt] = ordered.splice(currentIndex, 1);
-      const targetIndex =
-        direction === "front"
-          ? ordered.length
-          : direction === "back"
-            ? 0
-            : direction === "forward"
-              ? Math.min(ordered.length, currentIndex + 1)
-              : Math.max(0, currentIndex - 1);
-      ordered.splice(targetIndex, 0, postIt);
-      const layers = new Map(
-        ordered.map((item, index) => [item.id, index + 1]),
+      const highestLayer = Math.max(0, ...visible.map((item) => item.zIndex ?? 0));
+      const related = postIt.groupId
+        ? visible
+            .filter((item) => item.groupId === postIt.groupId)
+            .sort((first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0))
+        : visible.filter((item) => item.id === postIt.id);
+      if (
+        related.length === 0 ||
+        Math.max(...related.map((item) => item.zIndex ?? 0)) >= highestLayer
+      ) {
+        return current;
+      }
+      const nextLayers = new Map(
+        related.map((item, index) => [item.id, highestLayer + index + 1]),
       );
-      return current.map((item) => ({
-        ...item,
-        zIndex: layers.get(item.id) ?? item.zIndex,
-        updatedAt: item.id === id ? new Date().toISOString() : item.updatedAt,
-      }));
+      const updatedAt = new Date().toISOString();
+      return current.map((item) =>
+        nextLayers.has(item.id)
+          ? { ...item, zIndex: nextLayers.get(item.id), updatedAt }
+          : item,
+      );
     });
   };
 
@@ -4251,13 +4478,14 @@ export default function Home() {
         "button, summary, input, textarea, select, .post-it-resize-handle",
       )
     ) return;
-    if (
+    raisePostItOnTouch(postIt);
+    const locked = Boolean(
       postIt.locked ||
-      (postIt.groupId &&
-        postIts.some(
-          (item) => item.groupId === postIt.groupId && item.locked,
-        ))
-    ) return;
+        (postIt.groupId &&
+          postIts.some(
+            (item) => item.groupId === postIt.groupId && item.locked,
+          )),
+    );
     const canvas = phoneCanvasRef.current;
     if (!canvas) return;
     const bounds = canvas.getBoundingClientRect();
@@ -4273,6 +4501,7 @@ export default function Home() {
       startY: event.clientY,
       startPostItX: postIt.x,
       startPostItY: postIt.y,
+      locked,
       historyRecorded: false,
       groupPositions: postIt.groupId
         ? postIts
@@ -4304,6 +4533,7 @@ export default function Home() {
       if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
       postItLongPressRef.current = null;
     }
+    if (drag.locked) return;
     const bounds = canvas.getBoundingClientRect();
     if (!drag.historyRecorded) {
       recordAction("Moved post-it");
@@ -4340,6 +4570,13 @@ export default function Home() {
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (
+      !drag.historyRecorded &&
+      selectedPostItIds.length > 0 &&
+      !selectedPostItIds.includes(drag.id)
+    ) {
+      setSelectedPostItIds((current) => [...current, drag.id]);
     }
     postItDragRef.current = null;
   };
@@ -4454,6 +4691,13 @@ export default function Home() {
     dayKey: string,
     event: ReactPointerEvent<HTMLElement>,
   ) => {
+    if (
+      (event.target as HTMLElement).closest(
+        ".event-chip, .extended-event-pill, .simplified-event-strip, .agenda-v2-event",
+      )
+    ) {
+      return;
+    }
     calendarLongPressedRef.current = false;
     calendarPressStartRef.current = { x: event.clientX, y: event.clientY };
     if (calendarLongPressRef.current) window.clearTimeout(calendarLongPressRef.current);
@@ -4859,23 +5103,16 @@ export default function Home() {
           candidate.endTime,
         ),
     );
-    if (
-      conflict &&
-      !window.confirm(
-        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Keep it anyway?`,
-      )
-    ) {
-      return;
-    }
-    recordAction(editingEventId ? "Edited event" : "Created event");
-    setCalendarEvents((current) =>
-      editingEventId
-        ? current.map((item) =>
-            item.id === editingEventId ? savedEvent : item,
-          )
-        : [...current, savedEvent],
-    );
-    setEntityLinks((current) => {
+    const commitSavedEvent = () => {
+      recordAction(editingEventId ? "Edited event" : "Created event");
+      setCalendarEvents((current) =>
+        editingEventId
+          ? current.map((item) =>
+              item.id === editingEventId ? savedEvent : item,
+            )
+          : [...current, savedEvent],
+      );
+      setEntityLinks((current) => {
       const withoutOldAttachments = current.filter(
         (link) => !(link.fromType === "event" && link.fromId === savedEvent.id),
       );
@@ -4910,19 +5147,31 @@ export default function Home() {
         toId: String(recordingId),
         createdAt,
       }));
-      return [
-        ...withoutOldAttachments,
-        ...attachments,
-        ...noteLinks,
-        ...recordingLinks,
-      ];
-    });
-    setSelectedCalendarDate(savedEvent.date);
-    if (savedEvent.sourceInboxId) {
-      markInboxProcessed(savedEvent.sourceInboxId, "event");
+        return [
+          ...withoutOldAttachments,
+          ...attachments,
+          ...noteLinks,
+          ...recordingLinks,
+        ];
+      });
+      setSelectedCalendarDate(savedEvent.date);
+      if (savedEvent.sourceInboxId) {
+        markInboxProcessed(savedEvent.sourceInboxId, "event");
+      }
+      setEventEditorOpen(false);
+      setEditingEventId(null);
+    };
+    if (conflict) {
+      setCalendarConflictRequest({
+        conflict,
+        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
+        keepLabel: "Keep it",
+        onKeep: commitSavedEvent,
+        onChange: () => setEventEditorOpen(true),
+      });
+      return;
     }
-    setEventEditorOpen(false);
-    setEditingEventId(null);
+    commitSavedEvent();
   };
 
   const applyEventTemplate = (template: CalendarEvent) => {
@@ -5005,34 +5254,25 @@ export default function Home() {
     setEventDraft((current) => ({ ...current, [key]: value }));
   };
 
-  const duplicateCalendarEvent = (event: CalendarEvent) => {
-    if (event.eventType === "sports_event") return;
-    setEditingEventId(null);
-    setEventDraft({
-      ...makeEventDraft(event.date),
-      ...event,
-      title: `${event.title} (copy)`,
-      sourceInboxId: undefined,
-    });
-    setTodoDraft("");
-    setSelectedEventDetail(null);
-    setCalendarOpen(true);
-    setEventEditorOpen(true);
-  };
-
-  const toggleCalendarEventSelection = (event: CalendarEvent) => {
-    if (event.eventType === "sports_event") return;
-    setCalendarMultiSelect(true);
-    setSelectedEventIds((current) =>
-      current.includes(event.id)
-        ? current.filter((id) => id !== event.id)
-        : [...current, event.id],
-    );
-  };
-
   const moveCalendarEvent = (eventId: string, destinationDate: string) => {
     const event = calendarEvents.find((candidate) => candidate.id === eventId);
     if (!event || event.date === destinationDate) return;
+    const endDayOffset =
+      event.endDate && event.endDate !== event.date
+        ? Math.max(
+            0,
+            Math.round(
+              (dateFromKey(event.endDate).getTime() -
+                dateFromKey(event.date).getTime()) /
+                86_400_000,
+            ),
+          )
+        : 0;
+    const movedEvent: CalendarEvent = {
+      ...event,
+      date: destinationDate,
+      endDate: addDays(destinationDate, endDayOffset),
+    };
     const conflict = allCalendarEvents.find(
       (candidate) =>
         candidate.id !== event.id &&
@@ -5041,40 +5281,26 @@ export default function Home() {
         eventOccursOn(candidate, destinationDate) &&
         rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
     );
-    if (
-      conflict &&
-      !window.confirm(
-        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Move it anyway?`,
-      )
-    ) {
+    const commitMove = () => {
+      recordAction("Moved event");
+      setCalendarEvents((current) =>
+        current.map((candidate) =>
+          candidate.id === eventId ? movedEvent : candidate,
+        ),
+      );
+      setSelectedCalendarDate(destinationDate);
+    };
+    if (conflict) {
+      setCalendarConflictRequest({
+        conflict,
+        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
+        keepLabel: "Move anyway",
+        onKeep: commitMove,
+        onChange: () => openEventEditor(movedEvent),
+      });
       return;
     }
-    recordAction("Moved event");
-    setCalendarEvents((current) =>
-      current.map((candidate) =>
-        candidate.id === eventId
-          ? {
-              ...candidate,
-              date: destinationDate,
-              endDate:
-                candidate.endDate && candidate.endDate !== candidate.date
-                  ? addDays(
-                      destinationDate,
-                      Math.max(
-                        0,
-                        Math.round(
-                          (dateFromKey(candidate.endDate).getTime() -
-                            dateFromKey(candidate.date).getTime()) /
-                            86_400_000,
-                        ),
-                      ),
-                    )
-                  : destinationDate,
-            }
-          : candidate,
-      ),
-    );
-    setSelectedCalendarDate(destinationDate);
+    commitMove();
   };
 
   const startCalendarEventDrag = (
@@ -5082,6 +5308,8 @@ export default function Home() {
     calendarEvent: CalendarEvent,
   ) => {
     if (calendarEvent.eventType === "sports_event") return;
+    event.stopPropagation();
+    cancelCalendarLongPress();
     event.currentTarget.setPointerCapture(event.pointerId);
     const timer = window.setTimeout(() => {
       suppressCalendarEventClickRef.current = true;
@@ -5147,24 +5375,27 @@ export default function Home() {
         eventOccursOn(candidate, selectedCalendarDate) &&
         rangesOverlap(nextTime, nextEndTime, candidate.time, candidate.endTime),
     );
-    if (
-      conflict &&
-      !window.confirm(
-        `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}. Keep the new time anyway?`,
-      )
-    ) {
+    const movedEvent = { ...event, time: nextTime, endTime: nextEndTime };
+    const commitTimeMove = () => {
+      recordAction("Changed event time");
+      setCalendarEvents((current) =>
+        current.map((candidate) =>
+          candidate.id === eventId ? movedEvent : candidate,
+        ),
+      );
+      setHistoryMessage(`Moved to ${nextTime}–${nextEndTime}`);
+    };
+    if (conflict) {
+      setCalendarConflictRequest({
+        conflict,
+        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
+        keepLabel: "Keep new time",
+        onKeep: commitTimeMove,
+        onChange: () => openEventEditor(movedEvent),
+      });
       return;
     }
-
-    recordAction("Changed event time");
-    setCalendarEvents((current) =>
-      current.map((candidate) =>
-        candidate.id === eventId
-          ? { ...candidate, time: nextTime, endTime: nextEndTime }
-          : candidate,
-      ),
-    );
-    setHistoryMessage(`Moved to ${nextTime}–${nextEndTime}`);
+    commitTimeMove();
   };
 
   const startScheduleEventDrag = (
@@ -5240,193 +5471,6 @@ export default function Home() {
     }
     scheduleEventDragRef.current = null;
     setScheduleEventDragPreview(null);
-  };
-
-  const copyCurrentWeek = () => {
-    const destination = window.prompt(
-      "Choose any date in the destination week (YYYY-MM-DD)",
-      addDays(selectedCalendarDate, 7),
-    );
-    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
-    const sourceWeek = weekForDate(selectedCalendarDate).map((day) => day.key);
-    const destinationWeek = weekForDate(destination).map((day) => day.key);
-    const sourceEvents = calendarEvents.filter(
-      (event) => event.repeat === "Never" && sourceWeek.includes(event.date),
-    );
-    if (sourceEvents.length === 0) {
-      setHistoryMessage("There are no one-time events to copy this week.");
-      return;
-    }
-    const selectedSourceEvents = sourceEvents.filter((event) =>
-      selectedEventIds.includes(event.id),
-    );
-    const eventsToCopy =
-      selectedSourceEvents.length > 0 ? selectedSourceEvents : sourceEvents;
-    const planned = eventsToCopy.map((event) => {
-      const dayIndex = sourceWeek.indexOf(event.date);
-      const date = destinationWeek[dayIndex];
-      const endDayOffset = event.endDate
-        ? Math.max(
-            0,
-            Math.round(
-              (dateFromKey(event.endDate).getTime() -
-                dateFromKey(event.date).getTime()) /
-                86_400_000,
-            ),
-          )
-        : 0;
-      const duplicate = calendarEvents.some(
-        (candidate) =>
-          candidate.date === date &&
-          candidate.time === event.time &&
-          candidate.title.trim().toLowerCase() ===
-            event.title.trim().toLowerCase(),
-      );
-      const conflict = !event.allDay
-        ? allCalendarEvents.find(
-            (candidate) =>
-              !candidate.allDay &&
-              eventOccursOn(candidate, date) &&
-              rangesOverlap(
-                event.time,
-                event.endTime,
-                candidate.time,
-                candidate.endTime,
-              ),
-          )
-        : undefined;
-      return {
-        event,
-        date,
-        endDate: addDays(date, endDayOffset),
-        duplicate,
-        conflict,
-      };
-    });
-    const preview = planned
-      .map(({ event, duplicate, conflict }) =>
-        `${event.title} · ${eventTimeLabel(event)}${
-          duplicate
-            ? " · duplicate (skip)"
-            : conflict
-              ? ` · overlaps ${conflict.title}`
-              : ""
-        }`,
-      )
-      .join("\n");
-    if (
-      !window.confirm(
-        `Copy ${eventsToCopy.length} ${
-          selectedSourceEvents.length > 0 ? "selected " : ""
-        }events?\n\n${preview}`,
-      )
-    ) return;
-    recordAction("Copied week");
-    setCalendarEvents((current) => [
-      ...current,
-      ...planned
-        .filter((item) => !item.duplicate)
-        .map(({ event, date, endDate }) => ({
-          ...event,
-          id: crypto.randomUUID(),
-          date,
-          endDate,
-          sourceInboxId: undefined,
-        })),
-    ]);
-    setSelectedCalendarDate(destination);
-    setSelectedEventIds([]);
-  };
-
-  const deleteSelectedEvents = () => {
-    const events = calendarEvents.filter((event) =>
-      selectedEventIds.includes(event.id),
-    );
-    if (events.length === 0) return;
-    if (!window.confirm(`Move ${events.length} events to Trash?`)) return;
-    recordAction("Deleted selected events");
-    setTrashItems((current) => [
-      ...events.map((event) => createTrashItem("event", event.title, event)),
-      ...current,
-    ]);
-    setCalendarEvents((current) =>
-      current.filter((event) => !selectedEventIds.includes(event.id)),
-    );
-    setSelectedEventIds([]);
-    setCalendarMultiSelect(false);
-  };
-
-  const moveSelectedEvents = () => {
-    const selected = calendarEvents.filter((event) =>
-      selectedEventIds.includes(event.id),
-    );
-    if (selected.length === 0) return;
-    const firstDate = [...selected].sort((a, b) => a.date.localeCompare(b.date))[0].date;
-    const destination = window.prompt(
-      "Move the first selected event to (YYYY-MM-DD)",
-      addDays(firstDate, 1),
-    );
-    if (!destination || !/^\d{4}-\d{2}-\d{2}$/.test(destination)) return;
-    const offset = Math.round(
-      (dateFromKey(destination).getTime() - dateFromKey(firstDate).getTime()) /
-        86_400_000,
-    );
-    const hasConflict = selected.some((event) => {
-      const targetDate = addDays(event.date, offset);
-      return allCalendarEvents.some(
-        (candidate) =>
-          !selectedEventIds.includes(candidate.id) &&
-          !candidate.allDay &&
-          !event.allDay &&
-          eventOccursOn(candidate, targetDate) &&
-          rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
-      );
-    });
-    if (hasConflict && !window.confirm("One or more moved events overlap another event. Keep them anyway?")) return;
-    recordAction("Moved selected events");
-    setCalendarEvents((current) =>
-      current.map((event) =>
-        selectedEventIds.includes(event.id)
-          ? {
-              ...event,
-              date: addDays(event.date, offset),
-              endDate: addDays(event.endDate || event.date, offset),
-            }
-          : event,
-      ),
-    );
-    setSelectedEventIds([]);
-    setCalendarMultiSelect(false);
-    goToCalendarDate(destination);
-  };
-
-  const recolorSelectedEvents = (color: EventColor) => {
-    if (selectedEventIds.length === 0) return;
-    recordAction("Changed selected event colors");
-    setCalendarEvents((current) =>
-      current.map((event) =>
-        selectedEventIds.includes(event.id) ? { ...event, color } : event,
-      ),
-    );
-  };
-
-  const duplicateSelectedEvents = () => {
-    const selected = calendarEvents.filter((event) =>
-      selectedEventIds.includes(event.id),
-    );
-    if (selected.length === 0) return;
-    recordAction("Duplicated selected events");
-    setCalendarEvents((current) => [
-      ...current,
-      ...selected.map((event) => ({
-        ...event,
-        id: crypto.randomUUID(),
-        title: `${event.title} (copy)`,
-        sourceInboxId: undefined,
-      })),
-    ]);
-    setSelectedEventIds([]);
-    setCalendarMultiSelect(false);
   };
 
   const toggleHabit = (habitId: number, dayIndex = 3) => {
@@ -6785,7 +6829,25 @@ export default function Home() {
       data-color-mode={colorMode}
       data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
+      onKeyDown={(event) => {
+        if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") {
+          return;
+        }
+        if (
+          (event.target as HTMLElement).closest(
+            "input, textarea, [contenteditable='true']",
+          )
+        ) {
+          return;
+        }
+        event.preventDefault();
+        if (event.shiftKey) redoGlobal();
+        else undoGlobal();
+      }}
     >
+      <span className="visually-hidden" aria-live="polite">
+        {historyMessage}
+      </span>
       {simplifiedCalendarMode && stateReady && (
         <section
           className="simplified-calendar-screen"
@@ -7509,6 +7571,7 @@ export default function Home() {
                     ...studyFiles,
                     ...libraryItems.map(libraryItemAsStudyFile),
                   ]}
+                  recordings={recordings}
                   onNotesChange={(notes) => {
                     recordAction("Edited Library notes");
                     setStudyNotes(notes);
@@ -7581,23 +7644,11 @@ export default function Home() {
                       }),
                     );
                   }}
-                  usedInForFile={(fileId) =>
-                    entityLinks
-                      .filter((link) => link.toType === "file" && link.toId === fileId)
-                      .map((link) => {
-                        if (link.fromType === "event") {
-                          return calendarEvents.find((event) => event.id === link.fromId)?.title;
-                        }
-                        if (link.fromType === "task") {
-                          return tasks.find((task) => task.id === link.fromId)?.title;
-                        }
-                        if (link.fromType === "class") {
-                          return classItems.find((item) => item.id === link.fromId)?.name;
-                        }
-                        return undefined;
-                      })
-                      .filter((label): label is string => Boolean(label))
-                  }
+                  onRecordingsChange={(nextRecordings) => {
+                    recordAction("Updated Library recordings");
+                    setRecordings(nextRecordings);
+                  }}
+                  usedInForFile={fileUsedInLabels}
                   onBack={() => setSpace("menu")}
                 />
               )}
@@ -8798,15 +8849,6 @@ export default function Home() {
                       {postIt.locked ? "🔒" : "♙"}
                     </button>
                     <button type="button" onClick={() => duplicatePostIt(postIt)} title="Duplicate">⧉</button>
-                    <details className="post-it-layer-menu">
-                      <summary title="Layer order">↕</summary>
-                      <div>
-                        <button type="button" onClick={() => changePostItLayer(postIt.id, "front")}>Bring to front</button>
-                        <button type="button" onClick={() => changePostItLayer(postIt.id, "forward")}>Bring forward</button>
-                        <button type="button" onClick={() => changePostItLayer(postIt.id, "backward")}>Send backward</button>
-                        <button type="button" onClick={() => changePostItLayer(postIt.id, "back")}>Send to back</button>
-                      </div>
-                    </details>
                     <button
                       type="button"
                       onClick={() => archivePostIt(postIt)}
@@ -9010,6 +9052,13 @@ export default function Home() {
                           </button>
                           <button
                             type="button"
+                            className="reset-task-attachments"
+                            onClick={() => setTaskLinkEditorId(task.id)}
+                          >
+                            Attached
+                          </button>
+                          <button
+                            type="button"
                             className="reset-category-delete"
                             aria-label={`Move ${task.title} to Trash`}
                             onClick={() => {
@@ -9055,6 +9104,7 @@ export default function Home() {
                             : `on ${readableDate(task.dueDate)}`}.
                         </span>
                         <div>
+                          <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
                           <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
                           <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                           <button
@@ -9085,6 +9135,7 @@ export default function Home() {
                     <article key={task.id}>
                       <span>{task.title}</span>
                       <div>
+                        <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
                         <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                         <button
                           type="button"
@@ -9110,6 +9161,146 @@ export default function Home() {
             </button>
           </section>
         </div>
+      )}
+
+      {taskLinkEditor && (
+          <div
+            className="modal-backdrop task-link-backdrop"
+            role="presentation"
+            onPointerDown={(event) => {
+              if (event.target === event.currentTarget) setTaskLinkEditorId(null);
+            }}
+          >
+            <section
+              className="task-link-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Attachments for ${taskLinkEditor.title}`}
+            >
+              <header>
+                <div>
+                  <p className="tiny-label">ATTACHED</p>
+                  <h2>{taskLinkEditor.title}</h2>
+                </div>
+                <button type="button" onClick={() => setTaskLinkEditorId(null)} aria-label="Close task attachments">×</button>
+              </header>
+
+              {(taskAttachedFileIds.length > 0 || taskAttachedNoteIds.length > 0) && (
+                <div className="task-linked-items">
+                  {taskAttachedFileIds.map((fileId) => {
+                    const capturedFile = libraryItems.find((item) => item.id === fileId);
+                    const studyFile = studyFiles.find((item) => item.id === fileId);
+                    const file = capturedFile ?? studyFile;
+                    if (!file) return null;
+                    return (
+                      <button
+                        type="button"
+                        key={`file-${fileId}`}
+                        onClick={() => {
+                          setTaskLinkEditorId(null);
+                          setResetExperience(null);
+                          if (capturedFile) void openLibraryItem(capturedFile);
+                          else if (studyFile) void openStudyFile(studyFile);
+                        }}
+                      >
+                        {file.kind === "pdf" ? "📄" : "▤"} {file.name}
+                      </button>
+                    );
+                  })}
+                  {taskAttachedNoteIds.map((noteId) => {
+                    const note = entries.find((item) => String(item.id) === noteId);
+                    if (!note) return null;
+                    return (
+                      <button
+                        type="button"
+                        key={`note-${noteId}`}
+                        onClick={() => {
+                          setTaskLinkEditorId(null);
+                          setResetExperience(null);
+                          setSelectedJournalEntry(note);
+                        }}
+                      >
+                        📝 {notePreview(note.text, 54)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="task-link-columns">
+                <fieldset>
+                  <legend>Library files</legend>
+                  {taskLinkAvailableFiles.map((file) => {
+                    const checked = taskAttachedFileIds.includes(file.id);
+                    return (
+                      <label key={file.id}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleTaskFileAttachment(taskLinkEditor, file.id)}
+                        />
+                        {file.kind === "pdf" ? "📄" : "▤"} {file.name}
+                      </label>
+                    );
+                  })}
+                  {taskLinkAvailableFiles.length === 0 && <small>Your Library is empty.</small>}
+                  <label className="task-link-create">
+                    ＋ Import & attach a file
+                    <input
+                      type="file"
+                      hidden
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = "";
+                        if (!file) return;
+                        void importLibraryFile(file).then((item) =>
+                          toggleTaskFileAttachment(taskLinkEditor, item.id),
+                        );
+                      }}
+                    />
+                  </label>
+                </fieldset>
+                <fieldset>
+                  <legend>Notes</legend>
+                  {entries.map((note) => {
+                    const noteId = String(note.id);
+                    const checked = taskAttachedNoteIds.includes(noteId);
+                    return (
+                      <label key={note.id}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            toggleEntityLink(
+                              "task",
+                              taskLinkEditor.id,
+                              "note",
+                              noteId,
+                              checked
+                                ? "Detached note from task"
+                                : "Attached note to task",
+                            )
+                          }
+                        />
+                        📝 {notePreview(note.text, 46)}
+                      </label>
+                    );
+                  })}
+                  {entries.length === 0 && <small>No notes yet.</small>}
+                  <button
+                    type="button"
+                    className="task-link-create"
+                    onClick={() => createTaskAttachedNote(taskLinkEditor)}
+                  >
+                    ＋ New attached note
+                  </button>
+                </fieldset>
+              </div>
+              <p className="task-link-hint">
+                Removing a link never deletes the original file or note.
+              </p>
+            </section>
+          </div>
       )}
 
       {authCallbackStatus && (
@@ -9223,14 +9414,6 @@ export default function Home() {
         </div>
       )}
 
-      {(globalHistoryDepth.undo > 0 || globalHistoryDepth.redo > 0 || historyMessage) && (
-        <div className="global-history-controls" aria-live="polite">
-          {historyMessage && <span>{historyMessage}</span>}
-          <button type="button" onClick={undoGlobal} disabled={globalHistoryDepth.undo === 0} aria-label="Undo">↶</button>
-          <button type="button" onClick={redoGlobal} disabled={globalHistoryDepth.redo === 0} aria-label="Redo">↷</button>
-        </div>
-      )}
-
       {activeStudyFile?.kind === "pdf" && (
         <PdfStudyReader
           fileId={activeStudyFile.id}
@@ -9253,6 +9436,7 @@ export default function Home() {
             }));
           }}
           initialLocation={activeStudyFile.readerLocation}
+          usedIn={fileUsedInLabels(activeStudyFile.id)}
           onLocationChange={(location) => {
             setStudyFiles((current) =>
               current.map((file) =>
@@ -9267,20 +9451,47 @@ export default function Home() {
                 : current,
             );
             setLibraryItems((current) =>
-              current.map((file) =>
-                file.id === activeStudyFile.id
-                  ? {
-                      ...file,
-                      readerLocation: {
-                        ...file.readerLocation,
-                        page: location.page,
-                        offset: location.offset,
-                        zoom: location.zoom,
-                      },
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : file,
-              ),
+              current.map((file) => {
+                if (file.id !== activeStudyFile.id) return file;
+                const now = new Date().toISOString();
+                const bookmarkByPage = new Map(
+                  (file.annotations ?? [])
+                    .filter(
+                      (annotation) =>
+                        annotation.type === "bookmark" &&
+                        typeof annotation.location.page === "number",
+                    )
+                    .map((annotation) => [annotation.location.page as number, annotation]),
+                );
+                return {
+                  ...file,
+                  readerLocation: {
+                    ...file.readerLocation,
+                    page: location.page,
+                    offset: location.offset,
+                    zoom: location.zoom,
+                  },
+                  annotations: [
+                    ...(file.annotations ?? []).filter(
+                      (annotation) => annotation.type !== "bookmark",
+                    ),
+                    ...location.bookmarks.map((bookmarkPage) => {
+                      const existing = bookmarkByPage.get(bookmarkPage);
+                      return {
+                        id: existing?.id ?? crypto.randomUUID(),
+                        type: "bookmark" as const,
+                        location: { page: bookmarkPage },
+                        name:
+                          location.bookmarkNames[String(bookmarkPage)] ||
+                          undefined,
+                        createdAt: existing?.createdAt ?? now,
+                        updatedAt: now,
+                      };
+                    }),
+                  ],
+                  updatedAt: now,
+                };
+              }),
             );
           }}
           onClose={() => setActiveStudyFile(null)}
@@ -9291,6 +9502,7 @@ export default function Home() {
         <EpubStudyReader
           fileName={activeStudyFile.name}
           book={activeEpubBook}
+          usedIn={fileUsedInLabels(activeStudyFile.id)}
           readingState={
             epubReadingStates[activeStudyFile.id] || {
               chapter: 0,
@@ -10238,27 +10450,14 @@ export default function Home() {
                               {dayEvents.slice(0, 3).map((calendarEvent) => (
                                 <button
                                   type="button"
-                                  className={`extended-event-pill ${calendarEvent.color} ${
-                                    selectedEventIds.includes(calendarEvent.id)
-                                      ? "selected"
-                                      : ""
-                                  }`}
+                                  className={`extended-event-pill ${calendarEvent.color}`}
                                   key={`${calendarEvent.id}-${dayKey}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     setSelectedCalendarDate(dayKey);
-                                    if (calendarMultiSelect) {
-                                      toggleCalendarEventSelection(calendarEvent);
-                                      return;
-                                    }
                                     openEventDetail(
                                       calendarEventAtOccurrence(calendarEvent, dayKey),
                                     );
-                                  }}
-                                  onContextMenu={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    toggleCalendarEventSelection(calendarEvent);
                                   }}
                                   title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
                                 >
@@ -10358,43 +10557,14 @@ export default function Home() {
                     <button className="calendar-date-menu-done" onClick={() => setMonthPickerOpen(false)}>Done</button>
                   </div>
                 )}
-                {!calendarScheduleOpen && (
+                {!calendarScheduleOpen && selectedCalendarDate !== todayKey && (
                   <div className="calendar-power-tools" aria-label="Calendar power tools">
-                    <label>
-                      <span>Jump to date</span>
-                      <input
-                        type="date"
-                        value={jumpDate}
-                        onChange={(event) => setJumpDate(event.target.value)}
-                      />
-                      <button type="button" onClick={() => goToCalendarDate(jumpDate)}>
-                        Go
-                      </button>
-                    </label>
-                    {selectedCalendarDate !== todayKey && (
-                      <button type="button" onClick={() => goToCalendarDate(todayKey)}>
-                        Today
-                      </button>
-                    )}
-                    <button type="button" onClick={copyCurrentWeek}>Copy week</button>
                     <button
                       type="button"
-                      className={calendarMultiSelect ? "active" : ""}
-                      onClick={() => {
-                        setCalendarMultiSelect((current) => !current);
-                        setSelectedEventIds([]);
-                      }}
+                      onClick={() => goToCalendarDate(todayKey)}
                     >
-                      {calendarMultiSelect ? "Cancel selection" : "Select events"}
+                      Today
                     </button>
-                    {calendarMultiSelect && selectedEventIds.length > 0 && (
-                      <div className="calendar-bulk-actions">
-                        <button type="button" onClick={moveSelectedEvents}>Move</button>
-                        <button type="button" onClick={duplicateSelectedEvents}>Duplicate</button>
-                        <button type="button" onClick={() => recolorSelectedEvents("lilac")}>Color</button>
-                        <button type="button" className="danger" onClick={deleteSelectedEvents}>Delete</button>
-                      </div>
-                    )}
                   </div>
                 )}
                 <div className="calendar-sources">
@@ -10516,28 +10686,7 @@ export default function Home() {
                       {calendarSearchQuery.trim() && (
                         <small>title · calendar · notes · place</small>
                       )}
-                      {calendarSearchQuery.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCalendarMultiSelect((current) => !current);
-                            setSelectedEventIds([]);
-                          }}
-                        >
-                          {calendarMultiSelect ? "Cancel selection" : "Select"}
-                        </button>
-                      )}
                     </div>
-
-                    {calendarMultiSelect && selectedEventIds.length > 0 && (
-                      <div className="calendar-bulk-actions calendar-search-bulk-actions">
-                        <span>{selectedEventIds.length} selected</span>
-                        <button type="button" onClick={moveSelectedEvents}>Move</button>
-                        <button type="button" onClick={duplicateSelectedEvents}>Duplicate</button>
-                        <button type="button" onClick={() => recolorSelectedEvents("lilac")}>Color</button>
-                        <button type="button" className="danger" onClick={deleteSelectedEvents}>Delete</button>
-                      </div>
-                    )}
 
                     <div className="calendar-search-results">
                       {!calendarSearchQuery.trim() ? (
@@ -10581,11 +10730,7 @@ export default function Home() {
                             <div>
                               {group.occurrences.map(({ event, date }) => (
                                 <button
-                                  className={`calendar-search-result ${
-                                    selectedEventIds.includes(event.id)
-                                      ? "selected"
-                                      : ""
-                                  }`}
+                                  className="calendar-search-result"
                                   type="button"
                                   key={`${event.id}-${date}`}
                                   style={
@@ -10597,17 +10742,9 @@ export default function Home() {
                                     } as CSSProperties
                                   }
                                   onClick={() => {
-                                    if (calendarMultiSelect) {
-                                      toggleCalendarEventSelection(event);
-                                      return;
-                                    }
                                     openEventDetail(
                                       calendarEventAtOccurrence(event, date),
                                     );
-                                  }}
-                                  onContextMenu={(pointerEvent) => {
-                                    pointerEvent.preventDefault();
-                                    toggleCalendarEventSelection(event);
                                   }}
                                 >
                                   <i aria-hidden="true" />
@@ -11192,7 +11329,14 @@ export default function Home() {
                             calendarEvent.eventType === "sports_event"
                               ? "sports-event"
                               : ""
-                          } ${selectedEventIds.includes(calendarEvent.id) ? "selected" : ""}`}
+                          } ${
+                            calendarEventHasConflictOnDate(
+                              calendarEvent,
+                              selectedCalendarDate,
+                            )
+                              ? "has-conflict"
+                              : ""
+                          }`}
                           key={calendarEvent.id}
                           onPointerDown={(event) =>
                             calendarEvent.eventType !== "sports_event" &&
@@ -11209,15 +11353,6 @@ export default function Home() {
                             onClick={() => {
                               if (suppressCalendarEventClickRef.current) {
                                 suppressCalendarEventClickRef.current = false;
-                                return;
-                              }
-                              if (calendarMultiSelect) {
-                                if (calendarEvent.eventType === "sports_event") return;
-                                setSelectedEventIds((current) =>
-                                  current.includes(calendarEvent.id)
-                                    ? current.filter((id) => id !== calendarEvent.id)
-                                    : [...current, calendarEvent.id],
-                                );
                                 return;
                               }
                               if (calendarEvent.eventType === "sports_event") {
@@ -11437,7 +11572,21 @@ export default function Home() {
                     const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
                     return (
                       <article
-                        className={`day-summary-event ${event.color} pocket-tone-${index % 4} ${hasDetails ? "expanded" : "compact"}`}
+                        className={[
+                          "day-summary-event",
+                          event.color,
+                          `pocket-tone-${index % 4}`,
+                          hasDetails ? "expanded" : "compact",
+                          event.sportsCardStyle ? "match-day-pocket-card" : "",
+                        ].filter(Boolean).join(" ")}
+                        style={
+                          event.sportsCardStyle
+                            ? ({
+                                "--sports-primary": event.sportsPrimary,
+                                "--sports-secondary": event.sportsSecondary,
+                              } as CSSProperties)
+                            : undefined
+                        }
                         key={event.id}
                         role="button"
                         tabIndex={0}
@@ -11467,7 +11616,20 @@ export default function Home() {
                               <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
                             </svg>
                           </span>
-                          <div><strong>{event.title}</strong><small>{eventStartTimeLabel(event)}</small></div>
+                          <div>
+                            {event.sportsCardStyle && (
+                              <span className="day-summary-match-label">
+                                {event.sportsIcon ?? "♡"} MATCH DAY
+                              </span>
+                            )}
+                            <strong>{event.title}</strong>
+                            <small>
+                              {eventStartTimeLabel(event)}
+                              {event.eventType === "sports_event"
+                                ? ` · ${matchCountdownLabel(event)}`
+                                : ""}
+                            </small>
+                          </div>
                           <i aria-hidden="true">›</i>
                         </div>
                         {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
@@ -11882,16 +12044,6 @@ export default function Home() {
                 <div className="event-detail-primary-actions">
                   {selectedEventDetail.eventType !== "sports_event" && (
                     <button
-                      className="event-detail-duplicate"
-                      type="button"
-                      onClick={() => duplicateCalendarEvent(selectedEventDetail)}
-                    >
-                      <span aria-hidden="true">⧉</span>
-                      Duplicate
-                    </button>
-                  )}
-                  {selectedEventDetail.eventType !== "sports_event" && (
-                    <button
                       className="event-detail-edit"
                       type="button"
                       onClick={() => {
@@ -11926,6 +12078,63 @@ export default function Home() {
             </div>
           );
         })()}
+
+      {calendarConflictRequest && (
+        <div
+          className="modal-backdrop calendar-conflict-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setCalendarConflictRequest(null);
+            }
+          }}
+        >
+          <section
+            className="calendar-conflict-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Schedule conflict"
+          >
+            <p className="tiny-label">SCHEDULE CONFLICT</p>
+            <h2>These plans overlap</h2>
+            <p>{calendarConflictRequest.message}</p>
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  const request = calendarConflictRequest;
+                  setCalendarConflictRequest(null);
+                  request.onChange();
+                }}
+              >
+                Change time
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const conflict = calendarConflictRequest.conflict;
+                  setCalendarConflictRequest(null);
+                  setSelectedEventDetail(conflict);
+                }}
+              >
+                View conflicting event
+              </button>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => {
+                  const request = calendarConflictRequest;
+                  setCalendarConflictRequest(null);
+                  request.onKeep();
+                }}
+              >
+                {calendarConflictRequest.keepLabel}
+              </button>
+            </div>
+            <small>Overlaps are allowed; the warning is only here to help.</small>
+          </section>
+        </div>
+      )}
 
       {eventDeleteRequest &&
         (() => {
@@ -12295,6 +12504,18 @@ export default function Home() {
                 ))}
               </fieldset>
             </div>
+
+            {editingPostItId && (
+              <button
+                className="post-it-group-action"
+                type="button"
+                onClick={() => choosePostItGroupAction(editingPostItId)}
+              >
+                {postIts.find((item) => item.id === editingPostItId)?.groupId
+                  ? "Ungroup these post-its"
+                  : "Group with other post-its…"}
+              </button>
+            )}
 
             <footer>
               {editingPostItId ? (
@@ -13289,7 +13510,19 @@ function TodayScreen({
           <p className="coming-up-label noir-section-label">COMING UP NEXT</p>
           <button
             type="button"
-            className={`schedule-card ${comingUpEvent.color}-card`}
+            className={[
+              "schedule-card",
+              `${comingUpEvent.color}-card`,
+              comingUpEvent.sportsCardStyle ? "match-day-schedule-card" : "",
+            ].filter(Boolean).join(" ")}
+            style={
+              comingUpEvent.sportsCardStyle
+                ? ({
+                    "--sports-primary": comingUpEvent.sportsPrimary,
+                    "--sports-secondary": comingUpEvent.sportsSecondary,
+                  } as CSSProperties)
+                : undefined
+            }
             onPointerDown={(pointerEvent) =>
               beginScheduleLongPress(pointerEvent, comingUpEvent)
             }
@@ -13302,18 +13535,27 @@ function TodayScreen({
             title="Hold to preview event"
           >
             <div className="time-block">
-              <strong>{comingUpEvent.time}</strong>
-              <span>TIME</span>
+              <strong>{comingUpEvent.allDay ? "ALL" : comingUpEvent.time}</strong>
+              <span>{comingUpEvent.allDay ? "DAY" : "TIME"}</span>
             </div>
             <div className="schedule-line" />
             <div className="schedule-copy">
-              <p className="card-tag">{comingUpEvent.calendar ?? "AÉREA"}</p>
+              <p className="card-tag">
+                {comingUpEvent.sportsCardStyle
+                  ? `${comingUpEvent.sportsIcon ?? "♡"} MATCH DAY`
+                  : comingUpEvent.calendar ?? "AÉREA"}
+              </p>
               <h4>{comingUpEvent.title}</h4>
               <span>
                 {comingUpEvent.location ||
                   comingUpEvent.note ||
                   "Saved in your calendar"}
               </span>
+              {comingUpEvent.eventType === "sports_event" && (
+                <small className="match-countdown">
+                  {matchCountdownLabel(comingUpEvent)}
+                </small>
+              )}
             </div>
             <div className="mini-people">
               {isNoirRest ? "•••" : "✦"}
