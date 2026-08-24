@@ -18981,7 +18981,7 @@ body {
 
 .app-shell[data-theme] .event-detail-note {
   --detail-ink:#31386c;
-  background:#fffdf8;
+  background:#fffefa;
   border:2px solid rgba(255,255,255,.86);
   border-radius:38px;
   box-shadow:
@@ -18989,7 +18989,6 @@ body {
     0 28px 78px rgba(24,30,57,.34);
   box-sizing:border-box;
   color:var(--detail-ink);
-  isolation:isolate;
   max-height:min(88dvh,820px);
   max-width:520px;
   overflow-x:hidden;
@@ -19000,33 +18999,10 @@ body {
   width:100%;
 }
 
-.app-shell[data-theme] .event-detail-corner {
-  background:#fff0de;
-  border-radius:0 38px 0 100%;
-  height:174px;
-  pointer-events:none;
-  position:absolute;
-  right:0;
-  top:0;
-  width:184px;
-  z-index:-1;
-}
-
-.app-shell[data-theme] .event-detail-corner::after {
-  background:rgba(246,213,232,.42);
-  border-radius:58% 0 0 100%;
-  bottom:-22px;
-  content:"";
-  height:92px;
-  position:absolute;
-  right:0;
-  width:118px;
-}
-
 .app-shell[data-theme] .event-detail-header {
-  align-items:flex-start;
+  align-items:center;
   display:flex;
-  gap:24px;
+  gap:20px;
   justify-content:space-between;
   position:relative;
   z-index:2;
@@ -19034,7 +19010,16 @@ body {
 
 .app-shell[data-theme] .event-detail-heading-copy {
   min-width:0;
-  padding-top:4px;
+}
+
+.app-shell[data-theme] .event-detail-date-eyebrow {
+  color:#696895;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.14em;
+  line-height:1.35;
+  margin:0;
+  overflow-wrap:anywhere;
 }
 
 .app-shell[data-theme] .event-detail-category {
@@ -19055,7 +19040,7 @@ body {
   white-space:nowrap;
 }
 
-.app-shell[data-theme] .event-detail-header h2 {
+.app-shell[data-theme] .event-detail-title {
   color:var(--detail-ink);
   font-family:var(--font-geist-sans),"Nunito Sans","Segoe UI",sans-serif;
   font-size:clamp(40px,9vw,56px);
@@ -19085,21 +19070,6 @@ body {
   position:relative;
   width:58px;
   z-index:3;
-}
-
-.app-shell[data-theme] .event-detail-doodle {
-  height:74px;
-  margin:-13px 20px -5px 118px;
-  pointer-events:none;
-  position:relative;
-}
-
-.app-shell[data-theme] .event-detail-doodle img {
-  display:block;
-  height:100%;
-  object-fit:contain;
-  object-position:left center;
-  width:100%;
 }
 
 .app-shell[data-theme] .event-detail-divider {
@@ -19163,25 +19133,12 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-time strong {
-  align-items:center;
   color:var(--detail-ink);
-  display:flex;
-  flex-wrap:wrap;
+  display:block;
   font-size:25px;
   font-weight:950;
-  gap:10px;
   letter-spacing:-.035em;
   line-height:1.08;
-}
-
-.app-shell[data-theme] .event-detail-time strong em {
-  background:#d9cdf8;
-  border-radius:999px;
-  color:#62639a;
-  font-size:11px;
-  font-style:normal;
-  letter-spacing:.09em;
-  padding:7px 11px;
 }
 
 .app-shell[data-theme] .event-detail-time small {
@@ -19199,7 +19156,7 @@ body {
   border-radius:23px;
   display:grid;
   gap:15px;
-  grid-template-columns:54px minmax(0,1fr) 28px;
+  grid-template-columns:54px minmax(0,1fr);
   margin-bottom:22px;
   padding:16px 18px;
 }
@@ -19220,9 +19177,9 @@ body {
 .app-shell[data-theme] .event-detail-reminder small {
   color:#6d678c;
   display:block;
-  font-size:10px;
+  font-size:12px;
   font-weight:950;
-  letter-spacing:.13em;
+  letter-spacing:0;
   margin-bottom:5px;
 }
 
@@ -19231,26 +19188,6 @@ body {
   display:block;
   font-size:17px;
   font-weight:900;
-}
-
-.app-shell[data-theme] .event-detail-reminder b {
-  align-items:center;
-  color:#c8b3ef;
-  display:flex;
-  height:22px;
-  justify-content:center;
-  justify-self:center;
-  line-height:1;
-  text-align:center;
-  width:22px;
-}
-
-.app-shell[data-theme] .event-detail-reminder b svg {
-  display:block;
-  fill:currentColor;
-  height:22px;
-  overflow:visible;
-  width:22px;
 }
 
 .app-shell[data-theme] .event-detail-facts {
@@ -19308,12 +19245,6 @@ body {
     padding:29px 23px 27px;
   }
 
-  .app-shell[data-theme] .event-detail-corner {
-    border-radius:0 31px 0 100%;
-    height:143px;
-    width:150px;
-  }
-
   .app-shell[data-theme] .event-detail-category {
     font-size:10px;
     margin-bottom:21px;
@@ -19321,18 +19252,13 @@ body {
     padding:9px 15px;
   }
 
-  .app-shell[data-theme] .event-detail-header h2 { font-size:42px; }
+  .app-shell[data-theme] .event-detail-title { font-size:42px; }
 
   .app-shell[data-theme] .event-detail-header > button {
     flex-basis:50px;
     font-size:33px;
     height:50px;
     width:50px;
-  }
-
-  .app-shell[data-theme] .event-detail-doodle {
-    height:61px;
-    margin:-8px 8px -1px 82px;
   }
 
   .app-shell[data-theme] .event-detail-divider { height:18px; margin-bottom:4px; }
@@ -19352,14 +19278,13 @@ body {
   }
 
   .app-shell[data-theme] .event-detail-time-icon svg { height:29px; width:29px; }
-  .app-shell[data-theme] .event-detail-time strong { font-size:20px; gap:7px; }
-  .app-shell[data-theme] .event-detail-time strong em { font-size:9px; padding:6px 8px; }
+  .app-shell[data-theme] .event-detail-time strong { font-size:20px; }
   .app-shell[data-theme] .event-detail-time small { font-size:12px; margin-top:5px; }
 
   .app-shell[data-theme] .event-detail-reminder {
     border-radius:20px;
     gap:12px;
-    grid-template-columns:48px minmax(0,1fr) 24px;
+    grid-template-columns:48px minmax(0,1fr);
     margin-bottom:18px;
     padding:13px 14px;
   }
@@ -19444,7 +19369,7 @@ body {
   padding:6px 9px;
 }
 
-/* The approved detail note, scaled down with its cloud tucked beside the title. */
+/* Reference-style event note shared by Personal and Day Pocket. */
 .app-shell[data-theme] .event-detail-note {
   max-height:min(86dvh,760px);
   max-width:450px;
@@ -19452,38 +19377,23 @@ body {
   width:min(86vw,450px);
 }
 
-.app-shell[data-theme] .event-detail-corner {
-  height:148px;
-  width:156px;
+.app-shell[data-theme] .event-detail-heading-copy {
+  margin-top:17px;
 }
 
-.app-shell[data-theme] .event-detail-heading-copy { flex:1; }
+.app-shell[data-theme] .event-detail-date-eyebrow {
+  font-size:11px;
+  max-width:calc(100% - 62px);
+}
 
 .app-shell[data-theme] .event-detail-category {
   font-size:10px;
-  margin-bottom:15px;
   padding:8px 15px;
 }
 
-.app-shell[data-theme] .event-detail-title-row {
-  align-items:center;
-  display:flex;
-  gap:8px;
-  min-width:0;
-}
-
-.app-shell[data-theme] .event-detail-title-row h2 {
-  flex:0 1 auto;
+.app-shell[data-theme] .event-detail-title {
   font-size:clamp(31px,7vw,43px);
-  max-width:calc(100% - 88px);
-  min-width:0;
-}
-
-.app-shell[data-theme] .event-detail-title-row .event-detail-doodle {
-  flex:0 0 78px;
-  height:42px;
-  margin:0;
-  min-width:0;
+  margin-top:15px;
 }
 
 .app-shell[data-theme] .event-detail-header { gap:13px; }
@@ -19497,7 +19407,7 @@ body {
 
 .app-shell[data-theme] .event-detail-divider {
   height:18px;
-  margin:10px 2px 3px;
+  margin:22px 2px 3px;
 }
 
 .app-shell[data-theme] .event-detail-time {
@@ -19515,13 +19425,13 @@ body {
 }
 
 .app-shell[data-theme] .event-detail-time-icon svg { height:28px; width:28px; }
-.app-shell[data-theme] .event-detail-time strong { font-size:20px; gap:7px; }
+.app-shell[data-theme] .event-detail-time strong { font-size:20px; }
 .app-shell[data-theme] .event-detail-time small { font-size:12px; margin-top:4px; }
 
 .app-shell[data-theme] .event-detail-reminder {
   border-radius:20px;
   gap:11px;
-  grid-template-columns:46px minmax(0,1fr) 22px;
+  grid-template-columns:46px minmax(0,1fr);
   margin-bottom:16px;
   padding:12px 13px;
 }
@@ -19644,18 +19554,8 @@ body {
     width:min(86vw,450px);
   }
 
-  .app-shell[data-theme] .event-detail-corner {
-    border-radius:0 28px 0 100%;
-    height:121px;
-    width:128px;
-  }
-
-  .app-shell[data-theme] .event-detail-title-row h2 { font-size:34px; }
-
-  .app-shell[data-theme] .event-detail-title-row .event-detail-doodle {
-    flex-basis:66px;
-    height:34px;
-  }
+  .app-shell[data-theme] .event-detail-date-eyebrow { font-size:10px; }
+  .app-shell[data-theme] .event-detail-title { font-size:34px; }
 
   .event-delete-dialog { border-radius:24px; padding:21px; }
 }

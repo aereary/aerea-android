@@ -1086,6 +1086,17 @@ function eventDetailDate(dateKey: string) {
   }).format(new Date(year, month - 1, day));
 }
 
+function eventDetailHeadingDate(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  })
+    .format(new Date(year, month - 1, day))
+    .toUpperCase();
+}
+
 function dateFromKey(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -1265,17 +1276,13 @@ function eventDetailTimeParts(event: CalendarEvent) {
   };
 
   const start = formatPart(event.time);
-  if (!event.endTime) return { range: start.clock, period: start.period };
+  const startLabel = [start.clock, start.period].filter(Boolean).join(" ");
+  if (!event.endTime) return { range: startLabel, period: "" };
   const end = formatPart(event.endTime);
-  if (start.period && end.period && start.period !== end.period) {
-    return {
-      range: `${start.clock} ${start.period} – ${end.clock}`,
-      period: end.period,
-    };
-  }
+  const endLabel = [end.clock, end.period].filter(Boolean).join(" ");
   return {
-    range: `${start.clock} – ${end.clock}`,
-    period: end.period || start.period,
+    range: `${startLabel} – ${endLabel}`,
+    period: "",
   };
 }
 
@@ -11763,37 +11770,10 @@ export default function Home() {
                 aria-modal="true"
                 aria-label={`Details for ${selectedEventDetail.title}`}
               >
-                <span className="event-detail-corner" aria-hidden="true" />
                 <header className="event-detail-header">
-                  <div className="event-detail-heading-copy">
-                    <div className="event-detail-category-row">
-                      {eventDetailReturnDayPocket && (
-                        <button
-                          className="event-detail-back"
-                          type="button"
-                          onClick={returnToDayPocket}
-                          aria-label={`Back to Day Pocket for ${readableDate(eventDetailReturnDayPocket)}`}
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12H19" />
-                          </svg>
-                        </button>
-                      )}
-                      <p className="event-detail-category">
-                        {selectedEventDetail.calendar ?? "PERSONAL"}
-                      </p>
-                    </div>
-                    <div className="event-detail-title-row">
-                      <h2>{selectedEventDetail.title}</h2>
-                      <div className="event-detail-doodle" aria-hidden="true">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src="/assets/event-modal-cloud-sparkles.png"
-                          alt=""
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <p className="event-detail-date-eyebrow">
+                    {eventDetailHeadingDate(selectedEventDetail.date)}
+                  </p>
                   <button
                     onClick={closeEventDetail}
                     aria-label="Close event details"
@@ -11801,6 +11781,29 @@ export default function Home() {
                     ×
                   </button>
                 </header>
+
+                <div className="event-detail-heading-copy">
+                  <div className="event-detail-category-row">
+                    {eventDetailReturnDayPocket && (
+                      <button
+                        className="event-detail-back"
+                        type="button"
+                        onClick={returnToDayPocket}
+                        aria-label={`Back to Day Pocket for ${readableDate(eventDetailReturnDayPocket)}`}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12H19" />
+                        </svg>
+                      </button>
+                    )}
+                    <p className="event-detail-category">
+                      {selectedEventDetail.calendar ?? "PERSONAL"}
+                    </p>
+                  </div>
+                  <h2 className="event-detail-title">
+                    {selectedEventDetail.title}
+                  </h2>
+                </div>
 
                 <div className="event-detail-divider" aria-hidden="true">
                   <span>✦</span>
@@ -11814,10 +11817,7 @@ export default function Home() {
                     </svg>
                   </span>
                   <div>
-                    <strong>
-                      <span>{detailTime.range}</span>
-                      {detailTime.period && <em>{detailTime.period}</em>}
-                    </strong>
+                    <strong>{detailTime.range}</strong>
                     <small>
                       {eventDetailDate(selectedEventDetail.date)}
                       {selectedEventDetail.endDate &&
@@ -11836,16 +11836,11 @@ export default function Home() {
                     </svg>
                   </span>
                   <div>
-                    <small>REMINDER</small>
+                    <small>Reminder</small>
                     <strong>
                       {selectedEventDetail.reminder || "No reminder"}
                     </strong>
                   </div>
-                  <b aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M12 21C10.7 19.9 4.2 15.3 2.6 11.6C1 7.9 3 4.2 6.7 4.2C9 4.2 10.5 5.6 12 7.4C13.5 5.6 15 4.2 17.3 4.2C21 4.2 23 7.9 21.4 11.6C19.8 15.3 13.3 19.9 12 21Z" />
-                    </svg>
-                  </b>
                 </div>
 
                 <div className="event-detail-facts">
