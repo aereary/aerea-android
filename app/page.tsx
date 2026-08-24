@@ -1,5 +1,7 @@
 "use client";
 
+import { Ao3Library } from "./ao3-library";
+
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
   AEREA_ACCOUNT,
@@ -26,7 +28,7 @@ import {
 } from "react";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
-type Space = "menu" | "classes" | "sketchbook";
+type Space = "menu" | "classes" | "sketchbook" | "ao3";
 type PageStyle = "grid" | "lined" | "dotted" | "plain";
 type AppTheme =
   | "storybook"
@@ -2871,6 +2873,14 @@ export default function Home() {
                   />
                   <div className="spaces-grid">
                     <SpaceCard
+                      title="AO3 Library"
+                      subtitle="Fics, series & archived EPUBs"
+                      color="space-lilac"
+                      icon="📚"
+                      note="466 works · 470 EPUBs"
+                      onClick={() => setSpace("ao3")}
+                    />
+                    <SpaceCard
                       title="Class library"
                       subtitle="Recordings with notes"
                       color="space-blue"
@@ -2898,6 +2908,16 @@ export default function Home() {
                 </>
               )}
 
+              {space === "ao3" && (
+                <section>
+                  <InnerHeader
+                    label="AO3 LIBRARY"
+                    title="My fic archive"
+                    onBack={() => setSpace("menu")}
+                  />
+                  <Ao3Library />
+                </section>
+              )}
               {space === "classes" && (
                 <section>
                   <InnerHeader
