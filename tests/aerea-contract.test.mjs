@@ -166,3 +166,30 @@ test("keeps cross-device sync private and local-first", () => {
   assert.match(syncSource, /aerea-private-state-v1/);
   assert.doesNotMatch(syncSource, /service_role/i);
 });
+
+test("keeps Boca fixtures automatic, cached, and outside private sync", () => {
+  assert.match(syncSource, /\.from\("football_matches"\)/);
+  assert.match(syncSource, /\.eq\("team_key", "boca_juniors"\)/);
+  assert.match(syncSource, /aerea-football-matches-v1/);
+  assert.match(syncSource, /new Map\(matches\.map\(\(match\) =>/);
+  assert.match(pageSource, /useState<FootballMatch\[\]>\(\[\]\)/);
+  assert.match(pageSource, /Hora por confirmar/);
+  assert.match(pageSource, /window\.addEventListener\("online"/);
+  assert.match(pageSource, /visibilitychange/);
+  assert.match(pageSource, /FootballMatchDetailDialog/);
+  assert.match(pageSource, /DAILY POCKET/);
+  assert.match(pageSource, /COMING UP NEXT/);
+  assert.match(pageSource, /startCalendarLongPress/);
+  assert.match(cssSource, /\.football-match-card/);
+
+  const privateState = pageSource.match(
+    /const state = \{([\s\S]*?)cleanStartVersion: CLEAN_START_VERSION/,
+  );
+  assert.ok(privateState, "the private state payload should remain explicit");
+  assert.doesNotMatch(
+    privateState[1],
+    /footballMatches/,
+    "automatic fixtures must never be sent to aerea_sync",
+  );
+  assert.doesNotMatch(syncSource, /service_role/i);
+});

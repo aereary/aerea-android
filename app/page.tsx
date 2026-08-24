@@ -4,12 +4,15 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
   AEREA_ACCOUNT,
   currentAereaEmail,
+  fetchFootballMatches,
   pushCloudState,
   readBrowserSketches,
   readBrowserState,
+  readCachedFootballMatches,
   reconcileCloudState,
   requestAereaCode,
   supabase,
+  type FootballMatch,
   verifyAereaCode,
   writeBrowserSketches,
   writeBrowserState,
@@ -166,6 +169,12 @@ type CalendarEvent = {
   todos?: string[];
   todoStates?: ("pending" | "done" | "missed")[];
   files?: string[];
+};
+
+type FootballVisualEvent = CalendarEvent & {
+  source: "football";
+  footballMatch: FootballMatch;
+  kickoffTimestamp: number | null;
 };
 
 type EventColor =
@@ -793,6 +802,121 @@ function eventTimeLabel(event: CalendarEvent) {
   return event.time;
 }
 
+function footballKickoff(match: FootballMatch) {
+  if (!match.time_confirmed || !match.kickoff_at) return null;
+  const kickoff = new Date(match.kickoff_at);
+  return Number.isNaN(kickoff.getTime()) ? null : kickoff;
+}
+
+function footballMatchDateKey(match: FootballMatch) {
+  const kickoff = footballKickoff(match);
+  return kickoff ? localDateKey(kickoff) : match.match_date;
+}
+
+function footballMatchTime(match: FootballMatch) {
+  const kickoff = footballKickoff(match);
+  if (!kickoff) return "Hora por confirmar";
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(kickoff);
+}
+
+function footballMatchTitle(match: FootballMatch) {
+  return `${match.home_team} vs ${match.away_team}`;
+}
+
+function footballMatchToCalendarEvent(
+  match: FootballMatch,
+): FootballVisualEvent {
+  const kickoff = footballKickoff(match);
+  return {
+    id: `football:${match.external_event_id}`,
+    date: footballMatchDateKey(match),
+    title: footballMatchTitle(match),
+    time: footballMatchTime(match),
+    calendar: "BOCA JUNIORS",
+    color: "blue",
+    location: match.venue ?? undefined,
+    note: match.competition ?? undefined,
+    source: "football",
+    footballMatch: match,
+    kickoffTimestamp: kickoff?.getTime() ?? null,
+  };
+}
+
+function normalizedFootballStatus(status: string) {
+  return status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function footballStatusLabel(status: string) {
+  const normalized = normalizedFootballStatus(status);
+  const labels: Record<string, string> = {
+    scheduled: "Scheduled",
+    not_started: "Scheduled",
+    live: "Live",
+    in_progress: "Live",
+    halftime: "Half time",
+    half_time: "Half time",
+    finished: "Finished",
+    full_time: "Finished",
+    ft: "Finished",
+    final: "Finished",
+    completed: "Finished",
+    ended: "Finished",
+    after_penalties: "Finished · penalties",
+    postponed: "Postponed",
+    suspended: "Suspended",
+    cancelled: "Cancelled",
+    canceled: "Cancelled",
+  };
+  return (
+    labels[normalized] ??
+    normalized
+      .split("_")
+      .filter(Boolean)
+      .map((word) => word[0]?.toUpperCase() + word.slice(1))
+      .join(" ")
+  );
+}
+
+function footballMatchFinished(match: FootballMatch) {
+  return [
+    "finished",
+    "full_time",
+    "ft",
+    "final",
+    "completed",
+    "ended",
+    "after_penalties",
+  ].includes(normalizedFootballStatus(match.status));
+}
+
+function footballMatchIsHome(match: FootballMatch) {
+  return match.home_team.toLocaleLowerCase().includes("boca");
+}
+
+function footballMatchOpponent(match: FootballMatch) {
+  return footballMatchIsHome(match) ? match.away_team : match.home_team;
+}
+
+function footballScore(match: FootballMatch) {
+  if (match.home_score === null || match.away_score === null) return null;
+  return `${match.home_score} – ${match.away_score}`;
+}
+
+function compareFootballVisualEvents(
+  left: FootballVisualEvent,
+  right: FootballVisualEvent,
+) {
+  if (left.kickoffTimestamp === null && right.kickoffTimestamp !== null) return 1;
+  if (left.kickoffTimestamp !== null && right.kickoffTimestamp === null) return -1;
+  if (left.kickoffTimestamp !== null && right.kickoffTimestamp !== null) {
+    return left.kickoffTimestamp - right.kickoffTimestamp;
+  }
+  return left.title.localeCompare(right.title);
+}
+
 function eventRepeatLabel(event: CalendarEvent) {
   if (!event.repeat || event.repeat === "Never") return "Does not repeat";
   if (event.repeat !== "Custom") return event.repeat;
@@ -836,11 +960,15 @@ export default function Home() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
+  const [selectedFootballMatch, setSelectedFootballMatch] =
+    useState<FootballVisualEvent | null>(null);
+  const [dailyPocketDate, setDailyPocketDate] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState<EventDraft>(() =>
     makeEventDraft(todayKey),
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [stateReady, setStateReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -952,6 +1080,11 @@ export default function Home() {
   const redrawSketchRef = useRef<() => void>(() => undefined);
   const [historyDepth, setHistoryDepth] = useState({ undo: 0, redo: 0 });
   const calendarSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const calendarLongPressTimerRef = useRef<number | null>(null);
+  const calendarLongPressTriggeredRef = useRef(false);
+  const calendarLongPressStartRef = useRef<{ x: number; y: number } | null>(
+    null,
+  );
 
   const doneIds = useMemo(
     () => reminderHistory[todayKey] ?? [],
@@ -1252,6 +1385,66 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    let refreshRunning = false;
+
+    const cachedMatches = readCachedFootballMatches();
+    const cachedTimer = window.setTimeout(() => {
+      if (!cancelled && cachedMatches.length > 0) {
+        setFootballMatches(cachedMatches);
+      }
+    }, 0);
+
+    const refreshFootballMatches = async () => {
+      if (refreshRunning) return;
+      refreshRunning = true;
+      try {
+        const matches = await fetchFootballMatches();
+        if (!cancelled) setFootballMatches(matches);
+      } catch {
+        // Keep the last valid cached fixture visible while offline.
+      } finally {
+        refreshRunning = false;
+      }
+    };
+
+    void refreshFootballMatches();
+    const channel = supabase
+      .channel("aerea-boca-football-matches")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "football_matches" },
+        () => void refreshFootballMatches(),
+      )
+      .subscribe();
+    const refreshWhenOnline = () => void refreshFootballMatches();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshFootballMatches();
+    };
+    const interval = window.setInterval(refreshFootballMatches, 15 * 60_000);
+    window.addEventListener("online", refreshWhenOnline);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(cachedTimer);
+      window.clearInterval(interval);
+      window.removeEventListener("online", refreshWhenOnline);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (calendarLongPressTimerRef.current !== null) {
+        window.clearTimeout(calendarLongPressTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const pending = useMemo(
     () => reminders.filter((item) => !doneIds.includes(item.id)),
     [doneIds],
@@ -1273,9 +1466,19 @@ export default function Home() {
   ).getDate();
   const leadingDays =
     (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+  const footballVisualEvents = useMemo(
+    () =>
+      footballMatches
+        .map(footballMatchToCalendarEvent)
+        .sort(compareFootballVisualEvents),
+    [footballMatches],
+  );
   const selectedDateEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const selectedDateFootballEvents = footballVisualEvents.filter(
+    (event) => event.date === selectedCalendarDate,
+  );
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
@@ -1286,6 +1489,26 @@ export default function Home() {
   const selectedHomeEvents = calendarEvents
     .filter((event) => eventOccursOn(event, selectedHomeDate))
     .sort((a, b) => a.time.localeCompare(b.time));
+  const selectedHomeFootballEvents = footballVisualEvents.filter(
+    (event) => event.date === selectedHomeDate,
+  );
+  const footballDateKeys = useMemo(
+    () => new Set(footballVisualEvents.map((event) => event.date)),
+    [footballVisualEvents],
+  );
+  const upcomingFootballMatch =
+    footballVisualEvents.find(
+      (event) =>
+        event.date === todayKey && !footballMatchFinished(event.footballMatch),
+    ) ?? null;
+  const dailyPocketEvents = dailyPocketDate
+    ? calendarEvents
+        .filter((event) => eventOccursOn(event, dailyPocketDate))
+        .sort((a, b) => a.time.localeCompare(b.time))
+    : [];
+  const dailyPocketFootballEvents = dailyPocketDate
+    ? footballVisualEvents.filter((event) => event.date === dailyPocketDate)
+    : [];
   const todayWidgetEvents = useMemo(
     () =>
       calendarEvents
@@ -1489,6 +1712,54 @@ export default function Home() {
       return;
     }
     shiftCalendarMonth(deltaX < 0 ? 1 : -1);
+  };
+
+  const cancelCalendarLongPress = () => {
+    if (calendarLongPressTimerRef.current !== null) {
+      window.clearTimeout(calendarLongPressTimerRef.current);
+      calendarLongPressTimerRef.current = null;
+    }
+    calendarLongPressStartRef.current = null;
+  };
+
+  const startCalendarLongPress = (
+    dateKey: string,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    cancelCalendarLongPress();
+    calendarLongPressTriggeredRef.current = false;
+    calendarLongPressStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    calendarLongPressTimerRef.current = window.setTimeout(() => {
+      calendarLongPressTriggeredRef.current = true;
+      calendarLongPressTimerRef.current = null;
+      calendarLongPressStartRef.current = null;
+      setSelectedCalendarDate(dateKey);
+      setDailyPocketDate(dateKey);
+    }, 550);
+  };
+
+  const moveCalendarLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const start = calendarLongPressStartRef.current;
+    if (!start) return;
+    if (
+      Math.abs(event.clientX - start.x) > 10 ||
+      Math.abs(event.clientY - start.y) > 10
+    ) {
+      cancelCalendarLongPress();
+    }
+  };
+
+  const selectCalendarDate = (dateKey: string) => {
+    if (calendarLongPressTriggeredRef.current) {
+      calendarLongPressTriggeredRef.current = false;
+      return;
+    }
+    setSelectedCalendarDate(dateKey);
   };
 
   const updateProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
@@ -2642,7 +2913,11 @@ export default function Home() {
               todayKey={todayKey}
               weekDays={homeWeek}
               selectedDateEvents={selectedHomeEvents}
+              selectedFootballEvents={selectedHomeFootballEvents}
+              footballDateKeys={footballDateKeys}
+              upcomingFootballMatch={upcomingFootballMatch}
               openEventDetail={setSelectedEventDetail}
+              openFootballMatch={setSelectedFootballMatch}
               dayCharm={activeTheme.art}
               dayCharmLabel={activeTheme.name}
               dayCharmText={activeTheme.charm}
@@ -3937,6 +4212,9 @@ export default function Home() {
                   <span>
                     <i className="source-aerea" /> aérea
                   </span>
+                  <span>
+                    <i className="source-football" /> Boca Juniors
+                  </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
                 </div>
@@ -3972,6 +4250,11 @@ export default function Home() {
                     const dayEvents = calendarEvents.filter((event) =>
                       eventOccursOn(event, dayKey),
                     );
+                    const dayFootballEvents = footballVisualEvents.filter(
+                      (event) => event.date === dayKey,
+                    );
+                    const dayEventCount =
+                      dayEvents.length + dayFootballEvents.length;
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
                     );
@@ -3982,7 +4265,10 @@ export default function Home() {
                         key={day}
                         className={[
                           selectedCalendarDate === dayKey ? "selected" : "",
-                          dayEvents.length > 0 ? "has-event" : "",
+                          dayEventCount > 0 ? "has-event" : "",
+                          dayFootballEvents.length > 0
+                            ? "has-football-match"
+                            : "",
                           dayMood ? "has-mood" : "",
                           dayComplete ? "day-complete" : "",
                           dayMissed ? "day-missed" : "",
@@ -3990,7 +4276,20 @@ export default function Home() {
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => setSelectedCalendarDate(dayKey)}
+                        onClick={() => selectCalendarDate(dayKey)}
+                        onPointerDown={(event) =>
+                          startCalendarLongPress(dayKey, event)
+                        }
+                        onPointerUp={cancelCalendarLongPress}
+                        onPointerMove={moveCalendarLongPress}
+                        onPointerLeave={cancelCalendarLongPress}
+                        onPointerCancel={cancelCalendarLongPress}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          cancelCalendarLongPress();
+                          setSelectedCalendarDate(dayKey);
+                          setDailyPocketDate(dayKey);
+                        }}
                       >
                         <span className="calendar-day-number">{day}</span>
                         {dayMood && (
@@ -4017,20 +4316,28 @@ export default function Home() {
                             {dayComplete ? "✓" : "×"}
                           </i>
                         )}
-                        {dayEvents.length > 0 && (
+                        {dayEventCount > 0 && (
                           <>
                             <span className="calendar-event-dots">
-                              {dayEvents.slice(0, 3).map((event) => (
+                              {dayFootballEvents.slice(0, 3).map((event) => (
+                                <b
+                                  className="event-dot football"
+                                  key={event.id}
+                                />
+                              ))}
+                              {dayEvents
+                                .slice(0, Math.max(0, 3 - dayFootballEvents.length))
+                                .map((event) => (
                                 <b
                                   className={`event-dot ${event.color}`}
                                   key={event.id}
                                 />
-                              ))}
+                                ))}
                             </span>
                             <small>
-                              {dayEvents.length === 1
-                                ? dayEvents[0].title
-                                : `${dayEvents.length} plans`}
+                              {dayEventCount === 1
+                                ? (dayFootballEvents[0]?.title ?? dayEvents[0].title)
+                                : `${dayEventCount} plans`}
                             </small>
                           </>
                         )}
@@ -4139,7 +4446,8 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {selectedDateEvents.length === 0 ? (
+                  {selectedDateEvents.length === 0 &&
+                  selectedDateFootballEvents.length === 0 ? (
                     <p className="empty-day">
                       Nothing here yet—this day is yours.
                     </p>
@@ -4181,6 +4489,14 @@ export default function Home() {
                             ×
                           </button>
                         </article>
+                      ))}
+                      {selectedDateFootballEvents.map((footballEvent) => (
+                        <FootballMatchCard
+                          event={footballEvent}
+                          key={footballEvent.id}
+                          onOpen={setSelectedFootballMatch}
+                          variant="chip"
+                        />
                       ))}
                     </div>
                   )}
@@ -4714,6 +5030,30 @@ export default function Home() {
         </div>
       )}
 
+      {selectedFootballMatch && (
+        <FootballMatchDetailDialog
+          event={selectedFootballMatch}
+          onClose={() => setSelectedFootballMatch(null)}
+        />
+      )}
+
+      {dailyPocketDate && (
+        <DailyPocketDialog
+          date={dailyPocketDate}
+          events={dailyPocketEvents}
+          footballEvents={dailyPocketFootballEvents}
+          onClose={() => setDailyPocketDate(null)}
+          onOpenEvent={(event) => {
+            setDailyPocketDate(null);
+            setSelectedEventDetail(event);
+          }}
+          onOpenFootball={(event) => {
+            setDailyPocketDate(null);
+            setSelectedFootballMatch(event);
+          }}
+        />
+      )}
+
       {settingsOpen && (
         <div className="modal-backdrop settings-backdrop" role="presentation">
           <section
@@ -5210,7 +5550,11 @@ function TodayScreen({
   selectedDate,
   selectDate,
   selectedDateEvents,
+  selectedFootballEvents,
+  footballDateKeys,
+  upcomingFootballMatch,
   openEventDetail,
+  openFootballMatch,
   todayKey,
   weekDays,
   yesterdayDoneCount,
@@ -5228,7 +5572,11 @@ function TodayScreen({
   selectedDate: string;
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
+  selectedFootballEvents: FootballVisualEvent[];
+  footballDateKeys: Set<string>;
+  upcomingFootballMatch: FootballVisualEvent | null;
   openEventDetail: (event: CalendarEvent) => void;
+  openFootballMatch: (event: FootballVisualEvent) => void;
   todayKey: string;
   weekDays: { key: string; day: string; date: string }[];
   yesterdayDoneCount: number;
@@ -5320,6 +5668,7 @@ function TodayScreen({
               "day",
               selectedDate === day.key ? "active" : "",
               todayKey === day.key ? "today" : "",
+              footballDateKeys.has(day.key) ? "has-football-match" : "",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -5329,9 +5678,29 @@ function TodayScreen({
             <span>{day.day}</span>
             <strong>{day.date}</strong>
             {todayKey === day.key && <i />}
+            {footballDateKeys.has(day.key) && (
+              <em className="football-day-marker" aria-label="Boca match" />
+            )}
           </button>
         ))}
       </section>
+
+      {selectedIsToday && upcomingFootballMatch && (
+        <section className="coming-up-football" aria-label="Coming up next">
+          <div className="coming-up-heading">
+            <div>
+              <p className="tiny-label">COMING UP NEXT</p>
+              <h3>Boca plays today</h3>
+            </div>
+            <span>💙 💛</span>
+          </div>
+          <FootballMatchCard
+            event={upcomingFootballMatch}
+            onOpen={openFootballMatch}
+            variant="coming"
+          />
+        </section>
+      )}
 
       <section className="day-grid">
         <div className="column">
@@ -5348,7 +5717,8 @@ function TodayScreen({
               See calendar
             </button>
           </div>
-          {selectedDateEvents.length === 0 ? (
+          {selectedDateEvents.length === 0 &&
+          selectedFootballEvents.length === 0 ? (
             <article className="empty-schedule">
               <span>☁</span>
               <p>A clear day. Add something whenever you&apos;re ready.</p>
@@ -5380,6 +5750,14 @@ function TodayScreen({
               </button>
             ))
           )}
+          {selectedFootballEvents.map((event) => (
+            <FootballMatchCard
+              event={event}
+              key={event.id}
+              onOpen={openFootballMatch}
+              variant="schedule"
+            />
+          ))}
           <button className="add-event-button" onClick={openCalendar}>
             <span>＋</span> Add something to your day
           </button>
@@ -5452,6 +5830,192 @@ function TodayScreen({
         <i>→</i>
       </button>
     </>
+  );
+}
+
+function FootballMatchCard({
+  event,
+  onOpen,
+  variant,
+}: {
+  event: FootballVisualEvent;
+  onOpen: (event: FootballVisualEvent) => void;
+  variant: "schedule" | "chip" | "coming" | "pocket";
+}) {
+  const match = event.footballMatch;
+  const score = footballScore(match);
+  const homeOrAway = footballMatchIsHome(match) ? "HOME" : "AWAY";
+
+  return (
+    <button
+      type="button"
+      className={`football-match-card ${variant}`}
+      onClick={() => onOpen(event)}
+      aria-label={`Open match details for ${event.title}`}
+    >
+      <span className="football-badge" aria-hidden="true">
+        <b>BJ</b>
+        <i />
+      </span>
+      <span className="football-card-copy">
+        <span className="football-card-kicker">
+          <b>{homeOrAway}</b>
+          <small>{event.time}</small>
+        </span>
+        <strong>{event.title}</strong>
+        <small>
+          {[match.competition, match.venue].filter(Boolean).join(" · ") ||
+            "Boca Juniors fixture"}
+        </small>
+      </span>
+      <span className="football-card-state">
+        {score && <strong>{score}</strong>}
+        <small>{footballStatusLabel(match.status)}</small>
+        <i aria-hidden="true">›</i>
+      </span>
+    </button>
+  );
+}
+
+function FootballMatchDetailDialog({
+  event,
+  onClose,
+}: {
+  event: FootballVisualEvent;
+  onClose: () => void;
+}) {
+  const match = event.footballMatch;
+  const score = footballScore(match);
+  const homeOrAway = footballMatchIsHome(match) ? "Home" : "Away";
+
+  return (
+    <div className="modal-backdrop football-detail-backdrop" role="presentation">
+      <section
+        className="football-detail-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Match details for ${event.title}`}
+      >
+        <header className="football-detail-header">
+          <span className="football-badge large" aria-hidden="true">
+            <b>BJ</b>
+            <i />
+          </span>
+          <div>
+            <p className="tiny-label">BOCA JUNIORS · AUTOMATIC FIXTURE</p>
+            <h2>{event.title}</h2>
+          </div>
+          <button onClick={onClose} aria-label="Close match details">
+            ×
+          </button>
+        </header>
+
+        <div className="football-scoreboard">
+          <span>
+            <small>{match.home_team}</small>
+            <strong>{match.home_score ?? "–"}</strong>
+          </span>
+          <i>{footballStatusLabel(match.status)}</i>
+          <span>
+            <small>{match.away_team}</small>
+            <strong>{match.away_score ?? "–"}</strong>
+          </span>
+        </div>
+
+        <div className="football-detail-facts">
+          <div>
+            <small>When</small>
+            <strong>{event.time}</strong>
+            <span>{readableDate(event.date)}</span>
+          </div>
+          <div>
+            <small>Boca is</small>
+            <strong>{homeOrAway}</strong>
+            <span>vs {footballMatchOpponent(match)}</span>
+          </div>
+          <div>
+            <small>Competition</small>
+            <strong>{match.competition || "To be confirmed"}</strong>
+          </div>
+          {match.venue && (
+            <div>
+              <small>Stadium</small>
+              <strong>{match.venue}</strong>
+            </div>
+          )}
+        </div>
+
+        {score && <p className="football-result">Result · {score}</p>}
+        <p className="football-readonly-note">
+          This match is updated automatically and is read-only in aérea.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function DailyPocketDialog({
+  date,
+  events,
+  footballEvents,
+  onClose,
+  onOpenEvent,
+  onOpenFootball,
+}: {
+  date: string;
+  events: CalendarEvent[];
+  footballEvents: FootballVisualEvent[];
+  onClose: () => void;
+  onOpenEvent: (event: CalendarEvent) => void;
+  onOpenFootball: (event: FootballVisualEvent) => void;
+}) {
+  return (
+    <div className="modal-backdrop daily-pocket-backdrop" role="presentation">
+      <section
+        className="daily-pocket-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Daily Pocket for ${readableDate(date)}`}
+      >
+        <header>
+          <div>
+            <p className="tiny-label">DAILY POCKET</p>
+            <h2>{readableDate(date)}</h2>
+            <p>Your plans for this little day, all together.</p>
+          </div>
+          <button onClick={onClose} aria-label="Close Daily Pocket">
+            ×
+          </button>
+        </header>
+
+        {events.length === 0 && footballEvents.length === 0 ? (
+          <p className="daily-pocket-empty">Nothing planned for this day.</p>
+        ) : (
+          <div className="daily-pocket-list">
+            {events.map((event) => (
+              <button
+                type="button"
+                className={`daily-pocket-event ${event.color}`}
+                key={event.id}
+                onClick={() => onOpenEvent(event)}
+              >
+                <span>{eventTimeLabel(event)}</span>
+                <strong>{event.title}</strong>
+                <small>{event.calendar ?? "AÉREA"}</small>
+              </button>
+            ))}
+            {footballEvents.map((event) => (
+              <FootballMatchCard
+                event={event}
+                key={event.id}
+                onOpen={onOpenFootball}
+                variant="pocket"
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

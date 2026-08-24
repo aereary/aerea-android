@@ -20,6 +20,83 @@ export const supabase = createClient(
 const STATE_KEY = "aerea-private-state-v1";
 const STATE_TIME_KEY = "aerea-private-state-updated-at";
 const SKETCH_KEY = "aerea-private-sketches-v1";
+const FOOTBALL_MATCHES_KEY = "aerea-football-matches-v1";
+
+export type FootballMatch = {
+  external_event_id: string;
+  team_key: "boca_juniors";
+  match_date: string;
+  kickoff_at: string | null;
+  time_confirmed: boolean;
+  home_team: string;
+  away_team: string;
+  competition: string | null;
+  venue: string | null;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+function validFootballMatches(value: unknown): FootballMatch[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const matches = value.filter((item): item is FootballMatch => {
+    if (!item || typeof item !== "object") return false;
+    const match = item as Record<string, unknown>;
+    return (
+      typeof match.external_event_id === "string" &&
+      match.external_event_id.length > 0 &&
+      match.team_key === "boca_juniors" &&
+      typeof match.match_date === "string" &&
+      (typeof match.kickoff_at === "string" || match.kickoff_at === null) &&
+      typeof match.time_confirmed === "boolean" &&
+      typeof match.home_team === "string" &&
+      typeof match.away_team === "string" &&
+      (typeof match.competition === "string" || match.competition === null) &&
+      (typeof match.venue === "string" || match.venue === null) &&
+      typeof match.status === "string" &&
+      (typeof match.home_score === "number" || match.home_score === null) &&
+      (typeof match.away_score === "number" || match.away_score === null)
+    );
+  });
+
+  if (matches.length !== value.length) return null;
+  return Array.from(
+    new Map(matches.map((match) => [match.external_event_id, match])).values(),
+  );
+}
+
+export function readCachedFootballMatches(): FootballMatch[] {
+  try {
+    return (
+      validFootballMatches(
+        JSON.parse(localStorage.getItem(FOOTBALL_MATCHES_KEY) || "[]"),
+      ) ?? []
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFootballMatches(): Promise<FootballMatch[]> {
+  const { data, error } = await supabase
+    .from("football_matches")
+    .select(
+      "external_event_id,team_key,match_date,kickoff_at,time_confirmed,home_team,away_team,competition,venue,status,home_score,away_score",
+    )
+    .eq("team_key", "boca_juniors");
+
+  if (error) throw error;
+  const matches = validFootballMatches(data);
+  if (!matches) throw new Error("Supabase returned an invalid football fixture.");
+
+  try {
+    localStorage.setItem(FOOTBALL_MATCHES_KEY, JSON.stringify(matches));
+  } catch {
+    // A valid live fixture is still useful if local storage is unavailable.
+  }
+  return matches;
+}
 
 export function readBrowserState(): { state?: unknown } {
   try {
