@@ -354,6 +354,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /Schedule composition v7/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal \.agenda-v3-scene[\s\S]*height:100%/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal::after[\s\S]*background:var\(--cream\)[\s\S]*height:142px/);
+  assert.match(cssSource, /On phones the schedule meets the glass edges without showing outer corners[\s\S]*border-radius:0!important/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav::after/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav \.nav-item/);
   assert.match(cssSource, /The daily schedule starts with its week strip; the old greeting card is gone/);
@@ -476,7 +477,7 @@ test("opens the faithful event note with a real long press", () => {
   );
 });
 
-test("opens the normal event editor from every detail-card surface except navigation actions", () => {
+test("opens the normal event editor only from its title and controls", () => {
   assert.match(pageSource, /const openSelectedEventEditor = \(\) =>/);
   assert.match(
     pageSource,
@@ -484,8 +485,15 @@ test("opens the normal event editor from every detail-card surface except naviga
   );
   assert.match(
     pageSource,
-    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}`\}[\s\S]{0,500}onClickCapture=[\s\S]{0,500}\.event-detail-add, \.event-detail-header > button, \.event-detail-back[\s\S]{0,300}openSelectedEventEditor\(\)/,
+    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}`\}[\s\S]{0,900}onClickCapture=[\s\S]{0,900}\[data-event-detail-edit="true"\], button[\s\S]{0,400}openSelectedEventEditor\(\)/,
   );
+  assert.match(pageSource, /className="event-detail-title"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(pageSource, /className="event-detail-time"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(pageSource, /className="event-detail-reminder"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(cssSource, /Event-note paper stays calm; only its title and controls invite editing/);
+  assert.match(pageSource, /const closeCalendarEventEditor = \(\) =>[\s\S]{0,500}setCalendarOpen\(false\);[\s\S]{0,180}changeTab\("today"\)/);
+  assert.match(pageSource, /onClick=\{closeCalendarEventEditor\}/);
+  assert.match(pageSource, /closeCalendarEventEditor\(\);/);
 });
 
 test("matches the clean event-note language in Day Pocket", () => {
@@ -659,13 +667,19 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /ensureInboxLibraryItem/);
   assert.match(pageSource, /libraryItemAsStudyFile/);
   assert.match(pageSource, /Capture is still here/);
-  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) return/);
-  assert.match(pageSource, /disabled=\{converted\}/);
-  assert.match(pageSource, /Already saved as \$\{destination\}/);
+  assert.match(pageSource, /const openInboxDestination =/);
+  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/);
+  assert.match(pageSource, /className=\{converted \? "converted" : ""\}/);
+  assert.match(pageSource, /Open saved \$\{destination\}/);
+  assert.match(pageSource, /sourceInboxId: item\.id/);
+  assert.match(pageSource, /setRequestedStudyNoteId\(note\.id\)/);
+  assert.match(pageSource, /openTaskEditor\(task\)/);
+  assert.match(pageSource, /className="task-editor-basics"/);
+  assert.match(pageSource, />\s*Save task\s*</);
   assert.match(pageSource, /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/);
   assert.match(pageSource, /className="inbox-item-icon"/);
   assert.match(pageSource, /className="inbox-item-copy"/);
-  assert.match(cssSource, /\.inbox-convert-actions button:disabled/);
+  assert.match(cssSource, /\.inbox-convert-actions button\.converted/);
 });
 
 test("keeps the Recordings class editor compact and centered", () => {
@@ -941,6 +955,10 @@ test("ships movable post-its with an editor that matches the placed note", () =>
     assert.match(pageSource, new RegExp(`value: "${color}"`));
     assert.match(cssSource, new RegExp(`post-it(?:-editor-preview)?\\.${color}`));
   }
+  for (const color of ["orchid", "lemon", "petal", "ocean", "eucalyptus", "apricot", "terracotta", "oat", "plum", "sunshine", "berry", "denim", "forest", "tangerine", "brick", "cocoa"]) {
+    assert.match(pageSource, new RegExp(`value: "${color}"`));
+    assert.match(cssSource, new RegExp(`post-it-editor-preview\\.${color}`));
+  }
   assert.match(pageSource, /function postItVisualStyle/);
   assert.match(pageSource, /const fontSize = length > 150 \? 15 : length > 80 \? 16 : 18/);
   assert.match(pageSource, /\.\.\.postItVisualStyle\(postIt\.text\)/);
@@ -952,6 +970,13 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);
   assert.match(cssSource, /\.post-it-editor-options button \{[\s\S]*height:30px;[\s\S]*width:30px;/);
+  assert.match(pageSource, /const postItColorPalettes:/);
+  assert.match(pageSource, /const shiftPostItPalette =/);
+  assert.match(pageSource, /onTouchStart=\{startPostItPaletteSwipe\}/);
+  assert.match(pageSource, /onTouchEnd=\{finishPostItPaletteSwipe\}/);
+  assert.match(pageSource, /Previous paper-color palette/);
+  assert.match(pageSource, /Next paper-color palette/);
+  assert.match(cssSource, /\.post-it-palette-picker \{[\s\S]*touch-action:pan-y/);
   assert.match(cssSource, /August 24 polish: match the latest event, calendar, and post-it references/);
   assert.match(cssSource, /\.post-it-group-action \{[\s\S]*margin:16px auto 0/);
   assert.match(cssSource, /\.post-it-editor-backdrop \{[\s\S]*align-items:center;[\s\S]*justify-content:center/);

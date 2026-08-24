@@ -20656,6 +20656,38 @@ body {
 .movable-post-it.peach { --post-it-paper:#f3d5c1; }
 .movable-post-it.coral { --post-it-paper:#edc8c4; }
 .movable-post-it.cream { --post-it-paper:#eee7d8; }
+.movable-post-it.orchid,
+.post-it-editor-preview.orchid { --post-it-paper:#c5b3e6; }
+.movable-post-it.lemon,
+.post-it-editor-preview.lemon { --post-it-paper:#f4d66d; }
+.movable-post-it.petal,
+.post-it-editor-preview.petal { --post-it-paper:#ebaec6; }
+.movable-post-it.ocean,
+.post-it-editor-preview.ocean { --post-it-paper:#a8d6e5; }
+.movable-post-it.eucalyptus,
+.post-it-editor-preview.eucalyptus { --post-it-paper:#afd0bd; }
+.movable-post-it.apricot,
+.post-it-editor-preview.apricot { --post-it-paper:#f0bc91; }
+.movable-post-it.terracotta,
+.post-it-editor-preview.terracotta { --post-it-paper:#d99688; }
+.movable-post-it.oat,
+.post-it-editor-preview.oat { --post-it-paper:#d8ccb7; }
+.movable-post-it.plum,
+.post-it-editor-preview.plum { --post-it-paper:#bda4c8; }
+.movable-post-it.sunshine,
+.post-it-editor-preview.sunshine { --post-it-paper:#f3c95e; }
+.movable-post-it.berry,
+.post-it-editor-preview.berry { --post-it-paper:#d992ad; }
+.movable-post-it.denim,
+.post-it-editor-preview.denim { --post-it-paper:#92b7d3; }
+.movable-post-it.forest,
+.post-it-editor-preview.forest { --post-it-paper:#9fc2a8; }
+.movable-post-it.tangerine,
+.post-it-editor-preview.tangerine { --post-it-paper:#efa677; }
+.movable-post-it.brick,
+.post-it-editor-preview.brick { --post-it-paper:#c9857d; }
+.movable-post-it.cocoa,
+.post-it-editor-preview.cocoa { --post-it-paper:#c9b19c; }
 
 .movable-post-it::after,
 .post-it-editor-preview::after {
@@ -20832,6 +20864,52 @@ body {
 }
 .post-it-editor-options button > span { background:var(--post-it-swatch); border-radius:50%; height:22px; width:22px; }
 .post-it-editor-options button.active { border-color:#7964be; box-shadow:0 0 0 2px rgba(121,100,190,.13); }
+.post-it-palette-picker {
+  align-items:center;
+  display:grid;
+  gap:4px;
+  grid-template-columns:26px minmax(0,1fr) 26px;
+  touch-action:pan-y;
+}
+.post-it-editor-options .post-it-palette-fieldset { display:grid; }
+.post-it-palette-swatches {
+  display:grid;
+  gap:2px;
+  grid-template-columns:repeat(8,25px);
+}
+.post-it-editor-options .post-it-palette-swatches > button {
+  height:25px;
+  width:25px;
+}
+.post-it-editor-options .post-it-palette-swatches > button > span {
+  height:19px;
+  width:19px;
+}
+.post-it-editor-options .post-it-palette-nav {
+  background:transparent;
+  border-color:transparent;
+  color:#65558d;
+  height:26px;
+  width:26px;
+}
+.post-it-editor-options .post-it-palette-nav > span {
+  background:transparent;
+  border-radius:0;
+  font-size:26px;
+  height:auto;
+  line-height:.8;
+  width:auto;
+}
+.post-it-palette-count {
+  color:rgba(40,35,55,.58);
+  display:block;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  margin-top:3px;
+  text-align:center;
+  text-transform:uppercase;
+}
 
 .post-it-group-action {
   align-self:center;
@@ -27813,6 +27891,28 @@ html[data-native="true"] .simplified-calendar-screen {
   color:var(--ink);
   font-size:26px;
 }
+.task-editor-basics {
+  display:grid;
+  gap:10px;
+  grid-template-columns:minmax(0,1fr) minmax(150px,.42fr);
+}
+.task-editor-basics label {
+  color:var(--muted);
+  display:grid;
+  font-size:.68rem;
+  font-weight:900;
+  gap:5px;
+}
+.task-editor-basics :is(input,textarea) {
+  background:color-mix(in srgb,var(--cream) 58%,var(--paper));
+  border:1px solid var(--line);
+  border-radius:13px;
+  color:var(--ink);
+  font:inherit;
+  padding:10px 12px;
+}
+.task-editor-basics textarea { min-height:76px; resize:vertical; }
+.task-editor-notes { grid-column:1 / -1; }
 .task-linked-items {
   display:flex;
   flex-wrap:wrap;
@@ -27864,6 +27964,21 @@ html[data-native="true"] .simplified-calendar-screen {
 }
 .task-link-columns input[type="checkbox"] { accent-color:var(--hero); }
 .task-link-hint { color:var(--muted); font-size:.72rem; margin:0; }
+.task-editor-footer {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+.task-editor-footer button {
+  border:0;
+  border-radius:999px;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:900;
+  padding:10px 16px;
+}
+.task-editor-footer .primary { background:var(--hero); color:#fff; }
+.task-editor-footer button:disabled { opacity:.45; }
 
 .reader-used-in {
   align-items:center;
@@ -27919,6 +28034,8 @@ html[data-native="true"] .simplified-calendar-screen {
     grid-template-columns:1fr;
     margin-bottom:calc(-1 * max(10px,var(--safe-area-inset-bottom)));
   }
+  .task-editor-basics { grid-template-columns:1fr; }
+  .task-editor-notes { grid-column:auto; }
   .task-link-columns { grid-template-columns:1fr; }
 }
 
@@ -28805,10 +28922,9 @@ button.brand-wrap {
 /* August 24 follow-up: clearer Space actions and even calendar controls. */
 .day-summary-card .day-summary-add { margin-top:10px; }
 
-.inbox-convert-actions button:disabled {
+.inbox-convert-actions button.converted {
   background:color-mix(in srgb,var(--leaf) 16%,var(--paper));
   color:var(--leaf-deep);
-  cursor:default;
   opacity:.82;
 }
 
@@ -28888,5 +29004,20 @@ button.brand-wrap {
   .class-editor-backdrop > .class-editor-modal {
     border-radius:26px;
     padding:18px;
+  }
+}
+
+/* Event-note paper stays calm; only its title and controls invite editing. */
+.event-detail-note [data-event-detail-edit="true"] { cursor:pointer; }
+.event-detail-note [data-event-detail-edit="true"]:focus-visible {
+  outline:3px solid color-mix(in srgb,var(--detail-tint,var(--hero)) 64%,#fff);
+  outline-offset:4px;
+}
+
+/* On phones the schedule meets the glass edges without showing outer corners. */
+@media (max-width:720px) {
+  .calendar-modal.calendar-expanded.agenda-v2-modal {
+    border-inline:0!important;
+    border-radius:0!important;
   }
 }

@@ -515,7 +515,23 @@ type PostItColor =
   | "mint"
   | "peach"
   | "coral"
-  | "cream";
+  | "cream"
+  | "orchid"
+  | "lemon"
+  | "petal"
+  | "ocean"
+  | "eucalyptus"
+  | "apricot"
+  | "terracotta"
+  | "oat"
+  | "plum"
+  | "sunshine"
+  | "berry"
+  | "denim"
+  | "forest"
+  | "tangerine"
+  | "brick"
+  | "cocoa";
 type PostItPage =
   | "today"
   | "habits"
@@ -532,6 +548,7 @@ type PostItPage =
 
 type PostItNote = {
   id: string;
+  sourceInboxId?: string;
   text: string;
   color: PostItColor;
   page: PostItPage;
@@ -925,20 +942,46 @@ const moods = [
   { face: "•O•", label: "surprised", color: "mood-coral" },
 ];
 
-const postItColors: Array<{
+type PostItColorOption = {
   value: PostItColor;
   label: string;
   hex: string;
-}> = [
-  { value: "lavender", label: "Lilac mist", hex: "#d8d0f0" },
-  { value: "butter", label: "Vanilla", hex: "#f6e2a9" },
-  { value: "blush", label: "Rosewater", hex: "#f1d0db" },
-  { value: "sky", label: "Powder blue", hex: "#d2e4ef" },
-  { value: "mint", label: "Sage", hex: "#d3e5da" },
-  { value: "peach", label: "Apricot", hex: "#f3d5c1" },
-  { value: "coral", label: "Dusty rose", hex: "#edc8c4" },
-  { value: "cream", label: "Ivory", hex: "#eee7d8" },
+};
+
+const postItColorPalettes: PostItColorOption[][] = [
+  [
+    { value: "lavender", label: "Lilac mist", hex: "#d8d0f0" },
+    { value: "butter", label: "Vanilla", hex: "#f6e2a9" },
+    { value: "blush", label: "Rosewater", hex: "#f1d0db" },
+    { value: "sky", label: "Powder blue", hex: "#d2e4ef" },
+    { value: "mint", label: "Sage", hex: "#d3e5da" },
+    { value: "peach", label: "Apricot", hex: "#f3d5c1" },
+    { value: "coral", label: "Dusty rose", hex: "#edc8c4" },
+    { value: "cream", label: "Ivory", hex: "#eee7d8" },
+  ],
+  [
+    { value: "orchid", label: "Soft orchid", hex: "#c5b3e6" },
+    { value: "lemon", label: "Lemon drop", hex: "#f4d66d" },
+    { value: "petal", label: "Pink petal", hex: "#ebaec6" },
+    { value: "ocean", label: "Quiet ocean", hex: "#a8d6e5" },
+    { value: "eucalyptus", label: "Eucalyptus", hex: "#afd0bd" },
+    { value: "apricot", label: "Warm apricot", hex: "#f0bc91" },
+    { value: "terracotta", label: "Terracotta", hex: "#d99688" },
+    { value: "oat", label: "Oat paper", hex: "#d8ccb7" },
+  ],
+  [
+    { value: "plum", label: "Plum cloud", hex: "#bda4c8" },
+    { value: "sunshine", label: "Sunshine", hex: "#f3c95e" },
+    { value: "berry", label: "Berry cream", hex: "#d992ad" },
+    { value: "denim", label: "Washed denim", hex: "#92b7d3" },
+    { value: "forest", label: "Soft forest", hex: "#9fc2a8" },
+    { value: "tangerine", label: "Tangerine", hex: "#efa677" },
+    { value: "brick", label: "Rose brick", hex: "#c9857d" },
+    { value: "cocoa", label: "Cocoa paper", hex: "#c9b19c" },
+  ],
 ];
+
+const postItColors = postItColorPalettes.flat();
 
 function postItVisualStyle(text: string): CSSProperties {
   const length = text.trim().length;
@@ -1753,6 +1796,11 @@ export default function Home() {
   const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
+  const [taskEditorDraft, setTaskEditorDraft] = useState({
+    title: "",
+    dueDate: todayKey,
+    notes: "",
+  });
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [quickCaptureText, setQuickCaptureText] = useState("");
@@ -1810,8 +1858,10 @@ export default function Home() {
   const [activeEpubBook, setActiveEpubBook] = useState<EpubBook | null>(null);
   const [studyReaderMessage, setStudyReaderMessage] = useState("");
   const [activeStudyNotebookId, setActiveStudyNotebookId] = useState<string | null>(null);
+  const [requestedStudyNoteId, setRequestedStudyNoteId] = useState<string | null>(null);
   const [postItEditorOpen, setPostItEditorOpen] = useState(false);
   const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
+  const [postItPaletteIndex, setPostItPaletteIndex] = useState(0);
   const [postItDraft, setPostItDraft] = useState<PostItDraft>({
     text: "",
     color: "lavender",
@@ -1962,6 +2012,8 @@ export default function Home() {
     groupPositions: Array<{ id: string; x: number; y: number }>;
   } | null>(null);
   const postItLongPressRef = useRef<number | null>(null);
+  const postItPaletteTouchStartRef = useRef<number | null>(null);
+  const postItPaletteDidSwipeRef = useRef(false);
   const postItResizeRef = useRef<{
     id: string;
     pointerId: number;
@@ -3737,32 +3789,135 @@ export default function Home() {
           : candidate,
       ),
     );
-    return id;
+    return libraryItem;
+  };
+
+  const openTaskEditor = (task: TaskItem) => {
+    setTaskEditorDraft({
+      title: task.title,
+      dueDate: task.dueDate,
+      notes: task.notes ?? "",
+    });
+    setTaskLinkEditorId(task.id);
+  };
+
+  const closeTaskEditor = () => {
+    setTaskLinkEditorId(null);
+  };
+
+  const saveTaskEditor = () => {
+    if (!taskLinkEditorId || !taskEditorDraft.title.trim()) return;
+    const title = taskEditorDraft.title.trim();
+    const notes = taskEditorDraft.notes.trim();
+    const updatedAt = new Date().toISOString();
+    recordAction("Edited task");
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskLinkEditorId
+          ? {
+              ...task,
+              title,
+              dueDate: taskEditorDraft.dueDate,
+              notes,
+              updatedAt,
+            }
+          : task,
+      ),
+    );
+    setStudyTasks((current) =>
+      current.map((task) =>
+        task.id === taskLinkEditorId
+          ? {
+              ...task,
+              title,
+              detail: notes,
+              dueDate: taskEditorDraft.dueDate,
+            }
+          : task,
+      ),
+    );
+    closeTaskEditor();
+  };
+
+  const openInboxDestination = (
+    item: InboxItem,
+    destination: "event" | "task" | "post-it" | "note" | "library",
+  ) => {
+    if (destination === "event") {
+      const event = calendarEvents.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!event) return false;
+      const eventDate = dateFromKey(event.date);
+      changeTab("today");
+      setSelectedCalendarDate(event.date);
+      setViewMonth(new Date(eventDate.getFullYear(), eventDate.getMonth(), 1));
+      setCalendarOpen(true);
+      openEventEditor(event);
+      return true;
+    }
+    if (destination === "task") {
+      const task = tasks.find((candidate) => candidate.sourceInboxId === item.id);
+      if (!task) return false;
+      changeTab("today");
+      openTaskEditor(task);
+      return true;
+    }
+    if (destination === "post-it") {
+      const postIt = postIts.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!postIt) return false;
+      changeTab("today");
+      openPostItEditor(postIt);
+      return true;
+    }
+    if (destination === "note") {
+      const note = studyNotes.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!note) return false;
+      changeTab("spaces");
+      setSpace("library");
+      setRequestedStudyNoteId(note.id);
+      return true;
+    }
+    const libraryItem = libraryItems.find(
+      (candidate) => candidate.id === item.libraryItemId,
+    );
+    if (!libraryItem) return false;
+    changeTab("spaces");
+    setSpace("library");
+    void openLibraryItem(libraryItem);
+    return true;
   };
 
   const convertInboxItem = (
     item: InboxItem,
     destination: "event" | "task" | "post-it" | "note" | "library",
   ) => {
-    if (item.processedAs?.includes(destination)) return;
+    if (item.processedAs?.includes(destination)) {
+      if (!openInboxDestination(item, destination)) {
+        setHistoryMessage("That saved item is no longer available.");
+      }
+      return;
+    }
     const now = new Date().toISOString();
     recordAction(`Converted Inbox item to ${destination}`);
     if (destination === "event") {
       const draft = makeEventDraft(todayKey);
       const eventId = crypto.randomUUID();
-      const attachmentId = ensureInboxLibraryItem(item, now);
-      setCalendarEvents((current) => [
-        ...current,
-        {
-          ...draft,
-          id: eventId,
-          title: item.text || item.originalName || "Inbox item",
-          sourceInboxId: item.id,
-          attachmentIds: attachmentId ? [attachmentId] : [],
-          url: item.kind === "link" ? item.text : "",
-        },
-      ]);
-      if (attachmentId) {
+      const attachment = ensureInboxLibraryItem(item, now);
+      const createdEvent: CalendarEvent = {
+        ...draft,
+        id: eventId,
+        title: item.text || item.originalName || "Inbox item",
+        sourceInboxId: item.id,
+        attachmentIds: attachment ? [attachment.id] : [],
+        url: item.kind === "link" ? item.text : "",
+      };
+      setCalendarEvents((current) => [...current, createdEvent]);
+      if (attachment) {
         setEntityLinks((current) => [
           ...current,
           {
@@ -3770,21 +3925,28 @@ export default function Home() {
             fromType: "event",
             fromId: eventId,
             toType: "file",
-            toId: attachmentId,
+            toId: attachment.id,
             createdAt: now,
           },
         ]);
       }
+      const eventDate = dateFromKey(createdEvent.date);
+      changeTab("today");
+      setSelectedCalendarDate(createdEvent.date);
+      setViewMonth(new Date(eventDate.getFullYear(), eventDate.getMonth(), 1));
+      setCalendarOpen(true);
+      openEventEditor(createdEvent);
     }
     if (destination === "task") {
-      const attachmentId = ensureInboxLibraryItem(item, now);
+      const attachment = ensureInboxLibraryItem(item, now);
       const task: TaskItem = {
         id: crypto.randomUUID(),
+        sourceInboxId: item.id,
         title: item.text || item.originalName || "Inbox task",
         dueDate: todayKey,
         completed: false,
         notes: "Captured in Inbox",
-        attachmentIds: attachmentId ? [attachmentId] : [],
+        attachmentIds: attachment ? [attachment.id] : [],
         createdAt: now,
         updatedAt: now,
       };
@@ -3805,7 +3967,7 @@ export default function Home() {
         },
         ...current.filter((candidate) => candidate.id !== task.id),
       ]);
-      if (attachmentId) {
+      if (attachment) {
         setEntityLinks((current) => [
           ...current,
           {
@@ -3813,50 +3975,63 @@ export default function Home() {
             fromType: "task",
             fromId: task.id,
             toType: "file",
-            toId: attachmentId,
+            toId: attachment.id,
             createdAt: now,
           },
         ]);
       }
+      changeTab("today");
+      openTaskEditor(task);
     }
     if (destination === "post-it") {
+      const postIt: PostItNote = {
+        id: crypto.randomUUID(),
+        sourceInboxId: item.id,
+        text: item.text || item.originalName || "Inbox note",
+        color: "butter",
+        page: "today",
+        x: 54,
+        y: 28,
+        rotation: 1,
+        width: 184,
+        height: 174,
+        zIndex: postIts.length + 1,
+        pinned: false,
+        locked: false,
+        archived: false,
+        style: "plain",
+        createdAt: now,
+        updatedAt: now,
+      };
       setPostIts((current) => [
         ...current,
-        {
-          id: crypto.randomUUID(),
-          text: item.text || item.originalName || "Inbox note",
-          color: "butter",
-          page: "today",
-          x: 54,
-          y: 28,
-          rotation: 1,
-          width: 184,
-          height: 174,
-          zIndex: current.length + 1,
-          pinned: false,
-          locked: false,
-          archived: false,
-          style: "plain",
-          createdAt: now,
-          updatedAt: now,
-        },
+        { ...postIt, zIndex: current.length + 1 },
       ]);
+      changeTab("today");
+      openPostItEditor(postIt);
     }
     if (destination === "note") {
-      setStudyNotes((current) => [
-        {
-          id: crypto.randomUUID(),
-          title: item.originalName || "Inbox note",
-          body: item.text,
-          pinned: false,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...current,
-      ]);
+      const note: StudyNote = {
+        id: crypto.randomUUID(),
+        sourceInboxId: item.id,
+        title: item.originalName || "Inbox note",
+        body: item.text,
+        pinned: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setStudyNotes((current) => [note, ...current]);
+      changeTab("spaces");
+      setSpace("library");
+      setRequestedStudyNoteId(note.id);
     }
     if (destination === "library") {
-      ensureInboxLibraryItem(item, now, true);
+      const libraryItem = ensureInboxLibraryItem(item, now, true);
+      if (libraryItem) {
+        changeTab("spaces");
+        setSpace("library");
+        void openLibraryItem(libraryItem);
+      }
     }
     markInboxProcessed(item.id, destination);
     const destinationLabel =
@@ -4466,19 +4641,62 @@ export default function Home() {
 
   const openPostItEditor = (postIt?: PostItNote) => {
     if (postIt) {
+      const paletteIndex = postItColorPalettes.findIndex((palette) =>
+        palette.some((color) => color.value === postIt.color),
+      );
+      setPostItPaletteIndex(Math.max(0, paletteIndex));
       setEditingPostItId(postIt.id);
       setPostItDraft({
         text: postIt.text,
         color: postIt.color,
       });
     } else {
+      const color = postItColors[visiblePostIts.length % postItColors.length];
+      const paletteIndex = postItColorPalettes.findIndex((palette) =>
+        palette.some((candidate) => candidate.value === color.value),
+      );
+      setPostItPaletteIndex(Math.max(0, paletteIndex));
       setEditingPostItId(null);
       setPostItDraft({
         text: "",
-        color: postItColors[visiblePostIts.length % postItColors.length].value,
+        color: color.value,
       });
     }
     setPostItEditorOpen(true);
+  };
+
+  const shiftPostItPalette = (direction: -1 | 1) => {
+    setPostItPaletteIndex((current) =>
+      (current + direction + postItColorPalettes.length) %
+      postItColorPalettes.length,
+    );
+  };
+
+  const startPostItPaletteSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    postItPaletteDidSwipeRef.current = false;
+    postItPaletteTouchStartRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const finishPostItPaletteSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = postItPaletteTouchStartRef.current;
+    postItPaletteTouchStartRef.current = null;
+    const end = event.changedTouches[0]?.clientX;
+    if (start === null || end === undefined || Math.abs(end - start) < 34) return;
+    postItPaletteDidSwipeRef.current = true;
+    shiftPostItPalette(end < start ? 1 : -1);
+    window.setTimeout(() => {
+      postItPaletteDidSwipeRef.current = false;
+    }, 350);
+  };
+
+  const choosePostItColor = (color: PostItColor) => {
+    if (postItPaletteDidSwipeRef.current) return;
+    setPostItDraft((current) => ({ ...current, color }));
+  };
+
+  const choosePostItPalette = (direction: -1 | 1) => {
+    if (postItPaletteDidSwipeRef.current) return;
+    shiftPostItPalette(direction);
   };
 
   const savePostIt = () => {
@@ -5289,6 +5507,20 @@ export default function Home() {
     setEventEditorOpen(true);
   };
 
+  const closeCalendarEventEditor = () => {
+    const returnHome = editingEventId !== null;
+    setEventEditorOpen(false);
+    setEditingEventId(null);
+    if (!returnHome) return;
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarOpen(false);
+    setDaySummaryDate(null);
+    changeTab("today");
+  };
+
   const openEventDetail = (
     calendarEvent: CalendarEvent,
     returnDayPocket: string | null = null,
@@ -5400,8 +5632,7 @@ export default function Home() {
       if (savedEvent.sourceInboxId) {
         markInboxProcessed(savedEvent.sourceInboxId, "event");
       }
-      setEventEditorOpen(false);
-      setEditingEventId(null);
+      closeCalendarEventEditor();
     };
     commitSavedEvent();
   };
@@ -7833,6 +8064,8 @@ export default function Home() {
                     setRecordings(nextRecordings);
                   }}
                   usedInForFile={fileUsedInLabels}
+                  requestedNoteId={requestedStudyNoteId}
+                  onRequestedNoteOpened={() => setRequestedStudyNoteId(null)}
                   onBack={() => setSpace("menu")}
                 />
               )}
@@ -7874,10 +8107,10 @@ export default function Home() {
                                 <button
                                   type="button"
                                   key={destination}
-                                  disabled={converted}
+                                  className={converted ? "converted" : ""}
                                   aria-label={
                                     converted
-                                      ? `Already saved as ${destination}`
+                                      ? `Open saved ${destination}`
                                       : `Save as ${destination}`
                                   }
                                   onClick={() => convertInboxItem(item, destination)}
@@ -9265,7 +9498,7 @@ export default function Home() {
                           <button
                             type="button"
                             className="reset-task-attachments"
-                            onClick={() => setTaskLinkEditorId(task.id)}
+                            onClick={() => openTaskEditor(task)}
                           >
                             Attached
                           </button>
@@ -9316,7 +9549,7 @@ export default function Home() {
                             : `on ${readableDate(task.dueDate)}`}.
                         </span>
                         <div>
-                          <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
+                          <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
                           <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
                           <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                           <button
@@ -9347,7 +9580,7 @@ export default function Home() {
                     <article key={task.id}>
                       <span>{task.title}</span>
                       <div>
-                        <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
+                        <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
                         <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                         <button
                           type="button"
@@ -9380,22 +9613,63 @@ export default function Home() {
             className="modal-backdrop task-link-backdrop"
             role="presentation"
             onPointerDown={(event) => {
-              if (event.target === event.currentTarget) setTaskLinkEditorId(null);
+              if (event.target === event.currentTarget) closeTaskEditor();
             }}
           >
             <section
               className="task-link-modal"
               role="dialog"
               aria-modal="true"
-              aria-label={`Attachments for ${taskLinkEditor.title}`}
+              aria-label={`Edit ${taskLinkEditor.title}`}
             >
               <header>
                 <div>
-                  <p className="tiny-label">ATTACHED</p>
-                  <h2>{taskLinkEditor.title}</h2>
+                  <p className="tiny-label">TASK DETAILS</p>
+                  <h2>Edit this task</h2>
                 </div>
-                <button type="button" onClick={() => setTaskLinkEditorId(null)} aria-label="Close task attachments">×</button>
+                <button type="button" onClick={closeTaskEditor} aria-label="Close task editor">×</button>
               </header>
+
+              <div className="task-editor-basics">
+                <label>
+                  <span>Title</span>
+                  <input
+                    autoFocus
+                    value={taskEditorDraft.title}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Due date</span>
+                  <input
+                    type="date"
+                    value={taskEditorDraft.dueDate}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        dueDate: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="task-editor-notes">
+                  <span>Notes</span>
+                  <textarea
+                    value={taskEditorDraft.notes}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        notes: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
 
               {(taskAttachedFileIds.length > 0 || taskAttachedNoteIds.length > 0) && (
                 <div className="task-linked-items">
@@ -9409,7 +9683,7 @@ export default function Home() {
                         type="button"
                         key={`file-${fileId}`}
                         onClick={() => {
-                          setTaskLinkEditorId(null);
+                          closeTaskEditor();
                           setResetExperience(null);
                           if (capturedFile) void openLibraryItem(capturedFile);
                           else if (studyFile) void openStudyFile(studyFile);
@@ -9427,7 +9701,7 @@ export default function Home() {
                         type="button"
                         key={`note-${noteId}`}
                         onClick={() => {
-                          setTaskLinkEditorId(null);
+                          closeTaskEditor();
                           setResetExperience(null);
                           setSelectedJournalEntry(note);
                         }}
@@ -9511,6 +9785,17 @@ export default function Home() {
               <p className="task-link-hint">
                 Removing a link never deletes the original file or note.
               </p>
+              <footer className="task-editor-footer">
+                <button type="button" onClick={closeTaskEditor}>Cancel</button>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={saveTaskEditor}
+                  disabled={!taskEditorDraft.title.trim()}
+                >
+                  Save task
+                </button>
+              </footer>
             </section>
           </div>
       )}
@@ -9804,8 +10089,8 @@ export default function Home() {
                   <button
                     className="event-editor-back"
                     type="button"
-                    onClick={() => setEventEditorOpen(false)}
-                    aria-label="Back to calendar"
+                    onClick={closeCalendarEventEditor}
+                    aria-label={editingEventId ? "Close event editor and return home" : "Back to calendar"}
                   >
                     ←
                   </button>
@@ -12084,6 +12369,28 @@ export default function Home() {
                   ) {
                     return;
                   }
+                  if (
+                    !target.closest(
+                      '[data-event-detail-edit="true"], button',
+                    )
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSelectedEventEditor();
+                }}
+                onKeyDownCapture={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  const target = event.target as Element;
+                  if (
+                    target.closest(
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                    ) ||
+                    !target.closest('[data-event-detail-edit="true"]')
+                  ) {
+                    return;
+                  }
                   event.preventDefault();
                   event.stopPropagation();
                   openSelectedEventEditor();
@@ -12121,14 +12428,24 @@ export default function Home() {
                       {selectedEventDetail.calendar ?? "PERSONAL"}
                     </p>
                   </div>
-                  <h2 className="event-detail-title">
+                  <h2
+                    className="event-detail-title"
+                    data-event-detail-edit="true"
+                    role="button"
+                    tabIndex={0}
+                  >
                     {selectedEventDetail.title}
                   </h2>
                 </div>
 
                 <div className="event-detail-divider" aria-hidden="true" />
 
-                <div className="event-detail-time">
+                <div
+                  className="event-detail-time"
+                  data-event-detail-edit="true"
+                  role="button"
+                  tabIndex={0}
+                >
                   <span className="event-detail-time-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="8" />
@@ -12140,7 +12457,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="event-detail-reminder">
+                <div
+                  className="event-detail-reminder"
+                  data-event-detail-edit="true"
+                  role="button"
+                  tabIndex={0}
+                >
                   <span className="event-detail-reminder-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
@@ -12157,35 +12479,35 @@ export default function Home() {
 
                 <div className="event-detail-facts">
                   {selectedEventDetail.location && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>⌖</span>
                       <small>Location</small>
                       <strong>{selectedEventDetail.location}</strong>
                     </div>
                   )}
                   {selectedEventDetail.guests && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>♡</span>
                       <small>People</small>
                       <strong>{selectedEventDetail.guests}</strong>
                     </div>
                   )}
                   {(selectedEventDetail.repeat ?? "Never") !== "Never" && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>↻</span>
                       <small>Repeats</small>
                       <strong>{eventRepeatLabel(selectedEventDetail)}</strong>
                     </div>
                   )}
                   {selectedEventDetail.dayCounter && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>⌁</span>
                       <small>Day counter</small>
                       <strong>Enabled</strong>
                     </div>
                   )}
                   {selectedEventDetail.memo && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>✎</span>
                       <small>Saved as</small>
                       <strong>Memo</strong>
@@ -12732,26 +13054,48 @@ export default function Home() {
             </div>
 
             <div className="post-it-editor-options">
-              <fieldset>
+              <fieldset className="post-it-palette-fieldset">
                 <legend>Paper color</legend>
-                {postItColors.map((color) => (
+                <div
+                  className="post-it-palette-picker"
+                  onTouchStart={startPostItPaletteSwipe}
+                  onTouchEnd={finishPostItPaletteSwipe}
+                >
                   <button
-                    key={color.value}
                     type="button"
-                    className={postItDraft.color === color.value ? "active" : ""}
-                    style={{ "--post-it-swatch": color.hex } as CSSProperties}
-                    onClick={() =>
-                      setPostItDraft((current) => ({
-                        ...current,
-                        color: color.value,
-                      }))
-                    }
-                    aria-label={color.label}
-                    aria-pressed={postItDraft.color === color.value}
+                    className="post-it-palette-nav"
+                    onClick={() => choosePostItPalette(-1)}
+                    aria-label="Previous paper-color palette"
                   >
-                    <span />
+                    <span aria-hidden="true">‹</span>
                   </button>
-                ))}
+                  <div className="post-it-palette-swatches">
+                    {postItColorPalettes[postItPaletteIndex].map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        className={postItDraft.color === color.value ? "active" : ""}
+                        style={{ "--post-it-swatch": color.hex } as CSSProperties}
+                        onClick={() => choosePostItColor(color.value)}
+                        aria-label={color.label}
+                        aria-pressed={postItDraft.color === color.value}
+                      >
+                        <span />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="post-it-palette-nav"
+                    onClick={() => choosePostItPalette(1)}
+                    aria-label="Next paper-color palette"
+                  >
+                    <span aria-hidden="true">›</span>
+                  </button>
+                </div>
+                <small className="post-it-palette-count" aria-live="polite">
+                  Palette {postItPaletteIndex + 1} of {postItColorPalettes.length}
+                </small>
               </fieldset>
             </div>
 

@@ -25,6 +25,7 @@ export type InboxItem = {
 
 export type TaskItem = {
   id: string;
+  sourceInboxId?: string;
   title: string;
   dueDate: string;
   completed: boolean;
