@@ -164,6 +164,7 @@ const AereaSportsNotifications =
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
+  clearPersonalContent(): Promise<void>;
   listSketches(): Promise<{ pages: SketchPage[] }>;
   saveSketch(options: {
     title: string;
@@ -885,7 +886,12 @@ const themeOptions: {
   },
 ];
 
-const CLEAN_START_VERSION = "android-release-1";
+// Rhea explicitly requested one clean personal-data reset for this release.
+// Keeping the marker stable makes the reset run once, without turning future
+// APK updates into destructive migrations.
+const CLEAN_START_VERSION = "personal-content-reset-2026-08-24";
+const BROWSER_CONTENT_RESET_KEY =
+  "aerea-personal-content-reset-2026-08-24";
 
 const starterReminders: Reminder[] = [
   {
@@ -1102,6 +1108,45 @@ function makeEventDraft(date: string): EventDraft {
 }
 
 const starterClasses: ClassItem[] = [];
+
+function resetUserCreatedContent(state: Record<string, unknown>) {
+  return {
+    ...state,
+    reminderHistory: {},
+    reminders: starterReminders.map((reminder) => ({ ...reminder })),
+    habits: starterHabits.map((habit) => ({
+      ...habit,
+      days: [...habit.days],
+    })),
+    entries: [],
+    moodHistory: {},
+    completedDays: {},
+    calendarEvents: [],
+    tasks: [],
+    inboxItems: [],
+    postIts: [],
+    postItGroups: [],
+    libraryItems: [],
+    libraryCollections: [],
+    entityLinks: [],
+    trashItems: [],
+    calendarCategories: starterCalendarCategories.map((category) => ({
+      ...category,
+    })),
+    focusSessions: 0,
+    classes: starterClasses.map((classItem) => ({ ...classItem })),
+    recordings: [],
+    studyNotebooks: [],
+    studyNotes: [],
+    studyTasks: [],
+    studyFiles: [],
+    calendarMemos: [],
+    pdfAnnotations: {},
+    pdfPageNotes: {},
+    epubReadingStates: {},
+    cleanStartVersion: CLEAN_START_VERSION,
+  };
+}
 
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -2302,6 +2347,7 @@ export default function Home() {
 
     async function loadState() {
       try {
+        let contentFilesCleared = false;
         let payload = (isNative()
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
           : readBrowserState()) as {
@@ -2344,14 +2390,50 @@ export default function Home() {
             cleanStartVersion?: string;
           } | null;
         };
+        const applyRequestedContentReset = async (candidate: typeof payload) => {
+          const existingState = candidate.state;
+          if (existingState?.cleanStartVersion === CLEAN_START_VERSION) {
+            return candidate;
+          }
+
+          if (!contentFilesCleared) {
+            if (isNative()) {
+              try {
+                await AereaStorage.clearPersonalContent();
+              } catch {
+                // Compatibility with the last signed preview: a fresh install
+                // has no local files to purge, and the sanitized state below
+                // still prevents old cloud content from returning.
+              }
+            } else {
+              writeBrowserSketches([]);
+            }
+            contentFilesCleared = true;
+          }
+
+          const state = resetUserCreatedContent(
+            (existingState ?? {}) as Record<string, unknown>,
+          ) as NonNullable<typeof candidate.state>;
+          const cleanPayload = { state } as typeof candidate;
+          if (isNative()) {
+            await AereaStorage.putState({ state: JSON.stringify(cleanPayload) });
+          } else {
+            writeBrowserState(cleanPayload);
+          }
+          return cleanPayload;
+        };
+
+        payload = await applyRequestedContentReset(payload);
         payload = (await reconcileCloudState(payload)) || payload;
+        payload = await applyRequestedContentReset(payload);
         if (cancelled) return;
 
         if (payload.state) {
           const state = payload.state;
           const expiredTrashFileIds = new Set<string>();
-          // Older payloads are migrated in place. An APK update must never
-          // interpret a missing version marker as permission to erase data.
+          // Ordinary older payloads are still migrated in place. The only
+          // destructive marker is the explicit one-time reset requested for
+          // this release; future updates keep the same marker and preserve data.
           if (state.reminderHistory) setReminderHistory(state.reminderHistory);
           if (Array.isArray(state.reminders)) setReminders(state.reminders);
           if (Array.isArray(state.habits)) setHabits(state.habits);
@@ -2537,12 +2619,29 @@ export default function Home() {
 
     async function loadStudyFiles() {
       try {
-        const payload = isNative()
+        let payload = isNative()
           ? await AereaStorage.listDocuments()
           : await fetch("/api/files", { cache: "no-store" }).then(async (response) => {
               if (!response.ok) throw new Error("Study files are unavailable.");
               return (await response.json()) as { files?: StudyFileItem[] };
             });
+        if (
+          !isNative() &&
+          localStorage.getItem(BROWSER_CONTENT_RESET_KEY) !== CLEAN_START_VERSION
+        ) {
+          await Promise.all(
+            (payload.files ?? []).map(async (file) => {
+              const response = await fetch(`/api/files/${file.id}`, {
+                method: "DELETE",
+              });
+              if (!response.ok && response.status !== 404) {
+                throw new Error("Could not remove an old Library file.");
+              }
+            }),
+          );
+          localStorage.setItem(BROWSER_CONTENT_RESET_KEY, CLEAN_START_VERSION);
+          payload = { files: [] };
+        }
         if (!cancelled && Array.isArray(payload.files)) {
           setStudyFiles((current) =>
             payload.files!.map((file) => {
@@ -2562,8 +2661,10 @@ export default function Home() {
       }
     }
 
-    void loadSketches();
-    void loadState().then(loadStudyFiles);
+    void loadState().then(async () => {
+      await loadSketches();
+      await loadStudyFiles();
+    });
     return () => {
       cancelled = true;
     };

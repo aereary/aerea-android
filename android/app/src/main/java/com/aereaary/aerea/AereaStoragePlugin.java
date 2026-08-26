@@ -57,6 +57,33 @@ public class AereaStoragePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void clearPersonalContent(PluginCall call) {
+        SQLiteDatabase writable = database.getWritableDatabase();
+        try {
+            deleteStoredFiles(writable, "sketches");
+            deleteStoredFiles(writable, "study_files");
+            deleteStoredFiles(writable, "library_files");
+
+            writable.beginTransaction();
+            try {
+                writable.delete("sketches", null, null);
+                writable.delete("study_files", null, null);
+                writable.delete("library_files", null, null);
+                writable.setTransactionSuccessful();
+            } finally {
+                writable.endTransaction();
+            }
+
+            clearDirectoryContents(new File(getContext().getFilesDir(), "sketches"));
+            clearDirectoryContents(new File(getContext().getFilesDir(), "study-files"));
+            clearDirectoryContents(new File(getContext().getFilesDir(), "library"));
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Could not clear personal content", error);
+        }
+    }
+
+    @PluginMethod
     public void listSketches(PluginCall call) {
         JSArray pages = new JSArray();
         try (Cursor cursor = database.getReadableDatabase().query(
@@ -341,6 +368,27 @@ public class AereaStoragePlugin extends Plugin {
         }
         database.getWritableDatabase().delete("library_files", "id=?", new String[]{id});
         call.resolve();
+    }
+
+    private void deleteStoredFiles(SQLiteDatabase db, String table) {
+        try (Cursor cursor = db.query(
+                table, new String[]{"path"}, null, null, null, null, null)) {
+            while (cursor.moveToNext()) {
+                String path = cursor.getString(0);
+                if (path != null) new File(path).delete();
+            }
+        }
+    }
+
+    private void clearDirectoryContents(File directory) {
+        File[] children = directory.listFiles();
+        if (children == null) return;
+        for (File child : children) {
+            if (child.isDirectory()) clearDirectoryContents(child);
+            if (!child.delete() && child.exists()) {
+                throw new IllegalStateException("Could not delete " + child.getName());
+            }
+        }
     }
 
     static class AereaDatabase extends SQLiteOpenHelper {

@@ -616,8 +616,20 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
-test("migrates older installs without erasing their data", () => {
-  assert.match(pageSource, /Older payloads are migrated in place/);
+test("runs the requested personal-content reset once without making updates destructive", () => {
+  assert.match(pageSource, /personal-content-reset-2026-08-24/);
+  assert.match(pageSource, /resetUserCreatedContent/);
+  assert.match(pageSource, /AereaStorage\.clearPersonalContent\(\)/);
+  assert.match(pageSource, /Compatibility with the last signed preview/);
+  assert.match(pageSource, /future updates keep the same marker and preserve data/);
+  assert.match(nativeStorageSource, /public void clearPersonalContent/);
+  for (const table of ["sketches", "study_files", "library_files"]) {
+    assert.match(
+      nativeStorageSource,
+      new RegExp(`writable\\.delete\\(\\"${table}\\", null, null\\)`),
+    );
+  }
+  assert.doesNotMatch(nativeStorageSource, /writable\.delete\("documents"/);
   assert.doesNotMatch(pageSource, /localStorage\.clear\(/);
 });
 
