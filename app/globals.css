@@ -25555,6 +25555,17 @@ body {
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
+/* Android 14 WebViews can report zero for the CSS safe-area variables even
+   while the activity is drawing edge-to-edge. Keep the injected values when
+   they are useful, and otherwise fall back to the standard status and
+   three-button navigation bar depths used by the phone build. */
+html[data-native="true"] {
+  --aerea-safe-area-top: max(var(--safe-area-inset-top, 0px), 32px);
+  --aerea-safe-area-right: var(--safe-area-inset-right, 0px);
+  --aerea-safe-area-bottom: max(var(--safe-area-inset-bottom, 0px), 48px);
+  --aerea-safe-area-left: var(--safe-area-inset-left, 0px);
+}
+
 html[data-native="true"],
 html[data-native="true"] body,
 html[data-native="true"] #root {
@@ -25578,43 +25589,43 @@ html[data-native="true"] .phone-canvas {
   box-shadow: none;
   max-width: none;
   min-height: 100dvh;
-  padding-bottom: var(--safe-area-inset-bottom);
-  padding-left: var(--safe-area-inset-left);
-  padding-right: var(--safe-area-inset-right);
-  padding-top: var(--safe-area-inset-top);
+  padding-bottom: calc(102px + var(--aerea-safe-area-bottom));
+  padding-left: var(--aerea-safe-area-left);
+  padding-right: var(--aerea-safe-area-right);
+  padding-top: var(--aerea-safe-area-top);
   width: 100%;
 }
 
 html[data-native="true"] :is(.modal-backdrop, .refuge-backdrop) {
-  padding-bottom: max(10px, var(--safe-area-inset-bottom));
-  padding-left: max(10px, var(--safe-area-inset-left));
-  padding-right: max(10px, var(--safe-area-inset-right));
-  padding-top: max(10px, var(--safe-area-inset-top));
+  padding-bottom: max(10px, var(--aerea-safe-area-bottom));
+  padding-left: max(10px, var(--aerea-safe-area-left));
+  padding-right: max(10px, var(--aerea-safe-area-right));
+  padding-top: max(10px, var(--aerea-safe-area-top));
 }
 
 html[data-native="true"] .bottom-nav {
-  bottom: var(--safe-area-inset-bottom);
+  bottom: calc(9px + var(--aerea-safe-area-bottom));
 }
 
 html[data-native="true"] .sketch-layout.sketch-fullscreen {
-  padding-bottom: var(--safe-area-inset-bottom);
-  padding-left: var(--safe-area-inset-left);
-  padding-right: var(--safe-area-inset-right);
-  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--aerea-safe-area-bottom);
+  padding-left: var(--aerea-safe-area-left);
+  padding-right: var(--aerea-safe-area-right);
+  padding-top: var(--aerea-safe-area-top);
 }
 
 html[data-native="true"] .study-reader {
-  padding-bottom: var(--safe-area-inset-bottom);
-  padding-left: var(--safe-area-inset-left);
-  padding-right: var(--safe-area-inset-right);
-  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--aerea-safe-area-bottom);
+  padding-left: var(--aerea-safe-area-left);
+  padding-right: var(--aerea-safe-area-right);
+  padding-top: var(--aerea-safe-area-top);
 }
 
 html[data-native="true"] .simplified-calendar-screen {
-  padding-bottom: calc(10px + var(--safe-area-inset-bottom));
-  padding-left: calc(10px + var(--safe-area-inset-left));
-  padding-right: calc(10px + var(--safe-area-inset-right));
-  padding-top: calc(10px + var(--safe-area-inset-top));
+  padding-bottom: calc(10px + var(--aerea-safe-area-bottom));
+  padding-left: calc(10px + var(--aerea-safe-area-left));
+  padding-right: calc(10px + var(--aerea-safe-area-right));
+  padding-top: calc(10px + var(--aerea-safe-area-top));
 }
 
 @media (orientation: landscape) {

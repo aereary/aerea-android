@@ -792,6 +792,10 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(syncSource, /aerea:\/\/auth\/callback/);
   assert.match(syncSource, /exchangeCodeForSession/);
   assert.match(cssSource, /html\[data-native="true"\] \.phone-canvas/);
+  assert.match(cssSource, /--aerea-safe-area-top: max\(var\(--safe-area-inset-top, 0px\), 32px\)/);
+  assert.match(cssSource, /--aerea-safe-area-bottom: max\(var\(--safe-area-inset-bottom, 0px\), 48px\)/);
+  assert.match(cssSource, /padding-bottom: calc\(102px \+ var\(--aerea-safe-area-bottom\)\)/);
+  assert.match(cssSource, /bottom: calc\(9px \+ var\(--aerea-safe-area-bottom\)\)/);
 });
 
 test("keeps sports provider secrets behind a normalized Supabase model", () => {
