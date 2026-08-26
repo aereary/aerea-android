@@ -29423,3 +29423,585 @@ html[data-native="true"] .focus-layout > * {
 
 .app-shell[data-theme="ao3night"] :is(.boca-pocket-teams h3,.boca-pocket-teams p) { color:#f2eaf0; }
 .app-shell[data-theme="ao3night"] :is(.boca-pocket-teams p,.boca-pocket-facts span) { background:#35433d; color:#e8dbe3!important; }
+
+/* Boca Day Pocket v2 — a layered, illustrated match keepsake. */
+.day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match {
+  background:
+    radial-gradient(circle at 17% 13%,rgba(112,87,55,.1) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 78% 73%,rgba(112,87,55,.08) 0 1px,transparent 1.5px),
+    linear-gradient(150deg,rgba(215,206,247,.42),transparent 34%),
+    linear-gradient(325deg,rgba(255,221,102,.28),transparent 36%),
+    #fff9ec;
+  background-size:13px 15px,17px 19px,100% 100%,100% 100%,100% 100%;
+  border:1px solid #dfcfb3;
+  clip-path:polygon(5% 0,95% 0,95% 2%,100% 2%,100% 41%,96.5% 45%,100% 49%,100% 96%,96% 96%,96% 100%,52% 100%,50% 97%,48% 100%,4% 100%,4% 97%,0 97%,0 50%,3.5% 46%,0 42%,0 4%,5% 4%);
+  filter:drop-shadow(0 14px 14px rgba(56,58,108,.2)) drop-shadow(0 3px 0 rgba(198,180,218,.58));
+  padding:12px;
+}
+
+.day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match::before {
+  border:2px dashed #aa99d4;
+  border-radius:19px;
+  inset:9px;
+}
+
+.boca-pocket-ticket {
+  min-height:446px;
+  padding:7px 11px 12px;
+}
+
+.boca-pocket-ticket-topline {
+  padding:1px 4px 0 8px;
+  position:relative;
+  z-index:7;
+}
+
+.boca-pocket-match-label {
+  background:#f7dd6c;
+  border:1px solid rgba(121,91,23,.13);
+  border-radius:5px 12px 5px 10px;
+  box-shadow:2px 3px 0 #e9dff5;
+  color:#153a88;
+  font-size:10px;
+  letter-spacing:.11em;
+  padding:8px 13px 7px;
+  transform:rotate(-2deg);
+}
+
+.boca-pocket-match-label > span {
+  color:#153a88;
+  font-size:11px;
+  letter-spacing:0;
+  margin-right:1px;
+}
+
+.boca-pocket-heart {
+  background:#ece4fa;
+  border-color:#fff9ec;
+  color:#143b89;
+  transform:rotate(6deg);
+}
+
+.boca-pocket-collage {
+  min-height:336px;
+  position:relative;
+}
+
+.boca-pocket-main {
+  align-items:center;
+  display:grid;
+  gap:14px;
+  grid-template-columns:112px minmax(0,1fr);
+  padding:10px 15px 0 7px;
+  position:relative;
+  z-index:4;
+}
+
+.boca-pocket-crest {
+  filter:drop-shadow(0 6px 4px rgba(29,47,99,.24));
+  height:128px;
+  transform:rotate(-5deg);
+  width:112px;
+}
+
+.boca-pocket-teams {
+  padding-top:3px;
+  transform:rotate(1.2deg);
+}
+
+.boca-pocket-kicker {
+  color:#7667a3;
+  display:block;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.2em;
+  margin:0 0 2px 3px;
+}
+
+.boca-pocket-teams h3 {
+  color:#14377f;
+  font-family:"Trebuchet MS",Arial,sans-serif;
+  font-size:clamp(36px,7.4vw,50px);
+  font-weight:1000;
+  letter-spacing:-.065em;
+  line-height:.78;
+  text-shadow:2px 2px 0 #f4cf37;
+}
+
+.boca-pocket-teams h3 > span { display:block; }
+
+.boca-pocket-opponent {
+  background:#eee7f8!important;
+  border:1px dashed #b7a5da;
+  border-radius:8px!important;
+  color:#253f80!important;
+  display:inline-block!important;
+  font-size:11px!important;
+  line-height:1.15;
+  margin:10px 0 0!important;
+  max-width:100%;
+  overflow:hidden;
+  padding:7px 9px!important;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.boca-pocket-opponent em {
+  color:#e1b311;
+  font-style:normal;
+  font-weight:1000;
+  margin-right:3px;
+}
+
+.boca-pocket-opponent i {
+  color:#719ccc;
+  font-style:normal;
+}
+
+.boca-pocket-time-note {
+  align-items:center;
+  background:#fffdf7;
+  border:1px solid #e4d6bc;
+  box-shadow:3px 4px 0 rgba(211,198,230,.75);
+  color:#273d7c;
+  display:grid;
+  gap:1px 6px;
+  grid-template-columns:18px auto;
+  left:14px;
+  min-width:118px;
+  padding:9px 10px 8px;
+  position:absolute;
+  top:157px;
+  transform:rotate(-4deg);
+  z-index:5;
+}
+
+.boca-pocket-time-note .boca-pocket-clock { grid-row:1 / span 2; }
+.boca-pocket-time-note strong { font-size:15px; line-height:1; }
+.boca-pocket-time-note small { color:#81789c; font-size:8px; font-weight:850; letter-spacing:.03em; }
+.boca-pocket-time-note .boca-pocket-score {
+  bottom:-11px;
+  font-size:11px;
+  margin:0;
+  position:absolute;
+  right:-8px;
+}
+
+.boca-pocket-stadium-wrap {
+  bottom:7px;
+  position:absolute;
+  right:9px;
+  transform:rotate(2.5deg);
+  width:64%;
+  z-index:3;
+}
+
+.boca-pocket-stadium {
+  filter:drop-shadow(0 5px 3px rgba(41,47,97,.2));
+  height:auto;
+  object-fit:contain;
+  position:static;
+  transform:none;
+  width:100%;
+}
+
+.boca-pocket-stadium-wrap > span {
+  background:#f2e8fb;
+  border:1px dashed #ac99d3;
+  bottom:1px;
+  color:#343d7a;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.1em;
+  padding:5px 8px;
+  position:absolute;
+  right:1px;
+  transform:rotate(-4deg);
+}
+
+.boca-pocket-ribbon {
+  box-shadow:2px 3px 0 rgba(93,79,143,.18);
+  color:#fff;
+  display:inline-block;
+  font-size:8px;
+  font-weight:1000;
+  letter-spacing:.1em;
+  padding:6px 10px;
+  position:absolute;
+  z-index:6;
+}
+
+.boca-pocket-ribbon-one {
+  background:#143e8f;
+  left:8px;
+  top:242px;
+  transform:rotate(-7deg);
+}
+
+.boca-pocket-ribbon-two {
+  background:#eabf23;
+  color:#153b88;
+  right:2px;
+  top:132px;
+  transform:rotate(7deg);
+}
+
+.boca-pocket-doodles span:nth-child(1) { left:7px; top:67px; }
+.boca-pocket-doodles span:nth-child(2) { right:63px; top:43px; }
+.boca-pocket-doodles span:nth-child(3) { bottom:121px; left:32px; }
+.boca-pocket-doodles span:nth-child(4) { color:#e9bd26; right:9px; top:103px; }
+.boca-pocket-doodles span:nth-child(5) { bottom:52px; color:#8e77c4; font-size:22px; left:4px; transform:rotate(-14deg); }
+
+.boca-pocket-rule {
+  border-color:#bba9dd;
+  margin:2px 9px 10px;
+}
+
+.boca-pocket-facts {
+  display:grid;
+  gap:6px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  padding:0 8px 6px;
+}
+
+.boca-pocket-facts span {
+  background:rgba(255,255,255,.68);
+  border:1px dashed #c6b5df;
+  border-radius:9px;
+  color:#3c447d!important;
+  font-size:9px;
+  justify-content:flex-start;
+  min-width:0;
+  overflow:hidden;
+  padding:7px 8px;
+  text-overflow:ellipsis;
+}
+
+/* The morning charm is also the hidden handle for the semester timetable. */
+.day-charm {
+  appearance:none;
+  color:inherit;
+  cursor:pointer;
+  font:inherit;
+  touch-action:manipulation;
+  -webkit-touch-callout:none;
+  user-select:none;
+}
+
+.day-charm:active { transform:scale(.975); }
+.day-charm:focus-visible { outline:3px solid color-mix(in srgb,var(--purple) 55%,white); outline-offset:4px; }
+
+.timetable-backdrop {
+  align-items:center;
+  background:rgba(54,45,79,.42);
+  display:flex;
+  inset:0;
+  justify-content:center;
+  padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  position:fixed;
+  z-index:320;
+}
+
+.timetable-card {
+  background:
+    radial-gradient(circle at 16px 16px,rgba(165,145,193,.11) 0 1px,transparent 1.4px),
+    #fffdf8;
+  background-size:18px 18px;
+  border:1px solid #e2d5c8;
+  border-radius:30px 18px 28px 20px;
+  box-shadow:0 22px 55px rgba(51,42,78,.28),0 4px 0 rgba(207,190,221,.6);
+  color:#37334b;
+  max-height:min(88vh,820px);
+  overflow:auto;
+  padding:29px 30px 20px;
+  position:relative;
+  width:min(910px,100%);
+}
+
+.timetable-card::before,
+.timetable-card::after {
+  background:rgba(246,224,143,.72);
+  content:"";
+  height:25px;
+  position:absolute;
+  top:-7px;
+  width:86px;
+  z-index:2;
+}
+
+.timetable-card::before { left:44px; transform:rotate(-5deg); }
+.timetable-card::after { right:72px; transform:rotate(4deg); }
+
+.timetable-paperclip {
+  color:#9c86c4;
+  font-family:Georgia,serif;
+  font-size:29px;
+  position:absolute;
+  right:19px;
+  top:17px;
+  transform:rotate(9deg);
+}
+
+.timetable-heading {
+  align-items:flex-start;
+  display:flex;
+  gap:18px;
+  justify-content:space-between;
+  margin-bottom:22px;
+  padding:9px 34px 0 5px;
+}
+
+.timetable-heading .tiny-label { color:#9180b2; margin-bottom:5px; }
+.timetable-heading h2 { color:#3d3763; font-family:Georgia,"Times New Roman",serif; font-size:30px; font-weight:600; margin:0; }
+.timetable-heading > div:first-child > p:last-child { color:#8a8294; font-size:12px; margin:5px 0 0; }
+
+.timetable-heading-actions { display:flex; gap:7px; }
+.timetable-heading-actions button {
+  align-items:center;
+  background:#f1ebf8;
+  border:1px solid #d9cae8;
+  border-radius:50%;
+  color:#675689;
+  display:flex;
+  height:38px;
+  justify-content:center;
+  padding:0;
+  width:38px;
+}
+
+.timetable-heading-actions svg { fill:none; height:18px; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; width:18px; }
+.timetable-close-button { font-size:25px; line-height:1; }
+
+.timetable-board {
+  background:#fffefa;
+  border:1px solid #ded2e5;
+  border-radius:18px;
+  box-shadow:3px 4px 0 #eee5f3;
+  display:grid;
+  gap:0;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  overflow:hidden;
+}
+
+.timetable-day { border-right:1px dashed #d9cde2; min-width:0; }
+.timetable-day:last-child { border-right:0; }
+.timetable-day > h3 {
+  color:#5d5471;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.13em;
+  margin:0;
+  padding:10px 3px 9px;
+  text-align:center;
+}
+
+.timetable-day > div {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-height:236px;
+  padding:8px 6px 10px;
+}
+
+.timetable-class-block {
+  border:1px solid rgba(85,73,103,.09);
+  border-radius:10px 6px 10px 7px;
+  box-shadow:1px 2px 0 rgba(113,96,128,.12);
+  color:#514a62;
+  padding:9px 7px 8px;
+  position:relative;
+}
+
+.timetable-class-block::after { color:rgba(88,72,111,.55); content:"♡"; font-size:10px; position:absolute; right:5px; top:3px; }
+.timetable-class-block strong { display:block; font-size:10px; line-height:1.18; overflow-wrap:anywhere; padding-right:8px; }
+.timetable-class-block small { color:#766f80; display:block; font-size:7px; font-weight:750; line-height:1.25; margin-top:5px; }
+
+.timetable-empty-day {
+  align-items:center;
+  border:1px dashed #e4dbe9;
+  border-radius:9px;
+  color:#c4b6d0;
+  display:flex;
+  flex:1;
+  font-family:Georgia,serif;
+  justify-content:center;
+}
+
+.timetable-note { color:#948b9d; font-size:10px; margin:16px 0 0; text-align:center; }
+
+.timetable-empty-action,
+.timetable-first-class {
+  align-items:center;
+  background:#f7f1fa;
+  border:1px dashed #cbb9dd;
+  border-radius:15px;
+  color:#5e5274;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  margin:14px auto 0;
+  padding:15px 22px;
+}
+
+.timetable-empty-action > span,
+.timetable-first-class > span { font-size:23px; line-height:1; }
+.timetable-empty-action strong,
+.timetable-first-class strong { font-size:12px; }
+.timetable-empty-action small,
+.timetable-first-class small { color:#92889d; font-size:9px; }
+
+.timetable-term-fields { display:grid; gap:7px; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); }
+.timetable-term-fields label,
+.timetable-class-form label { display:flex; flex-direction:column; gap:4px; }
+.timetable-term-fields label > span,
+.timetable-class-form label > span,
+.timetable-color-picker legend { color:#8a7b99; font-size:8px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.timetable-term-fields input,
+.timetable-class-form input,
+.timetable-class-form select {
+  background:#fffefa;
+  border:1px solid #ddcfe5;
+  border-radius:10px;
+  color:#494257;
+  font:inherit;
+  font-size:11px;
+  min-height:38px;
+  padding:8px 10px;
+}
+
+.timetable-editor { border-top:1px dashed #d8cae1; padding-top:17px; }
+.timetable-editor-title { align-items:center; display:flex; gap:12px; justify-content:space-between; }
+.timetable-editor-title h3 { color:#4c4560; font-family:Georgia,"Times New Roman",serif; font-size:20px; margin:1px 0 0; }
+.timetable-editor-title > button {
+  background:#eee6f7;
+  border:1px solid #d2c1e0;
+  border-radius:999px;
+  color:#62527b;
+  font-size:10px;
+  font-weight:850;
+  padding:9px 12px;
+}
+
+.timetable-edit-list { display:grid; gap:7px; margin-top:13px; }
+.timetable-first-class { margin:0; width:100%; }
+.timetable-edit-row {
+  align-items:center;
+  background:rgba(255,255,255,.76);
+  border:1px solid #e1d6e6;
+  border-radius:12px;
+  color:#4c4659;
+  display:grid;
+  gap:10px;
+  grid-template-columns:14px minmax(0,1fr) auto;
+  padding:9px 12px;
+  text-align:left;
+}
+.timetable-edit-row > i { border-radius:5px; height:34px; width:14px; }
+.timetable-edit-row strong { display:block; font-size:11px; }
+.timetable-edit-row small { color:#8a8192; display:block; font-size:8px; margin-top:2px; }
+.timetable-edit-row > b { color:#9b8bab; font-size:20px; }
+
+.timetable-class-form {
+  background:#f9f4fb;
+  border:1px solid #d9c9e3;
+  border-radius:18px;
+  box-shadow:0 13px 25px rgba(71,58,90,.13);
+  margin-top:14px;
+  padding:16px;
+}
+
+.timetable-class-form-heading { align-items:flex-start; display:flex; justify-content:space-between; margin-bottom:12px; }
+.timetable-class-form-heading h3 { color:#4c4560; font-family:Georgia,"Times New Roman",serif; font-size:19px; margin:2px 0 0; }
+.timetable-class-form-heading > button { background:transparent; border:0; color:#776886; font-size:24px; }
+.timetable-class-form-grid { display:grid; gap:8px; grid-template-columns:1fr 1fr 1fr; margin-top:9px; }
+.timetable-color-picker { border:0; display:flex; gap:8px; margin:12px 0 0; padding:0; }
+.timetable-color-picker legend { margin-bottom:6px; }
+.timetable-color-picker button { border:2px solid #fff; border-radius:50%; box-shadow:0 0 0 1px #d6c9dd; height:25px; width:25px; }
+.timetable-color-picker button.active { box-shadow:0 0 0 2px #8f7ba4; transform:scale(1.08); }
+.timetable-class-form footer { align-items:center; display:grid; gap:7px; grid-template-columns:1fr auto auto; margin-top:15px; }
+.timetable-class-form footer button { background:#fffdf8; border:1px solid #d9cbe1; border-radius:999px; color:#665b73; font-size:9px; font-weight:800; padding:8px 11px; }
+.timetable-class-form footer .timetable-delete-class { border-color:#e4c7cf; color:#a45f70; justify-self:start; }
+.timetable-class-form footer .timetable-save-class { background:#e5dbf2; color:#51436d; }
+.timetable-class-form footer .timetable-save-class:disabled { opacity:.45; }
+
+.timetable-editor-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+.timetable-editor-footer button { background:#fffdf9; border:1px solid #d9cbe1; border-radius:999px; color:#675a75; font-size:10px; font-weight:850; padding:9px 14px; }
+.timetable-editor-footer button:last-child { background:#e8def3; color:#51436d; }
+
+.app-shell[data-color-mode="dark"] .timetable-card {
+  background:radial-gradient(circle at 16px 16px,rgba(248,200,220,.06) 0 1px,transparent 1.4px),#29272d;
+  border-color:#49434d;
+  color:#eee7ed;
+}
+.app-shell[data-color-mode="dark"] .timetable-heading h2,
+.app-shell[data-color-mode="dark"] .timetable-editor-title h3,
+.app-shell[data-color-mode="dark"] .timetable-class-form-heading h3 { color:#f3e9f0; }
+.app-shell[data-color-mode="dark"] .timetable-board,
+.app-shell[data-color-mode="dark"] .timetable-term-fields input,
+.app-shell[data-color-mode="dark"] .timetable-class-form input,
+.app-shell[data-color-mode="dark"] .timetable-class-form select { background:#343139; border-color:#554d5a; color:#f1eaf0; }
+.app-shell[data-color-mode="dark"] .timetable-class-form { background:#343039; border-color:#554b5b; }
+
+@media (max-width:700px) {
+  .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match { padding:9px; }
+  .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match::before { inset:7px; }
+  .boca-pocket-ticket { min-height:416px; padding:6px 7px 9px; }
+  .boca-pocket-collage { min-height:309px; }
+  .boca-pocket-main { gap:9px; grid-template-columns:86px minmax(0,1fr); padding:10px 7px 0 5px; }
+  .boca-pocket-crest { height:102px; width:86px; }
+  .boca-pocket-kicker { font-size:7px; }
+  .boca-pocket-teams h3 { font-size:clamp(32px,10.6vw,43px); }
+  .boca-pocket-opponent { font-size:9px!important; margin-top:8px!important; padding:6px 7px!important; }
+  .boca-pocket-time-note { left:7px; min-width:106px; padding:7px 8px; top:145px; }
+  .boca-pocket-time-note strong { font-size:13px; }
+  .boca-pocket-time-note small { font-size:7px; }
+  .boca-pocket-stadium-wrap { bottom:4px; right:2px; width:67%; }
+  .boca-pocket-ribbon-one { left:2px; top:231px; }
+  .boca-pocket-ribbon-two { right:0; top:122px; }
+  .boca-pocket-rule { margin-top:1px; }
+  .boca-pocket-facts { gap:5px; padding-inline:6px; }
+  .boca-pocket-facts span { font-size:8px; padding:6px 7px; }
+
+  .timetable-backdrop { align-items:flex-end; padding:0; }
+  .timetable-card {
+    border-bottom-left-radius:0;
+    border-bottom-right-radius:0;
+    max-height:92vh;
+    padding:28px 14px max(17px,env(safe-area-inset-bottom));
+    width:100%;
+  }
+  .timetable-card::before { left:28px; }
+  .timetable-card::after { right:58px; }
+  .timetable-heading { gap:8px; margin-bottom:16px; padding:9px 30px 0 2px; }
+  .timetable-heading h2 { font-size:24px; }
+  .timetable-heading-actions { position:absolute; right:13px; top:27px; }
+  .timetable-heading-actions button { height:34px; width:34px; }
+  .timetable-term-fields { gap:6px; grid-template-columns:1fr; padding-right:42px; }
+  .timetable-board { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .timetable-day { border-bottom:1px dashed #d9cde2; }
+  .timetable-day:nth-child(3n) { border-right:0; }
+  .timetable-day:nth-child(n+4) { border-bottom:0; }
+  .timetable-day > div { min-height:128px; padding:6px 5px 8px; }
+  .timetable-class-block { padding:7px 6px 6px; }
+  .timetable-class-block strong { font-size:9px; }
+  .timetable-class-block small { font-size:6.5px; }
+  .timetable-editor-title h3 { font-size:17px; }
+  .timetable-class-form-grid { grid-template-columns:1fr 1fr; }
+  .timetable-class-form-grid label:first-child { grid-column:1 / -1; }
+  .timetable-class-form footer { grid-template-columns:1fr auto auto; }
+}
+
+@media (max-width:370px) {
+  .boca-pocket-ticket { min-height:398px; }
+  .boca-pocket-collage { min-height:294px; }
+  .boca-pocket-main { grid-template-columns:77px minmax(0,1fr); }
+  .boca-pocket-crest { height:92px; width:77px; }
+  .boca-pocket-teams h3 { font-size:31px; }
+  .boca-pocket-time-note { top:137px; }
+  .boca-pocket-ribbon-one { top:219px; }
+  .boca-pocket-ribbon-two { top:114px; }
+  .timetable-class-form { padding:13px; }
+  .timetable-class-form footer { grid-template-columns:1fr 1fr; }
+  .timetable-class-form footer > span,
+  .timetable-class-form footer .timetable-delete-class { grid-column:1 / -1; }
+}

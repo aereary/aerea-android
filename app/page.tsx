@@ -53,8 +53,10 @@ import {
 import {
   ChangeEvent,
   CSSProperties,
+  Dispatch,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  SetStateAction,
   TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
@@ -421,6 +423,47 @@ type ClassItem = {
   name: string;
   icon: string;
   color: string;
+};
+
+type TimetableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
+type TimetableClass = {
+  id: string;
+  name: string;
+  day: TimetableDay;
+  start: string;
+  end: string;
+  color: string;
+};
+
+type ClassTimetable = {
+  termName: string;
+  termDates: string;
+  classes: TimetableClass[];
+};
+
+const timetableDays: { id: TimetableDay; label: string }[] = [
+  { id: "mon", label: "MON" },
+  { id: "tue", label: "TUE" },
+  { id: "wed", label: "WED" },
+  { id: "thu", label: "THU" },
+  { id: "fri", label: "FRI" },
+  { id: "sat", label: "SAT" },
+];
+
+const timetableColors = [
+  "#ddd8ff",
+  "#ffe8a8",
+  "#d7eddd",
+  "#f8d9e8",
+  "#d5eafb",
+  "#f8d8c5",
+];
+
+const defaultClassTimetable: ClassTimetable = {
+  termName: "Current semester",
+  termDates: "Set your term dates",
+  classes: [],
 };
 
 type CalendarEvent = {
@@ -1464,6 +1507,7 @@ function BocaPocketFactIcon({
 function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
   const match = event.footballMatch;
   const score = footballScore(match);
+  const opponent = footballMatchOpponent(match);
   const competitionParts = (match.competition ?? "")
     .split(/\s+(?:-|·)\s+/)
     .map((part) => part.trim())
@@ -1478,8 +1522,8 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
     <div className="boca-pocket-ticket">
       <div className="boca-pocket-ticket-topline">
         <span className="boca-pocket-match-label">
-          <span aria-hidden="true">💙💛</span>
-          MATCH DAY
+          <span aria-hidden="true">★</span>
+          HOY JUEGA BOCA
         </span>
         <span className="boca-pocket-heart" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false">
@@ -1492,40 +1536,58 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
         <span>☆</span>
         <span>✧</span>
         <span>♡</span>
-        <span>♡</span>
+        <span>★</span>
+        <span>〰</span>
       </div>
 
-      <div className="boca-pocket-main">
-        <img
-          className="boca-pocket-crest"
-          src="/assets/boca-crest-sticker.png"
-          alt="Escudo de Boca Juniors"
-        />
-        <div className="boca-pocket-teams">
-          <h3>
-            <span className="boca-pocket-home-team">{match.home_team}</span>
-            <span className="boca-pocket-versus-row">
-              <em>vs</em> {match.away_team} <i aria-hidden="true">♡</i>
-            </span>
-          </h3>
-          <p>
-            <span className="boca-pocket-clock" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <circle cx="12" cy="12" r="8.5" />
-                <path d="M12 7.5v5l3.2 2" />
-              </svg>
-            </span>
-            {eventStartTimeLabel(event)} · {matchCountdownLabel(event)} ♡
-          </p>
-          {score && <span className="boca-pocket-score">{score}</span>}
+      <div className="boca-pocket-collage">
+        <div className="boca-pocket-main">
+          <img
+            className="boca-pocket-crest"
+            src="/assets/boca-crest-sticker.png"
+            alt="Escudo de Boca Juniors"
+          />
+          <div className="boca-pocket-teams">
+            <span className="boca-pocket-kicker">CLUB ATLÉTICO</span>
+            <h3>
+              <span>BOCA</span>
+              <span>JUNIORS</span>
+            </h3>
+            <p className="boca-pocket-opponent">
+              <em>VS</em> {opponent} <i aria-hidden="true">♡</i>
+            </p>
+          </div>
         </div>
-      </div>
 
-      <img
-        className="boca-pocket-stadium"
-        src="/assets/bombonera-sticker.png"
-        alt="Ilustración de La Bombonera"
-      />
+        <span className="boca-pocket-ribbon boca-pocket-ribbon-one">
+          BOCA ES PUEBLO
+        </span>
+
+        <div className="boca-pocket-time-note">
+          <span className="boca-pocket-clock" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5v5l3.2 2" />
+            </svg>
+          </span>
+          <strong>{eventStartTimeLabel(event)}</strong>
+          <small>{matchCountdownLabel(event)}</small>
+          {score && <b className="boca-pocket-score">{score}</b>}
+        </div>
+
+        <div className="boca-pocket-stadium-wrap">
+          <img
+            className="boca-pocket-stadium"
+            src="/assets/bombonera-sticker.png"
+            alt="Ilustración de La Bombonera"
+          />
+          <span>LA BOMBONERA ♡</span>
+        </div>
+
+        <span className="boca-pocket-ribbon boca-pocket-ribbon-two">
+          AZUL Y ORO
+        </span>
+      </div>
 
       <div className="boca-pocket-rule" aria-hidden="true" />
 
@@ -2144,6 +2206,9 @@ export default function Home() {
     color: "habit-sage",
   });
   const [classItems, setClassItems] = useState<ClassItem[]>(starterClasses);
+  const [classTimetable, setClassTimetable] = useState<ClassTimetable>(
+    defaultClassTimetable,
+  );
   const [selectedClass, setSelectedClass] = useState(
     starterClasses[0]?.name ?? "",
   );
@@ -2580,6 +2645,7 @@ export default function Home() {
             customTheme?: CustomTheme;
             profilePhoto?: string | null;
             classes?: ClassItem[];
+            classTimetable?: ClassTimetable;
             recordings?: Recording[];
             studyNotebooks?: StudyNotebook[];
             studyNotes?: StudyNote[];
@@ -2817,6 +2883,17 @@ export default function Home() {
               setSelectedClass(state.classes[0].name);
             }
           }
+          if (
+            state.classTimetable &&
+            typeof state.classTimetable === "object" &&
+            Array.isArray(state.classTimetable.classes)
+          ) {
+            setClassTimetable({
+              ...defaultClassTimetable,
+              ...state.classTimetable,
+              classes: state.classTimetable.classes,
+            });
+          }
           if (Array.isArray(state.recordings)) {
             setRecordings(state.recordings);
           }
@@ -2985,6 +3062,7 @@ export default function Home() {
               customTheme,
               profilePhoto,
               classes: classItems,
+              classTimetable,
               recordings,
               studyNotebooks,
               studyNotes,
@@ -3017,6 +3095,7 @@ export default function Home() {
     calendarEvents,
     calendarCategories,
     classItems,
+    classTimetable,
     appTheme,
     colorMode,
     simplifiedCalendarMode,
@@ -8053,6 +8132,8 @@ export default function Home() {
               dayCharmText={activeTheme.charm}
               showDayCharm={activeTheme.showCharm !== false}
               isNight={isNight}
+              classTimetable={classTimetable}
+              setClassTimetable={setClassTimetable}
             />
           )}
 
@@ -14066,6 +14147,8 @@ function TodayScreen({
   dayCharmText,
   showDayCharm,
   isNight,
+  classTimetable,
+  setClassTimetable,
 }: {
   themeId: AppTheme;
   pending: Reminder[];
@@ -14089,11 +14172,22 @@ function TodayScreen({
   dayCharmText: string;
   showDayCharm: boolean;
   isNight: boolean;
+  classTimetable: ClassTimetable;
+  setClassTimetable: Dispatch<SetStateAction<ClassTimetable>>;
 }) {
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
+  const [timetableOpen, setTimetableOpen] = useState(false);
+  const [timetableEditing, setTimetableEditing] = useState(false);
+  const [timetableDraft, setTimetableDraft] =
+    useState<ClassTimetable>(classTimetable);
+  const [timetableClassDraft, setTimetableClassDraft] =
+    useState<TimetableClass | null>(null);
   const scheduleLongPressTimerRef = useRef<number | null>(null);
   const scheduleLongPressedRef = useRef(false);
   const schedulePressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const timetablePressTimerRef = useRef<number | null>(null);
+  const timetablePressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const timetableLongPressedRef = useRef(false);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
@@ -14103,6 +14197,106 @@ function TodayScreen({
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
+
+  const openClassTimetable = () => {
+    setTimetableDraft({
+      ...classTimetable,
+      classes: classTimetable.classes.map((classItem) => ({ ...classItem })),
+    });
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+    setTimetableOpen(true);
+  };
+
+  const cancelTimetableLongPress = () => {
+    if (timetablePressTimerRef.current) {
+      window.clearTimeout(timetablePressTimerRef.current);
+    }
+    timetablePressTimerRef.current = null;
+    timetablePressStartRef.current = null;
+  };
+
+  const beginTimetableLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    timetableLongPressedRef.current = false;
+    cancelTimetableLongPress();
+    timetablePressStartRef.current = { x: event.clientX, y: event.clientY };
+    timetablePressTimerRef.current = window.setTimeout(() => {
+      timetableLongPressedRef.current = true;
+      timetablePressTimerRef.current = null;
+      openClassTimetable();
+    }, 560);
+  };
+
+  const moveTimetableLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const start = timetablePressStartRef.current;
+    if (
+      start &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+    ) {
+      cancelTimetableLongPress();
+    }
+  };
+
+  const closeClassTimetable = () => {
+    setTimetableOpen(false);
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+  };
+
+  const beginNewTimetableClass = () => {
+    setTimetableClassDraft({
+      id: `timetable-${Date.now()}`,
+      name: "",
+      day: "mon",
+      start: "08:00",
+      end: "09:30",
+      color: timetableColors[timetableDraft.classes.length % timetableColors.length],
+    });
+  };
+
+  const saveTimetableClass = () => {
+    if (!timetableClassDraft?.name.trim()) return;
+    setTimetableDraft((current) => ({
+      ...current,
+      classes: current.classes.some(
+        (classItem) => classItem.id === timetableClassDraft.id,
+      )
+        ? current.classes.map((classItem) =>
+            classItem.id === timetableClassDraft.id
+              ? { ...timetableClassDraft, name: timetableClassDraft.name.trim() }
+              : classItem,
+          )
+        : [
+            ...current.classes,
+            { ...timetableClassDraft, name: timetableClassDraft.name.trim() },
+          ],
+    }));
+    setTimetableClassDraft(null);
+  };
+
+  const deleteTimetableClass = (classId: string) => {
+    setTimetableDraft((current) => ({
+      ...current,
+      classes: current.classes.filter((classItem) => classItem.id !== classId),
+    }));
+    setTimetableClassDraft(null);
+  };
+
+  const saveClassTimetable = () => {
+    const nextTimetable = {
+      ...timetableDraft,
+      termName: timetableDraft.termName.trim() || "Current semester",
+      termDates: timetableDraft.termDates.trim() || "Set your term dates",
+    };
+    setClassTimetable(nextTimetable);
+    setTimetableDraft(nextTimetable);
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+  };
 
   const cancelScheduleLongPress = () => {
     if (scheduleLongPressTimerRef.current) {
@@ -14157,6 +14351,9 @@ function TodayScreen({
     () => () => {
       if (scheduleLongPressTimerRef.current) {
         window.clearTimeout(scheduleLongPressTimerRef.current);
+      }
+      if (timetablePressTimerRef.current) {
+        window.clearTimeout(timetablePressTimerRef.current);
       }
     },
     [],
@@ -14213,14 +14410,32 @@ function TodayScreen({
           </p>
         </div>
         {showDayCharm && (
-          <div
+          <button
+            type="button"
             className={[
               "day-charm",
               dayCharmText === "you may rest" ? "curved-copy" : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-label={`${dayCharmLabel}: ${dayCharmText}`}
+            onPointerDown={beginTimetableLongPress}
+            onPointerMove={moveTimetableLongPress}
+            onPointerUp={cancelTimetableLongPress}
+            onPointerCancel={cancelTimetableLongPress}
+            onContextMenu={(event) => event.preventDefault()}
+            onClick={() => {
+              if (timetableLongPressedRef.current) {
+                timetableLongPressedRef.current = false;
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openClassTimetable();
+              }
+            }}
+            aria-label={`${dayCharmLabel}: ${dayCharmText}. Hold to open your class schedule.`}
+            title="Hold to open your class schedule"
           >
             <img src={dayCharm} alt="" />
             {dayCharmText === "you may rest" ? (
@@ -14248,7 +14463,7 @@ function TodayScreen({
             ) : (
               <span>{dayCharmText}</span>
             )}
-          </div>
+          </button>
         )}
       </section>
 
@@ -14603,6 +14818,362 @@ function TodayScreen({
                 Save
               </button>
             </footer>
+          </section>
+        </div>
+      )}
+
+      {timetableOpen && (
+        <div
+          className="timetable-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) closeClassTimetable();
+          }}
+        >
+          <section
+            className="timetable-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="My class schedule"
+          >
+            <span className="timetable-paperclip" aria-hidden="true">♡</span>
+            <header className="timetable-heading">
+              <div>
+                <p className="tiny-label">A LITTLE MAP OF MY WEEK</p>
+                {timetableEditing ? (
+                  <div className="timetable-term-fields">
+                    <label>
+                      <span>Semester name</span>
+                      <input
+                        value={timetableDraft.termName}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termName: event.target.value,
+                          }))
+                        }
+                        placeholder="Second semester"
+                      />
+                    </label>
+                    <label>
+                      <span>Dates</span>
+                      <input
+                        value={timetableDraft.termDates}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termDates: event.target.value,
+                          }))
+                        }
+                        placeholder="August — December 2026"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <h2>{classTimetable.termName}</h2>
+                    <p>{classTimetable.termDates}</p>
+                  </>
+                )}
+              </div>
+              <div className="timetable-heading-actions">
+                {!timetableEditing && (
+                  <button
+                    className="timetable-edit-button"
+                    type="button"
+                    onClick={() => {
+                      setTimetableDraft({
+                        ...classTimetable,
+                        classes: classTimetable.classes.map((classItem) => ({
+                          ...classItem,
+                        })),
+                      });
+                      setTimetableEditing(true);
+                    }}
+                    aria-label="Edit class schedule"
+                    title="Edit class schedule"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m5 16-.8 3.8L8 19l9.8-9.8-3-3Z" />
+                      <path d="m13.8 7.2 3 3" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  className="timetable-close-button"
+                  type="button"
+                  onClick={closeClassTimetable}
+                  aria-label="Close class schedule"
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+
+            {!timetableEditing ? (
+              <div className="timetable-board" aria-label="Weekly classes">
+                {timetableDays.map((day, dayIndex) => {
+                  const dayClasses = classTimetable.classes
+                    .filter((classItem) => classItem.day === day.id)
+                    .sort((first, second) => first.start.localeCompare(second.start));
+                  return (
+                    <section className="timetable-day" key={day.id}>
+                      <h3 style={{ background: timetableColors[dayIndex] }}>
+                        {day.label}
+                      </h3>
+                      <div>
+                        {dayClasses.length === 0 ? (
+                          <span className="timetable-empty-day">♡</span>
+                        ) : (
+                          dayClasses.map((classItem) => (
+                            <article
+                              className="timetable-class-block"
+                              key={classItem.id}
+                              style={{ background: classItem.color }}
+                            >
+                              <strong>{classItem.name}</strong>
+                              <small>
+                                {classItem.start} — {classItem.end}
+                              </small>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="timetable-editor">
+                <div className="timetable-editor-title">
+                  <div>
+                    <p className="tiny-label">SUBJECTS & TIMES</p>
+                    <h3>Build your weekly rhythm</h3>
+                  </div>
+                  <button type="button" onClick={beginNewTimetableClass}>
+                    <span aria-hidden="true">＋</span> Add class
+                  </button>
+                </div>
+
+                <div className="timetable-edit-list">
+                  {timetableDraft.classes.length === 0 ? (
+                    <button
+                      className="timetable-first-class"
+                      type="button"
+                      onClick={beginNewTimetableClass}
+                    >
+                      <span>＋</span>
+                      <strong>Add your first class</strong>
+                      <small>Choose its day, time and pastel color.</small>
+                    </button>
+                  ) : (
+                    [...timetableDraft.classes]
+                      .sort((first, second) =>
+                        `${first.day}-${first.start}`.localeCompare(
+                          `${second.day}-${second.start}`,
+                        ),
+                      )
+                      .map((classItem) => (
+                        <button
+                          className="timetable-edit-row"
+                          type="button"
+                          key={classItem.id}
+                          onClick={() => setTimetableClassDraft({ ...classItem })}
+                        >
+                          <i style={{ background: classItem.color }} />
+                          <span>
+                            <strong>{classItem.name}</strong>
+                            <small>
+                              {timetableDays.find((day) => day.id === classItem.day)?.label}
+                              {' · '}{classItem.start} — {classItem.end}
+                            </small>
+                          </span>
+                          <b aria-hidden="true">›</b>
+                        </button>
+                      ))
+                  )}
+                </div>
+
+                {timetableClassDraft && (
+                  <section
+                    className="timetable-class-form"
+                    aria-label={
+                      timetableDraft.classes.some(
+                        (classItem) => classItem.id === timetableClassDraft.id,
+                      )
+                        ? "Edit class"
+                        : "Add class"
+                    }
+                  >
+                    <div className="timetable-class-form-heading">
+                      <div>
+                        <p className="tiny-label">CLASS DETAILS</p>
+                        <h3>
+                          {timetableDraft.classes.some(
+                            (classItem) => classItem.id === timetableClassDraft.id,
+                          )
+                            ? "Edit this class"
+                            : "Add a new class"}
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTimetableClassDraft(null)}
+                        aria-label="Close class details"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <label className="timetable-class-name">
+                      <span>Class name</span>
+                      <input
+                        autoFocus
+                        value={timetableClassDraft.name}
+                        onChange={(event) =>
+                          setTimetableClassDraft((current) =>
+                            current ? { ...current, name: event.target.value } : current,
+                          )
+                        }
+                        placeholder="For example: Applied Physics"
+                      />
+                    </label>
+                    <div className="timetable-class-form-grid">
+                      <label>
+                        <span>Day</span>
+                        <select
+                          value={timetableClassDraft.day}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    day: event.target.value as TimetableDay,
+                                  }
+                                : current,
+                            )
+                          }
+                        >
+                          {timetableDays.map((day) => (
+                            <option value={day.id} key={day.id}>{day.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Starts</span>
+                        <input
+                          type="time"
+                          value={timetableClassDraft.start}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, start: event.target.value } : current,
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Ends</span>
+                        <input
+                          type="time"
+                          value={timetableClassDraft.end}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, end: event.target.value } : current,
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <fieldset className="timetable-color-picker">
+                      <legend>Color</legend>
+                      {timetableColors.map((color) => (
+                        <button
+                          type="button"
+                          key={color}
+                          className={timetableClassDraft.color === color ? "active" : ""}
+                          style={{ background: color }}
+                          onClick={() =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, color } : current,
+                            )
+                          }
+                          aria-label={`Use color ${color}`}
+                          aria-pressed={timetableClassDraft.color === color}
+                        />
+                      ))}
+                    </fieldset>
+                    <footer>
+                      {timetableDraft.classes.some(
+                        (classItem) => classItem.id === timetableClassDraft.id,
+                      ) ? (
+                        <button
+                          className="timetable-delete-class"
+                          type="button"
+                          onClick={() => deleteTimetableClass(timetableClassDraft.id)}
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setTimetableClassDraft(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="timetable-save-class"
+                        type="button"
+                        disabled={!timetableClassDraft.name.trim()}
+                        onClick={saveTimetableClass}
+                      >
+                        Save class
+                      </button>
+                    </footer>
+                  </section>
+                )}
+
+                <footer className="timetable-editor-footer">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimetableDraft({
+                        ...classTimetable,
+                        classes: classTimetable.classes.map((classItem) => ({
+                          ...classItem,
+                        })),
+                      });
+                      setTimetableEditing(false);
+                      setTimetableClassDraft(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="button" onClick={saveClassTimetable}>
+                    Save semester
+                  </button>
+                </footer>
+              </div>
+            )}
+
+            {!timetableEditing && classTimetable.classes.length === 0 && (
+              <button
+                className="timetable-empty-action"
+                type="button"
+                onClick={() => {
+                  setTimetableEditing(true);
+                  beginNewTimetableClass();
+                }}
+              >
+                <span>＋</span>
+                <strong>Make this semester yours</strong>
+                <small>Add your first class</small>
+              </button>
+            )}
+
+            <p className="timetable-note">
+              Hold the little morning circle whenever you want to see this again.
+            </p>
           </section>
         </div>
       )}
