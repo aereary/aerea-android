@@ -25605,6 +25605,28 @@ html[data-native="true"] :is(.modal-backdrop, .refuge-backdrop) {
 
 html[data-native="true"] .bottom-nav {
   bottom: calc(9px + var(--aerea-safe-area-bottom));
+  position: fixed;
+}
+
+/* Samsung's large-screen taskbar can stay translucent while reporting a
+   smaller navigation inset to the WebView. Reserve the full taskbar depth on
+   native tablets so the five app destinations remain in their own capsule,
+   completely above the system icons. Phones keep the regular inset above. */
+@media (min-width: 681px) {
+  html[data-native="true"] {
+    --aerea-tablet-bottom-clearance: max(
+      var(--safe-area-inset-bottom, 0px),
+      84px
+    );
+  }
+
+  html[data-native="true"] .phone-canvas {
+    padding-bottom: calc(102px + var(--aerea-tablet-bottom-clearance));
+  }
+
+  html[data-native="true"] .bottom-nav {
+    bottom: calc(12px + var(--aerea-tablet-bottom-clearance));
+  }
 }
 
 html[data-native="true"] .sketch-layout.sketch-fullscreen {
@@ -29157,24 +29179,27 @@ html[data-native="true"] .focus-layout > * {
 /* Boca in Day Pocket — a soft collectible match ticket. */
 .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match {
   background:
-    radial-gradient(circle at 0 50%,#fff 0 10px,transparent 11px),
-    radial-gradient(circle at 100% 50%,#fff 0 10px,transparent 11px),
-    linear-gradient(135deg,rgba(220,209,250,.44),transparent 34%),
-    linear-gradient(315deg,rgba(250,216,103,.34),transparent 32%),
+    radial-gradient(circle at 21% 14%,rgba(152,125,91,.07) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 75% 73%,rgba(142,118,86,.06) 0 1px,transparent 1.5px),
+    linear-gradient(135deg,rgba(220,209,250,.36),transparent 31%),
+    linear-gradient(315deg,rgba(250,216,103,.3),transparent 30%),
     #fffaf0;
-  border:1px solid #eadfca;
-  border-radius:18px;
-  box-shadow:0 11px 22px rgba(52,55,105,.16),0 3px 0 rgba(199,181,217,.44);
+  background-size:11px 13px,15px 17px,100% 100%,100% 100%,100% 100%;
+  border:1px solid #e5d7bd;
+  border-radius:0;
+  box-shadow:none;
+  clip-path:polygon(4% 0,96% 0,96% 2%,100% 2%,100% 42%,96.5% 46%,100% 50%,100% 96%,96% 96%,96% 100%,52% 100%,50% 96%,48% 100%,4% 100%,4% 97%,0 97%,0 50%,3.5% 46%,0 42%,0 4%,4% 4%);
   color:#242b68;
+  filter:drop-shadow(0 12px 12px rgba(52,55,105,.2)) drop-shadow(0 3px 0 rgba(199,181,217,.55));
   min-height:0;
   overflow:hidden;
-  padding:10px;
+  padding:11px;
   position:relative;
 }
 
 .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match::before {
   border:2px dashed #b8a4e2;
-  border-radius:14px;
+  border-radius:17px;
   content:"";
   inset:9px;
   pointer-events:none;
@@ -29182,7 +29207,8 @@ html[data-native="true"] .focus-layout > * {
 }
 
 .boca-pocket-ticket {
-  padding:7px 9px 9px;
+  min-height:326px;
+  padding:7px 11px 10px;
   position:relative;
   z-index:1;
 }
@@ -29232,61 +29258,60 @@ html[data-native="true"] .focus-layout > * {
   width:21px;
 }
 
+.boca-pocket-doodles {
+  color:#9c86d4;
+  inset:0;
+  pointer-events:none;
+  position:absolute;
+  z-index:0;
+}
+
+.boca-pocket-doodles span { font-family:Georgia,serif; font-size:29px; position:absolute; }
+.boca-pocket-doodles span:nth-child(1) { left:10px; top:68px; transform:rotate(-16deg); }
+.boca-pocket-doodles span:nth-child(2) { right:56px; top:42px; transform:rotate(11deg); }
+.boca-pocket-doodles span:nth-child(3) { bottom:116px; left:12px; transform:rotate(14deg); }
+.boca-pocket-doodles span:nth-child(4) { color:#8fb1db; right:101px; top:132px; transform:rotate(-11deg); }
+
 .boca-pocket-main {
   align-items:center;
   display:grid;
-  gap:13px;
-  grid-template-columns:70px minmax(0,1fr);
-  padding:5px 8px 8px;
+  gap:20px;
+  grid-template-columns:94px minmax(0,1fr);
+  padding:8px 22px 4px 13px;
 }
 
-.boca-pocket-monogram {
-  align-items:center;
-  aspect-ratio:.86;
-  background:linear-gradient(150deg,#173c8b,#0b2867);
-  border:3px solid #f3c937;
-  border-radius:20px 20px 28px 28px;
-  box-shadow:0 4px 0 #fff,0 7px 11px rgba(28,50,111,.18);
-  color:#f8d34d;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
+.boca-pocket-crest {
+  display:block;
+  filter:drop-shadow(0 5px 4px rgba(31,48,102,.2));
+  height:108px;
+  object-fit:contain;
   transform:rotate(-3deg);
-  width:66px;
-}
-
-.boca-pocket-monogram small {
-  font-size:7px;
-  letter-spacing:1px;
-  line-height:1;
-  margin-bottom:4px;
-}
-
-.boca-pocket-monogram strong {
-  color:#f8d34d!important;
-  font-size:16px!important;
-  font-weight:950;
-  letter-spacing:.03em;
+  width:94px;
 }
 
 .boca-pocket-teams { min-width:0; text-align:left; }
 
 .boca-pocket-teams h3 {
   color:#17255f;
-  font-size:clamp(20px,6vw,29px);
+  font-size:clamp(26px,6.4vw,36px);
   font-weight:950;
   letter-spacing:-.045em;
   line-height:.95;
   margin:0;
 }
 
-.boca-pocket-teams h3 span { display:block; overflow-wrap:anywhere; }
+.boca-pocket-home-team,
+.boca-pocket-versus-row { display:block; overflow-wrap:anywhere; }
+
+.boca-pocket-versus-row { white-space:nowrap; }
 
 .boca-pocket-teams h3 em {
   color:#e5b91f;
   font-style:normal;
-  margin-right:5px;
+  margin-right:3px;
 }
+
+.boca-pocket-teams h3 i { color:#83add6; font-size:.82em; font-style:normal; font-weight:500; }
 
 .boca-pocket-teams p {
   align-items:center;
@@ -29294,11 +29319,11 @@ html[data-native="true"] .focus-layout > * {
   border-radius:999px;
   color:#424580;
   display:inline-flex;
-  font-size:11px;
+  font-size:12px;
   font-weight:800;
   gap:5px;
-  margin:9px 0 0;
-  padding:6px 9px;
+  margin:10px 0 0;
+  padding:7px 10px;
 }
 
 .boca-pocket-clock { display:inline-flex; height:16px; width:16px; }
@@ -29315,9 +29340,23 @@ html[data-native="true"] .focus-layout > * {
   padding:5px 9px;
 }
 
+.boca-pocket-stadium {
+  display:block;
+  filter:drop-shadow(0 4px 3px rgba(43,48,99,.18));
+  height:86px;
+  object-fit:contain;
+  pointer-events:none;
+  position:absolute;
+  right:12px;
+  top:153px;
+  transform:rotate(4deg);
+  width:103px;
+  z-index:2;
+}
+
 .boca-pocket-rule {
   border-top:2px dashed #cbbbe5;
-  margin:0 8px 8px;
+  margin:48px 9px 10px;
 }
 
 .boca-pocket-facts {
@@ -29333,30 +29372,43 @@ html[data-native="true"] .focus-layout > * {
   border-radius:999px;
   color:#3e447f!important;
   display:inline-flex;
-  font-size:10px;
+  font-size:11px;
   font-weight:750;
   gap:5px;
   line-height:1.1;
   max-width:100%;
-  padding:7px 9px;
+  padding:7px 10px;
 }
 
-.boca-pocket-facts b { color:#33438d; font-size:13px; line-height:1; }
+.boca-pocket-facts svg {
+  fill:none;
+  flex:0 0 16px;
+  height:16px;
+  stroke:#33438d;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:1.9;
+  width:16px;
+}
 
 @media (max-width:520px) {
-  .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match { padding:8px; }
+  .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match { padding:9px; }
   .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match::before { inset:7px; }
-  .boca-pocket-ticket { padding:6px 7px 8px; }
-  .boca-pocket-main { gap:10px; grid-template-columns:58px minmax(0,1fr); padding:4px 6px 8px; }
-  .boca-pocket-monogram { border-radius:17px 17px 23px 23px; width:54px; }
-  .boca-pocket-monogram strong { font-size:13px!important; }
-  .boca-pocket-teams h3 { font-size:clamp(19px,5.6vw,25px); }
-  .boca-pocket-teams p { font-size:10px; margin-top:7px; padding:5px 7px; }
+  .boca-pocket-ticket { min-height:300px; padding:6px 7px 8px; }
+  .boca-pocket-main { gap:13px; grid-template-columns:76px minmax(0,1fr); padding:7px 15px 3px 10px; }
+  .boca-pocket-crest { height:91px; width:76px; }
+  .boca-pocket-teams h3 { font-size:clamp(23px,6.2vw,30px); }
+  .boca-pocket-teams p { font-size:10px; margin-top:8px; padding:6px 8px; }
   .boca-pocket-match-label { font-size:8px; padding:6px 9px 5px; }
   .boca-pocket-heart { height:32px; width:32px; }
   .boca-pocket-heart svg { height:18px; width:18px; }
+  .boca-pocket-stadium { height:73px; right:7px; top:138px; width:86px; }
+  .boca-pocket-rule { margin-top:43px; }
   .boca-pocket-facts { gap:5px; padding-inline:6px; }
   .boca-pocket-facts span { font-size:9px; padding:6px 8px; }
+  .boca-pocket-doodles span { font-size:24px; }
+  .boca-pocket-doodles span:nth-child(2) { right:46px; }
+  .boca-pocket-doodles span:nth-child(4) { right:78px; top:122px; }
 }
 
 .app-shell[data-theme="ao3night"] .day-summary-card .day-summary-event.match-day-pocket-card.canonical-boca-match {

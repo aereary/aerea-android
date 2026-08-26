@@ -1359,9 +1359,58 @@ function footballMatchToCalendarEvent(match: FootballMatch): FootballVisualEvent
   };
 }
 
+function BocaPocketFactIcon({
+  type,
+}: {
+  type: "home" | "place" | "competition" | "venue" | "status";
+}) {
+  const iconPaths = {
+    home: <path d="M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4Z" />,
+    place: (
+      <>
+        <path d="M12 21s6-5.8 6-11a6 6 0 1 0-12 0c0 5.2 6 11 6 11Z" />
+        <circle cx="12" cy="10" r="2" />
+      </>
+    ),
+    competition: (
+      <>
+        <path d="M8 4h8v4.5a4 4 0 0 1-8 0Z" />
+        <path d="M8 6H5v1.5A3.5 3.5 0 0 0 8.5 11M16 6h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 12.5V17M8.5 20h7M10 17h4" />
+      </>
+    ),
+    venue: (
+      <>
+        <rect x="4" y="6" width="16" height="13" rx="2" />
+        <path d="M7 9h3v3H7ZM14 9h3M14 12h3M7 15h10" />
+      </>
+    ),
+    status: (
+      <>
+        <rect x="4" y="6" width="16" height="14" rx="2" />
+        <path d="M8 3v6M16 3v6M4 11h16" />
+      </>
+    ),
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {iconPaths[type]}
+    </svg>
+  );
+}
+
 function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
   const match = event.footballMatch;
   const score = footballScore(match);
+  const competitionParts = (match.competition ?? "")
+    .split(/\s+(?:-|·)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const competitionPlace = competitionParts.length > 1 ? competitionParts[0] : null;
+  const competitionName =
+    competitionParts.length > 1
+      ? competitionParts.slice(1).join(" · ")
+      : match.competition;
 
   return (
     <div className="boca-pocket-ticket">
@@ -1377,16 +1426,25 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
         </span>
       </div>
 
+      <div className="boca-pocket-doodles" aria-hidden="true">
+        <span>☆</span>
+        <span>✧</span>
+        <span>♡</span>
+        <span>♡</span>
+      </div>
+
       <div className="boca-pocket-main">
-        <span className="boca-pocket-monogram" aria-hidden="true">
-          <small>★ ★ ★</small>
-          <strong>CABJ</strong>
-        </span>
+        <img
+          className="boca-pocket-crest"
+          src="/assets/boca-crest-sticker.png"
+          alt="Escudo de Boca Juniors"
+        />
         <div className="boca-pocket-teams">
           <h3>
-            <span>{match.home_team}</span>
-            <em>vs</em>
-            <span>{match.away_team}</span>
+            <span className="boca-pocket-home-team">{match.home_team}</span>
+            <span className="boca-pocket-versus-row">
+              <em>vs</em> {match.away_team} <i aria-hidden="true">♡</i>
+            </span>
           </h3>
           <p>
             <span className="boca-pocket-clock" aria-hidden="true">
@@ -1401,27 +1459,39 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
         </div>
       </div>
 
+      <img
+        className="boca-pocket-stadium"
+        src="/assets/bombonera-sticker.png"
+        alt="Ilustración de La Bombonera"
+      />
+
       <div className="boca-pocket-rule" aria-hidden="true" />
 
       <div className="boca-pocket-facts">
         <span>
-          <b aria-hidden="true">⌂</b>
+          <BocaPocketFactIcon type="home" />
           {footballMatchIsHome(match) ? "Home" : "Away"}
         </span>
-        {match.competition && (
+        {competitionPlace && (
           <span>
-            <b aria-hidden="true">♜</b>
-            {match.competition}
+            <BocaPocketFactIcon type="place" />
+            {competitionPlace}
+          </span>
+        )}
+        {competitionName && (
+          <span>
+            <BocaPocketFactIcon type="competition" />
+            {competitionName}
           </span>
         )}
         {match.venue && (
           <span>
-            <b aria-hidden="true">⌖</b>
+            <BocaPocketFactIcon type="venue" />
             {match.venue}
           </span>
         )}
         <span>
-          <b aria-hidden="true">▣</b>
+          <BocaPocketFactIcon type="status" />
           {footballStatusLabel(match.status)}
         </span>
       </div>

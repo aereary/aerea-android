@@ -798,6 +798,14 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(cssSource, /--aerea-safe-area-bottom: max\(var\(--safe-area-inset-bottom, 0px\), 48px\)/);
   assert.match(cssSource, /padding-bottom: calc\(102px \+ var\(--aerea-safe-area-bottom\)\)/);
   assert.match(cssSource, /bottom: calc\(9px \+ var\(--aerea-safe-area-bottom\)\)/);
+  assert.match(
+    cssSource,
+    /@media \(min-width: 681px\)[\s\S]{0,260}--aerea-tablet-bottom-clearance: max\([\s\S]{0,100}84px[\s\S]{0,260}bottom: calc\(12px \+ var\(--aerea-tablet-bottom-clearance\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.bottom-nav \{[\s\S]{0,100}position: fixed;/,
+  );
 });
 
 test("keeps native clouds and full screens inside phone and tablet safe areas", () => {
