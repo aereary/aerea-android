@@ -29032,3 +29032,59 @@ button.brand-wrap {
     border-radius:0!important;
   }
 }
+
+/* Native phone + tablet: decorative art and full-screen surfaces share the
+   same safe viewport instead of measuring from behind the system bars. */
+html[data-native="true"] .phone-canvas > .storybook-scene .cloud-one {
+  top:calc(42px + var(--aerea-safe-area-top));
+}
+
+html[data-native="true"] .phone-canvas > .storybook-scene .cloud-two {
+  top:calc(86px + var(--aerea-safe-area-top));
+}
+
+html[data-native="true"] .modal-backdrop {
+  box-sizing:border-box;
+  height:100dvh;
+  max-height:100dvh;
+  overflow:hidden;
+}
+
+html[data-native="true"] .modal-backdrop > :is(.calendar-modal,.settings-modal) {
+  box-sizing:border-box;
+  max-height:100%;
+  min-height:0;
+  min-width:0;
+}
+
+html[data-native="true"] .modal-backdrop > :is(
+  .calendar-modal.calendar-extended-month,
+  .calendar-modal.calendar-expanded.agenda-v2-modal
+) {
+  height:100%;
+  max-height:100%;
+  max-width:100%;
+  width:100%;
+}
+
+html[data-native="true"] .focus-screen {
+  box-sizing:border-box;
+  max-width:100%;
+  min-width:0;
+  padding-bottom:24px;
+}
+
+html[data-native="true"] .focus-layout,
+html[data-native="true"] .focus-layout > * {
+  max-width:100%;
+  min-width:0;
+}
+
+/* Light calendars use a clean white sheet; night themes keep their intended
+   dark surface. */
+.app-shell:not([data-color-mode="dark"]) :is(
+  .calendar-modal.calendar-extended-month,
+  .extended-calendar-view
+) {
+  background:#fff!important;
+}

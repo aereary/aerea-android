@@ -800,6 +800,30 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(cssSource, /bottom: calc\(9px \+ var\(--aerea-safe-area-bottom\)\)/);
 });
 
+test("keeps native clouds and full screens inside phone and tablet safe areas", () => {
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \.cloud-one \{[\s\S]{0,100}top:calc\(42px \+ var\(--aerea-safe-area-top\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \.cloud-two \{[\s\S]{0,100}top:calc\(86px \+ var\(--aerea-safe-area-top\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.modal-backdrop \{[\s\S]{0,180}height:100dvh;[\s\S]{0,80}max-height:100dvh;/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-modal\.calendar-extended-month,[\s\S]{0,100}\.calendar-modal\.calendar-expanded\.agenda-v2-modal[\s\S]{0,180}height:100%;[\s\S]{0,80}max-height:100%;/,
+  );
+  assert.match(cssSource, /html\[data-native="true"\] \.focus-screen/);
+  assert.match(
+    cssSource,
+    /\.app-shell:not\(\[data-color-mode="dark"\]\) :is\([\s\S]{0,180}\.extended-calendar-view[\s\S]{0,80}background:#fff!important;/,
+  );
+});
+
 test("keeps sports provider secrets behind a normalized Supabase model", () => {
   for (const table of [
     "sports",
