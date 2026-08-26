@@ -10152,6 +10152,7 @@ export default function Home() {
         <div
           className={[
             "modal-backdrop",
+            "calendar-backdrop",
             calendarScheduleOpen && !eventEditorOpen ? "agenda-overlay-backdrop" : "",
             calendarExpanded && !eventEditorOpen ? "extended-month-backdrop" : "",
           ].filter(Boolean).join(" ")}

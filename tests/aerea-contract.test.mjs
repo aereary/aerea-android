@@ -801,13 +801,10 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
 });
 
 test("keeps native clouds and full screens inside phone and tablet safe areas", () => {
+  assert.match(pageSource, /"calendar-backdrop"/);
   assert.match(
     cssSource,
-    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \.cloud-one \{[\s\S]{0,100}top:calc\(42px \+ var\(--aerea-safe-area-top\)\)/,
-  );
-  assert.match(
-    cssSource,
-    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \.cloud-two \{[\s\S]{0,100}top:calc\(86px \+ var\(--aerea-safe-area-top\)\)/,
+    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \{[\s\S]{0,100}inset:var\(--aerea-safe-area-top\) 0 auto/,
   );
   assert.match(
     cssSource,
@@ -815,7 +812,19 @@ test("keeps native clouds and full screens inside phone and tablet safe areas", 
   );
   assert.match(
     cssSource,
-    /\.calendar-modal\.calendar-extended-month,[\s\S]{0,100}\.calendar-modal\.calendar-expanded\.agenda-v2-modal[\s\S]{0,180}height:100%;[\s\S]{0,80}max-height:100%;/,
+    /html\[data-native="true"\] :is\(\.calendar-backdrop,\.settings-backdrop\) \{[\s\S]{0,120}padding:0/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-backdrop > \.calendar-modal,[\s\S]{0,100}\.settings-backdrop > \.settings-modal[\s\S]{0,260}height:100dvh;[\s\S]{0,160}width:100vw;/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-modal\.calendar-extended-month > \.extended-calendar-view \{[\s\S]{0,260}var\(--aerea-safe-area-top\)[\s\S]{0,220}var\(--aerea-safe-area-bottom\)/,
+  );
+  assert.match(
+    cssSource,
+    /\.settings-backdrop > \.settings-modal \{[\s\S]{0,260}var\(--aerea-safe-area-top\)[\s\S]{0,220}var\(--aerea-safe-area-bottom\)/,
   );
   assert.match(cssSource, /html\[data-native="true"\] \.focus-screen/);
   assert.match(
