@@ -800,11 +800,32 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(cssSource, /bottom: calc\(9px \+ var\(--aerea-safe-area-bottom\)\)/);
   assert.match(
     cssSource,
-    /@media \(min-width: 681px\)[\s\S]{0,260}--aerea-tablet-bottom-clearance: max\([\s\S]{0,100}84px[\s\S]{0,260}bottom: calc\(12px \+ var\(--aerea-tablet-bottom-clearance\)\)/,
+    /@media \(min-width: 681px\)[\s\S]{0,260}--aerea-tablet-bottom-clearance: max\([\s\S]{0,100}72px[\s\S]{0,260}bottom: calc\(8px \+ var\(--aerea-tablet-bottom-clearance\)\)/,
   );
   assert.match(
     cssSource,
     /html\[data-native="true"\] \.bottom-nav \{[\s\S]{0,100}position: fixed;/,
+  );
+});
+
+test("restores the original built-in habits once without replacing saved habits", () => {
+  for (const habit of [
+    "Drink 6 glasses of water",
+    "Study for at least 25 minutes",
+    "Write one gentle thought",
+    "Stretch and breathe",
+  ]) {
+    assert.match(pageSource, new RegExp(habit));
+  }
+  assert.match(
+    pageSource,
+    /const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26"/,
+  );
+  assert.match(pageSource, /function restoreBuiltInHabits\(savedHabits: Habit\[\]\)/);
+  assert.match(pageSource, /return \[\.\.\.savedHabits, \.\.\.missingHabits\]/);
+  assert.match(
+    pageSource,
+    /habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION/,
   );
 });
 

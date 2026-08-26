@@ -25616,7 +25616,7 @@ html[data-native="true"] .bottom-nav {
   html[data-native="true"] {
     --aerea-tablet-bottom-clearance: max(
       var(--safe-area-inset-bottom, 0px),
-      84px
+      72px
     );
   }
 
@@ -25625,7 +25625,7 @@ html[data-native="true"] .bottom-nav {
   }
 
   html[data-native="true"] .bottom-nav {
-    bottom: calc(12px + var(--aerea-tablet-bottom-clearance));
+    bottom: calc(8px + var(--aerea-tablet-bottom-clearance));
   }
 }
 

@@ -892,6 +892,7 @@ const themeOptions: {
 const CLEAN_START_VERSION = "personal-content-reset-2026-08-24";
 const BROWSER_CONTENT_RESET_KEY =
   "aerea-personal-content-reset-2026-08-24";
+const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
 
 const starterReminders: Reminder[] = [
   {
@@ -928,7 +929,67 @@ const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
 
-const starterHabits: Habit[] = [];
+const starterHabits: Habit[] = [
+  {
+    id: 1,
+    title: "Drink 6 glasses of water",
+    icon: "💧",
+    color: "habit-blue",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 2,
+    title: "Study for at least 25 minutes",
+    icon: "📚",
+    color: "habit-lilac",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 3,
+    title: "Write one gentle thought",
+    icon: "🪶",
+    color: "habit-pink",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 4,
+    title: "Stretch and breathe",
+    icon: "🌿",
+    color: "habit-sage",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+];
+
+function restoreBuiltInHabits(savedHabits: Habit[]) {
+  const existingIds = new Set(savedHabits.map((habit) => habit.id));
+  const existingTitles = new Set(
+    savedHabits.map((habit) => habit.title.trim().toLowerCase()),
+  );
+  const usedIds = new Set(existingIds);
+  let nextId = Math.max(0, ...savedHabits.map((habit) => habit.id));
+
+  const missingHabits = starterHabits.flatMap((habit) => {
+    if (
+      existingIds.has(habit.id) ||
+      existingTitles.has(habit.title.toLowerCase())
+    ) {
+      return [];
+    }
+    let id = habit.id;
+    if (usedIds.has(id)) {
+      nextId += 1;
+      id = nextId;
+    }
+    usedIds.add(id);
+    return [{ ...habit, id, days: [...habit.days] }];
+  });
+
+  return [...savedHabits, ...missingHabits];
+}
 
 const habitColorOptions = [
   { value: "habit-blue", label: "Sky blue", hex: "#bdeaff" },
@@ -1145,6 +1206,7 @@ function resetUserCreatedContent(state: Record<string, unknown>) {
     pdfPageNotes: {},
     epubReadingStates: {},
     cleanStartVersion: CLEAN_START_VERSION,
+    habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
   };
 }
 
@@ -2528,6 +2590,7 @@ export default function Home() {
             pdfPageNotes?: Record<string, Record<string, string>>;
             epubReadingStates?: Record<string, EpubReadingState>;
             cleanStartVersion?: string;
+            habitRestoreVersion?: string;
           } | null;
         };
         const applyRequestedContentReset = async (candidate: typeof payload) => {
@@ -2566,6 +2629,27 @@ export default function Home() {
         payload = await applyRequestedContentReset(payload);
         payload = (await reconcileCloudState(payload)) || payload;
         payload = await applyRequestedContentReset(payload);
+        if (
+          payload.state &&
+          payload.state.habitRestoreVersion !== BUILTIN_HABITS_RESTORE_VERSION
+        ) {
+          const restoredHabits = restoreBuiltInHabits(
+            Array.isArray(payload.state.habits) ? payload.state.habits : [],
+          );
+          payload = {
+            ...payload,
+            state: {
+              ...payload.state,
+              habits: restoredHabits,
+              habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
+            },
+          };
+          if (isNative()) {
+            await AereaStorage.putState({ state: JSON.stringify(payload) });
+          } else {
+            writeBrowserState(payload);
+          }
+        }
         if (cancelled) return;
 
         if (payload.state) {
@@ -2911,6 +2995,7 @@ export default function Home() {
               pdfPageNotes,
               epubReadingStates,
               cleanStartVersion: CLEAN_START_VERSION,
+              habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
             };
         if (isNative()) {
           await AereaStorage.putState({ state: JSON.stringify({ state }) });
