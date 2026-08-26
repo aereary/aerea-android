@@ -1359,6 +1359,76 @@ function footballMatchToCalendarEvent(match: FootballMatch): FootballVisualEvent
   };
 }
 
+function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
+  const match = event.footballMatch;
+  const score = footballScore(match);
+
+  return (
+    <div className="boca-pocket-ticket">
+      <div className="boca-pocket-ticket-topline">
+        <span className="boca-pocket-match-label">
+          <span aria-hidden="true">💙💛</span>
+          MATCH DAY
+        </span>
+        <span className="boca-pocket-heart" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 20.2C10.8 19.1 4 14.8 4 9.8 4 7 5.8 5.2 8.4 5.2c1.7 0 2.9.8 3.6 2 0.7-1.2 1.9-2 3.6-2C18.2 5.2 20 7 20 9.8c0 5-6.8 9.3-8 10.4Z" />
+          </svg>
+        </span>
+      </div>
+
+      <div className="boca-pocket-main">
+        <span className="boca-pocket-monogram" aria-hidden="true">
+          <small>★ ★ ★</small>
+          <strong>CABJ</strong>
+        </span>
+        <div className="boca-pocket-teams">
+          <h3>
+            <span>{match.home_team}</span>
+            <em>vs</em>
+            <span>{match.away_team}</span>
+          </h3>
+          <p>
+            <span className="boca-pocket-clock" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5v5l3.2 2" />
+              </svg>
+            </span>
+            {eventStartTimeLabel(event)} · {matchCountdownLabel(event)} ♡
+          </p>
+          {score && <span className="boca-pocket-score">{score}</span>}
+        </div>
+      </div>
+
+      <div className="boca-pocket-rule" aria-hidden="true" />
+
+      <div className="boca-pocket-facts">
+        <span>
+          <b aria-hidden="true">⌂</b>
+          {footballMatchIsHome(match) ? "Home" : "Away"}
+        </span>
+        {match.competition && (
+          <span>
+            <b aria-hidden="true">♜</b>
+            {match.competition}
+          </span>
+        )}
+        {match.venue && (
+          <span>
+            <b aria-hidden="true">⌖</b>
+            {match.venue}
+          </span>
+        )}
+        <span>
+          <b aria-hidden="true">▣</b>
+          {footballStatusLabel(match.status)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function isFootballVisualEvent(
   event: CalendarEvent,
 ): event is FootballVisualEvent {
@@ -12224,28 +12294,34 @@ export default function Home() {
                           }
                         }}
                       >
-                        <div className="day-summary-event-heading">
-                          <span className="day-summary-event-heart" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" focusable="false">
-                              <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
-                            </svg>
-                          </span>
-                          <div>
-                            {event.sportsCardStyle && (
-                              <span className="day-summary-match-label">
-                                {event.sportsIcon ?? "♡"} MATCH DAY
-                              </span>
-                            )}
-                            <strong>{event.title}</strong>
-                            <small className="day-summary-event-time">
-                              {eventStartTimeLabel(event)}
-                              {event.eventType === "sports_event"
-                                ? ` · ${matchCountdownLabel(event)}`
-                                : ""}
-                            </small>
+                        {isFootballVisualEvent(event) ? (
+                          <BocaDayPocketTicket event={event} />
+                        ) : (
+                          <div className="day-summary-event-heading">
+                            <span className="day-summary-event-heart" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
+                              </svg>
+                            </span>
+                            <div>
+                              {event.sportsCardStyle && (
+                                <span className="day-summary-match-label">
+                                  {event.sportsIcon ?? "♡"} MATCH DAY
+                                </span>
+                              )}
+                              <strong>{event.title}</strong>
+                              <small className="day-summary-event-time">
+                                {eventStartTimeLabel(event)}
+                                {event.eventType === "sports_event"
+                                  ? ` · ${matchCountdownLabel(event)}`
+                                  : ""}
+                              </small>
+                            </div>
                           </div>
-                        </div>
-                        {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
+                        )}
+                        {!isFootballVisualEvent(event) && event.note?.trim() && (
+                          <p className="day-summary-memo">{event.note}</p>
+                        )}
                         {!!event.todos?.length && (
                           <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
                         )}
