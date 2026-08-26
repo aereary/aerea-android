@@ -787,6 +787,8 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(pageSource, /SystemBarsStyle\.Dark/);
   assert.match(pageSource, /SystemBars\.setStyle/);
   assert.match(capacitorSource, /insetsHandling: "css"/);
+  assert.match(manifestSource, /android:theme="@style\/AppTheme\.NoActionBar"/);
+  assert.doesNotMatch(manifestSource, /AppTheme\.NoActionBarLaunch/);
   assert.match(manifestSource, /android:scheme="aerea"/);
   assert.match(manifestSource, /android:host="auth"/);
   assert.match(syncSource, /aerea:\/\/auth\/callback/);
