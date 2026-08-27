@@ -15,6 +15,13 @@ const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
 );
+const nativeStorageSource = await readFile(
+  new URL(
+    "../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("opens AO3 only from the brand while the current screen is Spaces Library", () => {
   assert.match(pageSource, /activeTab === "spaces" && space === "library" && !calendarOpen/);
@@ -23,7 +30,10 @@ test("opens AO3 only from the brand while the current screen is Spaces Library",
   assert.match(pageSource, /window\.history\.pushState\(/);
   assert.match(pageSource, /window\.addEventListener\("popstate", closeAo3FromHistory\)/);
   assert.match(pageSource, /inert=\{ao3LibraryOpen \? true : undefined\}/);
-  assert.match(pageSource, /\{ao3LibraryOpen && <Ao3Library onBack=\{closeAo3Library\} \/>\}/);
+  assert.match(
+    pageSource,
+    /<Ao3Library onBack=\{closeAo3Library\} onSaveEpub=\{saveAo3Epub\} \/>/,
+  );
   assert.equal((pageSource.match(/onClick=\{openAereaFromBrand\}/g) ?? []).length, 2);
   assert.match(ao3Source, />\s*← Library\s*<\/button>/);
 });
@@ -79,7 +89,25 @@ test("preserves the full AO3 card, series, search, filter and download experienc
   assert.match(ao3Source, /const fandoms = useMemo/);
   assert.match(ao3Source, /const filtered = useMemo/);
   assert.match(ao3Source, /Do you want to download this EPUB\?/);
-  assert.match(ao3Source, /openExternalUrl\(directDownloadUrl/);
+  assert.match(ao3Source, /await onSaveEpub\(downloadTarget\)/);
+  assert.doesNotMatch(ao3Source, /openExternalUrl|directDownloadUrl/);
+});
+
+test("saves Drive EPUBs into Android study_files and refreshes Your Library immediately", () => {
+  assert.match(pageSource, /AereaStorage\.downloadAo3Epub\(\{/);
+  assert.match(pageSource, /driveFileId: target\.driveFileId/);
+  assert.match(pageSource, /workId: target\.workId/);
+  assert.match(pageSource, /setStudyFiles\(\(current\) => \{/);
+  assert.match(nativeStorageSource, /public void downloadAo3Epub\(PluginCall call\)/);
+  assert.match(nativeStorageSource, /connection\.setReadTimeout\(60_000\)/);
+  assert.match(nativeStorageSource, /drive\.usercontent\.google\.com\/download\?id=/);
+  assert.match(nativeStorageSource, /values\.put\("kind", "epub"\)/);
+  assert.match(nativeStorageSource, /insertOrThrow\("study_files"/);
+  assert.match(nativeStorageSource, /source_drive_file_id=\? OR source_work_id=\?/);
+  assert.match(nativeStorageSource, /study_files_ao3_drive_idx/);
+  assert.match(nativeStorageSource, /study_files_ao3_work_idx/);
+  assert.match(nativeStorageSource, /result\.put\("alreadyStored", true\)/);
+  assert.doesNotMatch(nativeStorageSource, /setRequestMethod\("(?:DELETE|PATCH|PUT)"\)/);
 });
 
 test("retains the standalone AO3 visual language on phone, tablet and dark mode", () => {

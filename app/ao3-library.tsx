@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import { supabase } from "./supabase-sync";
+import type { StudyFileItem } from "./study-library";
 
 type SeriesMembership = {
   label: string;
@@ -65,17 +66,23 @@ type SingleEntry = {
 
 type LibraryEntry = SeriesGroup | SingleEntry;
 
-type DownloadTarget = {
+export type Ao3EpubDownloadTarget = {
   title: string;
   driveFileId: string;
+  fileName: string;
+  workId: number;
 };
 
 type Ao3LibraryProps = {
   onBack: () => void;
+  onSaveEpub: (target: Ao3EpubDownloadTarget) => Promise<{
+    file: StudyFileItem;
+    alreadyStored: boolean;
+    replaced: boolean;
+  }>;
 };
 
 const CACHE_KEY = "aerea-ao3-library-cache-v1";
-const DIRECT_DOWNLOAD_BASE = "https://drive.usercontent.google.com/download";
 
 function compactUnique(values: Array<string | null | undefined>) {
   return Array.from(
@@ -351,26 +358,6 @@ function driveViewUrl(fileId: string) {
   return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
 }
 
-function directDownloadUrl(fileId: string) {
-  const query = new URLSearchParams({
-    id: fileId,
-    export: "download",
-    confirm: "t",
-  });
-  return `${DIRECT_DOWNLOAD_BASE}?${query.toString()}`;
-}
-
-function openExternalUrl(url: string) {
-  const link = document.createElement("a");
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
 function TagCloud({ tags, limit = 14 }: { tags: string[]; limit?: number }) {
   const uniqueTags = compactUnique(tags);
   const first = uniqueTags.slice(0, limit);
@@ -406,7 +393,7 @@ function WorkActions({
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
-  onDownload: (target: DownloadTarget) => void;
+  onDownload: (target: Ao3EpubDownloadTarget) => void;
 }) {
   const ordered = [...versions].sort(
     (a, b) => Number(b.is_primary) - Number(a.is_primary),
@@ -431,7 +418,12 @@ function WorkActions({
           <button
             type="button"
             onClick={() =>
-              onDownload({ title: work.title, driveFileId: primary.drive_file_id })
+              onDownload({
+                title: work.title,
+                driveFileId: primary.drive_file_id,
+                fileName: primary.filename,
+                workId: work.work_id,
+              })
             }
           >
             ↓ Download EPUB
@@ -462,6 +454,8 @@ function WorkActions({
                       onDownload({
                         title: `${work.title} · versión alternativa`,
                         driveFileId: version.drive_file_id,
+                        fileName: version.filename,
+                        workId: work.work_id,
                       })
                     }
                   >
@@ -484,7 +478,7 @@ function WorkDetails({
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
-  onDownload: (target: DownloadTarget) => void;
+  onDownload: (target: Ao3EpubDownloadTarget) => void;
 }) {
   const secondarySeries = (work.series || []).slice(1);
   return (
@@ -531,7 +525,7 @@ function FicCard({
   work: Ao3Work;
   versions: EpubVersion[];
   onCopy: (title: string) => void;
-  onDownload: (target: DownloadTarget) => void;
+  onDownload: (target: Ao3EpubDownloadTarget) => void;
 }) {
   return (
     <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""}`}>
@@ -604,7 +598,7 @@ function SeriesCard({
   entry: SeriesGroup;
   versionsByWork: Map<number, EpubVersion[]>;
   onCopy: (title: string) => void;
-  onDownload: (target: DownloadTarget) => void;
+  onDownload: (target: Ao3EpubDownloadTarget) => void;
 }) {
   const first = entry.works[0];
   const authors = compactUnique(entry.works.map((work) => work.author));
@@ -694,7 +688,7 @@ function SeriesCard({
   );
 }
 
-export function Ao3Library({ onBack }: Ao3LibraryProps) {
+export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const [works, setWorks] = useState<Ao3Work[]>([]);
   const [epubs, setEpubs] = useState<EpubVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -707,7 +701,9 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
   );
   const [fandomFilter, setFandomFilter] = useState("all");
   const [toast, setToast] = useState<string | null>(null);
-  const [downloadTarget, setDownloadTarget] = useState<DownloadTarget | null>(null);
+  const [downloadTarget, setDownloadTarget] = useState<Ao3EpubDownloadTarget | null>(null);
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   const refresh = useCallback(async (showSpinner = true) => {
     if (showSpinner) setRefreshing(true);
@@ -849,11 +845,29 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
     setToast(copied ? "Título copiado ✓" : "No pude copiar el título");
   };
 
-  const confirmDownload = () => {
+  const confirmDownload = async () => {
     if (!downloadTarget) return;
-    openExternalUrl(directDownloadUrl(downloadTarget.driveFileId));
-    setDownloadTarget(null);
-    setToast("Downloading EPUB… ♡");
+    setDownloadBusy(true);
+    setDownloadError("");
+    try {
+      const result = await onSaveEpub(downloadTarget);
+      setDownloadTarget(null);
+      setToast(
+        result.alreadyStored
+          ? "Este EPUB ya está en Your Library ♡"
+          : result.replaced
+            ? "EPUB actualizado en Your Library ♡"
+            : "EPUB guardado en Your Library ♡",
+      );
+    } catch (reason) {
+      setDownloadError(
+        reason instanceof Error
+          ? reason.message
+          : "No pude guardar este EPUB. Intentá de nuevo.",
+      );
+    } finally {
+      setDownloadBusy(false);
+    }
   };
 
   return (
@@ -966,7 +980,10 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
               work={entry.work}
               versions={versionsByWork.get(entry.work.work_id) || []}
               onCopy={onCopy}
-              onDownload={(target) => setDownloadTarget(target)}
+              onDownload={(target) => {
+                setDownloadError("");
+                setDownloadTarget(target);
+              }}
             />
           ) : (
             <SeriesCard
@@ -974,7 +991,10 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
               entry={entry}
               versionsByWork={versionsByWork}
               onCopy={onCopy}
-              onDownload={(target) => setDownloadTarget(target)}
+              onDownload={(target) => {
+                setDownloadError("");
+                setDownloadTarget(target);
+              }}
             />
           ),
         )}
@@ -995,7 +1015,9 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
           className="ao3-modal-backdrop"
           role="presentation"
           onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
-            if (event.target === event.currentTarget) setDownloadTarget(null);
+            if (!downloadBusy && event.target === event.currentTarget) {
+              setDownloadTarget(null);
+            }
           }}
         >
           <div className="ao3-modal" role="dialog" aria-modal="true">
@@ -1004,12 +1026,22 @@ export function Ao3Library({ onBack }: Ao3LibraryProps) {
             <p>
               Do you want to download “{downloadTarget.title}” as an EPUB file?
             </p>
+            {downloadError && <p className="ao3-modal-error">{downloadError}</p>}
             <div className="ao3-modal-actions">
-              <button type="button" onClick={() => setDownloadTarget(null)}>
+              <button
+                type="button"
+                disabled={downloadBusy}
+                onClick={() => setDownloadTarget(null)}
+              >
                 Cancel
               </button>
-              <button className="ao3-modal-primary" type="button" onClick={confirmDownload}>
-                Download
+              <button
+                className="ao3-modal-primary"
+                type="button"
+                disabled={downloadBusy}
+                onClick={() => void confirmDownload()}
+              >
+                {downloadBusy ? "Saving…" : "Download"}
               </button>
             </div>
           </div>
@@ -1218,9 +1250,11 @@ const AO3_LIBRARY_CSS = String.raw`
 .ao3-modal-kicker { color: var(--ao3-plum); font-size: .7rem; font-weight: 900; letter-spacing: .13em; }
 .ao3-modal h3 { margin: 5px 0 7px; font-size: 1.2rem; }
 .ao3-modal p { margin: 0; color: var(--ao3-muted); font-size: .9rem; line-height: 1.5; }
+.ao3-modal .ao3-modal-error { margin-top: 10px; color: #985b63; font-weight: 750; }
 .ao3-modal-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 18px; }
 .ao3-modal-actions button { min-height: 45px; border: 1px solid var(--ao3-border); border-radius: 12px; background: white; color: var(--ao3-ink); font: inherit; font-weight: 800; cursor: pointer; }
 .ao3-modal-actions .ao3-modal-primary { border-color: var(--ao3-plum); background: var(--ao3-plum); color: white; }
+.ao3-modal-actions button:disabled { cursor: wait; opacity: .62; }
 @keyframes ao3-spin { to { transform: rotate(360deg); } }
 @media (min-width: 720px) {
   .ao3-library { padding-left: 18px; padding-right: 18px; }
