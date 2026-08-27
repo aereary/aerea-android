@@ -21,7 +21,7 @@ android {
         applicationId "com.aereaary.aerea"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode aereaRunNumber
+        versionCode 260827000 + aereaRunNumber
         versionName "0.${aereaRunNumber}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

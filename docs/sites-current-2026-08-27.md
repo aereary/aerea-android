@@ -65,16 +65,29 @@ Drive ni el flujo AO3 -> Drive -> Supabase.
 No se eliminaron ni simplificaron funciones de Sites v175 para resolver la
 integracion.
 
+## Correcciones de seguridad previas al merge
+
+- Se elimino del arranque el reset automatico marcado como
+  `personal-content-reset-2026-08-24`, incluida la limpieza nativa, el saneamiento
+  destructivo del estado y el borrado automatico de archivos web.
+- Los payloads existentes se cargan y migran in-place sin vaciar contenido personal.
+- La restauracion de habitos incorporados de 2026-08-26 sigue siendo aditiva y
+  conserva incluso habitos personalizados que reutilicen un ID incorporado.
+- Android usa `versionCode 260827000 + aereaRunNumber` y conserva
+  `versionName "0.${aereaRunNumber}"`.
+
 ## Verificacion
 
 La rama se valida con:
 
 1. `npm ci`: correcto (803 paquetes instalados).
-2. `npm test`: correcto; build web, build nativo y 61/61 tests aprobados.
+2. `npm test`: correcto; build web, build nativo y 62/62 tests aprobados.
 3. `npx cap sync android`: correcto.
 4. `android/gradlew.bat assembleDebug --stacktrace`: `BUILD SUCCESSFUL`.
 5. `android/gradlew.bat testDebugUnitTest --stacktrace`: `BUILD SUCCESSFUL`.
 6. APK confirmado en `android/app/build/outputs/apk/debug/app-debug.apk`.
+7. APK inspeccionado: `versionCode 260827001`, `versionName 0.1` con el run
+   local predeterminado.
 
 No habia ningun dispositivo o emulador visible en `adb devices`, por lo que no se
 pudieron ejecutar en este entorno las comprobaciones manuales de arranque limpio,

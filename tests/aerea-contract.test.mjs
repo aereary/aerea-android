@@ -22,6 +22,10 @@ const manifestSource = await readFile(
   new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url),
   "utf8",
 );
+const androidBuildSource = await readFile(
+  new URL("../android/app/build.gradle", import.meta.url),
+  "utf8",
+);
 const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
@@ -616,21 +620,57 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
-test("runs the requested personal-content reset once without making updates destructive", () => {
-  assert.match(pageSource, /personal-content-reset-2026-08-24/);
-  assert.match(pageSource, /resetUserCreatedContent/);
-  assert.match(pageSource, /AereaStorage\.clearPersonalContent\(\)/);
-  assert.match(pageSource, /Compatibility with the last signed preview/);
-  assert.match(pageSource, /future updates keep the same marker and preserve data/);
-  assert.match(nativeStorageSource, /public void clearPersonalContent/);
-  for (const table of ["sketches", "study_files", "library_files"]) {
-    assert.match(
-      nativeStorageSource,
-      new RegExp(`writable\\.delete\\(\\"${table}\\", null, null\\)`),
-    );
+test("preserves all personal content during normal startup and APK updates", () => {
+  const loadStateSource = pageSource.slice(
+    pageSource.indexOf("async function loadState()"),
+    pageSource.indexOf("async function loadSketches()"),
+  );
+  const loadStudyFilesSource = pageSource.slice(
+    pageSource.indexOf("async function loadStudyFiles()"),
+    pageSource.indexOf("void loadState().then"),
+  );
+
+  assert.match(loadStateSource, /reconcileCloudState\(payload\)/);
+  assert.match(loadStateSource, /Older payloads are migrated in place/);
+  for (const preservedField of [
+    "reminders",
+    "habits",
+    "entries",
+    "calendarEvents",
+    "tasks",
+    "inboxItems",
+    "postIts",
+    "postItGroups",
+    "libraryItems",
+    "libraryCollections",
+    "classes",
+    "classTimetable",
+    "recordings",
+    "studyNotebooks",
+    "studyNotes",
+    "studyTasks",
+    "calendarMemos",
+    "pdfAnnotations",
+    "pdfPageNotes",
+    "epubReadingStates",
+  ]) {
+    assert.match(loadStateSource, new RegExp(`state\\.${preservedField}`));
   }
-  assert.doesNotMatch(nativeStorageSource, /writable\.delete\("documents"/);
+  assert.doesNotMatch(pageSource, /personal-content-reset-2026-08-24/);
+  assert.doesNotMatch(pageSource, /CLEAN_START_VERSION|BROWSER_CONTENT_RESET_KEY/);
+  assert.doesNotMatch(pageSource, /resetUserCreatedContent/);
+  assert.doesNotMatch(pageSource, /AereaStorage\.clearPersonalContent\(\)/);
+  assert.doesNotMatch(loadStateSource, /writeBrowserSketches\(\[\]\)/);
+  assert.doesNotMatch(loadStudyFilesSource, /method: "DELETE"/);
+  assert.doesNotMatch(loadStudyFilesSource, /payload = \{ files: \[\] \}/);
+  assert.match(nativeStorageSource, /public void clearPersonalContent/);
   assert.doesNotMatch(pageSource, /localStorage\.clear\(/);
+});
+
+test("uses a monotonic Android versionCode while preserving versionName", () => {
+  assert.match(androidBuildSource, /versionCode 260827000 \+ aereaRunNumber/);
+  assert.match(androidBuildSource, /versionName "0\.\$\{aereaRunNumber\}"/);
+  assert.doesNotMatch(androidBuildSource, /^\s*versionCode aereaRunNumber\s*$/m);
 });
 
 test("ships launcher-safe widgets with a useful empty first render", () => {
@@ -809,6 +849,10 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
 });
 
 test("restores the original built-in habits once without replacing saved habits", () => {
+  const restoreHabitsSource = pageSource.slice(
+    pageSource.indexOf("function restoreBuiltInHabits"),
+    pageSource.indexOf("const habitColorOptions"),
+  );
   for (const habit of [
     "Drink 6 glasses of water",
     "Study for at least 25 minutes",
@@ -821,8 +865,11 @@ test("restores the original built-in habits once without replacing saved habits"
     pageSource,
     /const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26"/,
   );
-  assert.match(pageSource, /function restoreBuiltInHabits\(savedHabits: Habit\[\]\)/);
-  assert.match(pageSource, /return \[\.\.\.savedHabits, \.\.\.missingHabits\]/);
+  assert.match(restoreHabitsSource, /function restoreBuiltInHabits\(savedHabits: Habit\[\]\)/);
+  assert.match(restoreHabitsSource, /existingTitles\.has\(habit\.title\.toLowerCase\(\)\)/);
+  assert.doesNotMatch(restoreHabitsSource, /existingIds\.has\(habit\.id\) \|\|/);
+  assert.match(restoreHabitsSource, /if \(usedIds\.has\(id\)\)/);
+  assert.match(restoreHabitsSource, /return \[\.\.\.savedHabits, \.\.\.missingHabits\]/);
   assert.match(
     pageSource,
     /habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION/,
