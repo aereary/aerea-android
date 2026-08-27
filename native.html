@@ -5,9 +5,52 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="theme-color" content="transparent" />
     <title>aérea</title>
+    <style>
+      html,body{background:#eef1f3}
+      html.appearance-pending,html.appearance-pending body{background:#eef1f3!important}
+      html.appearance-pending #root{visibility:hidden}
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (() => {
+        const key = "aerea-native-appearance-v1";
+        const themes = [
+          "storybook", "otter", "strawberry", "duckpond", "bunnybakery",
+          "mooncat", "whalesong", "ribbonpromise", "gentlekitten",
+          "softguidance", "velvetrest", "rosegrid", "peachparlor",
+          "mintletter", "blueberrynight", "duckmail", "moonquilt", "custom",
+        ];
+        const pending = () => document.documentElement.classList.add("appearance-pending");
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return pending();
+          const appearance = JSON.parse(raw);
+          if (
+            !appearance ||
+            typeof appearance.appTheme !== "string" ||
+            !themes.includes(appearance.appTheme) ||
+            !["light", "dark"].includes(appearance.colorMode) ||
+            typeof appearance.background !== "string" ||
+            !appearance.background.trim() ||
+            (appearance.appTheme === "custom" &&
+              (!appearance.customTheme ||
+                ["accent", "background", "highlight", "art"].some(
+                  (field) => typeof appearance.customTheme[field] !== "string",
+                )))
+          ) return pending();
+          document.documentElement.style.background = appearance.background;
+          document.body.style.background = appearance.background;
+          if (typeof appearance.themeColor === "string" && appearance.themeColor.trim()) {
+            document.querySelector('meta[name="theme-color"]')
+              ?.setAttribute("content", appearance.themeColor);
+          }
+        } catch {
+          pending();
+        }
+      })();
+    </script>
     <script type="module" src="/app/native-entry.tsx"></script>
   </body>
 </html>

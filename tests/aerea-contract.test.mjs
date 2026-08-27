@@ -6,6 +6,18 @@ const pageSource = await readFile(
   new URL("../app/page.tsx", import.meta.url),
   "utf8",
 );
+const nativeAppearanceSource = await readFile(
+  new URL("../app/native-appearance.ts", import.meta.url),
+  "utf8",
+);
+const nativeHtmlSource = await readFile(
+  new URL("../native.html", import.meta.url),
+  "utf8",
+);
+const webLayoutSource = await readFile(
+  new URL("../app/layout.tsx", import.meta.url),
+  "utf8",
+);
 const cssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
@@ -644,6 +656,128 @@ test("applies the saved local appearance before waiting for cloud reconciliation
   );
   assert.match(loadStateSource, /if \(state\.colorMode\) setColorMode\(state\.colorMode\)/);
   assert.match(loadStateSource, /applySavedAppearance\(state\)/);
+});
+
+test("boots native React state synchronously from a validated appearance cache", () => {
+  const cacheStateIndex = pageSource.indexOf(
+    "const [cachedNativeAppearance] = useState",
+  );
+  const themeStateIndex = pageSource.indexOf(
+    "const [appTheme, setAppTheme] = useState",
+  );
+
+  assert.ok(cacheStateIndex >= 0, "native appearance should be read during initialization");
+  assert.ok(
+    cacheStateIndex < themeStateIndex,
+    "the appearance cache must be available before the first theme state",
+  );
+  assert.match(
+    pageSource,
+    /if \(!isNative\(\)\) return null;[\s\S]{0,160}readNativeAppearance\(\)/,
+  );
+  assert.match(
+    pageSource,
+    /savedTheme === "custom" \|\|[\s\S]{0,100}themeOptions\.some\(\(theme\) => theme\.id === savedTheme\)/,
+  );
+  assert.match(
+    pageSource,
+    /useState<AppTheme>\(\(\) => \{[\s\S]{0,260}cachedNativeAppearance\?\.appTheme/,
+  );
+  assert.doesNotMatch(pageSource, /useState<AppTheme>\("storybook"\)/);
+  assert.match(
+    pageSource,
+    /cachedNativeAppearance\?\.colorMode \?\? "light"/,
+  );
+  assert.match(
+    pageSource,
+    /cachedNativeAppearance\?\.appTheme === "custom"[\s\S]{0,100}cachedNativeAppearance\.customTheme/,
+  );
+});
+
+test("runs the native appearance bootstrap before loading the React bundle", () => {
+  const bootstrapIndex = nativeHtmlSource.indexOf(
+    'const key = "aerea-native-appearance-v1"',
+  );
+  const moduleIndex = nativeHtmlSource.indexOf(
+    '<script type="module" src="/app/native-entry.tsx"></script>',
+  );
+
+  assert.ok(bootstrapIndex >= 0, "native.html should contain the synchronous bootstrap");
+  assert.ok(moduleIndex >= 0, "native.html should load the native React entry");
+  assert.ok(
+    bootstrapIndex < moduleIndex,
+    "the cached background must be applied before the bundle starts",
+  );
+  assert.match(nativeHtmlSource, /localStorage\.getItem\(key\)/);
+  assert.match(nativeHtmlSource, /themes\.includes\(appearance\.appTheme\)/);
+  assert.match(nativeHtmlSource, /document\.documentElement\.style\.background = appearance\.background/);
+  assert.match(nativeHtmlSource, /meta\[name="theme-color"\]/);
+});
+
+test("keeps a cache miss hidden until local native appearance has rendered", () => {
+  const loadStateSource = pageSource.slice(
+    pageSource.indexOf("async function loadState()"),
+    pageSource.indexOf("async function loadSketches()"),
+  );
+  const localReadIndex = loadStateSource.indexOf("await AereaStorage.getState()");
+  const localAppearanceIndex = loadStateSource.indexOf(
+    "applySavedAppearance(payload.state)",
+  );
+  const appearanceCommitIndex = loadStateSource.indexOf(
+    "appearanceCommitResolverRef.current = resolve",
+  );
+  const reconciliationIndex = loadStateSource.indexOf(
+    "await reconcileCloudState(payload)",
+  );
+
+  assert.match(
+    nativeHtmlSource,
+    /html\.appearance-pending #root\{visibility:hidden\}/,
+  );
+  assert.match(nativeHtmlSource, /if \(!raw\) return pending\(\)/);
+  assert.ok(localReadIndex >= 0, "native startup should read AereaStorage");
+  assert.ok(localReadIndex < localAppearanceIndex);
+  assert.ok(localAppearanceIndex < appearanceCommitIndex);
+  assert.ok(appearanceCommitIndex < reconciliationIndex);
+  assert.match(
+    pageSource,
+    /useLayoutEffect\(\(\) => \{[\s\S]{0,1200}classList\.remove\("appearance-pending"\)[\s\S]{0,180}resolveAppearanceCommit\?\.\(\)/,
+  );
+});
+
+test("updates only the native visual cache after appearance hydration", () => {
+  const appearanceEffectSource = pageSource.slice(
+    pageSource.indexOf("useLayoutEffect(() =>"),
+    pageSource.indexOf("useEffect(() =>", pageSource.indexOf("useLayoutEffect(() =>")),
+  );
+
+  assert.match(
+    appearanceEffectSource,
+    /if \(!isNative\(\) \|\| !appearanceHydrated\) return/,
+  );
+  assert.match(appearanceEffectSource, /writeNativeAppearance\(\{/);
+  for (const field of ["appTheme", "colorMode", "customTheme"]) {
+    assert.match(appearanceEffectSource, new RegExp(field));
+  }
+  assert.match(
+    appearanceEffectSource,
+    /\[appearanceHydrated, appTheme, colorMode, customTheme\]/,
+  );
+  assert.doesNotMatch(appearanceEffectSource, /setTimeout|650/);
+  assert.match(nativeAppearanceSource, /try \{/);
+  assert.match(nativeAppearanceSource, /catch \{/);
+  assert.match(nativeAppearanceSource, /window\.localStorage\.getItem/);
+  assert.match(nativeAppearanceSource, /window\.localStorage\.setItem/);
+  for (const personalField of [
+    "habits",
+    "postIts",
+    "calendarEvents",
+    "studyFiles",
+    "recordings",
+  ]) {
+    assert.doesNotMatch(nativeAppearanceSource, new RegExp(personalField));
+  }
+  assert.doesNotMatch(webLayoutSource, /native-appearance|aerea-native-appearance-v1/);
 });
 
 test("preserves all personal content during normal startup and APK updates", () => {
