@@ -14,19 +14,61 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @CapacitorPlugin(name = "AereaStorage")
 public class AereaStoragePlugin extends Plugin {
+    private static final long MAX_STUDY_FILE_BYTES = 40L * 1024L * 1024L;
+    private static final Pattern DRIVE_FILE_ID = Pattern.compile("^[A-Za-z0-9_-]{8,200}$");
     private AereaDatabase database;
 
     @Override
     public void load() {
         database = new AereaDatabase(getContext());
+    }
+
+    private JSObject studyFileJson(String id, String name, long size, long createdAt, long updatedAt) {
+        JSObject file = new JSObject();
+        file.put("id", id);
+        file.put("name", name);
+        file.put("mediaType", "application/epub+zip");
+        file.put("kind", "epub");
+        file.put("size", size);
+        file.put("createdAt", Instant.ofEpochMilli(createdAt).toString());
+        file.put("updatedAt", Instant.ofEpochMilli(updatedAt).toString());
+        return file;
+    }
+
+    private String safeEpubName(String requestedName, int workId) {
+        String name = requestedName == null ? "" : requestedName
+                .replace('\u0000', ' ')
+                .replace('\r', ' ')
+                .replace('\n', ' ')
+                .trim();
+        if (name.isEmpty()) name = "AO3 work " + workId + ".epub";
+        if (!name.toLowerCase().endsWith(".epub")) name += ".epub";
+        if (name.length() > 180) {
+            name = name.substring(0, 175).trim() + ".epub";
+        }
+        return name;
+    }
+
+    private boolean isEpubArchive(File file) throws Exception {
+        try (FileInputStream stream = new FileInputStream(file)) {
+            return stream.read() == 'P' && stream.read() == 'K';
+        }
     }
 
     @PluginMethod
@@ -217,6 +259,151 @@ public class AereaStoragePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void downloadAo3Epub(PluginCall call) {
+        String requestedDriveFileId = call.getString("driveFileId");
+        Integer workId = call.getInt("workId");
+        if (requestedDriveFileId == null || workId == null || workId <= 0) {
+            call.reject("A Drive file id and AO3 work id are required");
+            return;
+        }
+        String driveFileId = requestedDriveFileId.trim();
+        if (!DRIVE_FILE_ID.matcher(driveFileId).matches()) {
+            call.reject("The Drive file id is invalid");
+            return;
+        }
+        String fileName = safeEpubName(call.getString("fileName"), workId);
+
+        // Capacitor dispatches plugin methods on its worker HandlerThread.
+            String existingId = null;
+            String existingName = null;
+            String existingPath = null;
+            String existingDriveFileId = null;
+            long existingSize = 0;
+            long existingCreatedAt = 0;
+            long existingUpdatedAt = 0;
+            try (Cursor cursor = database.getReadableDatabase().query(
+                    "study_files",
+                    new String[]{"id", "name", "path", "size", "created_at", "updated_at", "source_drive_file_id"},
+                    "source_drive_file_id=? OR source_work_id=?",
+                    new String[]{driveFileId, String.valueOf(workId)},
+                    null, null, "updated_at DESC", "1")) {
+                if (cursor.moveToFirst()) {
+                    existingId = cursor.getString(0);
+                    existingName = cursor.getString(1);
+                    existingPath = cursor.getString(2);
+                    existingSize = cursor.getLong(3);
+                    existingCreatedAt = cursor.getLong(4);
+                    existingUpdatedAt = cursor.getLong(5);
+                    existingDriveFileId = cursor.getString(6);
+                }
+            } catch (Exception error) {
+                call.reject("Could not check Your Library for this EPUB", error);
+                return;
+            }
+
+            File existingFile = existingPath == null ? null : new File(existingPath);
+            if (driveFileId.equals(existingDriveFileId) && existingFile != null && existingFile.isFile()) {
+                JSObject result = new JSObject();
+                result.put("file", studyFileJson(
+                        existingId, existingName, existingSize, existingCreatedAt, existingUpdatedAt));
+                result.put("alreadyStored", true);
+                result.put("replaced", false);
+                call.resolve(result);
+                return;
+            }
+
+            String id = existingId == null ? UUID.randomUUID().toString() : existingId;
+            long now = System.currentTimeMillis();
+            long createdAt = existingId == null ? now : existingCreatedAt;
+            File directory = new File(getContext().getFilesDir(), "study-files");
+            File stored = existingFile == null ? new File(directory, id + ".epub") : existingFile;
+            File pending = new File(directory, id + ".epub.download");
+            HttpURLConnection connection = null;
+            try {
+                if (!directory.exists() && !directory.mkdirs()) {
+                    throw new IllegalStateException("Could not create study file directory");
+                }
+                URL url = new URL(
+                        "https://drive.usercontent.google.com/download?id=" +
+                        URLEncoder.encode(driveFileId, StandardCharsets.UTF_8.toString()) +
+                        "&export=download&confirm=t");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setInstanceFollowRedirects(true);
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(20_000);
+                connection.setReadTimeout(60_000);
+                connection.setRequestProperty("Accept", "application/epub+zip,application/zip,*/*");
+                connection.setRequestProperty("User-Agent", "aerea-android");
+
+                int status = connection.getResponseCode();
+                if (status < 200 || status >= 300) {
+                    throw new IllegalStateException("Google Drive returned HTTP " + status);
+                }
+                long declaredLength = connection.getContentLengthLong();
+                if (declaredLength > MAX_STUDY_FILE_BYTES) {
+                    throw new IllegalStateException("This EPUB is larger than 40 MB");
+                }
+
+                long size = 0;
+                try (BufferedInputStream input = new BufferedInputStream(connection.getInputStream());
+                     FileOutputStream output = new FileOutputStream(pending)) {
+                    byte[] buffer = new byte[16 * 1024];
+                    int count;
+                    while ((count = input.read(buffer)) != -1) {
+                        size += count;
+                        if (size > MAX_STUDY_FILE_BYTES) {
+                            throw new IllegalStateException("This EPUB is larger than 40 MB");
+                        }
+                        output.write(buffer, 0, count);
+                    }
+                }
+                if (size == 0 || !isEpubArchive(pending)) {
+                    throw new IllegalStateException("Google Drive did not return a valid EPUB file");
+                }
+
+                try {
+                    Files.move(
+                            pending.toPath(), stored.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING,
+                            StandardCopyOption.ATOMIC_MOVE);
+                } catch (Exception atomicMoveError) {
+                    Files.move(
+                            pending.toPath(), stored.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                ContentValues values = new ContentValues();
+                values.put("name", fileName);
+                values.put("media_type", "application/epub+zip");
+                values.put("kind", "epub");
+                values.put("path", stored.getAbsolutePath());
+                values.put("size", size);
+                values.put("updated_at", now);
+                values.put("source_drive_file_id", driveFileId);
+                values.put("source_work_id", workId);
+                if (existingId == null) {
+                    values.put("id", id);
+                    values.put("created_at", createdAt);
+                    database.getWritableDatabase().insertOrThrow("study_files", null, values);
+                } else {
+                    database.getWritableDatabase().update(
+                            "study_files", values, "id=?", new String[]{id});
+                }
+
+                JSObject result = new JSObject();
+                result.put("file", studyFileJson(id, fileName, size, createdAt, now));
+                result.put("alreadyStored", false);
+                result.put("replaced", existingId != null);
+                call.resolve(result);
+            } catch (Exception error) {
+                pending.delete();
+                call.reject("Could not save this EPUB from Google Drive", error);
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+    }
+
+    @PluginMethod
     public void getDocument(PluginCall call) {
         String id = call.getString("id");
         if (id == null) {
@@ -345,7 +532,7 @@ public class AereaStoragePlugin extends Plugin {
 
     static class AereaDatabase extends SQLiteOpenHelper {
         AereaDatabase(Context context) {
-            super(context, "aerea-private.db", null, 4);
+            super(context, "aerea-private.db", null, 5);
         }
 
         @Override
@@ -368,8 +555,14 @@ public class AereaStoragePlugin extends Plugin {
                     "kind TEXT NOT NULL," +
                     "path TEXT NOT NULL," +
                     "size INTEGER NOT NULL," +
+                    "source_drive_file_id TEXT," +
+                    "source_work_id INTEGER," +
                     "created_at INTEGER NOT NULL," +
                     "updated_at INTEGER NOT NULL)");
+            db.execSQL("CREATE UNIQUE INDEX study_files_ao3_drive_idx " +
+                    "ON study_files(source_drive_file_id) WHERE source_drive_file_id IS NOT NULL");
+            db.execSQL("CREATE UNIQUE INDEX study_files_ao3_work_idx " +
+                    "ON study_files(source_work_id) WHERE source_work_id IS NOT NULL");
             db.execSQL("CREATE TABLE library_files (" +
                     "id TEXT PRIMARY KEY NOT NULL," +
                     "name TEXT NOT NULL," +
@@ -409,6 +602,14 @@ public class AereaStoragePlugin extends Plugin {
                         "path TEXT NOT NULL," +
                         "created_at INTEGER NOT NULL," +
                         "updated_at INTEGER NOT NULL)");
+            }
+            if (oldVersion < 5) {
+                db.execSQL("ALTER TABLE study_files ADD COLUMN source_drive_file_id TEXT");
+                db.execSQL("ALTER TABLE study_files ADD COLUMN source_work_id INTEGER");
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS study_files_ao3_drive_idx " +
+                        "ON study_files(source_drive_file_id) WHERE source_drive_file_id IS NOT NULL");
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS study_files_ao3_work_idx " +
+                        "ON study_files(source_work_id) WHERE source_work_id IS NOT NULL");
             }
         }
     }

@@ -1,6 +1,9 @@
 "use client";
 
-import { Ao3Library } from "./ao3-library";
+import {
+  Ao3Library,
+  type Ao3EpubDownloadTarget,
+} from "./ao3-library";
 import {
   Capacitor,
   registerPlugin,
@@ -182,6 +185,15 @@ type AereaStoragePlugin = {
   }): Promise<{ file: StudyFileItem }>;
   getDocument(options: { id: string }): Promise<{ dataUrl: string }>;
   deleteDocument(options: { id: string }): Promise<void>;
+  downloadAo3Epub(options: {
+    driveFileId: string;
+    workId: number;
+    fileName: string;
+  }): Promise<{
+    file: StudyFileItem;
+    alreadyStored: boolean;
+    replaced: boolean;
+  }>;
   saveFile(options: {
     name: string;
     mimeType: string;
@@ -4323,6 +4335,31 @@ export default function Home() {
     }
     setAo3LibraryOpen(false);
   }, []);
+
+  const saveAo3Epub = async (target: Ao3EpubDownloadTarget) => {
+    if (!isNative()) {
+      throw new Error("Guardá este EPUB desde la app Android de aérea.");
+    }
+    const result = await AereaStorage.downloadAo3Epub({
+      driveFileId: target.driveFileId,
+      workId: target.workId,
+      fileName: target.fileName || `${target.title}.epub`,
+    });
+    setStudyFiles((current) => {
+      const existing = current.find((file) => file.id === result.file.id);
+      const saved = {
+        ...result.file,
+        favorite: existing?.favorite,
+        collectionIds: existing?.collectionIds,
+        lastOpenedAt: existing?.lastOpenedAt,
+        readerLocation: result.replaced
+          ? undefined
+          : existing?.readerLocation,
+      };
+      return [saved, ...current.filter((file) => file.id !== saved.id)];
+    });
+    return result;
+  };
 
   const brandOpensAo3 =
     activeTab === "spaces" && space === "library" && !calendarOpen;
@@ -9055,7 +9092,9 @@ export default function Home() {
         </nav>}
       </section>
 
-      {ao3LibraryOpen && <Ao3Library onBack={closeAo3Library} />}
+      {ao3LibraryOpen && (
+        <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+      )}
 
       {aereaHubOpen && (
         <div
