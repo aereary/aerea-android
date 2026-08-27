@@ -620,6 +620,32 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
+test("applies the saved local appearance before waiting for cloud reconciliation", () => {
+  const loadStateSource = pageSource.slice(
+    pageSource.indexOf("async function loadState()"),
+    pageSource.indexOf("async function loadSketches()"),
+  );
+  const localAppearanceIndex = loadStateSource.indexOf(
+    "applySavedAppearance(payload.state)",
+  );
+  const reconciliationIndex = loadStateSource.indexOf(
+    "await reconcileCloudState(payload)",
+  );
+
+  assert.ok(localAppearanceIndex >= 0, "the local appearance should be applied");
+  assert.ok(reconciliationIndex >= 0, "cloud reconciliation should remain enabled");
+  assert.ok(
+    localAppearanceIndex < reconciliationIndex,
+    "the local appearance must render before waiting for cloud state",
+  );
+  assert.match(
+    loadStateSource,
+    /savedTheme === "custom" \|\|[\s\S]{0,100}themeOptions\.some\(\(theme\) => theme\.id === savedTheme\)/,
+  );
+  assert.match(loadStateSource, /if \(state\.colorMode\) setColorMode\(state\.colorMode\)/);
+  assert.match(loadStateSource, /applySavedAppearance\(state\)/);
+});
+
 test("preserves all personal content during normal startup and APK updates", () => {
   const loadStateSource = pageSource.slice(
     pageSource.indexOf("async function loadState()"),
@@ -1109,6 +1135,49 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(cssSource, /\.post-it-editor-backdrop \{[\s\S]*align-items:center;[\s\S]*justify-content:center/);
   assert.match(cssSource, /\.movable-post-it p \{ font-size:var\(--post-it-text-size,18px\); height:100%; line-height:1\.22; max-height:none; \}/);
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
+});
+
+test("previews post-it dragging directly and commits the final positions once", () => {
+  const movePostItSource = pageSource.slice(
+    pageSource.indexOf("const movePostIt ="),
+    pageSource.indexOf("const finishPostItDrag ="),
+  );
+  const finishPostItDragSource = pageSource.slice(
+    pageSource.indexOf("const finishPostItDrag ="),
+    pageSource.indexOf("const openCalendarAtToday ="),
+  );
+
+  assert.doesNotMatch(movePostItSource, /setPostIts\(/);
+  assert.doesNotMatch(movePostItSource, /recordAction\(/);
+  assert.match(movePostItSource, /drag\.groupPositions\.map/);
+  assert.match(movePostItSource, /Math\.max\(9, Math\.min\(91/);
+  assert.match(movePostItSource, /Math\.max\(3, Math\.min\(97/);
+  assert.match(movePostItSource, /style\.setProperty\([\s\S]{0,80}"--post-it-drag-x"/);
+  assert.match(movePostItSource, /style\.setProperty\([\s\S]{0,80}"--post-it-drag-y"/);
+  assert.equal(
+    [...finishPostItDragSource.matchAll(/setPostIts\(/g)].length,
+    1,
+    "pointer release should persist post-it positions once",
+  );
+  assert.equal(
+    [...finishPostItDragSource.matchAll(/recordAction\("Moved post-it"\)/g)].length,
+    1,
+    "pointer release should record one history action",
+  );
+  assert.equal(
+    [...finishPostItDragSource.matchAll(/new Date\(\)\.toISOString\(\)/g)].length,
+    1,
+    "pointer release should calculate updatedAt once",
+  );
+  assert.match(finishPostItDragSource, /window\.requestAnimationFrame\(clearPreview\)/);
+  assert.match(pageSource, /data-post-it-id=\{postIt\.id\}/);
+  assert.match(
+    cssSource,
+    /transform:translate3d\(var\(--post-it-drag-x\),var\(--post-it-drag-y\),0\)/,
+  );
+  assert.match(cssSource, /will-change:transform/);
+  assert.match(cssSource, /backface-visibility:hidden/);
+  assert.match(cssSource, /\.movable-post-it > p,[\s\S]{0,50}\.post-it-tape \{ pointer-events:none; \}/);
 });
 
 test("rejects impossible event ranges and keeps the restored journal footer", () => {
