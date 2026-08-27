@@ -2283,8 +2283,10 @@ export default function Home() {
     startPostItX: number;
     startPostItY: number;
     locked: boolean;
-    historyRecorded: boolean;
+    moved: boolean;
     groupPositions: Array<{ id: string; x: number; y: number }>;
+    latestPositions: Array<{ id: string; x: number; y: number }>;
+    previewElements: Array<{ id: string; element: HTMLElement }>;
   } | null>(null);
   const postItLongPressRef = useRef<number | null>(null);
   const postItPaletteTouchStartRef = useRef<number | null>(null);
@@ -2620,6 +2622,22 @@ export default function Home() {
             habitRestoreVersion?: string;
           } | null;
         };
+        const applySavedAppearance = (state: typeof payload.state) => {
+          if (!state) return;
+          const savedTheme = state.appTheme;
+          if (
+            savedTheme &&
+            (savedTheme === "custom" ||
+              themeOptions.some((theme) => theme.id === savedTheme))
+          ) {
+            setAppTheme(savedTheme);
+          } else {
+            setAppTheme("storybook");
+          }
+          if (state.colorMode) setColorMode(state.colorMode);
+        };
+
+        if (!cancelled) applySavedAppearance(payload.state);
         payload = (await reconcileCloudState(payload)) || payload;
         if (
           payload.state &&
@@ -2778,17 +2796,7 @@ export default function Home() {
               ),
             );
           }
-          const savedTheme = state.appTheme;
-          if (
-            savedTheme &&
-            (savedTheme === "custom" ||
-              themeOptions.some((theme) => theme.id === savedTheme))
-          ) {
-            setAppTheme(savedTheme);
-          } else {
-            setAppTheme("storybook");
-          }
-          if (state.colorMode) setColorMode(state.colorMode);
+          applySavedAppearance(state);
           if (typeof state.simplifiedCalendarMode === "boolean") {
             setSimplifiedCalendarMode(state.simplifiedCalendarMode);
           }
@@ -5277,6 +5285,20 @@ export default function Home() {
     const bounds = canvas.getBoundingClientRect();
     const centerX = bounds.left + (postIt.x / 100) * bounds.width;
     const centerY = bounds.top + (postIt.y / 100) * bounds.height;
+    const groupPositions = postIt.groupId
+      ? postIts
+          .filter((item) => item.groupId === postIt.groupId)
+          .map((item) => ({ id: item.id, x: item.x, y: item.y }))
+      : [{ id: postIt.id, x: postIt.x, y: postIt.y }];
+    const groupIds = new Set(groupPositions.map((item) => item.id));
+    const previewElements = Array.from(
+      canvas.querySelectorAll<HTMLElement>("[data-post-it-id]"),
+    )
+      .filter((element) => {
+        const id = element.dataset.postItId;
+        return Boolean(id && groupIds.has(id));
+      })
+      .map((element) => ({ id: element.dataset.postItId!, element }));
     postItDragRef.current = {
       id: postIt.id,
       pointerId: event.pointerId,
@@ -5288,12 +5310,10 @@ export default function Home() {
       startPostItX: postIt.x,
       startPostItY: postIt.y,
       locked:false,
-      historyRecorded: false,
-      groupPositions: postIt.groupId
-        ? postIts
-            .filter((item) => item.groupId === postIt.groupId)
-            .map((item) => ({ id: item.id, x: item.x, y: item.y }))
-        : [{ id: postIt.id, x: postIt.x, y: postIt.y }],
+      moved: false,
+      groupPositions,
+      latestPositions: groupPositions,
+      previewElements,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
@@ -5303,6 +5323,10 @@ export default function Home() {
       if (activeDrag.target.hasPointerCapture(activeDrag.pointerId)) {
         activeDrag.target.releasePointerCapture(activeDrag.pointerId);
       }
+      activeDrag.previewElements.forEach(({ element }) => {
+        element.style.removeProperty("--post-it-drag-x");
+        element.style.removeProperty("--post-it-drag-y");
+      });
       postItDragRef.current = null;
       navigator.vibrate?.(18);
       openPostItEditor(postIt);
@@ -5319,10 +5343,6 @@ export default function Home() {
     }
     if (drag.locked) return;
     const bounds = canvas.getBoundingClientRect();
-    if (!drag.historyRecorded) {
-      recordAction("Moved post-it");
-      drag.historyRecorded = true;
-    }
     const x = Math.max(
       9,
       Math.min(91, ((event.clientX - bounds.left - drag.offsetX) / bounds.width) * 100),
@@ -5333,18 +5353,30 @@ export default function Home() {
     );
     const deltaX = x - drag.startPostItX;
     const deltaY = y - drag.startPostItY;
-    setPostIts((current) =>
-      current.map((note) => {
-        const origin = drag.groupPositions.find((item) => item.id === note.id);
-        if (!origin) return note;
-        return {
-          ...note,
-          x: Math.max(9, Math.min(91, origin.x + deltaX)),
-          y: Math.max(3, Math.min(97, origin.y + deltaY)),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    );
+    const latestPositions = drag.groupPositions.map((origin) => ({
+      id: origin.id,
+      x: Math.max(9, Math.min(91, origin.x + deltaX)),
+      y: Math.max(3, Math.min(97, origin.y + deltaY)),
+    }));
+    drag.latestPositions = latestPositions;
+    drag.moved = latestPositions.some((position) => {
+      const origin = drag.groupPositions.find((item) => item.id === position.id);
+      return Boolean(origin && (position.x !== origin.x || position.y !== origin.y));
+    });
+
+    drag.previewElements.forEach(({ id, element }) => {
+      const origin = drag.groupPositions.find((item) => item.id === id);
+      const position = latestPositions.find((item) => item.id === id);
+      if (!origin || !position) return;
+      element.style.setProperty(
+        "--post-it-drag-x",
+        `${((position.x - origin.x) / 100) * bounds.width}px`,
+      );
+      element.style.setProperty(
+        "--post-it-drag-y",
+        `${((position.y - origin.y) / 100) * bounds.height}px`,
+      );
+    });
   };
 
   const finishPostItDrag = (event: ReactPointerEvent<HTMLElement>) => {
@@ -5355,12 +5387,38 @@ export default function Home() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (drag.moved) {
+      recordAction("Moved post-it");
+      const updatedAt = new Date().toISOString();
+      const finalPositions = new Map(
+        drag.latestPositions.map((position) => [position.id, position]),
+      );
+      setPostIts((current) =>
+        current.map((note) => {
+          const position = finalPositions.get(note.id);
+          return position
+            ? { ...note, x: position.x, y: position.y, updatedAt }
+            : note;
+        }),
+      );
+    }
     if (
-      !drag.historyRecorded &&
+      !drag.moved &&
       selectedPostItIds.length > 0 &&
       !selectedPostItIds.includes(drag.id)
     ) {
       setSelectedPostItIds((current) => [...current, drag.id]);
+    }
+    const clearPreview = () => {
+      drag.previewElements.forEach(({ element }) => {
+        element.style.removeProperty("--post-it-drag-x");
+        element.style.removeProperty("--post-it-drag-y");
+      });
+    };
+    if (drag.moved) {
+      window.requestAnimationFrame(clearPreview);
+    } else {
+      clearPreview();
     }
     postItDragRef.current = null;
   };
@@ -9544,6 +9602,7 @@ export default function Home() {
           >
             {visiblePostIts.map((postIt) => (
               <article
+                data-post-it-id={postIt.id}
                 className={`movable-post-it ${postIt.color} ${
                   selectedPostItIds.includes(postIt.id) ? "multi-selected" : ""
                 }`}
