@@ -304,7 +304,18 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /scheduleEventIcon/);
   assert.match(pageSource, /agenda-v2-event-extras/);
   assert.match(pageSource, /className=\{`agenda-v2-event[\s\S]*openEventDetail\(event\)/);
-  assert.match(pageSource, /className="event-detail-edit"[\s\S]*openEventEditor\(event\)/);
+  assert.match(
+    pageSource,
+    /className="day-summary-add event-detail-add"[\s\S]*openNewEvent\(eventDate\)/,
+  );
+  assert.match(
+    pageSource,
+    /const eventDate = selectedEventDetail\.date;[\s\S]{0,600}setCalendarOpen\(true\);[\s\S]{0,120}openNewEvent\(eventDate\)/,
+  );
+  assert.match(
+    pageSource,
+    /calendarDays\.map\([\s\S]{0,700}!hiddenCalendarSources\.includes\([\s\S]{0,100}event\.calendar \|\| "Personal"/,
+  );
   assert.match(pageSource, /SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /scheduleMarks/);
   assert.match(pageSource, /flushOverlapGroup/);
@@ -343,6 +354,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(cssSource, /Schedule composition v7/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal \.agenda-v3-scene[\s\S]*height:100%/);
   assert.match(cssSource, /\.calendar-modal\.calendar-expanded\.agenda-v2-modal::after[\s\S]*background:var\(--cream\)[\s\S]*height:142px/);
+  assert.match(cssSource, /On phones the schedule meets the glass edges without showing outer corners[\s\S]*border-radius:0!important/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav::after/);
   assert.doesNotMatch(cssSource, /agenda-v2-home-nav \.nav-item/);
   assert.match(cssSource, /The daily schedule starts with its week strip; the old greeting card is gone/);
@@ -360,7 +372,11 @@ test("searches every event from the compact calendar", () => {
   assert.match(pageSource, /aria-label="Search calendar events"/);
   assert.match(pageSource, /placeholder="Search events"/);
   assert.match(pageSource, /title · calendar · notes · place/);
-  assert.match(pageSource, /setSelectedEventDetail\([\s\S]*calendarEventAtOccurrence/);
+  assert.match(
+    pageSource,
+    /className="calendar-search-result"[\s\S]{0,900}setSelectedCalendarDate\(date\);[\s\S]{0,120}openEventEditor\(event\)/,
+  );
+  assert.match(pageSource, /♡ Tap a result to edit the event/);
   assert.match(cssSource, /\.calendar-search-trigger/);
   assert.match(cssSource, /\.calendar-search-screen/);
   assert.match(cssSource, /\.calendar-search-result/);
@@ -440,6 +456,7 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(pageSource, /className="event-detail-reminder"/);
   assert.match(pageSource, /<small>Reminder<\/small>/);
   assert.match(pageSource, /No reminder/);
+  assert.match(pageSource, /aria-label="Close event details"[\s\S]*M7 7 17 17M17 7 7 17/);
   assert.match(cssSource, /Long-press event card — shared faithfully by every theme/);
   assert.match(cssSource, /backdrop-filter:blur\(7px\)/);
   assert.match(cssSource, /Reference-style event note shared by Personal and Day Pocket/);
@@ -451,8 +468,32 @@ test("opens the faithful event note with a real long press", () => {
   assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-divider::before \{ display:none; \}/);
   assert.match(cssSource, /\.event-detail-divider,[\s\S]*border-radius:999px;[\s\S]*height:6px;[\s\S]*width:38px;/);
   assert.match(cssSource, /\.event-detail-reminder[\s\S]*grid-template-columns:54px minmax\(0,1fr\)/);
+  assert.match(cssSource, /\.app-shell\[data-theme\] \.event-detail-reminder,[\s\S]*background:#fff9ea;[\s\S]*border-color:#f1dfad/);
+  assert.match(cssSource, /\.event-detail-header > button svg \{[\s\S]*stroke:currentColor/);
   assert.match(pageSource, /range: `\$\{startLabel\} – \$\{endLabel\}`/);
-  assert.match(cssSource, /\.event-detail-edit[\s\S]*background:linear-gradient\(180deg,#ff8f82,#f8796e\)/);
+  assert.match(
+    cssSource,
+    /\.event-detail-note \.event-detail-add[\s\S]*background:linear-gradient\(180deg,#ff8b93,#ff737a\)/,
+  );
+});
+
+test("opens the normal event editor only from its title and controls", () => {
+  assert.match(pageSource, /const openSelectedEventEditor = \(\) =>/);
+  assert.match(
+    pageSource,
+    /calendarEvents\.find\(\(event\) => event\.id === selectedEventDetail\.id\)[\s\S]{0,500}setCalendarOpen\(true\);[\s\S]{0,100}openEventEditor\(editableEvent\)/,
+  );
+  assert.match(
+    pageSource,
+    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}`\}[\s\S]{0,900}onClickCapture=[\s\S]{0,900}\[data-event-detail-edit="true"\], button[\s\S]{0,400}openSelectedEventEditor\(\)/,
+  );
+  assert.match(pageSource, /className="event-detail-title"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(pageSource, /className="event-detail-time"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(pageSource, /className="event-detail-reminder"[\s\S]{0,120}data-event-detail-edit="true"/);
+  assert.match(cssSource, /Event-note paper stays calm; only its title and controls invite editing/);
+  assert.match(pageSource, /const closeCalendarEventEditor = \(\) =>[\s\S]{0,500}setCalendarOpen\(false\);[\s\S]{0,180}changeTab\("today"\)/);
+  assert.match(pageSource, /onClick=\{closeCalendarEventEditor\}/);
+  assert.match(pageSource, /closeCalendarEventEditor\(\);/);
 });
 
 test("matches the clean event-note language in Day Pocket", () => {
@@ -466,10 +507,16 @@ test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /className="day-summary-date-eyebrow"/);
   assert.match(pageSource, /className="day-summary-category">DAY POCKET/);
   assert.match(pageSource, /<h2>\{readableDate\(daySummaryDate\)\}<\/h2>/);
+  assert.match(
+    pageSource,
+    /className="day-summary-card"[\s\S]*?<\/header>\s*<div className="day-summary-divider" aria-hidden="true" \/>\s*\{summaryEvents\.length/,
+  );
   assert.doesNotMatch(pageSource, />Your plans</);
   assert.doesNotMatch(pageSource, /`pocket-tone-\$\{index % 4\}`/);
   assert.doesNotMatch(pageSource, /className="day-summary-event-category"/);
   assert.match(pageSource, /className="day-summary-add-spacer"/);
+  assert.match(cssSource, /\.day-summary-card \.day-summary-divider \{ margin:18px 2px; \}/);
+  assert.match(cssSource, /\.day-summary-card \.day-summary-add \{ margin-top:10px; \}/);
   assert.match(cssSource, /Clean reference card shared visually with the event note/);
   assert.match(cssSource, /\.day-summary-backdrop \.day-summary-card[\s\S]*max-width:450px;[\s\S]*width:min\(86vw,450px\)/);
   assert.match(cssSource, /\.day-summary-event\.yellow \{ --pocket-color:#ffe9a9; \}/);
@@ -569,8 +616,20 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
-test("migrates older installs without erasing their data", () => {
-  assert.match(pageSource, /Older payloads are migrated in place/);
+test("runs the requested personal-content reset once without making updates destructive", () => {
+  assert.match(pageSource, /personal-content-reset-2026-08-24/);
+  assert.match(pageSource, /resetUserCreatedContent/);
+  assert.match(pageSource, /AereaStorage\.clearPersonalContent\(\)/);
+  assert.match(pageSource, /Compatibility with the last signed preview/);
+  assert.match(pageSource, /future updates keep the same marker and preserve data/);
+  assert.match(nativeStorageSource, /public void clearPersonalContent/);
+  for (const table of ["sketches", "study_files", "library_files"]) {
+    assert.match(
+      nativeStorageSource,
+      new RegExp(`writable\\.delete\\(\\"${table}\\", null, null\\)`),
+    );
+  }
+  assert.doesNotMatch(nativeStorageSource, /writable\.delete\("documents"/);
   assert.doesNotMatch(pageSource, /localStorage\.clear\(/);
 });
 
@@ -597,6 +656,11 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
   assert.match(pageSource, /tab\.id === "add" \? "Open Quick Capture" : tab\.label/);
   assert.equal(
+    (pageSource.match(/\{tab\.id !== "add" && <small>\{tab\.label\}<\/small>\}/g) ?? []).length,
+    2,
+    "the center plus should not repeat the Add label in either bottom navigation",
+  );
+  assert.equal(
     (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
     2,
     "only the two rendered variants of the central navigation plus may open Quick Capture",
@@ -615,6 +679,31 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /ensureInboxLibraryItem/);
   assert.match(pageSource, /libraryItemAsStudyFile/);
   assert.match(pageSource, /Capture is still here/);
+  assert.match(pageSource, /const openInboxDestination =/);
+  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/);
+  assert.match(pageSource, /className=\{converted \? "converted" : ""\}/);
+  assert.match(pageSource, /Open saved \$\{destination\}/);
+  assert.match(pageSource, /sourceInboxId: item\.id/);
+  assert.match(pageSource, /setRequestedStudyNoteId\(note\.id\)/);
+  assert.match(pageSource, /openTaskEditor\(task\)/);
+  assert.match(pageSource, /className="task-editor-basics"/);
+  assert.match(pageSource, />\s*Save task\s*</);
+  assert.match(pageSource, /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/);
+  assert.match(pageSource, /className="inbox-item-icon"/);
+  assert.match(pageSource, /className="inbox-item-copy"/);
+  assert.match(cssSource, /\.inbox-convert-actions button\.converted/);
+});
+
+test("keeps the Recordings class editor compact and centered", () => {
+  assert.match(pageSource, /className="modal-backdrop class-editor-backdrop"/);
+  assert.match(
+    cssSource,
+    /\.class-editor-backdrop \{[\s\S]{0,140}align-items:center;[\s\S]{0,140}padding:16px/,
+  );
+  assert.match(
+    cssSource,
+    /\.class-editor-backdrop > \.class-editor-modal \{[\s\S]{0,260}max-height:min\(660px,calc\(100dvh - 32px\)\);[\s\S]{0,180}width:min\(88vw,500px\)/,
+  );
 });
 
 test("keeps reversible history, archive and a 30-day Trash", () => {
@@ -636,11 +725,16 @@ test("keeps reversible history, archive and a 30-day Trash", () => {
   assert.match(pageSource, /setSpace\("inbox"\)/);
   assert.match(pageSource, /setSpace\("postit-archive"\)/);
   assert.match(pageSource, /setSpace\("trash"\)/);
+  assert.match(pageSource, /const emptyTrash = async \(\) =>/);
+  assert.match(pageSource, /Promise\.all\(trashItems\.map\(\(item\) => purgeTrashItemPayload\(item\)\)\)/);
+  assert.match(pageSource, /className="empty-trash-button"/);
+  assert.match(pageSource, />\s*Empty trash\s*<\/button>/);
+  assert.match(cssSource, /\.feature-space \.trash-list \{ margin-top:18px; \}/);
   assert.doesNotMatch(pageSource, /title="Post-it Archive"/);
   assert.doesNotMatch(pageSource, /className="global-history-controls"/);
 });
 
-test("keeps calendar drag and conflict checks without the rejected power tools", () => {
+test("keeps calendar drag without conflict warnings or rejected power tools", () => {
   assert.match(pageSource, /data-calendar-date=\{dayKey\}/);
   assert.match(pageSource, /startCalendarEventDrag\(event, calendarEvent\)/);
   assert.match(pageSource, /event\.stopPropagation\(\);\s*cancelCalendarLongPress\(\)/);
@@ -654,10 +748,9 @@ test("keeps calendar drag and conflict checks without the rejected power tools",
   assert.doesNotMatch(pageSource, /Jump to date/);
   assert.doesNotMatch(pageSource, /Select events/);
   assert.match(pageSource, /className="agenda-v2-all-day-list"/);
-  assert.match(pageSource, /This overlaps with \$\{conflict\.title\}/);
-  assert.match(pageSource, /View conflicting event/);
-  assert.match(pageSource, /Change time/);
-  assert.match(pageSource, /calendarEventHasConflictOnDate/);
+  assert.doesNotMatch(pageSource, /Schedule conflict|These plans overlap|View conflicting event/);
+  assert.doesNotMatch(pageSource, /calendarConflictRequest|calendarEventHasConflictOnDate/);
+  assert.doesNotMatch(cssSource, /calendar-conflict|event-chip\.has-conflict/);
   assert.match(cssSource, /\.agenda-v2-event\.is-dragging/);
 });
 
@@ -694,11 +787,79 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(pageSource, /SystemBarsStyle\.Dark/);
   assert.match(pageSource, /SystemBars\.setStyle/);
   assert.match(capacitorSource, /insetsHandling: "css"/);
+  assert.match(manifestSource, /android:theme="@style\/AppTheme\.NoActionBar"/);
+  assert.doesNotMatch(manifestSource, /AppTheme\.NoActionBarLaunch/);
   assert.match(manifestSource, /android:scheme="aerea"/);
   assert.match(manifestSource, /android:host="auth"/);
   assert.match(syncSource, /aerea:\/\/auth\/callback/);
   assert.match(syncSource, /exchangeCodeForSession/);
   assert.match(cssSource, /html\[data-native="true"\] \.phone-canvas/);
+  assert.match(cssSource, /--aerea-safe-area-top: max\(var\(--safe-area-inset-top, 0px\), 32px\)/);
+  assert.match(cssSource, /--aerea-safe-area-bottom: max\(var\(--safe-area-inset-bottom, 0px\), 48px\)/);
+  assert.match(cssSource, /padding-bottom: calc\(102px \+ var\(--aerea-safe-area-bottom\)\)/);
+  assert.match(cssSource, /bottom: calc\(9px \+ var\(--aerea-safe-area-bottom\)\)/);
+  assert.match(
+    cssSource,
+    /@media \(min-width: 681px\)[\s\S]{0,260}--aerea-tablet-bottom-clearance: max\([\s\S]{0,100}72px[\s\S]{0,260}bottom: calc\(8px \+ var\(--aerea-tablet-bottom-clearance\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.bottom-nav \{[\s\S]{0,100}position: fixed;/,
+  );
+});
+
+test("restores the original built-in habits once without replacing saved habits", () => {
+  for (const habit of [
+    "Drink 6 glasses of water",
+    "Study for at least 25 minutes",
+    "Write one gentle thought",
+    "Stretch and breathe",
+  ]) {
+    assert.match(pageSource, new RegExp(habit));
+  }
+  assert.match(
+    pageSource,
+    /const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26"/,
+  );
+  assert.match(pageSource, /function restoreBuiltInHabits\(savedHabits: Habit\[\]\)/);
+  assert.match(pageSource, /return \[\.\.\.savedHabits, \.\.\.missingHabits\]/);
+  assert.match(
+    pageSource,
+    /habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION/,
+  );
+});
+
+test("keeps native clouds and full screens inside phone and tablet safe areas", () => {
+  assert.match(pageSource, /"calendar-backdrop"/);
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.phone-canvas > \.storybook-scene \{[\s\S]{0,100}inset:var\(--aerea-safe-area-top\) 0 auto/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] \.modal-backdrop \{[\s\S]{0,180}height:100dvh;[\s\S]{0,80}max-height:100dvh;/,
+  );
+  assert.match(
+    cssSource,
+    /html\[data-native="true"\] :is\(\.calendar-backdrop,\.settings-backdrop\) \{[\s\S]{0,120}padding:0/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-backdrop > \.calendar-modal,[\s\S]{0,100}\.settings-backdrop > \.settings-modal[\s\S]{0,260}height:100dvh;[\s\S]{0,160}width:100vw;/,
+  );
+  assert.match(
+    cssSource,
+    /\.calendar-modal\.calendar-extended-month > \.extended-calendar-view \{[\s\S]{0,260}var\(--aerea-safe-area-top\)[\s\S]{0,220}var\(--aerea-safe-area-bottom\)/,
+  );
+  assert.match(
+    cssSource,
+    /\.settings-backdrop > \.settings-modal \{[\s\S]{0,260}var\(--aerea-safe-area-top\)[\s\S]{0,220}var\(--aerea-safe-area-bottom\)/,
+  );
+  assert.match(cssSource, /html\[data-native="true"\] \.focus-screen/);
+  assert.match(
+    cssSource,
+    /\.app-shell:not\(\[data-color-mode="dark"\]\) :is\([\s\S]{0,180}\.extended-calendar-view[\s\S]{0,80}background:#fff!important;/,
+  );
 });
 
 test("keeps sports provider secrets behind a normalized Supabase model", () => {
@@ -720,6 +881,9 @@ test("keeps sports provider secrets behind a normalized Supabase model", () => {
   assert.match(pageSource, /MATCH DAY/);
   assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
   assert.match(pageSource, /match-day-pocket-card/);
+  assert.doesNotMatch(pageSource, /aria-label="Sports settings"/);
+  assert.doesNotMatch(pageSource, />Teams you follow</);
+  assert.doesNotMatch(pageSource, />Add matches automatically</);
 });
 
 test("reads and caches the canonical Boca fixture independently", () => {
@@ -838,6 +1002,12 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /groupSelectedPostIts/);
   assert.match(pageSource, /choosePostItGroupAction/);
   assert.match(pageSource, /Group with other post-its…/);
+  assert.match(pageSource, />Group it<\/button>/);
+  assert.match(pageSource, /if \(selectedPostItIds\.length > 0\)/);
+  assert.doesNotMatch(
+    pageSource,
+    /const groupSelectedPostIts = \(\) => \{[\s\S]{0,700}window\.prompt/,
+  );
   assert.doesNotMatch(pageSource, /togglePostItLock/);
   assert.doesNotMatch(pageSource, /duplicatePostIt/);
   assert.doesNotMatch(pageSource, /archiveSelectedPostIts/);
@@ -856,9 +1026,18 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /className="extended-calendar-view"/);
   assert.match(pageSource, /extendedCalendarDays/);
   assert.match(pageSource, /hiddenCalendarSources/);
+  assert.match(cssSource, /grid-template-areas:[\s\S]{0,100}"dot edit delete name"/);
+  assert.match(
+    cssSource,
+    /\.category-editor-list article > button:not\(\.category-delete\)[\s\S]{0,120}width:100%/,
+  );
   for (const color of ["lavender", "butter", "blush", "sky", "mint", "peach", "coral", "cream"]) {
     assert.match(pageSource, new RegExp(`value: "${color}"`));
     assert.match(cssSource, new RegExp(`post-it(?:-editor-preview)?\\.${color}`));
+  }
+  for (const color of ["orchid", "lemon", "petal", "ocean", "eucalyptus", "apricot", "terracotta", "oat", "plum", "sunshine", "berry", "denim", "forest", "tangerine", "brick", "cocoa"]) {
+    assert.match(pageSource, new RegExp(`value: "${color}"`));
+    assert.match(cssSource, new RegExp(`post-it-editor-preview\\.${color}`));
   }
   assert.match(pageSource, /function postItVisualStyle/);
   assert.match(pageSource, /const fontSize = length > 150 \? 15 : length > 80 \? 16 : 18/);
@@ -871,6 +1050,16 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);
   assert.match(cssSource, /\.post-it-editor-options button \{[\s\S]*height:30px;[\s\S]*width:30px;/);
+  assert.match(pageSource, /const postItColorPalettes:/);
+  assert.match(pageSource, /const shiftPostItPalette =/);
+  assert.match(pageSource, /onTouchStart=\{startPostItPaletteSwipe\}/);
+  assert.match(pageSource, /onTouchEnd=\{finishPostItPaletteSwipe\}/);
+  assert.match(pageSource, /Previous paper-color palette/);
+  assert.match(pageSource, /Next paper-color palette/);
+  assert.match(cssSource, /\.post-it-palette-picker \{[\s\S]*touch-action:pan-y/);
+  assert.match(cssSource, /August 24 polish: match the latest event, calendar, and post-it references/);
+  assert.match(cssSource, /\.post-it-group-action \{[\s\S]*margin:16px auto 0/);
+  assert.match(cssSource, /\.post-it-editor-backdrop \{[\s\S]*align-items:center;[\s\S]*justify-content:center/);
   assert.match(cssSource, /\.movable-post-it p \{ font-size:var\(--post-it-text-size,18px\); height:100%; line-height:1\.22; max-height:none; \}/);
   assert.match(cssSource, /\.post-it-edit \{ display:none!important; \}/);
 });
@@ -926,6 +1115,8 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(pageSource, /className="extended-calendar-header-actions"/);
   assert.match(pageSource, /className="extended-schedule-button"/);
   assert.match(pageSource, /className="extended-compact-glyph"/);
+  assert.match(pageSource, /className="extended-compact-button extended-back-button"/);
+  assert.match(pageSource, /className="extended-filter-control"/);
   assert.match(pageSource, /className="extended-filter-menu"/);
   assert.match(pageSource, /const extendedCalendarTabs = tabs\.filter/);
   assert.match(pageSource, /tab\.id !== "add"/);
@@ -940,6 +1131,8 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /breathing room, quiet selection, and motion for the extended month/);
   assert.match(cssSource, /Reference month: Sunday-first, open week rows, and compact event labels/);
   assert.match(cssSource, /Exact reference chrome: two-tool month header, roomy type rail, and legible event slips/);
+  assert.match(cssSource, /Extended month — the airy portrait reference, recolored by the active theme/);
+  assert.match(cssSource, /\.extended-calendar-header > \.extended-back-button/);
   assert.match(cssSource, /\.extended-schedule-glyph \{[\s\S]*font-size:42px/);
   assert.match(cssSource, /\.extended-event-pill > span > strong \{[\s\S]*font-size:10\.5px/);
   assert.match(cssSource, /\.extended-calendar-cell\.sunday \.extended-calendar-date/);

@@ -41,8 +41,6 @@ import {
   fileKind,
   inferInboxKind,
   isBocaSportsEvent,
-  isBocaSportsTeam,
-  rangesOverlap,
   trashDaysRemaining,
   type EntityLink,
   type InboxItem,
@@ -58,8 +56,10 @@ import {
 import {
   ChangeEvent,
   CSSProperties,
+  Dispatch,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  SetStateAction,
   TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
@@ -169,6 +169,7 @@ const AereaSportsNotifications =
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
+  clearPersonalContent(): Promise<void>;
   listSketches(): Promise<{ pages: SketchPage[] }>;
   saveSketch(options: {
     title: string;
@@ -436,6 +437,47 @@ type ClassItem = {
   color: string;
 };
 
+type TimetableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
+type TimetableClass = {
+  id: string;
+  name: string;
+  day: TimetableDay;
+  start: string;
+  end: string;
+  color: string;
+};
+
+type ClassTimetable = {
+  termName: string;
+  termDates: string;
+  classes: TimetableClass[];
+};
+
+const timetableDays: { id: TimetableDay; label: string }[] = [
+  { id: "mon", label: "MON" },
+  { id: "tue", label: "TUE" },
+  { id: "wed", label: "WED" },
+  { id: "thu", label: "THU" },
+  { id: "fri", label: "FRI" },
+  { id: "sat", label: "SAT" },
+];
+
+const timetableColors = [
+  "#ddd8ff",
+  "#ffe8a8",
+  "#d7eddd",
+  "#f8d9e8",
+  "#d5eafb",
+  "#f8d8c5",
+];
+
+const defaultClassTimetable: ClassTimetable = {
+  termName: "Current semester",
+  termDates: "Set your term dates",
+  classes: [],
+};
+
 type CalendarEvent = {
   id: string;
   date: string;
@@ -487,14 +529,6 @@ type FootballVisualEvent = CalendarEvent & {
   footballMatch: FootballMatch;
 };
 
-type CalendarConflictRequest = {
-  conflict: CalendarEvent;
-  message: string;
-  keepLabel: string;
-  onKeep: () => void;
-  onChange: () => void;
-};
-
 type EventColor =
   | "lilac"
   | "yellow"
@@ -537,7 +571,23 @@ type PostItColor =
   | "mint"
   | "peach"
   | "coral"
-  | "cream";
+  | "cream"
+  | "orchid"
+  | "lemon"
+  | "petal"
+  | "ocean"
+  | "eucalyptus"
+  | "apricot"
+  | "terracotta"
+  | "oat"
+  | "plum"
+  | "sunshine"
+  | "berry"
+  | "denim"
+  | "forest"
+  | "tangerine"
+  | "brick"
+  | "cocoa";
 type PostItPage =
   | "today"
   | "habits"
@@ -554,6 +604,7 @@ type PostItPage =
 
 type PostItNote = {
   id: string;
+  sourceInboxId?: string;
   text: string;
   color: PostItColor;
   page: PostItPage;
@@ -890,7 +941,13 @@ const themeOptions: {
   },
 ];
 
-const CLEAN_START_VERSION = "android-release-1";
+// Rhea explicitly requested one clean personal-data reset for this release.
+// Keeping the marker stable makes the reset run once, without turning future
+// APK updates into destructive migrations.
+const CLEAN_START_VERSION = "personal-content-reset-2026-08-24";
+const BROWSER_CONTENT_RESET_KEY =
+  "aerea-personal-content-reset-2026-08-24";
+const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
 
 const starterReminders: Reminder[] = [
   {
@@ -927,7 +984,67 @@ const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
 
-const starterHabits: Habit[] = [];
+const starterHabits: Habit[] = [
+  {
+    id: 1,
+    title: "Drink 6 glasses of water",
+    icon: "💧",
+    color: "habit-blue",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 2,
+    title: "Study for at least 25 minutes",
+    icon: "📚",
+    color: "habit-lilac",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 3,
+    title: "Write one gentle thought",
+    icon: "🪶",
+    color: "habit-pink",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+  {
+    id: 4,
+    title: "Stretch and breathe",
+    icon: "🌿",
+    color: "habit-sage",
+    days: [false, false, false, false, false, false, false],
+    streak: 0,
+  },
+];
+
+function restoreBuiltInHabits(savedHabits: Habit[]) {
+  const existingIds = new Set(savedHabits.map((habit) => habit.id));
+  const existingTitles = new Set(
+    savedHabits.map((habit) => habit.title.trim().toLowerCase()),
+  );
+  const usedIds = new Set(existingIds);
+  let nextId = Math.max(0, ...savedHabits.map((habit) => habit.id));
+
+  const missingHabits = starterHabits.flatMap((habit) => {
+    if (
+      existingIds.has(habit.id) ||
+      existingTitles.has(habit.title.toLowerCase())
+    ) {
+      return [];
+    }
+    let id = habit.id;
+    if (usedIds.has(id)) {
+      nextId += 1;
+      id = nextId;
+    }
+    usedIds.add(id);
+    return [{ ...habit, id, days: [...habit.days] }];
+  });
+
+  return [...savedHabits, ...missingHabits];
+}
 
 const habitColorOptions = [
   { value: "habit-blue", label: "Sky blue", hex: "#bdeaff" },
@@ -947,20 +1064,46 @@ const moods = [
   { face: "•O•", label: "surprised", color: "mood-coral" },
 ];
 
-const postItColors: Array<{
+type PostItColorOption = {
   value: PostItColor;
   label: string;
   hex: string;
-}> = [
-  { value: "lavender", label: "Lilac mist", hex: "#d8d0f0" },
-  { value: "butter", label: "Vanilla", hex: "#f6e2a9" },
-  { value: "blush", label: "Rosewater", hex: "#f1d0db" },
-  { value: "sky", label: "Powder blue", hex: "#d2e4ef" },
-  { value: "mint", label: "Sage", hex: "#d3e5da" },
-  { value: "peach", label: "Apricot", hex: "#f3d5c1" },
-  { value: "coral", label: "Dusty rose", hex: "#edc8c4" },
-  { value: "cream", label: "Ivory", hex: "#eee7d8" },
+};
+
+const postItColorPalettes: PostItColorOption[][] = [
+  [
+    { value: "lavender", label: "Lilac mist", hex: "#d8d0f0" },
+    { value: "butter", label: "Vanilla", hex: "#f6e2a9" },
+    { value: "blush", label: "Rosewater", hex: "#f1d0db" },
+    { value: "sky", label: "Powder blue", hex: "#d2e4ef" },
+    { value: "mint", label: "Sage", hex: "#d3e5da" },
+    { value: "peach", label: "Apricot", hex: "#f3d5c1" },
+    { value: "coral", label: "Dusty rose", hex: "#edc8c4" },
+    { value: "cream", label: "Ivory", hex: "#eee7d8" },
+  ],
+  [
+    { value: "orchid", label: "Soft orchid", hex: "#c5b3e6" },
+    { value: "lemon", label: "Lemon drop", hex: "#f4d66d" },
+    { value: "petal", label: "Pink petal", hex: "#ebaec6" },
+    { value: "ocean", label: "Quiet ocean", hex: "#a8d6e5" },
+    { value: "eucalyptus", label: "Eucalyptus", hex: "#afd0bd" },
+    { value: "apricot", label: "Warm apricot", hex: "#f0bc91" },
+    { value: "terracotta", label: "Terracotta", hex: "#d99688" },
+    { value: "oat", label: "Oat paper", hex: "#d8ccb7" },
+  ],
+  [
+    { value: "plum", label: "Plum cloud", hex: "#bda4c8" },
+    { value: "sunshine", label: "Sunshine", hex: "#f3c95e" },
+    { value: "berry", label: "Berry cream", hex: "#d992ad" },
+    { value: "denim", label: "Washed denim", hex: "#92b7d3" },
+    { value: "forest", label: "Soft forest", hex: "#9fc2a8" },
+    { value: "tangerine", label: "Tangerine", hex: "#efa677" },
+    { value: "brick", label: "Rose brick", hex: "#c9857d" },
+    { value: "cocoa", label: "Cocoa paper", hex: "#c9b19c" },
+  ],
 ];
+
+const postItColors = postItColorPalettes.flat();
 
 function postItVisualStyle(text: string): CSSProperties {
   const length = text.trim().length;
@@ -1081,6 +1224,46 @@ function makeEventDraft(date: string): EventDraft {
 }
 
 const starterClasses: ClassItem[] = [];
+
+function resetUserCreatedContent(state: Record<string, unknown>) {
+  return {
+    ...state,
+    reminderHistory: {},
+    reminders: starterReminders.map((reminder) => ({ ...reminder })),
+    habits: starterHabits.map((habit) => ({
+      ...habit,
+      days: [...habit.days],
+    })),
+    entries: [],
+    moodHistory: {},
+    completedDays: {},
+    calendarEvents: [],
+    tasks: [],
+    inboxItems: [],
+    postIts: [],
+    postItGroups: [],
+    libraryItems: [],
+    libraryCollections: [],
+    entityLinks: [],
+    trashItems: [],
+    calendarCategories: starterCalendarCategories.map((category) => ({
+      ...category,
+    })),
+    focusSessions: 0,
+    classes: starterClasses.map((classItem) => ({ ...classItem })),
+    recordings: [],
+    studyNotebooks: [],
+    studyNotes: [],
+    studyTasks: [],
+    studyFiles: [],
+    calendarMemos: [],
+    pdfAnnotations: {},
+    pdfPageNotes: {},
+    epubReadingStates: {},
+    cleanStartVersion: CLEAN_START_VERSION,
+    habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
+  };
+}
 
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -1293,6 +1476,165 @@ function footballMatchToCalendarEvent(match: FootballMatch): FootballVisualEvent
   };
 }
 
+function BocaPocketFactIcon({
+  type,
+}: {
+  type: "home" | "place" | "competition" | "venue" | "status";
+}) {
+  const iconPaths = {
+    home: <path d="M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4Z" />,
+    place: (
+      <>
+        <path d="M12 21s6-5.8 6-11a6 6 0 1 0-12 0c0 5.2 6 11 6 11Z" />
+        <circle cx="12" cy="10" r="2" />
+      </>
+    ),
+    competition: (
+      <>
+        <path d="M8 4h8v4.5a4 4 0 0 1-8 0Z" />
+        <path d="M8 6H5v1.5A3.5 3.5 0 0 0 8.5 11M16 6h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 12.5V17M8.5 20h7M10 17h4" />
+      </>
+    ),
+    venue: (
+      <>
+        <rect x="4" y="6" width="16" height="13" rx="2" />
+        <path d="M7 9h3v3H7ZM14 9h3M14 12h3M7 15h10" />
+      </>
+    ),
+    status: (
+      <>
+        <rect x="4" y="6" width="16" height="14" rx="2" />
+        <path d="M8 3v6M16 3v6M4 11h16" />
+      </>
+    ),
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {iconPaths[type]}
+    </svg>
+  );
+}
+
+function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
+  const match = event.footballMatch;
+  const score = footballScore(match);
+  const opponent = footballMatchOpponent(match);
+  const competitionParts = (match.competition ?? "")
+    .split(/\s+(?:-|·)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const competitionPlace = competitionParts.length > 1 ? competitionParts[0] : null;
+  const competitionName =
+    competitionParts.length > 1
+      ? competitionParts.slice(1).join(" · ")
+      : match.competition;
+
+  return (
+    <div className="boca-pocket-ticket">
+      <div className="boca-pocket-ticket-topline">
+        <span className="boca-pocket-match-label">
+          <span aria-hidden="true">★</span>
+          HOY JUEGA BOCA
+        </span>
+        <span className="boca-pocket-heart" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 20.2C10.8 19.1 4 14.8 4 9.8 4 7 5.8 5.2 8.4 5.2c1.7 0 2.9.8 3.6 2 0.7-1.2 1.9-2 3.6-2C18.2 5.2 20 7 20 9.8c0 5-6.8 9.3-8 10.4Z" />
+          </svg>
+        </span>
+      </div>
+
+      <div className="boca-pocket-doodles" aria-hidden="true">
+        <span>☆</span>
+        <span>✧</span>
+        <span>♡</span>
+        <span>★</span>
+        <span>〰</span>
+      </div>
+
+      <div className="boca-pocket-collage">
+        <div className="boca-pocket-main">
+          <img
+            className="boca-pocket-crest"
+            src="/assets/boca-crest-sticker.png"
+            alt="Escudo de Boca Juniors"
+          />
+          <div className="boca-pocket-teams">
+            <span className="boca-pocket-kicker">CLUB ATLÉTICO</span>
+            <h3>
+              <span>BOCA</span>
+              <span>JUNIORS</span>
+            </h3>
+            <p className="boca-pocket-opponent">
+              <em>VS</em> {opponent} <i aria-hidden="true">♡</i>
+            </p>
+          </div>
+        </div>
+
+        <span className="boca-pocket-ribbon boca-pocket-ribbon-one">
+          BOCA ES PUEBLO
+        </span>
+
+        <div className="boca-pocket-time-note">
+          <span className="boca-pocket-clock" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5v5l3.2 2" />
+            </svg>
+          </span>
+          <strong>{eventStartTimeLabel(event)}</strong>
+          <small>{matchCountdownLabel(event)}</small>
+          {score && <b className="boca-pocket-score">{score}</b>}
+        </div>
+
+        <div className="boca-pocket-stadium-wrap">
+          <img
+            className="boca-pocket-stadium"
+            src="/assets/bombonera-sticker.png"
+            alt="Ilustración de La Bombonera"
+          />
+          <span>LA BOMBONERA ♡</span>
+        </div>
+
+        <span className="boca-pocket-ribbon boca-pocket-ribbon-two">
+          AZUL Y ORO
+        </span>
+      </div>
+
+      <div className="boca-pocket-rule" aria-hidden="true" />
+
+      <div className="boca-pocket-facts">
+        <span>
+          <BocaPocketFactIcon type="home" />
+          {footballMatchIsHome(match) ? "Home" : "Away"}
+        </span>
+        {competitionPlace && (
+          <span>
+            <BocaPocketFactIcon type="place" />
+            {competitionPlace}
+          </span>
+        )}
+        {competitionName && (
+          <span>
+            <BocaPocketFactIcon type="competition" />
+            {competitionName}
+          </span>
+        )}
+        {match.venue && (
+          <span>
+            <BocaPocketFactIcon type="venue" />
+            {match.venue}
+          </span>
+        )}
+        <span>
+          <BocaPocketFactIcon type="status" />
+          {footballStatusLabel(match.status)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function isFootballVisualEvent(
   event: CalendarEvent,
 ): event is FootballVisualEvent {
@@ -1428,10 +1770,6 @@ function eventCompactTimeLabel(event: CalendarEvent) {
   if (event.timePending) return "Hora por confirmar";
   if (event.allDay) return "All day";
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
-}
-
-function eventTimeLabel(event: CalendarEvent) {
-  return eventCompactTimeLabel(event);
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
@@ -1766,8 +2104,6 @@ export default function Home() {
     useState<string | null>(null);
   const [eventDeleteRequest, setEventDeleteRequest] =
     useState<EventDeleteRequest | null>(null);
-  const [calendarConflictRequest, setCalendarConflictRequest] =
-    useState<CalendarConflictRequest | null>(null);
   const [
     eventTemplateSuggestionsDismissed,
     setEventTemplateSuggestionsDismissed,
@@ -1781,6 +2117,11 @@ export default function Home() {
   const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
+  const [taskEditorDraft, setTaskEditorDraft] = useState({
+    title: "",
+    dueDate: todayKey,
+    notes: "",
+  });
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
   const [quickCaptureText, setQuickCaptureText] = useState("");
@@ -1838,8 +2179,10 @@ export default function Home() {
   const [activeEpubBook, setActiveEpubBook] = useState<EpubBook | null>(null);
   const [studyReaderMessage, setStudyReaderMessage] = useState("");
   const [activeStudyNotebookId, setActiveStudyNotebookId] = useState<string | null>(null);
+  const [requestedStudyNoteId, setRequestedStudyNoteId] = useState<string | null>(null);
   const [postItEditorOpen, setPostItEditorOpen] = useState(false);
   const [editingPostItId, setEditingPostItId] = useState<string | null>(null);
+  const [postItPaletteIndex, setPostItPaletteIndex] = useState(0);
   const [postItDraft, setPostItDraft] = useState<PostItDraft>({
     text: "",
     color: "lavender",
@@ -1875,6 +2218,9 @@ export default function Home() {
     color: "habit-sage",
   });
   const [classItems, setClassItems] = useState<ClassItem[]>(starterClasses);
+  const [classTimetable, setClassTimetable] = useState<ClassTimetable>(
+    defaultClassTimetable,
+  );
   const [selectedClass, setSelectedClass] = useState(
     starterClasses[0]?.name ?? "",
   );
@@ -1990,6 +2336,8 @@ export default function Home() {
     groupPositions: Array<{ id: string; x: number; y: number }>;
   } | null>(null);
   const postItLongPressRef = useRef<number | null>(null);
+  const postItPaletteTouchStartRef = useRef<number | null>(null);
+  const postItPaletteDidSwipeRef = useRef(false);
   const postItResizeRef = useRef<{
     id: string;
     pointerId: number;
@@ -2278,6 +2626,7 @@ export default function Home() {
 
     async function loadState() {
       try {
+        let contentFilesCleared = false;
         let payload = (isNative()
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
           : readBrowserState()) as {
@@ -2308,6 +2657,7 @@ export default function Home() {
             customTheme?: CustomTheme;
             profilePhoto?: string | null;
             classes?: ClassItem[];
+            classTimetable?: ClassTimetable;
             recordings?: Recording[];
             studyNotebooks?: StudyNotebook[];
             studyNotes?: StudyNote[];
@@ -2318,16 +2668,74 @@ export default function Home() {
             pdfPageNotes?: Record<string, Record<string, string>>;
             epubReadingStates?: Record<string, EpubReadingState>;
             cleanStartVersion?: string;
+            habitRestoreVersion?: string;
           } | null;
         };
+        const applyRequestedContentReset = async (candidate: typeof payload) => {
+          const existingState = candidate.state;
+          if (existingState?.cleanStartVersion === CLEAN_START_VERSION) {
+            return candidate;
+          }
+
+          if (!contentFilesCleared) {
+            if (isNative()) {
+              try {
+                await AereaStorage.clearPersonalContent();
+              } catch {
+                // Compatibility with the last signed preview: a fresh install
+                // has no local files to purge, and the sanitized state below
+                // still prevents old cloud content from returning.
+              }
+            } else {
+              writeBrowserSketches([]);
+            }
+            contentFilesCleared = true;
+          }
+
+          const state = resetUserCreatedContent(
+            (existingState ?? {}) as Record<string, unknown>,
+          ) as NonNullable<typeof candidate.state>;
+          const cleanPayload = { state } as typeof candidate;
+          if (isNative()) {
+            await AereaStorage.putState({ state: JSON.stringify(cleanPayload) });
+          } else {
+            writeBrowserState(cleanPayload);
+          }
+          return cleanPayload;
+        };
+
+        payload = await applyRequestedContentReset(payload);
         payload = (await reconcileCloudState(payload)) || payload;
+        payload = await applyRequestedContentReset(payload);
+        if (
+          payload.state &&
+          payload.state.habitRestoreVersion !== BUILTIN_HABITS_RESTORE_VERSION
+        ) {
+          const restoredHabits = restoreBuiltInHabits(
+            Array.isArray(payload.state.habits) ? payload.state.habits : [],
+          );
+          payload = {
+            ...payload,
+            state: {
+              ...payload.state,
+              habits: restoredHabits,
+              habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
+            },
+          };
+          if (isNative()) {
+            await AereaStorage.putState({ state: JSON.stringify(payload) });
+          } else {
+            writeBrowserState(payload);
+          }
+        }
         if (cancelled) return;
 
         if (payload.state) {
           const state = payload.state;
           const expiredTrashFileIds = new Set<string>();
-          // Older payloads are migrated in place. An APK update must never
-          // interpret a missing version marker as permission to erase data.
+          // Ordinary older payloads are still migrated in place. The only
+          // destructive marker is the explicit one-time reset requested for
+          // this release; future updates keep the same marker and preserve data.
           if (state.reminderHistory) setReminderHistory(state.reminderHistory);
           if (Array.isArray(state.reminders)) setReminders(state.reminders);
           if (Array.isArray(state.habits)) setHabits(state.habits);
@@ -2487,6 +2895,17 @@ export default function Home() {
               setSelectedClass(state.classes[0].name);
             }
           }
+          if (
+            state.classTimetable &&
+            typeof state.classTimetable === "object" &&
+            Array.isArray(state.classTimetable.classes)
+          ) {
+            setClassTimetable({
+              ...defaultClassTimetable,
+              ...state.classTimetable,
+              classes: state.classTimetable.classes,
+            });
+          }
           if (Array.isArray(state.recordings)) {
             setRecordings(state.recordings);
           }
@@ -2513,12 +2932,29 @@ export default function Home() {
 
     async function loadStudyFiles() {
       try {
-        const payload = isNative()
+        let payload = isNative()
           ? await AereaStorage.listDocuments()
           : await fetch("/api/files", { cache: "no-store" }).then(async (response) => {
               if (!response.ok) throw new Error("Study files are unavailable.");
               return (await response.json()) as { files?: StudyFileItem[] };
             });
+        if (
+          !isNative() &&
+          localStorage.getItem(BROWSER_CONTENT_RESET_KEY) !== CLEAN_START_VERSION
+        ) {
+          await Promise.all(
+            (payload.files ?? []).map(async (file) => {
+              const response = await fetch(`/api/files/${file.id}`, {
+                method: "DELETE",
+              });
+              if (!response.ok && response.status !== 404) {
+                throw new Error("Could not remove an old Library file.");
+              }
+            }),
+          );
+          localStorage.setItem(BROWSER_CONTENT_RESET_KEY, CLEAN_START_VERSION);
+          payload = { files: [] };
+        }
         if (!cancelled && Array.isArray(payload.files)) {
           setStudyFiles((current) =>
             payload.files!.map((file) => {
@@ -2538,8 +2974,10 @@ export default function Home() {
       }
     }
 
-    void loadSketches();
-    void loadState().then(loadStudyFiles);
+    void loadState().then(async () => {
+      await loadSketches();
+      await loadStudyFiles();
+    });
     return () => {
       cancelled = true;
     };
@@ -2636,6 +3074,7 @@ export default function Home() {
               customTheme,
               profilePhoto,
               classes: classItems,
+              classTimetable,
               recordings,
               studyNotebooks,
               studyNotes,
@@ -2646,6 +3085,7 @@ export default function Home() {
               pdfPageNotes,
               epubReadingStates,
               cleanStartVersion: CLEAN_START_VERSION,
+              habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
             };
         if (isNative()) {
           await AereaStorage.putState({ state: JSON.stringify({ state }) });
@@ -2667,6 +3107,7 @@ export default function Home() {
     calendarEvents,
     calendarCategories,
     classItems,
+    classTimetable,
     appTheme,
     colorMode,
     simplifiedCalendarMode,
@@ -3560,24 +4001,6 @@ export default function Home() {
     return Array.from(new Set([...directLabels, ...linkedLabels]));
   };
 
-  const calendarEventHasConflictOnDate = (
-    event: CalendarEvent,
-    date: string,
-  ) =>
-    !event.allDay &&
-    allCalendarEvents.some(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        eventOccursOn(candidate, date) &&
-        rangesOverlap(
-          event.time,
-          event.endTime,
-          candidate.time,
-          candidate.endTime,
-        ),
-    );
-
   const toggleTaskFileAttachment = (task: TaskItem, fileId: string) => {
     const linked =
       task.attachmentIds?.includes(fileId) ||
@@ -3783,31 +4206,135 @@ export default function Home() {
           : candidate,
       ),
     );
-    return id;
+    return libraryItem;
+  };
+
+  const openTaskEditor = (task: TaskItem) => {
+    setTaskEditorDraft({
+      title: task.title,
+      dueDate: task.dueDate,
+      notes: task.notes ?? "",
+    });
+    setTaskLinkEditorId(task.id);
+  };
+
+  const closeTaskEditor = () => {
+    setTaskLinkEditorId(null);
+  };
+
+  const saveTaskEditor = () => {
+    if (!taskLinkEditorId || !taskEditorDraft.title.trim()) return;
+    const title = taskEditorDraft.title.trim();
+    const notes = taskEditorDraft.notes.trim();
+    const updatedAt = new Date().toISOString();
+    recordAction("Edited task");
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskLinkEditorId
+          ? {
+              ...task,
+              title,
+              dueDate: taskEditorDraft.dueDate,
+              notes,
+              updatedAt,
+            }
+          : task,
+      ),
+    );
+    setStudyTasks((current) =>
+      current.map((task) =>
+        task.id === taskLinkEditorId
+          ? {
+              ...task,
+              title,
+              detail: notes,
+              dueDate: taskEditorDraft.dueDate,
+            }
+          : task,
+      ),
+    );
+    closeTaskEditor();
+  };
+
+  const openInboxDestination = (
+    item: InboxItem,
+    destination: "event" | "task" | "post-it" | "note" | "library",
+  ) => {
+    if (destination === "event") {
+      const event = calendarEvents.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!event) return false;
+      const eventDate = dateFromKey(event.date);
+      changeTab("today");
+      setSelectedCalendarDate(event.date);
+      setViewMonth(new Date(eventDate.getFullYear(), eventDate.getMonth(), 1));
+      setCalendarOpen(true);
+      openEventEditor(event);
+      return true;
+    }
+    if (destination === "task") {
+      const task = tasks.find((candidate) => candidate.sourceInboxId === item.id);
+      if (!task) return false;
+      changeTab("today");
+      openTaskEditor(task);
+      return true;
+    }
+    if (destination === "post-it") {
+      const postIt = postIts.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!postIt) return false;
+      changeTab("today");
+      openPostItEditor(postIt);
+      return true;
+    }
+    if (destination === "note") {
+      const note = studyNotes.find(
+        (candidate) => candidate.sourceInboxId === item.id,
+      );
+      if (!note) return false;
+      changeTab("spaces");
+      setSpace("library");
+      setRequestedStudyNoteId(note.id);
+      return true;
+    }
+    const libraryItem = libraryItems.find(
+      (candidate) => candidate.id === item.libraryItemId,
+    );
+    if (!libraryItem) return false;
+    changeTab("spaces");
+    setSpace("library");
+    void openLibraryItem(libraryItem);
+    return true;
   };
 
   const convertInboxItem = (
     item: InboxItem,
     destination: "event" | "task" | "post-it" | "note" | "library",
   ) => {
+    if (item.processedAs?.includes(destination)) {
+      if (!openInboxDestination(item, destination)) {
+        setHistoryMessage("That saved item is no longer available.");
+      }
+      return;
+    }
     const now = new Date().toISOString();
     recordAction(`Converted Inbox item to ${destination}`);
     if (destination === "event") {
       const draft = makeEventDraft(todayKey);
       const eventId = crypto.randomUUID();
-      const attachmentId = ensureInboxLibraryItem(item, now);
-      setCalendarEvents((current) => [
-        ...current,
-        {
-          ...draft,
-          id: eventId,
-          title: item.text || item.originalName || "Inbox item",
-          sourceInboxId: item.id,
-          attachmentIds: attachmentId ? [attachmentId] : [],
-          url: item.kind === "link" ? item.text : "",
-        },
-      ]);
-      if (attachmentId) {
+      const attachment = ensureInboxLibraryItem(item, now);
+      const createdEvent: CalendarEvent = {
+        ...draft,
+        id: eventId,
+        title: item.text || item.originalName || "Inbox item",
+        sourceInboxId: item.id,
+        attachmentIds: attachment ? [attachment.id] : [],
+        url: item.kind === "link" ? item.text : "",
+      };
+      setCalendarEvents((current) => [...current, createdEvent]);
+      if (attachment) {
         setEntityLinks((current) => [
           ...current,
           {
@@ -3815,21 +4342,28 @@ export default function Home() {
             fromType: "event",
             fromId: eventId,
             toType: "file",
-            toId: attachmentId,
+            toId: attachment.id,
             createdAt: now,
           },
         ]);
       }
+      const eventDate = dateFromKey(createdEvent.date);
+      changeTab("today");
+      setSelectedCalendarDate(createdEvent.date);
+      setViewMonth(new Date(eventDate.getFullYear(), eventDate.getMonth(), 1));
+      setCalendarOpen(true);
+      openEventEditor(createdEvent);
     }
     if (destination === "task") {
-      const attachmentId = ensureInboxLibraryItem(item, now);
+      const attachment = ensureInboxLibraryItem(item, now);
       const task: TaskItem = {
         id: crypto.randomUUID(),
+        sourceInboxId: item.id,
         title: item.text || item.originalName || "Inbox task",
         dueDate: todayKey,
         completed: false,
         notes: "Captured in Inbox",
-        attachmentIds: attachmentId ? [attachmentId] : [],
+        attachmentIds: attachment ? [attachment.id] : [],
         createdAt: now,
         updatedAt: now,
       };
@@ -3850,7 +4384,7 @@ export default function Home() {
         },
         ...current.filter((candidate) => candidate.id !== task.id),
       ]);
-      if (attachmentId) {
+      if (attachment) {
         setEntityLinks((current) => [
           ...current,
           {
@@ -3858,52 +4392,70 @@ export default function Home() {
             fromType: "task",
             fromId: task.id,
             toType: "file",
-            toId: attachmentId,
+            toId: attachment.id,
             createdAt: now,
           },
         ]);
       }
+      changeTab("today");
+      openTaskEditor(task);
     }
     if (destination === "post-it") {
+      const postIt: PostItNote = {
+        id: crypto.randomUUID(),
+        sourceInboxId: item.id,
+        text: item.text || item.originalName || "Inbox note",
+        color: "butter",
+        page: "today",
+        x: 54,
+        y: 28,
+        rotation: 1,
+        width: 184,
+        height: 174,
+        zIndex: postIts.length + 1,
+        pinned: false,
+        locked: false,
+        archived: false,
+        style: "plain",
+        createdAt: now,
+        updatedAt: now,
+      };
       setPostIts((current) => [
         ...current,
-        {
-          id: crypto.randomUUID(),
-          text: item.text || item.originalName || "Inbox note",
-          color: "butter",
-          page: "today",
-          x: 54,
-          y: 28,
-          rotation: 1,
-          width: 184,
-          height: 174,
-          zIndex: current.length + 1,
-          pinned: false,
-          locked: false,
-          archived: false,
-          style: "plain",
-          createdAt: now,
-          updatedAt: now,
-        },
+        { ...postIt, zIndex: current.length + 1 },
       ]);
+      changeTab("today");
+      openPostItEditor(postIt);
     }
     if (destination === "note") {
-      setStudyNotes((current) => [
-        {
-          id: crypto.randomUUID(),
-          title: item.originalName || "Inbox note",
-          body: item.text,
-          pinned: false,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...current,
-      ]);
+      const note: StudyNote = {
+        id: crypto.randomUUID(),
+        sourceInboxId: item.id,
+        title: item.originalName || "Inbox note",
+        body: item.text,
+        pinned: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setStudyNotes((current) => [note, ...current]);
+      changeTab("spaces");
+      setSpace("library");
+      setRequestedStudyNoteId(note.id);
     }
     if (destination === "library") {
-      ensureInboxLibraryItem(item, now, true);
+      const libraryItem = ensureInboxLibraryItem(item, now, true);
+      if (libraryItem) {
+        changeTab("spaces");
+        setSpace("library");
+        void openLibraryItem(libraryItem);
+      }
     }
     markInboxProcessed(item.id, destination);
+    const destinationLabel =
+      destination === "post-it"
+        ? "Post-it"
+        : destination.charAt(0).toUpperCase() + destination.slice(1);
+    setHistoryMessage(`Saved as ${destinationLabel} ♡`);
   };
 
   const discardInboxItem = (item: InboxItem) => {
@@ -4071,14 +4623,7 @@ export default function Home() {
     setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
   };
 
-  const deleteTrashItemForever = async (trashItem: TrashItem) => {
-    if (
-      !window.confirm(
-        `Delete “${trashItem.label}” permanently? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const purgeTrashItemPayload = async (trashItem: TrashItem) => {
     const file =
       trashItem.kind === "file"
         ? (trashItem.payload as LibraryItem | StudyFileItem)
@@ -4118,7 +4663,34 @@ export default function Home() {
         return next;
       });
     }
+  };
+
+  const deleteTrashItemForever = async (trashItem: TrashItem) => {
+    if (
+      !window.confirm(
+        `Delete “${trashItem.label}” permanently? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    await purgeTrashItemPayload(trashItem);
     setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
+    setHistoryMessage(`Deleted ${trashItem.label} forever`);
+  };
+
+  const emptyTrash = async () => {
+    if (trashItems.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete all ${trashItems.length} Trash items permanently? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    recordAction("Emptied Trash");
+    await Promise.all(trashItems.map((item) => purgeTrashItemPayload(item)));
+    setTrashItems([]);
+    setHistoryMessage("Trash emptied ♡");
   };
 
   const rescheduleTask = (task: TaskItem, dueDate: string | null) => {
@@ -4511,19 +5083,62 @@ export default function Home() {
 
   const openPostItEditor = (postIt?: PostItNote) => {
     if (postIt) {
+      const paletteIndex = postItColorPalettes.findIndex((palette) =>
+        palette.some((color) => color.value === postIt.color),
+      );
+      setPostItPaletteIndex(Math.max(0, paletteIndex));
       setEditingPostItId(postIt.id);
       setPostItDraft({
         text: postIt.text,
         color: postIt.color,
       });
     } else {
+      const color = postItColors[visiblePostIts.length % postItColors.length];
+      const paletteIndex = postItColorPalettes.findIndex((palette) =>
+        palette.some((candidate) => candidate.value === color.value),
+      );
+      setPostItPaletteIndex(Math.max(0, paletteIndex));
       setEditingPostItId(null);
       setPostItDraft({
         text: "",
-        color: postItColors[visiblePostIts.length % postItColors.length].value,
+        color: color.value,
       });
     }
     setPostItEditorOpen(true);
+  };
+
+  const shiftPostItPalette = (direction: -1 | 1) => {
+    setPostItPaletteIndex((current) =>
+      (current + direction + postItColorPalettes.length) %
+      postItColorPalettes.length,
+    );
+  };
+
+  const startPostItPaletteSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    postItPaletteDidSwipeRef.current = false;
+    postItPaletteTouchStartRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const finishPostItPaletteSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = postItPaletteTouchStartRef.current;
+    postItPaletteTouchStartRef.current = null;
+    const end = event.changedTouches[0]?.clientX;
+    if (start === null || end === undefined || Math.abs(end - start) < 34) return;
+    postItPaletteDidSwipeRef.current = true;
+    shiftPostItPalette(end < start ? 1 : -1);
+    window.setTimeout(() => {
+      postItPaletteDidSwipeRef.current = false;
+    }, 350);
+  };
+
+  const choosePostItColor = (color: PostItColor) => {
+    if (postItPaletteDidSwipeRef.current) return;
+    setPostItDraft((current) => ({ ...current, color }));
+  };
+
+  const choosePostItPalette = (direction: -1 | 1) => {
+    if (postItPaletteDidSwipeRef.current) return;
+    shiftPostItPalette(direction);
   };
 
   const savePostIt = () => {
@@ -4574,7 +5189,9 @@ export default function Home() {
 
   const groupSelectedPostIts = () => {
     if (selectedPostItIds.length < 2) return;
-    const name = window.prompt("Optional group name", "Ideas")?.trim() || "Group";
+    const name =
+      postItGroups.length === 0 ? "Group" : `Group ${postItGroups.length + 1}`;
+    const updatedAt = new Date().toISOString();
     const group: PostItGroup = {
       id: crypto.randomUUID(),
       name,
@@ -4587,9 +5204,12 @@ export default function Home() {
     setPostIts((current) =>
       current.map((postIt) =>
         selectedPostItIds.includes(postIt.id)
-          ? { ...postIt, groupId: group.id }
+          ? { ...postIt, groupId: group.id, updatedAt }
           : postIt,
       ),
+    );
+    setHistoryMessage(
+      `${selectedPostItIds.length} post-its grouped. Move one to move them together.`,
     );
     setSelectedPostItIds([]);
   };
@@ -4743,6 +5363,19 @@ export default function Home() {
         "button, summary, input, textarea, select, .post-it-resize-handle",
       )
     ) return;
+    if (selectedPostItIds.length > 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedPostItIds((current) =>
+        current.includes(postIt.id)
+          ? current.length > 1
+            ? current.filter((id) => id !== postIt.id)
+            : current
+          : [...current, postIt.id],
+      );
+      navigator.vibrate?.(10);
+      return;
+    }
     raisePostItOnTouch(postIt);
     const canvas = phoneCanvasRef.current;
     if (!canvas) return;
@@ -5316,6 +5949,20 @@ export default function Home() {
     setEventEditorOpen(true);
   };
 
+  const closeCalendarEventEditor = () => {
+    const returnHome = editingEventId !== null;
+    setEventEditorOpen(false);
+    setEditingEventId(null);
+    if (!returnHome) return;
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarOpen(false);
+    setDaySummaryDate(null);
+    changeTab("today");
+  };
+
   const openEventDetail = (
     calendarEvent: CalendarEvent,
     returnDayPocket: string | null = null,
@@ -5336,6 +5983,24 @@ export default function Home() {
     setEventDetailReturnDayPocket(null);
   };
 
+  const openSelectedEventEditor = () => {
+    if (!selectedEventDetail || selectedEventDetail.eventType === "sports_event") {
+      return;
+    }
+    const editableEvent =
+      calendarEvents.find((event) => event.id === selectedEventDetail.id) ??
+      selectedEventDetail;
+    const occurrenceDate = selectedEventDetail.date;
+    const eventMonth = dateFromKey(occurrenceDate);
+    setSelectedCalendarDate(occurrenceDate);
+    setViewMonth(
+      new Date(eventMonth.getFullYear(), eventMonth.getMonth(), 1),
+    );
+    closeEventDetail();
+    setCalendarOpen(true);
+    openEventEditor(editableEvent);
+  };
+
   const returnToDayPocket = () => {
     if (!eventDetailReturnDayPocket) return;
     const returnDate = eventDetailReturnDayPocket;
@@ -5354,19 +6019,6 @@ export default function Home() {
       title: eventDraft.title.trim(),
       endDate: eventDraft.endDate || eventDraft.date,
     };
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== savedEvent.id &&
-        !candidate.allDay &&
-        !savedEvent.allDay &&
-        eventOccursOn(candidate, savedEvent.date) &&
-        rangesOverlap(
-          savedEvent.time,
-          savedEvent.endTime,
-          candidate.time,
-          candidate.endTime,
-        ),
-    );
     const commitSavedEvent = () => {
       recordAction(editingEventId ? "Edited event" : "Created event");
       setCalendarEvents((current) =>
@@ -5422,19 +6074,8 @@ export default function Home() {
       if (savedEvent.sourceInboxId) {
         markInboxProcessed(savedEvent.sourceInboxId, "event");
       }
-      setEventEditorOpen(false);
-      setEditingEventId(null);
+      closeCalendarEventEditor();
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Keep it",
-        onKeep: commitSavedEvent,
-        onChange: () => setEventEditorOpen(true),
-      });
-      return;
-    }
     commitSavedEvent();
   };
 
@@ -5537,14 +6178,6 @@ export default function Home() {
       date: destinationDate,
       endDate: addDays(destinationDate, endDayOffset),
     };
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        !event.allDay &&
-        eventOccursOn(candidate, destinationDate) &&
-        rangesOverlap(event.time, event.endTime, candidate.time, candidate.endTime),
-    );
     const commitMove = () => {
       recordAction("Moved event");
       setCalendarEvents((current) =>
@@ -5554,16 +6187,6 @@ export default function Home() {
       );
       setSelectedCalendarDate(destinationDate);
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Move anyway",
-        onKeep: commitMove,
-        onChange: () => openEventEditor(movedEvent),
-      });
-      return;
-    }
     commitMove();
   };
 
@@ -5632,13 +6255,6 @@ export default function Home() {
     const nextEndTime = timeFromMinutes(start + safeDuration);
     if (event.time === nextTime && event.endTime === nextEndTime) return;
 
-    const conflict = allCalendarEvents.find(
-      (candidate) =>
-        candidate.id !== event.id &&
-        !candidate.allDay &&
-        eventOccursOn(candidate, selectedCalendarDate) &&
-        rangesOverlap(nextTime, nextEndTime, candidate.time, candidate.endTime),
-    );
     const movedEvent = { ...event, time: nextTime, endTime: nextEndTime };
     const commitTimeMove = () => {
       recordAction("Changed event time");
@@ -5649,16 +6265,6 @@ export default function Home() {
       );
       setHistoryMessage(`Moved to ${nextTime}–${nextEndTime}`);
     };
-    if (conflict) {
-      setCalendarConflictRequest({
-        conflict,
-        message: `This overlaps with ${conflict.title} · ${eventTimeLabel(conflict)}.`,
-        keepLabel: "Keep new time",
-        onKeep: commitTimeMove,
-        onChange: () => openEventEditor(movedEvent),
-      });
-      return;
-    }
     commitTimeMove();
   };
 
@@ -7563,6 +8169,8 @@ export default function Home() {
               dayCharmText={activeTheme.charm}
               showDayCharm={activeTheme.showCharm !== false}
               isNight={isNight}
+              classTimetable={classTimetable}
+              setClassTimetable={setClassTimetable}
             />
           )}
 
@@ -7900,6 +8508,8 @@ export default function Home() {
                     setRecordings(nextRecordings);
                   }}
                   usedInForFile={fileUsedInLabels}
+                  requestedNoteId={requestedStudyNoteId}
+                  onRequestedNoteOpened={() => setRequestedStudyNoteId(null)}
                   onBack={() => setSpace("menu")}
                 />
               )}
@@ -7920,8 +8530,8 @@ export default function Home() {
                   <div className="inbox-list">
                     {inboxItems.map((item) => (
                       <article className="inbox-item" key={item.id}>
-                        <span className="inbox-kind">{item.kind}</span>
-                        <div>
+                        <span className="inbox-item-icon">{item.kind}</span>
+                        <div className="inbox-item-copy">
                           <strong>{item.originalName || item.text}</strong>
                           {item.originalName && item.text !== item.originalName && (
                             <p>{item.text}</p>
@@ -7935,19 +8545,28 @@ export default function Home() {
                         </div>
                         <div className="inbox-convert-actions" aria-label="Convert capture">
                           {(["event", "task", "post-it", "note", "library"] as const).map(
-                            (destination) => (
-                              <button
-                                type="button"
-                                key={destination}
-                                onClick={() => convertInboxItem(item, destination)}
-                              >
-                                {destination}
-                              </button>
-                            ),
+                            (destination) => {
+                              const converted = item.processedAs?.includes(destination) ?? false;
+                              return (
+                                <button
+                                  type="button"
+                                  key={destination}
+                                  className={converted ? "converted" : ""}
+                                  aria-label={
+                                    converted
+                                      ? `Open saved ${destination}`
+                                      : `Save as ${destination}`
+                                  }
+                                  onClick={() => convertInboxItem(item, destination)}
+                                >
+                                  {converted ? `✓ ${destination}` : destination}
+                                </button>
+                              );
+                            },
                           )}
                           <button
                             type="button"
-                            className="danger"
+                            className="inbox-discard"
                             onClick={() => discardInboxItem(item)}
                           >
                             discard
@@ -7969,10 +8588,20 @@ export default function Home() {
                     title="Trash"
                     onBack={() => setSpace("menu")}
                   />
-                  <p className="trash-explainer">
-                    Archive keeps things for later. Trash is for deleted items and
-                    removes them automatically after 30 days.
-                  </p>
+                  <div className="trash-space-toolbar">
+                    <p className="trash-explainer">
+                      Archive keeps things for later. Trash is for deleted items and
+                      removes them automatically after 30 days.
+                    </p>
+                    <button
+                      type="button"
+                      className="empty-trash-button"
+                      disabled={trashItems.length === 0}
+                      onClick={() => void emptyTrash()}
+                    >
+                      Empty trash
+                    </button>
+                  </div>
                   <div className="trash-list">
                     {trashItems.map((item) => (
                       <article key={item.id}>
@@ -9086,7 +9715,7 @@ export default function Home() {
               }}
             >
               <span>{tab.icon}</span>
-              <small>{tab.label}</small>
+              {tab.id !== "add" && <small>{tab.label}</small>}
             </button>
           ))}
         </nav>}
@@ -9315,7 +9944,7 @@ export default function Home() {
                           <button
                             type="button"
                             className="reset-task-attachments"
-                            onClick={() => setTaskLinkEditorId(task.id)}
+                            onClick={() => openTaskEditor(task)}
                           >
                             Attached
                           </button>
@@ -9366,7 +9995,7 @@ export default function Home() {
                             : `on ${readableDate(task.dueDate)}`}.
                         </span>
                         <div>
-                          <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
+                          <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
                           <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
                           <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                           <button
@@ -9397,7 +10026,7 @@ export default function Home() {
                     <article key={task.id}>
                       <span>{task.title}</span>
                       <div>
-                        <button type="button" onClick={() => setTaskLinkEditorId(task.id)}>Attached</button>
+                        <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
                         <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
                         <button
                           type="button"
@@ -9430,22 +10059,63 @@ export default function Home() {
             className="modal-backdrop task-link-backdrop"
             role="presentation"
             onPointerDown={(event) => {
-              if (event.target === event.currentTarget) setTaskLinkEditorId(null);
+              if (event.target === event.currentTarget) closeTaskEditor();
             }}
           >
             <section
               className="task-link-modal"
               role="dialog"
               aria-modal="true"
-              aria-label={`Attachments for ${taskLinkEditor.title}`}
+              aria-label={`Edit ${taskLinkEditor.title}`}
             >
               <header>
                 <div>
-                  <p className="tiny-label">ATTACHED</p>
-                  <h2>{taskLinkEditor.title}</h2>
+                  <p className="tiny-label">TASK DETAILS</p>
+                  <h2>Edit this task</h2>
                 </div>
-                <button type="button" onClick={() => setTaskLinkEditorId(null)} aria-label="Close task attachments">×</button>
+                <button type="button" onClick={closeTaskEditor} aria-label="Close task editor">×</button>
               </header>
+
+              <div className="task-editor-basics">
+                <label>
+                  <span>Title</span>
+                  <input
+                    autoFocus
+                    value={taskEditorDraft.title}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        title: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  <span>Due date</span>
+                  <input
+                    type="date"
+                    value={taskEditorDraft.dueDate}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        dueDate: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="task-editor-notes">
+                  <span>Notes</span>
+                  <textarea
+                    value={taskEditorDraft.notes}
+                    onChange={(event) =>
+                      setTaskEditorDraft((current) => ({
+                        ...current,
+                        notes: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
 
               {(taskAttachedFileIds.length > 0 || taskAttachedNoteIds.length > 0) && (
                 <div className="task-linked-items">
@@ -9459,7 +10129,7 @@ export default function Home() {
                         type="button"
                         key={`file-${fileId}`}
                         onClick={() => {
-                          setTaskLinkEditorId(null);
+                          closeTaskEditor();
                           setResetExperience(null);
                           if (capturedFile) void openLibraryItem(capturedFile);
                           else if (studyFile) void openStudyFile(studyFile);
@@ -9477,7 +10147,7 @@ export default function Home() {
                         type="button"
                         key={`note-${noteId}`}
                         onClick={() => {
-                          setTaskLinkEditorId(null);
+                          closeTaskEditor();
                           setResetExperience(null);
                           setSelectedJournalEntry(note);
                         }}
@@ -9561,6 +10231,17 @@ export default function Home() {
               <p className="task-link-hint">
                 Removing a link never deletes the original file or note.
               </p>
+              <footer className="task-editor-footer">
+                <button type="button" onClick={closeTaskEditor}>Cancel</button>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={saveTaskEditor}
+                  disabled={!taskEditorDraft.title.trim()}
+                >
+                  Save task
+                </button>
+              </footer>
             </section>
           </div>
       )}
@@ -9641,7 +10322,7 @@ export default function Home() {
       {selectedPostItIds.length > 0 && (
         <div className="postit-multi-toolbar" aria-label="Selected post-it actions">
           <strong>{selectedPostItIds.length} selected</strong>
-          <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group</button>
+          <button type="button" onClick={groupSelectedPostIts} disabled={selectedPostItIds.length < 2}>Group it</button>
           <button type="button" onClick={() => setSelectedPostItIds([])}>Done</button>
         </div>
       )}
@@ -9816,6 +10497,7 @@ export default function Home() {
         <div
           className={[
             "modal-backdrop",
+            "calendar-backdrop",
             calendarScheduleOpen && !eventEditorOpen ? "agenda-overlay-backdrop" : "",
             calendarExpanded && !eventEditorOpen ? "extended-month-backdrop" : "",
           ].filter(Boolean).join(" ")}
@@ -9854,8 +10536,8 @@ export default function Home() {
                   <button
                     className="event-editor-back"
                     type="button"
-                    onClick={() => setEventEditorOpen(false)}
-                    aria-label="Back to calendar"
+                    onClick={closeCalendarEventEditor}
+                    aria-label={editingEventId ? "Close event editor and return home" : "Back to calendar"}
                   >
                     ←
                   </button>
@@ -10499,6 +11181,39 @@ export default function Home() {
                     aria-label="Extended monthly calendar"
                   >
                     <header className="extended-calendar-header">
+                      <div className="extended-calendar-sky" aria-hidden="true">
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-left"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-right"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-moon"
+                          src="/assets/openmoji/moon.svg"
+                          alt=""
+                        />
+                      </div>
+                      <button
+                        className="extended-compact-button extended-back-button"
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          setCalendarExpanded(false);
+                        }}
+                        aria-label="Back to compact month"
+                        title="Back to compact month"
+                      >
+                        <span className="extended-compact-glyph" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M5 7h14M5 12h14M5 17h10" />
+                          </svg>
+                        </span>
+                      </button>
                       <div className="extended-calendar-heading-copy">
                         <div className="extended-calendar-month">
                           <button
@@ -10511,9 +11226,10 @@ export default function Home() {
                               month: "long",
                               year: "numeric",
                             })}
-                            <span className="extended-month-chevron" aria-hidden="true" />
+                            <span className="extended-month-chevron" aria-hidden="true">✧</span>
                           </button>
                         </div>
+                        <p>plan with purpose, live with intention ✦</p>
                       </div>
                       <nav
                         className="extended-calendar-header-actions"
@@ -10533,19 +11249,18 @@ export default function Home() {
                           <span className="extended-schedule-glyph" aria-hidden="true">☆</span>
                         </button>
                         <button
-                          className="extended-compact-button"
+                          className="extended-filter-control"
                           type="button"
-                          onClick={() => {
-                            setMonthPickerOpen(false);
-                            setCalendarExpanded(false);
-                          }}
-                          aria-label="Back to compact month"
-                          title="Back to compact month"
+                          onClick={() => openCalendarCategoryEditor()}
+                          aria-label="Edit visible event types"
+                          title="Edit event types"
                         >
-                          <span className="extended-compact-glyph" aria-hidden="true">
-                            <i />
-                            <i />
-                          </span>
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h9M17 17h3" />
+                            <circle cx="16" cy="7" r="2" />
+                            <circle cx="10" cy="12" r="2" />
+                            <circle cx="15" cy="17" r="2" />
+                          </svg>
                         </button>
                       </nav>
                     </header>
@@ -10588,7 +11303,9 @@ export default function Home() {
                               }
                               aria-pressed={!hidden}
                             >
-                              <span>{hidden ? "" : "✓"}</span>
+                              <span aria-hidden="true">
+                                {['♡', '▤', '✎', '▧'][index % 4]}
+                              </span>
                               {source}
                             </button>
                           );
@@ -10610,7 +11327,7 @@ export default function Home() {
                         aria-label="Edit event types"
                         title="Edit event types"
                       >
-                        <span aria-hidden="true" />
+                        <span aria-hidden="true">＋</span>
                       </button>
                     </section>
 
@@ -10729,7 +11446,7 @@ export default function Home() {
                           }}
                         >
                           <span aria-hidden="true">{tab.icon}</span>
-                          <small>{tab.label}</small>
+                          {tab.id !== "add" && <small>{tab.label}</small>}
                         </button>
                       ))}
                     </nav>
@@ -10983,9 +11700,8 @@ export default function Home() {
                                     } as CSSProperties
                                   }
                                   onClick={() => {
-                                    openEventDetail(
-                                      calendarEventAtOccurrence(event, date),
-                                    );
+                                    setSelectedCalendarDate(date);
+                                    openEventEditor(event);
                                   }}
                                 >
                                   <i aria-hidden="true" />
@@ -11016,7 +11732,7 @@ export default function Home() {
                     </div>
 
                     <footer className="calendar-search-footer">
-                      ♡ Tap a result to open its full note
+                      ♡ Tap a result to edit the event
                     </footer>
                   </section>
                 )}
@@ -11395,8 +12111,12 @@ export default function Home() {
                   {calendarDays.map(({ date, currentMonth }) => {
                     const day = date.getDate();
                     const dayKey = localDateKey(date);
-                    const dayEvents = allCalendarEvents.filter((event) =>
-                      eventOccursOn(event, dayKey),
+                    const dayEvents = allCalendarEvents.filter(
+                      (event) =>
+                        eventOccursOn(event, dayKey) &&
+                        !hiddenCalendarSources.includes(
+                          event.calendar || "Personal",
+                        ),
                     );
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
@@ -11599,13 +12319,6 @@ export default function Home() {
                           } ${
                             isFootballVisualEvent(calendarEvent)
                               ? "canonical-boca-match"
-                              : ""
-                          } ${
-                            calendarEventHasConflictOnDate(
-                              calendarEvent,
-                              selectedCalendarDate,
-                            )
-                              ? "has-conflict"
                               : ""
                           }`}
                           key={calendarEvent.id}
@@ -11829,6 +12542,7 @@ export default function Home() {
                   </svg>
                 </button>
               </header>
+              <div className="day-summary-divider" aria-hidden="true" />
               {summaryEvents.length === 0 ? (
                 <div className="day-summary-empty"><strong>Nothing planned yet</strong><p>This little page is completely yours.</p></div>
               ) : (
@@ -11875,28 +12589,34 @@ export default function Home() {
                           }
                         }}
                       >
-                        <div className="day-summary-event-heading">
-                          <span className="day-summary-event-heart" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" focusable="false">
-                              <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
-                            </svg>
-                          </span>
-                          <div>
-                            {event.sportsCardStyle && (
-                              <span className="day-summary-match-label">
-                                {event.sportsIcon ?? "♡"} MATCH DAY
-                              </span>
-                            )}
-                            <strong>{event.title}</strong>
-                            <small className="day-summary-event-time">
-                              {eventStartTimeLabel(event)}
-                              {event.eventType === "sports_event"
-                                ? ` · ${matchCountdownLabel(event)}`
-                                : ""}
-                            </small>
+                        {isFootballVisualEvent(event) ? (
+                          <BocaDayPocketTicket event={event} />
+                        ) : (
+                          <div className="day-summary-event-heading">
+                            <span className="day-summary-event-heart" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M12 20.5C10.9 19.5 3.2 14.7 3.2 9.7C3.2 6.8 5.2 4.8 8 4.8C9.8 4.8 11.2 5.7 12 7.2C12.8 5.7 14.2 4.8 16 4.8C18.8 4.8 20.8 6.8 20.8 9.7C20.8 14.7 13.1 19.5 12 20.5Z" />
+                              </svg>
+                            </span>
+                            <div>
+                              {event.sportsCardStyle && (
+                                <span className="day-summary-match-label">
+                                  {event.sportsIcon ?? "♡"} MATCH DAY
+                                </span>
+                              )}
+                              <strong>{event.title}</strong>
+                              <small className="day-summary-event-time">
+                                {eventStartTimeLabel(event)}
+                                {event.eventType === "sports_event"
+                                  ? ` · ${matchCountdownLabel(event)}`
+                                  : ""}
+                              </small>
+                            </div>
                           </div>
-                        </div>
-                        {event.note?.trim() && <p className="day-summary-memo">{event.note}</p>}
+                        )}
+                        {!isFootballVisualEvent(event) && event.note?.trim() && (
+                          <p className="day-summary-memo">{event.note}</p>
+                        )}
                         {!!event.todos?.length && (
                           <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
                         )}
@@ -11905,7 +12625,6 @@ export default function Home() {
                   })}
                 </div>
               )}
-              <div className="day-summary-divider" aria-hidden="true" />
               <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>
                 <span className="day-summary-add-icon" aria-hidden="true">
                   <svg viewBox="0 0 42 42" focusable="false">
@@ -12114,6 +12833,41 @@ export default function Home() {
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Details for ${selectedEventDetail.title}`}
+                onClickCapture={(event) => {
+                  const target = event.target as Element;
+                  if (
+                    target.closest(
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                    )
+                  ) {
+                    return;
+                  }
+                  if (
+                    !target.closest(
+                      '[data-event-detail-edit="true"], button',
+                    )
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSelectedEventEditor();
+                }}
+                onKeyDownCapture={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  const target = event.target as Element;
+                  if (
+                    target.closest(
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                    ) ||
+                    !target.closest('[data-event-detail-edit="true"]')
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSelectedEventEditor();
+                }}
               >
                 <header className="event-detail-header">
                   <p className="event-detail-date-eyebrow">
@@ -12123,7 +12877,9 @@ export default function Home() {
                     onClick={closeEventDetail}
                     aria-label="Close event details"
                   >
-                    ×
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M7 7 17 17M17 7 7 17" />
+                    </svg>
                   </button>
                 </header>
 
@@ -12145,14 +12901,24 @@ export default function Home() {
                       {selectedEventDetail.calendar ?? "PERSONAL"}
                     </p>
                   </div>
-                  <h2 className="event-detail-title">
+                  <h2
+                    className="event-detail-title"
+                    data-event-detail-edit="true"
+                    role="button"
+                    tabIndex={0}
+                  >
                     {selectedEventDetail.title}
                   </h2>
                 </div>
 
                 <div className="event-detail-divider" aria-hidden="true" />
 
-                <div className="event-detail-time">
+                <div
+                  className="event-detail-time"
+                  data-event-detail-edit="true"
+                  role="button"
+                  tabIndex={0}
+                >
                   <span className="event-detail-time-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="8" />
@@ -12164,7 +12930,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="event-detail-reminder">
+                <div
+                  className="event-detail-reminder"
+                  data-event-detail-edit="true"
+                  role="button"
+                  tabIndex={0}
+                >
                   <span className="event-detail-reminder-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
@@ -12181,35 +12952,35 @@ export default function Home() {
 
                 <div className="event-detail-facts">
                   {selectedEventDetail.location && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>⌖</span>
                       <small>Location</small>
                       <strong>{selectedEventDetail.location}</strong>
                     </div>
                   )}
                   {selectedEventDetail.guests && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>♡</span>
                       <small>People</small>
                       <strong>{selectedEventDetail.guests}</strong>
                     </div>
                   )}
                   {(selectedEventDetail.repeat ?? "Never") !== "Never" && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>↻</span>
                       <small>Repeats</small>
                       <strong>{eventRepeatLabel(selectedEventDetail)}</strong>
                     </div>
                   )}
                   {selectedEventDetail.dayCounter && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>⌁</span>
                       <small>Day counter</small>
                       <strong>Enabled</strong>
                     </div>
                   )}
                   {selectedEventDetail.memo && (
-                    <div>
+                    <div data-event-detail-edit="true" role="button" tabIndex={0}>
                       <span>✎</span>
                       <small>Saved as</small>
                       <strong>Memo</strong>
@@ -12375,33 +13146,33 @@ export default function Home() {
                 <div className="event-detail-primary-actions">
                   {selectedEventDetail.eventType !== "sports_event" && (
                     <button
-                      className="event-detail-edit"
+                      className="day-summary-add event-detail-add"
                       type="button"
                       onClick={() => {
-                        const event =
-                          calendarEvents.find(
-                            (calendarEvent) =>
-                              calendarEvent.id === selectedEventDetail.id,
-                          ) ?? selectedEventDetail;
-                        const eventDate = dateFromKey(event.date);
-                        setSelectedCalendarDate(event.date);
+                        const eventDate = selectedEventDetail.date;
+                        const eventMonth = dateFromKey(eventDate);
+                        setSelectedCalendarDate(eventDate);
                         setViewMonth(
                           new Date(
-                            eventDate.getFullYear(),
-                            eventDate.getMonth(),
+                            eventMonth.getFullYear(),
+                            eventMonth.getMonth(),
                             1,
                           ),
                         );
                         closeEventDetail();
-                        setCalendarSearchOpen(false);
-                        setCalendarSearchQuery("");
                         setCalendarOpen(true);
-                        openEventEditor(event);
+                        openNewEvent(eventDate);
                       }}
                     >
-                      <span aria-hidden="true">✎</span>
-                      Edit this event
-                      <i aria-hidden="true">✦</i>
+                      <span className="day-summary-add-icon" aria-hidden="true">
+                        <svg viewBox="0 0 42 42" focusable="false">
+                          <rect x="5" y="8" width="32" height="28" rx="7" />
+                          <path d="M13 4v9M29 4v9M5 16h32" />
+                          <path d="M21 21v10M16 26h10" />
+                        </svg>
+                      </span>
+                      <strong>+ Add event</strong>
+                      <span className="day-summary-add-spacer" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -12409,63 +13180,6 @@ export default function Home() {
             </div>
           );
         })()}
-
-      {calendarConflictRequest && (
-        <div
-          className="modal-backdrop calendar-conflict-backdrop"
-          role="presentation"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setCalendarConflictRequest(null);
-            }
-          }}
-        >
-          <section
-            className="calendar-conflict-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Schedule conflict"
-          >
-            <p className="tiny-label">SCHEDULE CONFLICT</p>
-            <h2>These plans overlap</h2>
-            <p>{calendarConflictRequest.message}</p>
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  const request = calendarConflictRequest;
-                  setCalendarConflictRequest(null);
-                  request.onChange();
-                }}
-              >
-                Change time
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const conflict = calendarConflictRequest.conflict;
-                  setCalendarConflictRequest(null);
-                  setSelectedEventDetail(conflict);
-                }}
-              >
-                View conflicting event
-              </button>
-              <button
-                type="button"
-                className="primary"
-                onClick={() => {
-                  const request = calendarConflictRequest;
-                  setCalendarConflictRequest(null);
-                  request.onKeep();
-                }}
-              >
-                {calendarConflictRequest.keepLabel}
-              </button>
-            </div>
-            <small>Overlaps are allowed; the warning is only here to help.</small>
-          </section>
-        </div>
-      )}
 
       {eventDeleteRequest &&
         (() => {
@@ -12813,26 +13527,48 @@ export default function Home() {
             </div>
 
             <div className="post-it-editor-options">
-              <fieldset>
+              <fieldset className="post-it-palette-fieldset">
                 <legend>Paper color</legend>
-                {postItColors.map((color) => (
+                <div
+                  className="post-it-palette-picker"
+                  onTouchStart={startPostItPaletteSwipe}
+                  onTouchEnd={finishPostItPaletteSwipe}
+                >
                   <button
-                    key={color.value}
                     type="button"
-                    className={postItDraft.color === color.value ? "active" : ""}
-                    style={{ "--post-it-swatch": color.hex } as CSSProperties}
-                    onClick={() =>
-                      setPostItDraft((current) => ({
-                        ...current,
-                        color: color.value,
-                      }))
-                    }
-                    aria-label={color.label}
-                    aria-pressed={postItDraft.color === color.value}
+                    className="post-it-palette-nav"
+                    onClick={() => choosePostItPalette(-1)}
+                    aria-label="Previous paper-color palette"
                   >
-                    <span />
+                    <span aria-hidden="true">‹</span>
                   </button>
-                ))}
+                  <div className="post-it-palette-swatches">
+                    {postItColorPalettes[postItPaletteIndex].map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        className={postItDraft.color === color.value ? "active" : ""}
+                        style={{ "--post-it-swatch": color.hex } as CSSProperties}
+                        onClick={() => choosePostItColor(color.value)}
+                        aria-label={color.label}
+                        aria-pressed={postItDraft.color === color.value}
+                      >
+                        <span />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="post-it-palette-nav"
+                    onClick={() => choosePostItPalette(1)}
+                    aria-label="Next paper-color palette"
+                  >
+                    <span aria-hidden="true">›</span>
+                  </button>
+                </div>
+                <small className="post-it-palette-count" aria-live="polite">
+                  Palette {postItPaletteIndex + 1} of {postItColorPalettes.length}
+                </small>
               </fieldset>
             </div>
 
@@ -12970,162 +13706,6 @@ export default function Home() {
                   }
                 />
               </label>
-            </section>
-
-            <section className="sports-settings-card" aria-label="Sports settings">
-              <div className="sports-settings-heading">
-                <div>
-                  <p className="tiny-label">SETTINGS → SPORTS</p>
-                  <h3>Teams you follow</h3>
-                  <p>Automatic fixtures stay separate from your personal events.</p>
-                </div>
-                <span>💙💛</span>
-              </div>
-              {INITIAL_SPORTS_TEAMS.map((team) => {
-                const followed = sportsSettings.followedTeamIds.includes(team.id);
-                const canonicalBoca = isBocaSportsTeam(team);
-                return (
-                  <label className="follow-team-row" key={team.id}>
-                    <span className="team-colors" style={{
-                      "--team-primary": team.primaryColor,
-                      "--team-secondary": team.secondaryColor,
-                    } as CSSProperties} />
-                    <span>
-                      <strong>{team.name} {team.icon}</strong>
-                      <small>
-                        {canonicalBoca
-                          ? "Official fixtures · always visible"
-                          : followed
-                            ? "Matches are visible"
-                            : "Available to follow"}
-                      </small>
-                    </span>
-                    {canonicalBoca ? (
-                      <span className="canonical-team-source">OFFICIAL</span>
-                    ) : (
-                      <input
-                        type="checkbox"
-                        checked={followed}
-                        onChange={(event) =>
-                          setSportsSettings((current) => ({
-                            ...current,
-                            followedTeamIds: event.target.checked
-                              ? Array.from(new Set([...current.followedTeamIds, team.id]))
-                              : current.followedTeamIds.filter((id) => id !== team.id),
-                          }))
-                        }
-                      />
-                    )}
-                  </label>
-                );
-              })}
-              <div className="sports-toggle-grid">
-                <label>
-                  <span>Add matches automatically</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.addAutomatically}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        addAutomatically: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Show special match cards</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showSpecialCards}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showSpecialCards: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Notify me before matches</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.notifyBeforeMatches}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        notifyBeforeMatches: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Notification time</span>
-                  <select
-                    value={sportsSettings.notificationLeadMinutes}
-                    onChange={(event) => {
-                      const selected = Number(event.target.value);
-                      if (selected === -1) {
-                        const custom = Number(
-                          window.prompt(
-                            "Minutes before the match",
-                            String(sportsSettings.notificationLeadMinutes),
-                          ),
-                        );
-                        if (!Number.isFinite(custom) || custom < 0) return;
-                        setSportsSettings((current) => ({
-                          ...current,
-                          notificationLeadMinutes: Math.round(custom),
-                        }));
-                        return;
-                      }
-                      setSportsSettings((current) => ({
-                        ...current,
-                        notificationLeadMinutes: selected,
-                      }));
-                    }}
-                  >
-                    {![30, 60, 180, 1440].includes(
-                      sportsSettings.notificationLeadMinutes,
-                    ) && (
-                      <option value={sportsSettings.notificationLeadMinutes}>
-                        Custom · {sportsSettings.notificationLeadMinutes} min
-                      </option>
-                    )}
-                    <option value={30}>30 min</option>
-                    <option value={60}>1 hour</option>
-                    <option value={180}>3 hours</option>
-                    <option value={1440}>1 day</option>
-                    <option value={-1}>Custom…</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Show live score</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showLiveScore}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showLiveScore: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Show final score</span>
-                  <input
-                    type="checkbox"
-                    checked={sportsSettings.showFinalScore}
-                    onChange={(event) =>
-                      setSportsSettings((current) => ({
-                        ...current,
-                        showFinalScore: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
             </section>
 
             <section className="sync-card" aria-label="Private device sync">
@@ -13626,6 +14206,8 @@ function TodayScreen({
   dayCharmText,
   showDayCharm,
   isNight,
+  classTimetable,
+  setClassTimetable,
 }: {
   themeId: AppTheme;
   pending: Reminder[];
@@ -13649,11 +14231,22 @@ function TodayScreen({
   dayCharmText: string;
   showDayCharm: boolean;
   isNight: boolean;
+  classTimetable: ClassTimetable;
+  setClassTimetable: Dispatch<SetStateAction<ClassTimetable>>;
 }) {
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
+  const [timetableOpen, setTimetableOpen] = useState(false);
+  const [timetableEditing, setTimetableEditing] = useState(false);
+  const [timetableDraft, setTimetableDraft] =
+    useState<ClassTimetable>(classTimetable);
+  const [timetableClassDraft, setTimetableClassDraft] =
+    useState<TimetableClass | null>(null);
   const scheduleLongPressTimerRef = useRef<number | null>(null);
   const scheduleLongPressedRef = useRef(false);
   const schedulePressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const timetablePressTimerRef = useRef<number | null>(null);
+  const timetablePressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const timetableLongPressedRef = useRef(false);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
@@ -13663,6 +14256,106 @@ function TodayScreen({
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
+
+  const openClassTimetable = () => {
+    setTimetableDraft({
+      ...classTimetable,
+      classes: classTimetable.classes.map((classItem) => ({ ...classItem })),
+    });
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+    setTimetableOpen(true);
+  };
+
+  const cancelTimetableLongPress = () => {
+    if (timetablePressTimerRef.current) {
+      window.clearTimeout(timetablePressTimerRef.current);
+    }
+    timetablePressTimerRef.current = null;
+    timetablePressStartRef.current = null;
+  };
+
+  const beginTimetableLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    timetableLongPressedRef.current = false;
+    cancelTimetableLongPress();
+    timetablePressStartRef.current = { x: event.clientX, y: event.clientY };
+    timetablePressTimerRef.current = window.setTimeout(() => {
+      timetableLongPressedRef.current = true;
+      timetablePressTimerRef.current = null;
+      openClassTimetable();
+    }, 560);
+  };
+
+  const moveTimetableLongPress = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const start = timetablePressStartRef.current;
+    if (
+      start &&
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
+    ) {
+      cancelTimetableLongPress();
+    }
+  };
+
+  const closeClassTimetable = () => {
+    setTimetableOpen(false);
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+  };
+
+  const beginNewTimetableClass = () => {
+    setTimetableClassDraft({
+      id: `timetable-${Date.now()}`,
+      name: "",
+      day: "mon",
+      start: "08:00",
+      end: "09:30",
+      color: timetableColors[timetableDraft.classes.length % timetableColors.length],
+    });
+  };
+
+  const saveTimetableClass = () => {
+    if (!timetableClassDraft?.name.trim()) return;
+    setTimetableDraft((current) => ({
+      ...current,
+      classes: current.classes.some(
+        (classItem) => classItem.id === timetableClassDraft.id,
+      )
+        ? current.classes.map((classItem) =>
+            classItem.id === timetableClassDraft.id
+              ? { ...timetableClassDraft, name: timetableClassDraft.name.trim() }
+              : classItem,
+          )
+        : [
+            ...current.classes,
+            { ...timetableClassDraft, name: timetableClassDraft.name.trim() },
+          ],
+    }));
+    setTimetableClassDraft(null);
+  };
+
+  const deleteTimetableClass = (classId: string) => {
+    setTimetableDraft((current) => ({
+      ...current,
+      classes: current.classes.filter((classItem) => classItem.id !== classId),
+    }));
+    setTimetableClassDraft(null);
+  };
+
+  const saveClassTimetable = () => {
+    const nextTimetable = {
+      ...timetableDraft,
+      termName: timetableDraft.termName.trim() || "Current semester",
+      termDates: timetableDraft.termDates.trim() || "Set your term dates",
+    };
+    setClassTimetable(nextTimetable);
+    setTimetableDraft(nextTimetable);
+    setTimetableEditing(false);
+    setTimetableClassDraft(null);
+  };
 
   const cancelScheduleLongPress = () => {
     if (scheduleLongPressTimerRef.current) {
@@ -13717,6 +14410,9 @@ function TodayScreen({
     () => () => {
       if (scheduleLongPressTimerRef.current) {
         window.clearTimeout(scheduleLongPressTimerRef.current);
+      }
+      if (timetablePressTimerRef.current) {
+        window.clearTimeout(timetablePressTimerRef.current);
       }
     },
     [],
@@ -13773,14 +14469,32 @@ function TodayScreen({
           </p>
         </div>
         {showDayCharm && (
-          <div
+          <button
+            type="button"
             className={[
               "day-charm",
               dayCharmText === "you may rest" ? "curved-copy" : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-label={`${dayCharmLabel}: ${dayCharmText}`}
+            onPointerDown={beginTimetableLongPress}
+            onPointerMove={moveTimetableLongPress}
+            onPointerUp={cancelTimetableLongPress}
+            onPointerCancel={cancelTimetableLongPress}
+            onContextMenu={(event) => event.preventDefault()}
+            onClick={() => {
+              if (timetableLongPressedRef.current) {
+                timetableLongPressedRef.current = false;
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openClassTimetable();
+              }
+            }}
+            aria-label={`${dayCharmLabel}: ${dayCharmText}. Hold to open your class schedule.`}
+            title="Hold to open your class schedule"
           >
             <img src={dayCharm} alt="" />
             {dayCharmText === "you may rest" ? (
@@ -13808,7 +14522,7 @@ function TodayScreen({
             ) : (
               <span>{dayCharmText}</span>
             )}
-          </div>
+          </button>
         )}
       </section>
 
@@ -14163,6 +14877,362 @@ function TodayScreen({
                 Save
               </button>
             </footer>
+          </section>
+        </div>
+      )}
+
+      {timetableOpen && (
+        <div
+          className="timetable-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) closeClassTimetable();
+          }}
+        >
+          <section
+            className="timetable-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="My class schedule"
+          >
+            <span className="timetable-paperclip" aria-hidden="true">♡</span>
+            <header className="timetable-heading">
+              <div>
+                <p className="tiny-label">A LITTLE MAP OF MY WEEK</p>
+                {timetableEditing ? (
+                  <div className="timetable-term-fields">
+                    <label>
+                      <span>Semester name</span>
+                      <input
+                        value={timetableDraft.termName}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termName: event.target.value,
+                          }))
+                        }
+                        placeholder="Second semester"
+                      />
+                    </label>
+                    <label>
+                      <span>Dates</span>
+                      <input
+                        value={timetableDraft.termDates}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termDates: event.target.value,
+                          }))
+                        }
+                        placeholder="August — December 2026"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <h2>{classTimetable.termName}</h2>
+                    <p>{classTimetable.termDates}</p>
+                  </>
+                )}
+              </div>
+              <div className="timetable-heading-actions">
+                {!timetableEditing && (
+                  <button
+                    className="timetable-edit-button"
+                    type="button"
+                    onClick={() => {
+                      setTimetableDraft({
+                        ...classTimetable,
+                        classes: classTimetable.classes.map((classItem) => ({
+                          ...classItem,
+                        })),
+                      });
+                      setTimetableEditing(true);
+                    }}
+                    aria-label="Edit class schedule"
+                    title="Edit class schedule"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m5 16-.8 3.8L8 19l9.8-9.8-3-3Z" />
+                      <path d="m13.8 7.2 3 3" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  className="timetable-close-button"
+                  type="button"
+                  onClick={closeClassTimetable}
+                  aria-label="Close class schedule"
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+
+            {!timetableEditing ? (
+              <div className="timetable-board" aria-label="Weekly classes">
+                {timetableDays.map((day, dayIndex) => {
+                  const dayClasses = classTimetable.classes
+                    .filter((classItem) => classItem.day === day.id)
+                    .sort((first, second) => first.start.localeCompare(second.start));
+                  return (
+                    <section className="timetable-day" key={day.id}>
+                      <h3 style={{ background: timetableColors[dayIndex] }}>
+                        {day.label}
+                      </h3>
+                      <div>
+                        {dayClasses.length === 0 ? (
+                          <span className="timetable-empty-day">♡</span>
+                        ) : (
+                          dayClasses.map((classItem) => (
+                            <article
+                              className="timetable-class-block"
+                              key={classItem.id}
+                              style={{ background: classItem.color }}
+                            >
+                              <strong>{classItem.name}</strong>
+                              <small>
+                                {classItem.start} — {classItem.end}
+                              </small>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="timetable-editor">
+                <div className="timetable-editor-title">
+                  <div>
+                    <p className="tiny-label">SUBJECTS & TIMES</p>
+                    <h3>Build your weekly rhythm</h3>
+                  </div>
+                  <button type="button" onClick={beginNewTimetableClass}>
+                    <span aria-hidden="true">＋</span> Add class
+                  </button>
+                </div>
+
+                <div className="timetable-edit-list">
+                  {timetableDraft.classes.length === 0 ? (
+                    <button
+                      className="timetable-first-class"
+                      type="button"
+                      onClick={beginNewTimetableClass}
+                    >
+                      <span>＋</span>
+                      <strong>Add your first class</strong>
+                      <small>Choose its day, time and pastel color.</small>
+                    </button>
+                  ) : (
+                    [...timetableDraft.classes]
+                      .sort((first, second) =>
+                        `${first.day}-${first.start}`.localeCompare(
+                          `${second.day}-${second.start}`,
+                        ),
+                      )
+                      .map((classItem) => (
+                        <button
+                          className="timetable-edit-row"
+                          type="button"
+                          key={classItem.id}
+                          onClick={() => setTimetableClassDraft({ ...classItem })}
+                        >
+                          <i style={{ background: classItem.color }} />
+                          <span>
+                            <strong>{classItem.name}</strong>
+                            <small>
+                              {timetableDays.find((day) => day.id === classItem.day)?.label}
+                              {' · '}{classItem.start} — {classItem.end}
+                            </small>
+                          </span>
+                          <b aria-hidden="true">›</b>
+                        </button>
+                      ))
+                  )}
+                </div>
+
+                {timetableClassDraft && (
+                  <section
+                    className="timetable-class-form"
+                    aria-label={
+                      timetableDraft.classes.some(
+                        (classItem) => classItem.id === timetableClassDraft.id,
+                      )
+                        ? "Edit class"
+                        : "Add class"
+                    }
+                  >
+                    <div className="timetable-class-form-heading">
+                      <div>
+                        <p className="tiny-label">CLASS DETAILS</p>
+                        <h3>
+                          {timetableDraft.classes.some(
+                            (classItem) => classItem.id === timetableClassDraft.id,
+                          )
+                            ? "Edit this class"
+                            : "Add a new class"}
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTimetableClassDraft(null)}
+                        aria-label="Close class details"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <label className="timetable-class-name">
+                      <span>Class name</span>
+                      <input
+                        autoFocus
+                        value={timetableClassDraft.name}
+                        onChange={(event) =>
+                          setTimetableClassDraft((current) =>
+                            current ? { ...current, name: event.target.value } : current,
+                          )
+                        }
+                        placeholder="For example: Applied Physics"
+                      />
+                    </label>
+                    <div className="timetable-class-form-grid">
+                      <label>
+                        <span>Day</span>
+                        <select
+                          value={timetableClassDraft.day}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    day: event.target.value as TimetableDay,
+                                  }
+                                : current,
+                            )
+                          }
+                        >
+                          {timetableDays.map((day) => (
+                            <option value={day.id} key={day.id}>{day.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Starts</span>
+                        <input
+                          type="time"
+                          value={timetableClassDraft.start}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, start: event.target.value } : current,
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Ends</span>
+                        <input
+                          type="time"
+                          value={timetableClassDraft.end}
+                          onChange={(event) =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, end: event.target.value } : current,
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <fieldset className="timetable-color-picker">
+                      <legend>Color</legend>
+                      {timetableColors.map((color) => (
+                        <button
+                          type="button"
+                          key={color}
+                          className={timetableClassDraft.color === color ? "active" : ""}
+                          style={{ background: color }}
+                          onClick={() =>
+                            setTimetableClassDraft((current) =>
+                              current ? { ...current, color } : current,
+                            )
+                          }
+                          aria-label={`Use color ${color}`}
+                          aria-pressed={timetableClassDraft.color === color}
+                        />
+                      ))}
+                    </fieldset>
+                    <footer>
+                      {timetableDraft.classes.some(
+                        (classItem) => classItem.id === timetableClassDraft.id,
+                      ) ? (
+                        <button
+                          className="timetable-delete-class"
+                          type="button"
+                          onClick={() => deleteTimetableClass(timetableClassDraft.id)}
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setTimetableClassDraft(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="timetable-save-class"
+                        type="button"
+                        disabled={!timetableClassDraft.name.trim()}
+                        onClick={saveTimetableClass}
+                      >
+                        Save class
+                      </button>
+                    </footer>
+                  </section>
+                )}
+
+                <footer className="timetable-editor-footer">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimetableDraft({
+                        ...classTimetable,
+                        classes: classTimetable.classes.map((classItem) => ({
+                          ...classItem,
+                        })),
+                      });
+                      setTimetableEditing(false);
+                      setTimetableClassDraft(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="button" onClick={saveClassTimetable}>
+                    Save semester
+                  </button>
+                </footer>
+              </div>
+            )}
+
+            {!timetableEditing && classTimetable.classes.length === 0 && (
+              <button
+                className="timetable-empty-action"
+                type="button"
+                onClick={() => {
+                  setTimetableEditing(true);
+                  beginNewTimetableClass();
+                }}
+              >
+                <span>＋</span>
+                <strong>Make this semester yours</strong>
+                <small>Add your first class</small>
+              </button>
+            )}
+
+            <p className="timetable-note">
+              Hold the little morning circle whenever you want to see this again.
+            </p>
           </section>
         </div>
       )}

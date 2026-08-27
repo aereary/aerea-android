@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ChangeEvent, MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
 import { supabase } from "./supabase-sync";
 import type { StudyFileItem } from "./study-library";
 
@@ -95,6 +95,56 @@ function normalized(value: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase();
+}
+
+function normalizedWithSourceMap(value: string) {
+  let folded = "";
+  const sourceOffsets: number[] = [];
+  let sourceOffset = 0;
+
+  for (const character of Array.from(value)) {
+    const normalizedCharacter = normalized(character);
+    folded += normalizedCharacter;
+    for (let index = 0; index < normalizedCharacter.length; index += 1) {
+      sourceOffsets.push(sourceOffset);
+    }
+    sourceOffset += character.length;
+  }
+
+  sourceOffsets.push(value.length);
+  return { folded, sourceOffsets };
+}
+
+function HighlightText({ text, query }: { text: string; query: string }) {
+  const needle = normalized(query.trim());
+  if (!needle) return text;
+
+  const { folded, sourceOffsets } = normalizedWithSourceMap(text);
+  const pieces = [];
+  let sourceCursor = 0;
+  let searchCursor = 0;
+  let matchIndex = folded.indexOf(needle, searchCursor);
+
+  while (matchIndex >= 0) {
+    const sourceStart = sourceOffsets[matchIndex] ?? sourceCursor;
+    const sourceEnd =
+      sourceOffsets[matchIndex + needle.length] ?? text.length;
+    if (sourceStart > sourceCursor) {
+      pieces.push(text.slice(sourceCursor, sourceStart));
+    }
+    pieces.push(
+      <mark className="ao3-highlight" key={`${sourceStart}-${sourceEnd}`}>
+        {text.slice(sourceStart, sourceEnd)}
+      </mark>,
+    );
+    sourceCursor = sourceEnd;
+    searchCursor = matchIndex + needle.length;
+    matchIndex = folded.indexOf(needle, searchCursor);
+  }
+
+  if (sourceCursor === 0) return text;
+  if (sourceCursor < text.length) pieces.push(text.slice(sourceCursor));
+  return <>{pieces}</>;
 }
 
 function formatNumber(value: number | null | undefined) {
@@ -358,27 +408,54 @@ function driveViewUrl(fileId: string) {
   return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
 }
 
-function TagCloud({ tags, limit = 14 }: { tags: string[]; limit?: number }) {
+function TagCloud({
+  tags,
+  limit = 14,
+  query,
+  activeTag,
+  onTagSearch,
+}: {
+  tags: string[];
+  limit?: number;
+  query: string;
+  activeTag: string | null;
+  onTagSearch: (tag: string) => void;
+}) {
   const uniqueTags = compactUnique(tags);
-  const first = uniqueTags.slice(0, limit);
-  const hidden = uniqueTags.slice(limit);
+  const needle = normalized(activeTag || query.trim());
+  const orderedTags = needle
+    ? [
+        ...uniqueTags.filter((tag) => normalized(tag).includes(needle)),
+        ...uniqueTags.filter((tag) => !normalized(tag).includes(needle)),
+      ]
+    : uniqueTags;
+  const first = orderedTags.slice(0, limit);
+  const hidden = orderedTags.slice(limit);
+
+  const tagButton = (tag: string) => {
+    const selected = Boolean(activeTag && normalized(activeTag) === normalized(tag));
+    return (
+      <button
+        className={`ao3-tag ${selected ? "is-searching" : ""}`}
+        key={tag}
+        type="button"
+        onClick={() => onTagSearch(tag)}
+        aria-label={`Buscar el tag ${tag}`}
+        aria-pressed={selected}
+      >
+        <HighlightText text={tag} query={query} />
+      </button>
+    );
+  };
 
   return (
     <div className="ao3-tags">
-      {first.map((tag) => (
-        <span className="ao3-tag" key={tag}>
-          {tag}
-        </span>
-      ))}
+      {first.map(tagButton)}
       {hidden.length > 0 && (
         <details className="ao3-more-tags">
           <summary>+{hidden.length} más</summary>
           <div className="ao3-more-tags-list">
-            {hidden.map((tag) => (
-              <span className="ao3-tag" key={tag}>
-                {tag}
-              </span>
-            ))}
+            {hidden.map(tagButton)}
           </div>
         </details>
       )}
@@ -475,10 +552,16 @@ function WorkDetails({
   work,
   versions,
   onDownload,
+  query,
+  activeTag,
+  onTagSearch,
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
   onDownload: (target: Ao3EpubDownloadTarget) => void;
+  query: string;
+  activeTag: string | null;
+  onTagSearch: (tag: string) => void;
 }) {
   const secondarySeries = (work.series || []).slice(1);
   return (
@@ -486,29 +569,47 @@ function WorkDetails({
       <div className="ao3-context">
         <div>
           <b>Fandom</b>
-          <span>{work.fandoms?.join(" · ") || "—"}</span>
+          <span>
+            <HighlightText text={work.fandoms?.join(" · ") || "—"} query={query} />
+          </span>
         </div>
         <div>
           <b>Ship</b>
-          <span>{work.relationships?.join(" · ") || "—"}</span>
+          <span>
+            <HighlightText
+              text={work.relationships?.join(" · ") || "—"}
+              query={query}
+            />
+          </span>
         </div>
       </div>
 
       {secondarySeries.length > 0 && (
         <p className="ao3-secondary-series">
           <b>También en:</b>{" "}
-          {secondarySeries.map((membership) => membership.label).join(" · ")}
+          <HighlightText
+            text={secondarySeries.map((membership) => membership.label).join(" · ")}
+            query={query}
+          />
         </p>
       )}
 
       <div className="ao3-synopsis">
         <b>Synopsis</b>
-        <p>{work.summary || "Sin synopsis guardada."}</p>
+        <p>
+          <HighlightText text={work.summary || "Sin synopsis guardada."} query={query} />
+        </p>
       </div>
 
       <div className="ao3-tag-section">
         <b>Tags</b>
-        <TagCloud tags={work.tags || []} limit={12} />
+        <TagCloud
+          tags={work.tags || []}
+          limit={12}
+          query={query}
+          activeTag={activeTag}
+          onTagSearch={onTagSearch}
+        />
       </div>
 
       <WorkActions work={work} versions={versions} onDownload={onDownload} />
@@ -521,11 +622,17 @@ function FicCard({
   versions,
   onCopy,
   onDownload,
+  query,
+  activeTag,
+  onTagSearch,
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
   onCopy: (title: string) => void;
   onDownload: (target: Ao3EpubDownloadTarget) => void;
+  query: string;
+  activeTag: string | null;
+  onTagSearch: (tag: string) => void;
 }) {
   return (
     <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""}`}>
@@ -539,12 +646,14 @@ function FicCard({
           title="Tocar para copiar el título"
           onClick={() => onCopy(work.title)}
         >
-          {work.title}
+          <HighlightText text={work.title} query={query} />
         </button>
       </header>
 
       <div className="ao3-card-meta">
-        <strong>{work.author || "Anonymous"}</strong>
+        <strong>
+          <HighlightText text={work.author || "Anonymous"} query={query} />
+        </strong>
         <span>
           {work.chapters || "? capítulos"} · {formatNumber(work.words)} palabras
         </span>
@@ -558,22 +667,36 @@ function FicCard({
         <div className="ao3-context">
           <div>
             <b>Fandom</b>
-            <span>{work.fandoms?.join(" · ") || "—"}</span>
+            <span>
+              <HighlightText text={work.fandoms?.join(" · ") || "—"} query={query} />
+            </span>
           </div>
           <div>
             <b>Ship</b>
-            <span>{work.relationships?.join(" · ") || "—"}</span>
+            <span>
+              <HighlightText
+                text={work.relationships?.join(" · ") || "—"}
+                query={query}
+              />
+            </span>
           </div>
         </div>
 
         <div className="ao3-synopsis">
           <b>Synopsis</b>
-          <p>{work.summary || "Sin synopsis guardada."}</p>
+          <p>
+            <HighlightText text={work.summary || "Sin synopsis guardada."} query={query} />
+          </p>
         </div>
 
         <div className="ao3-tag-section">
           <b>Tags</b>
-          <TagCloud tags={work.tags || []} />
+          <TagCloud
+            tags={work.tags || []}
+            query={query}
+            activeTag={activeTag}
+            onTagSearch={onTagSearch}
+          />
         </div>
 
         {work.archived && (
@@ -594,11 +717,17 @@ function SeriesCard({
   versionsByWork,
   onCopy,
   onDownload,
+  query,
+  activeTag,
+  onTagSearch,
 }: {
   entry: SeriesGroup;
   versionsByWork: Map<number, EpubVersion[]>;
   onCopy: (title: string) => void;
   onDownload: (target: Ao3EpubDownloadTarget) => void;
+  query: string;
+  activeTag: string | null;
+  onTagSearch: (tag: string) => void;
 }) {
   const first = entry.works[0];
   const authors = compactUnique(entry.works.map((work) => work.author));
@@ -617,13 +746,16 @@ function SeriesCard({
           title="Tocar para copiar el título"
           onClick={() => onCopy(entry.name)}
         >
-          {entry.name}
+          <HighlightText text={entry.name} query={query} />
         </button>
       </header>
 
       <div className="ao3-card-meta">
         <strong>
-          {authors.length === 1 ? authors[0] : `${authors.length} autores`}
+          <HighlightText
+            text={authors.length === 1 ? authors[0] : `${authors.length} autores`}
+            query={query}
+          />
         </strong>
         <span>
           {entry.works.length} obras · {formatNumber(entry.words)} palabras
@@ -637,35 +769,52 @@ function SeriesCard({
         <div className="ao3-context">
           <div>
             <b>Fandom</b>
-            <span>{entry.fandoms.join(" · ") || "—"}</span>
+            <span>
+              <HighlightText text={entry.fandoms.join(" · ") || "—"} query={query} />
+            </span>
           </div>
           <div>
             <b>Ship</b>
-            <span>{relationships.slice(0, 3).join(" · ") || "—"}</span>
+            <span>
+              <HighlightText
+                text={relationships.slice(0, 3).join(" · ") || "—"}
+                query={query}
+              />
+            </span>
           </div>
         </div>
 
         <div className="ao3-synopsis">
           <b>Synopsis</b>
           <p>
-            Sinopsis de la primera obra (“{first.title}”): {first.summary || "—"}
+            <HighlightText
+              text={`Sinopsis de la primera obra (“${first.title}”): ${first.summary || "—"}`}
+              query={query}
+            />
           </p>
         </div>
 
         <div className="ao3-tag-section">
           <b>Tags</b>
-          <TagCloud tags={tags} />
+          <TagCloud
+            tags={tags}
+            query={query}
+            activeTag={activeTag}
+            onTagSearch={onTagSearch}
+          />
         </div>
       </div>
 
-      <details className="ao3-series-parts">
+      <details className="ao3-series-parts" open={Boolean(query.trim())}>
         <summary>Ver {entry.works.length} obras</summary>
         <ol>
           {entry.works.map((work) => (
             <li key={work.work_id}>
               <details className="ao3-part">
                 <summary>
-                  <strong>{work.title}</strong>
+                  <strong>
+                    <HighlightText text={work.title} query={query} />
+                  </strong>
                   <small>
                     {work.series?.[0]?.part
                       ? `Parte ${work.series[0].part} · `
@@ -678,6 +827,9 @@ function SeriesCard({
                   work={work}
                   versions={versionsByWork.get(work.work_id) || []}
                   onDownload={onDownload}
+                  query={query}
+                  activeTag={activeTag}
+                  onTagSearch={onTagSearch}
                 />
               </details>
             </li>
@@ -689,12 +841,16 @@ function SeriesCard({
 }
 
 export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
+  const libraryLayerRef = useRef<HTMLElement | null>(null);
+  const lastScrollTopRef = useRef(0);
   const [works, setWorks] = useState<Ao3Work[]>([]);
   const [epubs, setEpubs] = useState<EpubVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [searchToolsHidden, setSearchToolsHidden] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"all" | "fic" | "series">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "complete" | "wip">(
     "all",
@@ -823,13 +979,21 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         return false;
       }
 
+      if (activeTag) {
+        const tagNeedle = normalized(activeTag);
+        const entryWorks = entry.kind === "series" ? entry.works : [entry.work];
+        return entryWorks.some((work) =>
+          (work.tags || []).some((tag) => normalized(tag) === tagNeedle),
+        );
+      }
+
       if (!needle) return true;
       if (entry.kind === "fic") return workSearchText(entry.work).includes(needle);
       return normalized(
         [entry.name, ...entry.works.map((work) => workSearchText(work))].join(" "),
       ).includes(needle);
     });
-  }, [entries, fandomFilter, query, statusFilter, typeFilter]);
+  }, [activeTag, entries, fandomFilter, query, statusFilter, typeFilter]);
 
   const archivedCount = useMemo(
     () => works.filter((work) => work.archived).length,
@@ -844,6 +1008,39 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     const copied = await copyText(title);
     setToast(copied ? "Título copiado ✓" : "No pude copiar el título");
   };
+
+  const handleLibraryScroll = useCallback(
+    (event: ReactUIEvent<HTMLElement>) => {
+      const nextScrollTop = event.currentTarget.scrollTop;
+      if (nextScrollTop <= 72) {
+        lastScrollTopRef.current = nextScrollTop;
+        setSearchToolsHidden(false);
+        return;
+      }
+
+      const delta = nextScrollTop - lastScrollTopRef.current;
+      if (delta >= 8) {
+        lastScrollTopRef.current = nextScrollTop;
+        setSearchToolsHidden(true);
+      } else if (delta <= -8) {
+        lastScrollTopRef.current = nextScrollTop;
+        setSearchToolsHidden(false);
+      }
+    },
+    [],
+  );
+
+  const searchByTag = useCallback((tag: string) => {
+    setQuery(tag);
+    setActiveTag(tag);
+    setTypeFilter("all");
+    setStatusFilter("all");
+    setFandomFilter("all");
+    setSearchToolsHidden(false);
+    window.requestAnimationFrame(() => {
+      libraryLayerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }, []);
 
   const confirmDownload = async () => {
     if (!downloadTarget) return;
@@ -872,10 +1069,12 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
   return (
     <section
-      className="ao3-library-layer"
+      ref={libraryLayerRef}
+      className={`ao3-library-layer ${searchToolsHidden ? "ao3-search-tools-hidden" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="My AO3 Library"
+      onScroll={handleLibraryScroll}
     >
       <style>{AO3_LIBRARY_CSS}</style>
       <header className="ao3-screen-header">
@@ -918,7 +1117,11 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         <input
           className="ao3-search"
           value={query}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setActiveTag(null);
+            setQuery(event.target.value);
+          }}
+          onFocus={() => setSearchToolsHidden(false)}
           placeholder="Buscar título, autor, ship, tag…"
           type="search"
         />
@@ -984,6 +1187,9 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
                 setDownloadError("");
                 setDownloadTarget(target);
               }}
+              query={query}
+              activeTag={activeTag}
+              onTagSearch={searchByTag}
             />
           ) : (
             <SeriesCard
@@ -995,6 +1201,9 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
                 setDownloadError("");
                 setDownloadTarget(target);
               }}
+              query={query}
+              activeTag={activeTag}
+              onTagSearch={searchByTag}
             />
           ),
         )}
@@ -1113,6 +1322,15 @@ const AO3_LIBRARY_CSS = String.raw`
   margin-bottom: 14px;
   background: color-mix(in srgb, var(--ao3-surface) 92%, transparent);
   backdrop-filter: blur(14px);
+  transform: translateY(0);
+  transform-origin: top center;
+  transition: transform .22s ease, opacity .18s ease;
+  will-change: transform;
+}
+.ao3-library-layer.ao3-search-tools-hidden .ao3-library-tools {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-100% - 70px));
 }
 .ao3-library-intro {
   display: flex;
@@ -1202,9 +1420,11 @@ const AO3_LIBRARY_CSS = String.raw`
 .ao3-context span { font-size: .9rem; overflow-wrap: anywhere; }
 .ao3-synopsis p { margin: 0; white-space: pre-line; font-size: .91rem; line-height: 1.55; }
 .ao3-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
-.ao3-tag { display: inline-block; max-width: 100%; padding: 5px 8px; border: 1px solid rgba(108,89,122,.12); border-radius: 999px; background: var(--ao3-peach); font-size: .75rem; line-height: 1.25; overflow-wrap: anywhere; }
+.ao3-tag { display: inline-block; max-width: 100%; padding: 5px 8px; border: 1px solid rgba(108,89,122,.12); border-radius: 999px; background: var(--ao3-peach); color: inherit; cursor: pointer; font: inherit; font-size: .75rem; line-height: 1.25; overflow-wrap: anywhere; text-align: left; }
 .ao3-tag:nth-of-type(3n+2) { background: var(--ao3-lav); }
 .ao3-tag:nth-of-type(3n+3) { background: var(--ao3-sage); }
+.ao3-tag.is-searching { border-color: var(--ao3-plum); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ao3-plum) 18%, transparent); }
+.ao3-highlight { padding: 0 .08em; border-radius: 4px; background: #fff0a8; color: #4b3b52; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .ao3-more-tags { width: 100%; }
 .ao3-more-tags > summary { width: fit-content; list-style: none; cursor: pointer; padding: 5px 9px; border-radius: 999px; background: var(--ao3-rose); color: var(--ao3-plum-dark); font-size: .75rem; font-weight: 800; }
 .ao3-more-tags > summary::-webkit-details-marker { display: none; }
@@ -1300,6 +1520,7 @@ const AO3_LIBRARY_CSS = String.raw`
 .app-shell[data-color-mode="dark"] .ao3-part { background: rgba(40,36,44,.72); }
 .app-shell[data-color-mode="dark"] .ao3-part[open] > summary { background: rgba(54,47,59,.72); }
 .app-shell[data-color-mode="dark"] .ao3-actions a { background: rgba(43,38,47,.85); }
+.app-shell[data-color-mode="dark"] .ao3-highlight { background: #725c2e; color: #fff5dc; }
 .app-shell[data-color-mode="dark"] .ao3-modal { background: #29252d; }
 .app-shell[data-color-mode="dark"] .ao3-modal-actions button { background: #332e37; color: var(--ao3-ink); }
 `;
