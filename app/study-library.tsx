@@ -1,6 +1,12 @@
 "use client";
 
-import { ChangeEvent, CSSProperties, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  CSSProperties,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 export type StudyNotebook = {
   id: string;
@@ -15,6 +21,7 @@ export type StudyNotebook = {
 
 export type StudyNote = {
   id: string;
+  sourceInboxId?: string;
   title: string;
   body: string;
   notebookId?: string;
@@ -123,6 +130,8 @@ export function StudyLibrary({
   onFilesChange,
   onRecordingsChange,
   usedInForFile,
+  requestedNoteId,
+  onRequestedNoteOpened,
   onBack,
 }: {
   notes: StudyNote[];
@@ -138,6 +147,8 @@ export function StudyLibrary({
   onFilesChange: (files: StudyFileItem[]) => void;
   onRecordingsChange: (recordings: StudyRecordingItem[]) => void;
   usedInForFile: (fileId: string) => string[];
+  requestedNoteId?: string | null;
+  onRequestedNoteOpened?: () => void;
   onBack: () => void;
 }) {
   const [filter, setFilter] = useState<LibraryFilter>("all");
@@ -148,6 +159,11 @@ export function StudyLibrary({
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const requestedNote = useMemo(
+    () => notes.find((note) => note.id === requestedNoteId) ?? null,
+    [notes, requestedNoteId],
+  );
+  const activeNoteEditor = noteEditor ?? requestedNote;
 
   const query = search.trim().toLowerCase();
   const visibleNotes = useMemo(
@@ -348,6 +364,10 @@ export function StudyLibrary({
   };
 
   const hasNote = (id: string) => notes.some((item) => item.id === id);
+  const closeNoteEditor = () => {
+    setNoteEditor(null);
+    if (requestedNoteId) onRequestedNoteOpened?.();
+  };
 
   return (
     <section className="study-library-screen" aria-label="Library">
@@ -806,17 +826,17 @@ export function StudyLibrary({
         </button>
       )}
 
-      {noteEditor && (
-        <div className="study-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setNoteEditor(null); }}>
+      {activeNoteEditor && (
+        <div className="study-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeNoteEditor(); }}>
           <section className="study-editor-card study-note-editor" role="dialog" aria-modal="true" aria-label="Note editor">
             <header>
-              <div><p className="tiny-label">QUICK NOTE</p><h2>{hasNote(noteEditor.id) ? "Keep writing" : "Catch the thought"}</h2></div>
-              <button type="button" onClick={() => setNoteEditor(null)} aria-label="Close">×</button>
+              <div><p className="tiny-label">QUICK NOTE</p><h2>{hasNote(activeNoteEditor.id) ? "Keep writing" : "Catch the thought"}</h2></div>
+              <button type="button" onClick={closeNoteEditor} aria-label="Close">×</button>
             </header>
-            <input className="study-note-title" autoFocus value={noteEditor.title} onChange={(event) => setNoteEditor({ ...noteEditor, title: event.target.value })} placeholder="Note title" />
-            <textarea value={noteEditor.body} onChange={(event) => setNoteEditor({ ...noteEditor, body: event.target.value })} placeholder="Write anything…" />
-            <label className="study-pin-toggle"><input type="checkbox" checked={noteEditor.pinned} onChange={(event) => setNoteEditor({ ...noteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
-            <label className="study-pin-toggle"><input type="checkbox" checked={noteEditor.favorite ?? false} onChange={(event) => setNoteEditor({ ...noteEditor, favorite: event.target.checked })} /><span>♡ Keep in Favorites</span></label>
+            <input className="study-note-title" autoFocus value={activeNoteEditor.title} onChange={(event) => setNoteEditor({ ...activeNoteEditor, title: event.target.value })} placeholder="Note title" />
+            <textarea value={activeNoteEditor.body} onChange={(event) => setNoteEditor({ ...activeNoteEditor, body: event.target.value })} placeholder="Write anything…" />
+            <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.pinned} onChange={(event) => setNoteEditor({ ...activeNoteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
+            <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.favorite ?? false} onChange={(event) => setNoteEditor({ ...activeNoteEditor, favorite: event.target.checked })} /><span>♡ Keep in Favorites</span></label>
             {collections.length > 0 && (
               <fieldset className="study-note-collections">
                 <legend>Collections</legend>
@@ -824,18 +844,18 @@ export function StudyLibrary({
                   <label key={collection.id}>
                     <input
                       type="checkbox"
-                      checked={noteEditor.collectionIds?.includes(collection.id) ?? false}
+                      checked={activeNoteEditor.collectionIds?.includes(collection.id) ?? false}
                       onChange={(event) =>
                         setNoteEditor({
-                          ...noteEditor,
+                          ...activeNoteEditor,
                           collectionIds: event.target.checked
                             ? Array.from(
                                 new Set([
-                                  ...(noteEditor.collectionIds ?? []),
+                                  ...(activeNoteEditor.collectionIds ?? []),
                                   collection.id,
                                 ]),
                               )
-                            : (noteEditor.collectionIds ?? []).filter(
+                            : (activeNoteEditor.collectionIds ?? []).filter(
                                 (id) => id !== collection.id,
                               ),
                         })
@@ -847,29 +867,29 @@ export function StudyLibrary({
               </fieldset>
             )}
             <footer>
-              {hasNote(noteEditor.id) ? (
+              {hasNote(activeNoteEditor.id) ? (
                 <button
                   type="button"
                   className="danger"
                   onClick={() => {
-                    if (!window.confirm(`Move “${noteEditor.title || "Untitled note"}” to Trash for 30 days?`)) return;
-                    onDeleteNote(noteEditor);
-                    setNoteEditor(null);
+                    if (!window.confirm(`Move “${activeNoteEditor.title || "Untitled note"}” to Trash for 30 days?`)) return;
+                    onDeleteNote(activeNoteEditor);
+                    closeNoteEditor();
                   }}
                 >
                   Delete
                 </button>
               ) : <span />}
               <span />
-              <button type="button" onClick={() => setNoteEditor(null)}>Cancel</button>
+              <button type="button" onClick={closeNoteEditor}>Cancel</button>
               <button
                 type="button"
                 className="primary"
-                disabled={!noteEditor.title.trim() && !noteEditor.body.trim()}
+                disabled={!activeNoteEditor.title.trim() && !activeNoteEditor.body.trim()}
                 onClick={() => {
-                  const saved = { ...noteEditor, title: noteEditor.title.trim() || "Untitled note", updatedAt: new Date().toISOString() };
+                  const saved = { ...activeNoteEditor, title: activeNoteEditor.title.trim() || "Untitled note", updatedAt: new Date().toISOString() };
                   onNotesChange(hasNote(saved.id) ? notes.map((item) => item.id === saved.id ? saved : item) : [saved, ...notes]);
-                  setNoteEditor(null);
+                  closeNoteEditor();
                 }}
               >
                 Save note
