@@ -11142,6 +11142,23 @@ export default function Home() {
                     aria-label="Extended monthly calendar"
                   >
                     <header className="extended-calendar-header">
+                      <div className="extended-calendar-sky" aria-hidden="true">
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-left"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-right"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-moon"
+                          src="/assets/openmoji/moon.svg"
+                          alt=""
+                        />
+                      </div>
                       <button
                         className="extended-compact-button extended-back-button"
                         type="button"
@@ -11154,7 +11171,7 @@ export default function Home() {
                       >
                         <span className="extended-compact-glyph" aria-hidden="true">
                           <svg viewBox="0 0 24 24" focusable="false">
-                            <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12H19" />
+                            <path d="M5 7h14M5 12h14M5 17h10" />
                           </svg>
                         </span>
                       </button>
@@ -11173,6 +11190,7 @@ export default function Home() {
                             <span className="extended-month-chevron" aria-hidden="true">✧</span>
                           </button>
                         </div>
+                        <p>plan with purpose, live with intention ✦</p>
                       </div>
                       <nav
                         className="extended-calendar-header-actions"
@@ -11246,7 +11264,9 @@ export default function Home() {
                               }
                               aria-pressed={!hidden}
                             >
-                              <span>{hidden ? "" : "✓"}</span>
+                              <span aria-hidden="true">
+                                {['♡', '▤', '✎', '▧'][index % 4]}
+                              </span>
                               {source}
                             </button>
                           );
@@ -11268,7 +11288,7 @@ export default function Home() {
                         aria-label="Edit event types"
                         title="Edit event types"
                       >
-                        <span aria-hidden="true" />
+                        <span aria-hidden="true">＋</span>
                       </button>
                     </section>
 
