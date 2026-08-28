@@ -710,6 +710,50 @@ type AereaHistoryEntry = {
   snapshot: AereaHistorySnapshot;
 };
 
+type PersistedState = {
+  reminderHistory?: Record<string, number[]>;
+  reminders?: Reminder[];
+  habits?: Habit[];
+  entries?: JournalEntry[];
+  moodHistory?: Record<string, string>;
+  completedDays?: Record<string, boolean>;
+  calendarEvents?: CalendarEvent[];
+  tasks?: TaskItem[];
+  inboxItems?: InboxItem[];
+  postIts?: PostItNote[];
+  postItGroups?: PostItGroup[];
+  libraryItems?: LibraryItem[];
+  libraryCollections?: LibraryCollection[];
+  entityLinks?: EntityLink[];
+  trashItems?: TrashItem[];
+  resetPreferences?: ResetPreferences;
+  sportsSettings?: SportsSettings;
+  sportsEvents?: SportsEvent[];
+  calendarCategories?: CalendarCategory[];
+  focusSessions?: number;
+  appTheme?: AppTheme;
+  colorMode?: ColorMode;
+  simplifiedCalendarMode?: boolean;
+  customTheme?: CustomTheme;
+  profilePhoto?: string | null;
+  classes?: ClassItem[];
+  classTimetable?: ClassTimetable;
+  recordings?: Recording[];
+  studyNotebooks?: StudyNotebook[];
+  studyNotes?: StudyNote[];
+  studyTasks?: StudyTask[];
+  studyFiles?: StudyFileItem[];
+  calendarMemos?: CalendarMemo[];
+  pdfAnnotations?: Record<string, PdfInkStroke[]>;
+  pdfPageNotes?: Record<string, Record<string, string>>;
+  epubReadingStates?: Record<string, EpubReadingState>;
+  habitRestoreVersion?: string;
+};
+
+type PersistedPayload = {
+  state?: PersistedState | null;
+};
+
 const themeOptions: {
   id: Exclude<AppTheme, "custom">;
   name: string;
@@ -2177,7 +2221,9 @@ export default function Home() {
     () => !isNative() || cachedNativeAppearance !== null,
   );
   const appearanceHydratedRef = useRef(appearanceHydrated);
-  const appearanceCommitResolverRef = useRef<(() => void) | null>(null);
+  const persistedStateCommitResolverRef = useRef<(() => void) | null>(null);
+  const [persistedStateCommitVersion, setPersistedStateCommitVersion] =
+    useState(0);
   const [appTheme, setAppTheme] = useState<AppTheme>(() => {
     const savedTheme = cachedNativeAppearance?.appTheme;
     return savedTheme &&
@@ -2393,10 +2439,218 @@ export default function Home() {
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", themeColor);
     document.documentElement.classList.remove("appearance-pending");
-    const resolveAppearanceCommit = appearanceCommitResolverRef.current;
-    appearanceCommitResolverRef.current = null;
-    resolveAppearanceCommit?.();
   }, [appearanceHydrated, appTheme, colorMode, customTheme]);
+
+  useLayoutEffect(() => {
+    const resolvePersistedStateCommit =
+      persistedStateCommitResolverRef.current;
+    if (!resolvePersistedStateCommit) return;
+    persistedStateCommitResolverRef.current = null;
+    resolvePersistedStateCommit();
+  }, [persistedStateCommitVersion]);
+
+  const applySavedAppearance = useCallback((state: PersistedState) => {
+    const savedTheme = state.appTheme;
+    if (
+      savedTheme &&
+      (savedTheme === "custom" ||
+        themeOptions.some((theme) => theme.id === savedTheme))
+    ) {
+      setAppTheme(savedTheme);
+    } else {
+      setAppTheme("storybook");
+    }
+    if (state.colorMode) setColorMode(state.colorMode);
+    if (state.customTheme) {
+      setCustomTheme((current) => ({
+        ...current,
+        ...state.customTheme,
+        art: state.customTheme?.art || current.art,
+      }));
+    }
+  }, []);
+
+  const applyPersistedState = useCallback(
+    (
+      state: PersistedState | null | undefined,
+      options: { purgeExpiredTrash?: boolean } = {},
+    ) => {
+      if (!state) return;
+      const expiredTrashFileIds = new Set<string>();
+      let expiredTrash: TrashItem[] = [];
+
+      // Older payloads are migrated in place. Startup never clears personal
+      // content; missing built-in habits are restored additively after sync.
+      if (state.reminderHistory) setReminderHistory(state.reminderHistory);
+      if (Array.isArray(state.reminders)) setReminders(state.reminders);
+      if (Array.isArray(state.habits)) setHabits(state.habits);
+      if (Array.isArray(state.entries)) setEntries(state.entries);
+      if (state.moodHistory) setMoodHistory(state.moodHistory);
+      if (state.completedDays) setCompletedDays(state.completedDays);
+      if (Array.isArray(state.calendarEvents)) {
+        setCalendarEvents(state.calendarEvents);
+      }
+      if (Array.isArray(state.tasks)) setTasks(state.tasks);
+      if (Array.isArray(state.inboxItems)) setInboxItems(state.inboxItems);
+      if (Array.isArray(state.postIts)) {
+        setPostIts(
+          state.postIts.map((note) => ({
+            ...note,
+            page: note.page || "today",
+          })),
+        );
+      }
+      if (Array.isArray(state.postItGroups)) {
+        setPostItGroups(state.postItGroups);
+      }
+      if (Array.isArray(state.libraryItems)) {
+        setLibraryItems(state.libraryItems);
+      }
+      if (Array.isArray(state.libraryCollections)) {
+        setLibraryCollections(state.libraryCollections);
+      }
+      if (Array.isArray(state.entityLinks)) setEntityLinks(state.entityLinks);
+      if (Array.isArray(state.trashItems)) {
+        const now = Date.now();
+        expiredTrash = state.trashItems.filter(
+          (item) => new Date(item.purgeAt).getTime() <= now,
+        );
+        expiredTrash.forEach((item) => {
+          if (
+            item.kind === "file" &&
+            item.payload &&
+            typeof item.payload === "object" &&
+            "id" in item.payload
+          ) {
+            expiredTrashFileIds.add(String(item.payload.id));
+          }
+        });
+        const activeTrash = state.trashItems.filter(
+          (item) => new Date(item.purgeAt).getTime() > now,
+        );
+        setTrashItems(activeTrash);
+      }
+      if (state.resetPreferences) {
+        setResetPreferences({
+          ...DEFAULT_RESET_PREFERENCES,
+          ...state.resetPreferences,
+        });
+      }
+      if (state.sportsSettings) {
+        setSportsSettings({
+          ...DEFAULT_SPORTS_SETTINGS,
+          ...state.sportsSettings,
+        });
+      }
+      if (Array.isArray(state.sportsEvents)) {
+        setSportsEvents(
+          state.sportsEvents.filter((event) => !isBocaSportsEvent(event)),
+        );
+      }
+      if (
+        Array.isArray(state.calendarCategories) &&
+        state.calendarCategories.length
+      ) {
+        setCalendarCategories(state.calendarCategories);
+      } else if (state.calendarEvents?.length) {
+        const restoredCategories = [...starterCalendarCategories];
+        state.calendarEvents.forEach((event) => {
+          const name = event.calendar?.trim();
+          if (
+            name &&
+            !restoredCategories.some(
+              (category) =>
+                category.name.toLowerCase() === name.toLowerCase(),
+            )
+          ) {
+            restoredCategories.push({
+              id: `restored-${restoredCategories.length}`,
+              name,
+              color: event.color,
+            });
+          }
+        });
+        setCalendarCategories(restoredCategories);
+      }
+      if (typeof state.focusSessions === "number") {
+        setFocusSessions(state.focusSessions);
+      }
+      if (Array.isArray(state.studyNotebooks)) {
+        setStudyNotebooks(state.studyNotebooks);
+      }
+      if (Array.isArray(state.studyNotes)) setStudyNotes(state.studyNotes);
+      if (Array.isArray(state.studyTasks)) setStudyTasks(state.studyTasks);
+      if (Array.isArray(state.studyFiles)) setStudyFiles(state.studyFiles);
+      if (Array.isArray(state.calendarMemos)) {
+        setCalendarMemos(state.calendarMemos);
+      }
+      if (state.pdfAnnotations && typeof state.pdfAnnotations === "object") {
+        setPdfAnnotations(
+          Object.fromEntries(
+            Object.entries(state.pdfAnnotations).filter(
+              ([fileId]) => !expiredTrashFileIds.has(fileId),
+            ),
+          ),
+        );
+      }
+      if (state.pdfPageNotes && typeof state.pdfPageNotes === "object") {
+        setPdfPageNotes(
+          Object.fromEntries(
+            Object.entries(state.pdfPageNotes).filter(
+              ([fileId]) => !expiredTrashFileIds.has(fileId),
+            ),
+          ),
+        );
+      }
+      if (
+        state.epubReadingStates &&
+        typeof state.epubReadingStates === "object"
+      ) {
+        setEpubReadingStates(
+          Object.fromEntries(
+            Object.entries(state.epubReadingStates).filter(
+              ([fileId]) => !expiredTrashFileIds.has(fileId),
+            ),
+          ),
+        );
+      }
+      applySavedAppearance(state);
+      if (typeof state.simplifiedCalendarMode === "boolean") {
+        setSimplifiedCalendarMode(state.simplifiedCalendarMode);
+      }
+      if (
+        typeof state.profilePhoto === "string" ||
+        state.profilePhoto === null
+      ) {
+        setProfilePhoto(state.profilePhoto);
+      }
+      if (Array.isArray(state.classes)) {
+        setClassItems(state.classes);
+        if (state.classes.length > 0) {
+          setSelectedClass(state.classes[0].name);
+        }
+      }
+      if (
+        state.classTimetable &&
+        typeof state.classTimetable === "object" &&
+        Array.isArray(state.classTimetable.classes)
+      ) {
+        setClassTimetable({
+          ...defaultClassTimetable,
+          ...state.classTimetable,
+          classes: state.classTimetable.classes,
+        });
+      }
+      if (Array.isArray(state.recordings)) {
+        setRecordings(state.recordings);
+      }
+
+      if (options.purgeExpiredTrash !== false && expiredTrash.length > 0) {
+        void purgeExpiredTrashFiles(expiredTrash).catch(() => undefined);
+      }
+    },
+    [applySavedAppearance],
+  );
 
   useEffect(() => {
     const updateClock = () => {
@@ -2650,80 +2904,23 @@ export default function Home() {
       try {
         let payload = (isNative()
           ? JSON.parse((await AereaStorage.getState()).state || "{}")
-          : readBrowserState()) as {
-          state?: {
-            reminderHistory?: Record<string, number[]>;
-            reminders?: Reminder[];
-            habits?: Habit[];
-            entries?: JournalEntry[];
-            moodHistory?: Record<string, string>;
-            completedDays?: Record<string, boolean>;
-            calendarEvents?: CalendarEvent[];
-            tasks?: TaskItem[];
-            inboxItems?: InboxItem[];
-            postIts?: PostItNote[];
-            postItGroups?: PostItGroup[];
-            libraryItems?: LibraryItem[];
-            libraryCollections?: LibraryCollection[];
-            entityLinks?: EntityLink[];
-            trashItems?: TrashItem[];
-            resetPreferences?: ResetPreferences;
-            sportsSettings?: SportsSettings;
-            sportsEvents?: SportsEvent[];
-            calendarCategories?: CalendarCategory[];
-            focusSessions?: number;
-            appTheme?: AppTheme;
-            colorMode?: ColorMode;
-            simplifiedCalendarMode?: boolean;
-            customTheme?: CustomTheme;
-            profilePhoto?: string | null;
-            classes?: ClassItem[];
-            classTimetable?: ClassTimetable;
-            recordings?: Recording[];
-            studyNotebooks?: StudyNotebook[];
-            studyNotes?: StudyNote[];
-            studyTasks?: StudyTask[];
-            studyFiles?: StudyFileItem[];
-            calendarMemos?: CalendarMemo[];
-            pdfAnnotations?: Record<string, PdfInkStroke[]>;
-            pdfPageNotes?: Record<string, Record<string, string>>;
-            epubReadingStates?: Record<string, EpubReadingState>;
-            habitRestoreVersion?: string;
-          } | null;
-        };
-        const applySavedAppearance = (state: typeof payload.state) => {
-          if (!state) return;
-          const savedTheme = state.appTheme;
-          if (
-            savedTheme &&
-            (savedTheme === "custom" ||
-              themeOptions.some((theme) => theme.id === savedTheme))
-          ) {
-            setAppTheme(savedTheme);
-          } else {
-            setAppTheme("storybook");
-          }
-          if (state.colorMode) setColorMode(state.colorMode);
-          if (state.customTheme) {
-            setCustomTheme((current) => ({
-              ...current,
-              ...state.customTheme,
-              art: state.customTheme?.art || current.art,
-            }));
-          }
-        };
+          : readBrowserState()) as PersistedPayload;
+        const localState = payload.state;
 
         if (cancelled) return;
-        applySavedAppearance(payload.state);
-        if (isNative() && !appearanceHydratedRef.current) {
-          await new Promise<void>((resolve) => {
-            appearanceCommitResolverRef.current = resolve;
+        applyPersistedState(localState);
+        await new Promise<void>((resolve) => {
+          persistedStateCommitResolverRef.current = resolve;
+          if (isNative() && !appearanceHydratedRef.current) {
             appearanceHydratedRef.current = true;
             setAppearanceHydrated(true);
-          });
-        }
+          }
+          setPersistedStateCommitVersion((current) => current + 1);
+        });
         if (cancelled) return;
-        payload = (await reconcileCloudState(payload)) || payload;
+        const reconciledPayload =
+          (await reconcileCloudState(payload)) || payload;
+        payload = reconciledPayload;
         if (
           payload.state &&
           payload.state.habitRestoreVersion !== BUILTIN_HABITS_RESTORE_VERSION
@@ -2746,168 +2943,8 @@ export default function Home() {
           }
         }
         if (cancelled) return;
-
-        if (payload.state) {
-          const state = payload.state;
-          const expiredTrashFileIds = new Set<string>();
-          // Older payloads are migrated in place. Startup never clears personal
-          // content; missing built-in habits are restored additively above.
-          if (state.reminderHistory) setReminderHistory(state.reminderHistory);
-          if (Array.isArray(state.reminders)) setReminders(state.reminders);
-          if (Array.isArray(state.habits)) setHabits(state.habits);
-          if (Array.isArray(state.entries)) setEntries(state.entries);
-          if (state.moodHistory) setMoodHistory(state.moodHistory);
-          if (state.completedDays) setCompletedDays(state.completedDays);
-          if (Array.isArray(state.calendarEvents)) {
-            setCalendarEvents(state.calendarEvents);
-          }
-          if (Array.isArray(state.tasks)) setTasks(state.tasks);
-          if (Array.isArray(state.inboxItems)) setInboxItems(state.inboxItems);
-          if (Array.isArray(state.postIts)) {
-            setPostIts(
-              state.postIts.map((note) => ({
-                ...note,
-                page: note.page || "today",
-              })),
-            );
-          }
-          if (Array.isArray(state.postItGroups)) {
-            setPostItGroups(state.postItGroups);
-          }
-          if (Array.isArray(state.libraryItems)) {
-            setLibraryItems(state.libraryItems);
-          }
-          if (Array.isArray(state.libraryCollections)) {
-            setLibraryCollections(state.libraryCollections);
-          }
-          if (Array.isArray(state.entityLinks)) setEntityLinks(state.entityLinks);
-          if (Array.isArray(state.trashItems)) {
-            const now = Date.now();
-            const expiredTrash = state.trashItems.filter(
-              (item) => new Date(item.purgeAt).getTime() <= now,
-            );
-            expiredTrash.forEach((item) => {
-              if (
-                item.kind === "file" &&
-                item.payload &&
-                typeof item.payload === "object" &&
-                "id" in item.payload
-              ) {
-                expiredTrashFileIds.add(String(item.payload.id));
-              }
-            });
-            const activeTrash = state.trashItems.filter(
-              (item) => new Date(item.purgeAt).getTime() > now,
-            );
-            await purgeExpiredTrashFiles(expiredTrash);
-            setTrashItems(activeTrash);
-          }
-          if (state.resetPreferences) {
-            setResetPreferences({
-              ...DEFAULT_RESET_PREFERENCES,
-              ...state.resetPreferences,
-            });
-          }
-          if (state.sportsSettings) {
-            setSportsSettings({
-              ...DEFAULT_SPORTS_SETTINGS,
-              ...state.sportsSettings,
-            });
-          }
-          if (Array.isArray(state.sportsEvents)) {
-            setSportsEvents(
-              state.sportsEvents.filter(
-                (event) => !isBocaSportsEvent(event),
-              ),
-            );
-          }
-          if (Array.isArray(state.calendarCategories) && state.calendarCategories.length) {
-            setCalendarCategories(state.calendarCategories);
-          } else if (state.calendarEvents?.length) {
-            const restoredCategories = [...starterCalendarCategories];
-            state.calendarEvents.forEach((event) => {
-              const name = event.calendar?.trim();
-              if (
-                name &&
-                !restoredCategories.some(
-                  (category) => category.name.toLowerCase() === name.toLowerCase(),
-                )
-              ) {
-                restoredCategories.push({
-                  id: `restored-${restoredCategories.length}`,
-                  name,
-                  color: event.color,
-                });
-              }
-            });
-            setCalendarCategories(restoredCategories);
-          }
-          if (typeof state.focusSessions === "number") {
-            setFocusSessions(state.focusSessions);
-          }
-          if (Array.isArray(state.studyNotebooks)) {
-            setStudyNotebooks(state.studyNotebooks);
-          }
-          if (Array.isArray(state.studyNotes)) setStudyNotes(state.studyNotes);
-          if (Array.isArray(state.studyTasks)) setStudyTasks(state.studyTasks);
-          if (Array.isArray(state.studyFiles)) setStudyFiles(state.studyFiles);
-          if (Array.isArray(state.calendarMemos)) {
-            setCalendarMemos(state.calendarMemos);
-          }
-          if (state.pdfAnnotations && typeof state.pdfAnnotations === "object") {
-            setPdfAnnotations(
-              Object.fromEntries(
-                Object.entries(state.pdfAnnotations).filter(
-                  ([fileId]) => !expiredTrashFileIds.has(fileId),
-                ),
-              ),
-            );
-          }
-          if (state.pdfPageNotes && typeof state.pdfPageNotes === "object") {
-            setPdfPageNotes(
-              Object.fromEntries(
-                Object.entries(state.pdfPageNotes).filter(
-                  ([fileId]) => !expiredTrashFileIds.has(fileId),
-                ),
-              ),
-            );
-          }
-          if (state.epubReadingStates && typeof state.epubReadingStates === "object") {
-            setEpubReadingStates(
-              Object.fromEntries(
-                Object.entries(state.epubReadingStates).filter(
-                  ([fileId]) => !expiredTrashFileIds.has(fileId),
-                ),
-              ),
-            );
-          }
-          applySavedAppearance(state);
-          if (typeof state.simplifiedCalendarMode === "boolean") {
-            setSimplifiedCalendarMode(state.simplifiedCalendarMode);
-          }
-          if (typeof state.profilePhoto === "string") {
-            setProfilePhoto(state.profilePhoto);
-          }
-          if (Array.isArray(state.classes)) {
-            setClassItems(state.classes);
-            if (state.classes.length > 0) {
-              setSelectedClass(state.classes[0].name);
-            }
-          }
-          if (
-            state.classTimetable &&
-            typeof state.classTimetable === "object" &&
-            Array.isArray(state.classTimetable.classes)
-          ) {
-            setClassTimetable({
-              ...defaultClassTimetable,
-              ...state.classTimetable,
-              classes: state.classTimetable.classes,
-            });
-          }
-          if (Array.isArray(state.recordings)) {
-            setRecordings(state.recordings);
-          }
+        if (payload.state && payload.state !== localState) {
+          applyPersistedState(payload.state);
         }
       } catch {
         // The UI remains usable while a temporary connection issue settles.
@@ -2967,7 +3004,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [todayKey]);
+  }, [applyPersistedState, todayKey]);
 
   useEffect(() => {
     if (!stateReady || !simplifiedCalendarMode) return;

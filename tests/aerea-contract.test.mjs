@@ -106,6 +106,14 @@ const supabaseConfigSource = await readFile(
   new URL("../supabase/config.toml", import.meta.url),
   "utf8",
 );
+const applyPersistedStateSource = pageSource.slice(
+  pageSource.indexOf("const applyPersistedState ="),
+  pageSource.indexOf("useEffect(() =>", pageSource.indexOf("const applyPersistedState =")),
+);
+const startupLoadStateSource = pageSource.slice(
+  pageSource.indexOf("async function loadState()"),
+  pageSource.indexOf("async function loadSketches()"),
+);
 
 test("keeps the approved worlds and removes every rejected theme", () => {
   for (const theme of [
@@ -632,30 +640,73 @@ test("keeps cross-device sync private and local-first", () => {
   assert.doesNotMatch(syncSource, /service_role/i);
 });
 
-test("applies the saved local appearance before waiting for cloud reconciliation", () => {
-  const loadStateSource = pageSource.slice(
-    pageSource.indexOf("async function loadState()"),
-    pageSource.indexOf("async function loadSketches()"),
+test("hydrates the complete local payload before waiting for cloud reconciliation", () => {
+  const localReadIndex = startupLoadStateSource.indexOf(
+    "await AereaStorage.getState()",
   );
-  const localAppearanceIndex = loadStateSource.indexOf(
-    "applySavedAppearance(payload.state)",
+  const localApplyIndex = startupLoadStateSource.indexOf(
+    "applyPersistedState(localState)",
   );
-  const reconciliationIndex = loadStateSource.indexOf(
+  const commitWaitIndex = startupLoadStateSource.indexOf(
+    "persistedStateCommitResolverRef.current = resolve",
+  );
+  const reconciliationIndex = startupLoadStateSource.indexOf(
     "await reconcileCloudState(payload)",
   );
 
-  assert.ok(localAppearanceIndex >= 0, "the local appearance should be applied");
-  assert.ok(reconciliationIndex >= 0, "cloud reconciliation should remain enabled");
-  assert.ok(
-    localAppearanceIndex < reconciliationIndex,
-    "the local appearance must render before waiting for cloud state",
+  assert.ok(localReadIndex >= 0, "native state should be read from AereaStorage");
+  assert.ok(localReadIndex < localApplyIndex);
+  assert.ok(localApplyIndex < commitWaitIndex);
+  assert.ok(commitWaitIndex < reconciliationIndex);
+  for (const setter of [
+    "setReminderHistory",
+    "setReminders",
+    "setHabits",
+    "setEntries",
+    "setMoodHistory",
+    "setCompletedDays",
+    "setCalendarEvents",
+    "setTasks",
+    "setInboxItems",
+    "setPostIts",
+    "setPostItGroups",
+    "setLibraryItems",
+    "setLibraryCollections",
+    "setEntityLinks",
+    "setTrashItems",
+    "setResetPreferences",
+    "setSportsSettings",
+    "setSportsEvents",
+    "setCalendarCategories",
+    "setFocusSessions",
+    "setStudyNotebooks",
+    "setStudyNotes",
+    "setStudyTasks",
+    "setStudyFiles",
+    "setCalendarMemos",
+    "setPdfAnnotations",
+    "setPdfPageNotes",
+    "setEpubReadingStates",
+    "setSimplifiedCalendarMode",
+    "setProfilePhoto",
+    "setClassItems",
+    "setClassTimetable",
+    "setRecordings",
+  ]) {
+    assert.match(applyPersistedStateSource, new RegExp(`${setter}\\(`));
+  }
+  assert.match(
+    applyPersistedStateSource,
+    /setPostIts\([\s\S]{0,180}page: note\.page \|\| "today"/,
   );
   assert.match(
-    loadStateSource,
+    pageSource,
     /savedTheme === "custom" \|\|[\s\S]{0,100}themeOptions\.some\(\(theme\) => theme\.id === savedTheme\)/,
   );
-  assert.match(loadStateSource, /if \(state\.colorMode\) setColorMode\(state\.colorMode\)/);
-  assert.match(loadStateSource, /applySavedAppearance\(state\)/);
+  assert.match(
+    applyPersistedStateSource,
+    /applySavedAppearance\(state\)/,
+  );
 });
 
 test("boots native React state synchronously from a validated appearance cache", () => {
@@ -714,19 +765,17 @@ test("runs the native appearance bootstrap before loading the React bundle", () 
   assert.match(nativeHtmlSource, /meta\[name="theme-color"\]/);
 });
 
-test("keeps a cache miss hidden until local native appearance has rendered", () => {
-  const loadStateSource = pageSource.slice(
-    pageSource.indexOf("async function loadState()"),
-    pageSource.indexOf("async function loadSketches()"),
+test("reveals a cache miss only with the complete local state committed", () => {
+  const localApplyIndex = startupLoadStateSource.indexOf(
+    "applyPersistedState(localState)",
   );
-  const localReadIndex = loadStateSource.indexOf("await AereaStorage.getState()");
-  const localAppearanceIndex = loadStateSource.indexOf(
-    "applySavedAppearance(payload.state)",
+  const revealReadyIndex = startupLoadStateSource.indexOf(
+    "setAppearanceHydrated(true)",
   );
-  const appearanceCommitIndex = loadStateSource.indexOf(
-    "appearanceCommitResolverRef.current = resolve",
+  const commitWaitIndex = startupLoadStateSource.indexOf(
+    "setPersistedStateCommitVersion",
   );
-  const reconciliationIndex = loadStateSource.indexOf(
+  const reconciliationIndex = startupLoadStateSource.indexOf(
     "await reconcileCloudState(payload)",
   );
 
@@ -735,14 +784,90 @@ test("keeps a cache miss hidden until local native appearance has rendered", () 
     /html\.appearance-pending #root\{visibility:hidden\}/,
   );
   assert.match(nativeHtmlSource, /if \(!raw\) return pending\(\)/);
-  assert.ok(localReadIndex >= 0, "native startup should read AereaStorage");
-  assert.ok(localReadIndex < localAppearanceIndex);
-  assert.ok(localAppearanceIndex < appearanceCommitIndex);
-  assert.ok(appearanceCommitIndex < reconciliationIndex);
+  assert.ok(localApplyIndex >= 0, "the full local state should be applied");
+  assert.ok(localApplyIndex < revealReadyIndex);
+  assert.ok(revealReadyIndex < commitWaitIndex);
+  assert.ok(commitWaitIndex < reconciliationIndex);
+  assert.match(applyPersistedStateSource, /setPostIts\(/);
+  assert.match(applyPersistedStateSource, /setCalendarEvents\(/);
+  assert.match(applyPersistedStateSource, /setHabits\(/);
   assert.match(
     pageSource,
-    /useLayoutEffect\(\(\) => \{[\s\S]{0,1200}classList\.remove\("appearance-pending"\)[\s\S]{0,180}resolveAppearanceCommit\?\.\(\)/,
+    /useLayoutEffect\(\(\) => \{[\s\S]{0,1200}classList\.remove\("appearance-pending"\)/,
   );
+  assert.match(
+    pageSource,
+    /persistedStateCommitResolverRef\.current = null;[\s\S]{0,80}resolvePersistedStateCommit\(\)/,
+  );
+});
+
+test("filters expired Trash immediately and purges its files in the background", () => {
+  const activeTrashIndex = applyPersistedStateSource.indexOf(
+    "setTrashItems(activeTrash)",
+  );
+  const annotationsIndex = applyPersistedStateSource.indexOf(
+    "setPdfAnnotations",
+  );
+  const pageNotesIndex = applyPersistedStateSource.indexOf("setPdfPageNotes");
+  const readerStatesIndex = applyPersistedStateSource.indexOf(
+    "setEpubReadingStates",
+  );
+  const purgeIndex = applyPersistedStateSource.indexOf(
+    "void purgeExpiredTrashFiles(expiredTrash)",
+  );
+
+  assert.ok(activeTrashIndex >= 0);
+  assert.ok(activeTrashIndex < annotationsIndex);
+  assert.ok(annotationsIndex < pageNotesIndex);
+  assert.ok(pageNotesIndex < readerStatesIndex);
+  assert.ok(readerStatesIndex < purgeIndex);
+  assert.match(
+    applyPersistedStateSource,
+    /void purgeExpiredTrashFiles\(expiredTrash\)\.catch\(\(\) => undefined\)/,
+  );
+  assert.doesNotMatch(applyPersistedStateSource, /await purgeExpiredTrashFiles/);
+  assert.doesNotMatch(startupLoadStateSource, /purgeExpiredTrashFiles/);
+});
+
+test("reapplies newer cloud state before enabling normal persistence", () => {
+  const reconciliationIndex = startupLoadStateSource.indexOf(
+    "await reconcileCloudState(payload)",
+  );
+  const cloudApplyIndex = startupLoadStateSource.indexOf(
+    "applyPersistedState(payload.state)",
+  );
+  const readyIndex = startupLoadStateSource.indexOf("setStateReady(true)");
+
+  assert.ok(reconciliationIndex >= 0);
+  assert.ok(reconciliationIndex < cloudApplyIndex);
+  assert.ok(cloudApplyIndex < readyIndex);
+  assert.match(
+    startupLoadStateSource,
+    /const reconciledPayload =[\s\S]{0,100}await reconcileCloudState\(payload\)/,
+  );
+  assert.match(
+    startupLoadStateSource,
+    /if \(payload\.state && payload\.state !== localState\) \{[\s\S]{0,80}applyPersistedState\(payload\.state\)/,
+  );
+  assert.equal(
+    [...startupLoadStateSource.matchAll(/setStateReady\(true\)/g)].length,
+    1,
+    "startup should enable persistence only once after reconciliation",
+  );
+  assert.match(pageSource, /if \(!stateReady\) return;[\s\S]{0,220}setTimeout/);
+});
+
+test("never clears visible state between local and cloud hydration", () => {
+  for (const reset of [
+    /setPostIts\(\[\]\)/,
+    /setCalendarEvents\(\[\]\)/,
+    /setHabits\(\[\]\)/,
+    /setTasks\(\[\]\)/,
+    /setStudyFiles\(\[\]\)/,
+    /setTrashItems\(\[\]\)/,
+  ]) {
+    assert.doesNotMatch(startupLoadStateSource, reset);
+  }
 });
 
 test("updates only the native visual cache after appearance hydration", () => {
@@ -781,17 +906,13 @@ test("updates only the native visual cache after appearance hydration", () => {
 });
 
 test("preserves all personal content during normal startup and APK updates", () => {
-  const loadStateSource = pageSource.slice(
-    pageSource.indexOf("async function loadState()"),
-    pageSource.indexOf("async function loadSketches()"),
-  );
   const loadStudyFilesSource = pageSource.slice(
     pageSource.indexOf("async function loadStudyFiles()"),
     pageSource.indexOf("void loadState().then"),
   );
 
-  assert.match(loadStateSource, /reconcileCloudState\(payload\)/);
-  assert.match(loadStateSource, /Older payloads are migrated in place/);
+  assert.match(startupLoadStateSource, /reconcileCloudState\(payload\)/);
+  assert.match(applyPersistedStateSource, /Older payloads are migrated in place/);
   for (const preservedField of [
     "reminders",
     "habits",
@@ -814,13 +935,16 @@ test("preserves all personal content during normal startup and APK updates", () 
     "pdfPageNotes",
     "epubReadingStates",
   ]) {
-    assert.match(loadStateSource, new RegExp(`state\\.${preservedField}`));
+    assert.match(
+      applyPersistedStateSource,
+      new RegExp(`state\\.${preservedField}`),
+    );
   }
   assert.doesNotMatch(pageSource, /personal-content-reset-2026-08-24/);
   assert.doesNotMatch(pageSource, /CLEAN_START_VERSION|BROWSER_CONTENT_RESET_KEY/);
   assert.doesNotMatch(pageSource, /resetUserCreatedContent/);
   assert.doesNotMatch(pageSource, /AereaStorage\.clearPersonalContent\(\)/);
-  assert.doesNotMatch(loadStateSource, /writeBrowserSketches\(\[\]\)/);
+  assert.doesNotMatch(startupLoadStateSource, /writeBrowserSketches\(\[\]\)/);
   assert.doesNotMatch(loadStudyFilesSource, /method: "DELETE"/);
   assert.doesNotMatch(loadStudyFilesSource, /payload = \{ files: \[\] \}/);
   assert.match(nativeStorageSource, /public void clearPersonalContent/);
