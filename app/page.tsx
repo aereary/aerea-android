@@ -63,10 +63,15 @@ import {
   TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import {
+  readNativeAppearance,
+  writeNativeAppearance,
+} from "./native-appearance";
 import {
   CalendarMemo,
   StudyFileItem,
@@ -401,6 +406,13 @@ type CustomTheme = {
   background: string;
   highlight: string;
   art: string;
+};
+
+const DEFAULT_CUSTOM_THEME: CustomTheme = {
+  accent: "#8db654",
+  background: "#fff9ed",
+  highlight: "#ffcf55",
+  art: "/assets/openmoji/blossom.svg",
 };
 
 type Reminder = {
@@ -2151,14 +2163,43 @@ export default function Home() {
   } | null>(null);
   const [isNight, setIsNight] = useState(false);
   const [scheduleNow, setScheduleNow] = useState(() => new Date());
-  const [appTheme, setAppTheme] = useState<AppTheme>("storybook");
-  const [colorMode, setColorMode] = useState<ColorMode>("light");
+  const [cachedNativeAppearance] = useState(() => {
+    if (!isNative()) return null;
+    const cachedAppearance = readNativeAppearance();
+    const savedTheme = cachedAppearance?.appTheme;
+    return savedTheme &&
+      (savedTheme === "custom" ||
+        themeOptions.some((theme) => theme.id === savedTheme))
+      ? cachedAppearance
+      : null;
+  });
+  const [appearanceHydrated, setAppearanceHydrated] = useState(
+    () => !isNative() || cachedNativeAppearance !== null,
+  );
+  const appearanceHydratedRef = useRef(appearanceHydrated);
+  const appearanceCommitResolverRef = useRef<(() => void) | null>(null);
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => {
+    const savedTheme = cachedNativeAppearance?.appTheme;
+    return savedTheme &&
+      (savedTheme === "custom" ||
+        themeOptions.some((theme) => theme.id === savedTheme))
+      ? (savedTheme as AppTheme)
+      : "storybook";
+  });
+  const [colorMode, setColorMode] = useState<ColorMode>(
+    () => cachedNativeAppearance?.colorMode ?? "light",
+  );
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [customTheme, setCustomTheme] = useState<CustomTheme>({
-    accent: "#8db654",
-    background: "#fff9ed",
-    highlight: "#ffcf55",
-    art: "/assets/openmoji/blossom.svg",
+  const [customTheme, setCustomTheme] = useState<CustomTheme>(() => {
+    const savedCustomTheme =
+      cachedNativeAppearance?.appTheme === "custom"
+        ? cachedNativeAppearance.customTheme
+        : undefined;
+    return {
+      ...DEFAULT_CUSTOM_THEME,
+      ...savedCustomTheme,
+      art: savedCustomTheme?.art || DEFAULT_CUSTOM_THEME.art,
+    };
   });
 
   const [habitEditorOpen, setHabitEditorOpen] = useState(false);
@@ -2328,6 +2369,34 @@ export default function Home() {
   const yesterdayKey = localDateKey(yesterdayDate);
   const yesterdayDoneCount =
     reminderHistory[yesterdayKey]?.length ?? 0;
+
+  useLayoutEffect(() => {
+    if (!isNative() || !appearanceHydrated) return;
+    const shell = document.querySelector<HTMLElement>(".app-shell");
+    const computed = window.getComputedStyle(shell ?? document.documentElement);
+    const themeColor = computed.getPropertyValue("--cream").trim() || "#eef1f3";
+    const background =
+      computed.background && computed.background !== "rgba(0, 0, 0, 0)"
+        ? computed.background
+        : computed.getPropertyValue("--app-backdrop").trim() || themeColor;
+
+    writeNativeAppearance({
+      appTheme,
+      colorMode,
+      ...(appTheme === "custom" ? { customTheme } : {}),
+      background,
+      themeColor,
+    });
+    document.documentElement.style.background = background;
+    document.body.style.background = background;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", themeColor);
+    document.documentElement.classList.remove("appearance-pending");
+    const resolveAppearanceCommit = appearanceCommitResolverRef.current;
+    appearanceCommitResolverRef.current = null;
+    resolveAppearanceCommit?.();
+  }, [appearanceHydrated, appTheme, colorMode, customTheme]);
 
   useEffect(() => {
     const updateClock = () => {
@@ -2635,9 +2704,25 @@ export default function Home() {
             setAppTheme("storybook");
           }
           if (state.colorMode) setColorMode(state.colorMode);
+          if (state.customTheme) {
+            setCustomTheme((current) => ({
+              ...current,
+              ...state.customTheme,
+              art: state.customTheme?.art || current.art,
+            }));
+          }
         };
 
-        if (!cancelled) applySavedAppearance(payload.state);
+        if (cancelled) return;
+        applySavedAppearance(payload.state);
+        if (isNative() && !appearanceHydratedRef.current) {
+          await new Promise<void>((resolve) => {
+            appearanceCommitResolverRef.current = resolve;
+            appearanceHydratedRef.current = true;
+            setAppearanceHydrated(true);
+          });
+        }
+        if (cancelled) return;
         payload = (await reconcileCloudState(payload)) || payload;
         if (
           payload.state &&
@@ -2800,13 +2885,6 @@ export default function Home() {
           if (typeof state.simplifiedCalendarMode === "boolean") {
             setSimplifiedCalendarMode(state.simplifiedCalendarMode);
           }
-          if (state.customTheme) {
-            setCustomTheme((current) => ({
-              ...current,
-              ...state.customTheme,
-              art: state.customTheme?.art || current.art,
-            }));
-          }
           if (typeof state.profilePhoto === "string") {
             setProfilePhoto(state.profilePhoto);
           }
@@ -2833,6 +2911,10 @@ export default function Home() {
         }
       } catch {
         // The UI remains usable while a temporary connection issue settles.
+        if (isNative() && !appearanceHydratedRef.current) {
+          appearanceHydratedRef.current = true;
+          setAppearanceHydrated(true);
+        }
       } finally {
         if (!cancelled) setStateReady(true);
       }
