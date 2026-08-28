@@ -1534,7 +1534,10 @@ test("shows Coming up next dynamically on today across every theme", () => {
   assert.match(pageSource, /selectedIsToday && comingUpEvent &&/);
   assert.doesNotMatch(pageSource, /Nothing else is waiting for you today/);
   assert.match(pageSource, /comingUpEvent\.sportsCardStyle \? "match-day-schedule-card"/);
-  assert.match(pageSource, /`\$\{comingUpEvent\.color\}-card`/);
+  assert.match(
+    pageSource,
+    /`\$\{eventDisplayColor\(comingUpEvent, selectedDate\)\}-card`/,
+  );
   assert.match(pageSource, /eventTimeBlockPrimary\(comingUpEvent\)/);
   assert.match(pageSource, /matchCountdownLabel\(comingUpEvent\)/);
   assert.match(pageSource, /<div className="schedule-line" \/>/);

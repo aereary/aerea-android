@@ -102,6 +102,16 @@ import {
   SketchPageSizeId,
   sketchPaperInkColors,
 } from "./sketch-paper";
+import {
+  cycleHabitDay,
+  eventDisplayColor,
+  formatTimeBlock,
+  isHealthCompletedOn,
+  isHealthCompletionEvent,
+  timetableClassPosition,
+  timetableGridWindow,
+  toggleHealthCompletedOn,
+} from "./planner-logic";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 const AO3_HISTORY_MARKER = "aereaAo3LibraryOpen";
@@ -429,6 +439,7 @@ type Habit = {
   icon: string;
   color: string;
   days: boolean[];
+  missedDays?: boolean[];
   streak: number;
 };
 
@@ -531,6 +542,7 @@ type CalendarEvent = {
   kickoffTimestamp?: number | null;
   footballMatch?: FootballMatch;
   sourceInboxId?: string;
+  healthCompletedDates?: string[];
 };
 
 type FootballVisualEvent = CalendarEvent & {
@@ -2028,12 +2040,18 @@ function matchCountdownLabel(event: CalendarEvent) {
 
 function eventTimeBlockPrimary(event: CalendarEvent) {
   if (event.timePending) return "TBC";
-  return event.allDay ? "ALL" : event.time;
+  return event.allDay ? "ALL" : formatTimeBlock(event.time).primary;
+}
+
+function scheduleEventTitle(event: CalendarEvent) {
+  return isFootballVisualEvent(event)
+    ? `Boca Juniors vs ${footballMatchOpponent(event.footballMatch)}`
+    : event.title;
 }
 
 function eventTimeBlockSecondary(event: CalendarEvent) {
   if (event.timePending) return "TIME";
-  return event.allDay ? "DAY" : "TIME";
+  return event.allDay ? "DAY" : formatTimeBlock(event.time).secondary;
 }
 
 function eventRepeatLabel(event: CalendarEvent) {
@@ -2143,6 +2161,7 @@ export default function Home() {
   >([]);
   const [selectedLibraryItem, setSelectedLibraryItem] =
     useState<LibraryItem | null>(null);
+  const [libraryImageFailed, setLibraryImageFailed] = useState(false);
   const [libraryPanel, setLibraryPanel] = useState<
     "contents" | "pages" | "bookmarks" | "highlights" | "notes"
   >("contents");
@@ -3642,7 +3661,7 @@ export default function Home() {
               : event.allDay
                 ? "Todo el día"
                 : event.time,
-            color: event.color,
+            color: eventDisplayColor(event, dateKey),
           }));
 
         return {
@@ -4520,6 +4539,7 @@ export default function Home() {
   };
 
   const openLibraryItem = async (item: LibraryItem) => {
+    setLibraryImageFailed(false);
     const lastOpenedAt = new Date().toISOString();
     let dataUrl = item.dataUrl;
     let mimeType = item.mimeType;
@@ -6418,14 +6438,27 @@ export default function Home() {
   const toggleHabit = (habitId: number, dayIndex = 3) => {
     setHabits((current) =>
       current.map((habit) =>
-        habit.id === habitId
-          ? {
-              ...habit,
-              days: habit.days.map((done, index) =>
-                index === dayIndex ? !done : done,
-              ),
-            }
-          : habit,
+        habit.id === habitId ? cycleHabitDay(habit, dayIndex) : habit,
+      ),
+    );
+  };
+
+  const toggleHealthOccurrence = (
+    clickEvent: ReactMouseEvent<HTMLButtonElement>,
+    event: CalendarEvent,
+    dateKey: string,
+  ) => {
+    clickEvent.stopPropagation();
+    recordAction(
+      isHealthCompletedOn(event, dateKey)
+        ? "Reopened Health occurrence"
+        : "Completed Health occurrence",
+    );
+    setCalendarEvents((current) =>
+      current.map((candidate) =>
+        candidate.id === event.id
+          ? toggleHealthCompletedOn(candidate, dateKey)
+          : candidate,
       ),
     );
   };
@@ -8019,7 +8052,8 @@ export default function Home() {
                   <div className="simplified-calendar-events">
                     {dayEvents.slice(0, 3).map((calendarEvent) => {
                       const eventColor = eventColors.find(
-                        (color) => color.value === calendarEvent.color,
+                        (color) =>
+                          color.value === eventDisplayColor(calendarEvent, dayKey),
                       )?.hex ?? "#ae96d8";
                       return (
                         <button
@@ -8286,19 +8320,22 @@ export default function Home() {
                       <small>{habit.streak} day gentle streak</small>
                     </div>
                     <div className="habit-dots">
-                      {habit.days.map((done, index) => (
-                        <button
-                          key={index}
-                          className={done ? "habit-dot done" : "habit-dot"}
-                          onClick={() => toggleHabit(habit.id, index)}
-                          aria-label={`Toggle day ${index + 1}`}
-                        >
-                          <small>
-                            {["M", "T", "W", "T", "F", "S", "S"][index]}
-                          </small>
-                          <span>{done ? "✓" : ""}</span>
-                        </button>
-                      ))}
+                      {habit.days.map((done, index) => {
+                        const missed = habit.missedDays?.[index] === true;
+                        return (
+                          <button
+                            key={index}
+                            className={`habit-dot ${done ? "done" : missed ? "missed" : ""}`.trim()}
+                            onClick={() => toggleHabit(habit.id, index)}
+                            aria-label={`Day ${index + 1}: ${done ? "done" : missed ? "missed" : "empty"}. Tap to change.`}
+                          >
+                            <small>
+                              {["M", "T", "W", "T", "F", "S", "S"][index]}
+                            </small>
+                            <span>{done ? "✓" : missed ? "✕" : ""}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </article>
                 ))}
@@ -10361,7 +10398,7 @@ export default function Home() {
                 <p className="tiny-label">LIBRARY</p>
                 <h2>{selectedLibraryItem.name}</h2>
               </div>
-              <button type="button" onClick={() => setSelectedLibraryItem(null)} aria-label="Close file">×</button>
+              <button type="button" onClick={() => { setSelectedLibraryItem(null); setLibraryImageFailed(false); }} aria-label="Close file">×</button>
             </header>
             <nav aria-label="Reader tools">
               {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
@@ -10377,7 +10414,24 @@ export default function Home() {
             </nav>
             <div className="library-reader-layout">
               <div className="library-document-stage">
-                {selectedLibraryItem.dataUrl ? (
+                {selectedLibraryItem.dataUrl &&
+                (selectedLibraryItem.kind === "image" ||
+                  selectedLibraryItem.mimeType?.startsWith("image/")) ? (
+                  libraryImageFailed ? (
+                    <div className="library-image-error" role="alert">
+                      <span aria-hidden="true">☹</span>
+                      <strong>This image could not be displayed.</strong>
+                      <p>The original file is still saved safely in your Library.</p>
+                    </div>
+                  ) : (
+                    <img
+                      src={selectedLibraryItem.dataUrl}
+                      alt={selectedLibraryItem.name}
+                      onLoad={() => setLibraryImageFailed(false)}
+                      onError={() => setLibraryImageFailed(true)}
+                    />
+                  )
+                ) : selectedLibraryItem.dataUrl ? (
                   <iframe src={selectedLibraryItem.dataUrl} title={selectedLibraryItem.name} />
                 ) : (
                   <p>{selectedLibraryItem.textContent || "This file is saved safely and will reopen when it is available."}</p>
@@ -11477,7 +11531,7 @@ export default function Home() {
                               {dayEvents.slice(0, 3).map((calendarEvent) => (
                                 <button
                                   type="button"
-                                  className={`extended-event-pill ${calendarEvent.color} ${
+                                  className={`extended-event-pill ${eventDisplayColor(calendarEvent, dayKey)} ${
                                     isFootballVisualEvent(calendarEvent)
                                       ? "canonical-boca-match"
                                       : ""
@@ -11768,7 +11822,9 @@ export default function Home() {
                                     {
                                       "--search-accent":
                                         eventColors.find(
-                                          (color) => color.value === event.color,
+                                          (color) =>
+                                            color.value ===
+                                            eventDisplayColor(event, date),
                                         )?.hex ?? "#ae96d8",
                                     } as CSSProperties
                                   }
@@ -11949,7 +12005,7 @@ export default function Home() {
                                   {selectedSchedulePendingTimeEvents.slice(0, 2).map((event) => (
                                     <button
                                       key={event.id}
-                                      className={`agenda-v2-all-day-event ${event.color} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
+                                      className={`agenda-v2-all-day-event ${eventDisplayColor(event, selectedCalendarDate)} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
                                       onClick={() => openEventDetail(event)}
                                     >
                                       {event.title}
@@ -11971,7 +12027,7 @@ export default function Home() {
                                   {selectedScheduleAllDayEvents.slice(0, 2).map((event) => (
                                     <button
                                       key={event.id}
-                                      className={`agenda-v2-all-day-event ${event.color}`}
+                                      className={`agenda-v2-all-day-event ${eventDisplayColor(event, selectedCalendarDate)}`}
                                       onClick={() => openEventDetail(event)}
                                     >
                                       {event.title}
@@ -12053,7 +12109,7 @@ export default function Home() {
                                     return (
                                       <button
                                         key={event.id}
-                                        className={`agenda-v2-event ${event.color} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""} ${previewMinute !== null ? "is-dragging" : ""} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
+                                        className={`agenda-v2-event ${eventDisplayColor(event, selectedCalendarDate)} ${densityClass} ${laneCount > 1 ? "is-overlap" : ""} ${previewMinute !== null ? "is-dragging" : ""} ${isFootballVisualEvent(event) ? "canonical-boca-match" : ""}`.trim()}
                                         style={{
                                           top: `${((visibleStart - SCHEDULE_START_MINUTE) / SCHEDULE_TOTAL_MINUTES) * 100}%`,
                                           height: `${(duration / SCHEDULE_TOTAL_MINUTES) * 100}%`,
@@ -12242,7 +12298,7 @@ export default function Home() {
                             <span className="calendar-event-dots">
                               {dayEvents.slice(0, 3).map((event) => (
                                 <b
-                                  className={`event-dot ${event.color}`}
+                                  className={`event-dot ${eventDisplayColor(event, dayKey)}`}
                                   key={event.id}
                                 />
                               ))}
@@ -12260,7 +12316,7 @@ export default function Home() {
                           <span className="calendar-cell-events">
                             {dayEvents.slice(0, 3).map((calendarEvent) => (
                               <span
-                                className={`calendar-cell-event ${calendarEvent.color} ${
+                                className={`calendar-cell-event ${eventDisplayColor(calendarEvent, dayKey)} ${
                                   isFootballVisualEvent(calendarEvent)
                                     ? "canonical-boca-match"
                                     : ""
@@ -12385,7 +12441,7 @@ export default function Home() {
                     <div className="selected-day-events">
                       {selectedDateEvents.map((calendarEvent) => (
                         <article
-                          className={`event-chip ${calendarEvent.color} ${
+                          className={`event-chip ${eventDisplayColor(calendarEvent, selectedCalendarDate)} ${
                             calendarEvent.eventType === "sports_event"
                               ? "sports-event"
                               : ""
@@ -12621,13 +12677,16 @@ export default function Home() {
               ) : (
                 <div className="day-summary-events">
                   {summaryEvents.map((event) => {
-                    const hasDetails = Boolean(event.note?.trim() || event.todos?.length);
+                    const hasDetails =
+                      !isHealthCompletionEvent(event) &&
+                      Boolean(event.note?.trim() || event.todos?.length);
                     return (
                       <article
                         className={[
                           "day-summary-event",
-                          event.color,
+                          eventDisplayColor(event, daySummaryDate),
                           hasDetails ? "expanded" : "compact",
+                          isHealthCompletionEvent(event) ? "health-completion-card" : "",
                           event.sportsCardStyle ? "match-day-pocket-card" : "",
                           isFootballVisualEvent(event) ? "canonical-boca-match" : "",
                         ].filter(Boolean).join(" ")}
@@ -12664,6 +12723,31 @@ export default function Home() {
                       >
                         {isFootballVisualEvent(event) ? (
                           <BocaDayPocketTicket event={event} />
+                        ) : isHealthCompletionEvent(event) ? (
+                          <div className="day-summary-health-heading">
+                            <span className="day-summary-health-icon" aria-hidden="true">✦</span>
+                            <div>
+                              <small>{eventStartTimeLabel(event)}</small>
+                              <strong>{event.title}</strong>
+                            </div>
+                            <button
+                              type="button"
+                              className={`health-completion-toggle ${
+                                isHealthCompletedOn(event, daySummaryDate) ? "active" : ""
+                              }`.trim()}
+                              onClick={(clickEvent) =>
+                                toggleHealthOccurrence(clickEvent, event, daySummaryDate)
+                              }
+                              aria-label={`${
+                                isHealthCompletedOn(event, daySummaryDate)
+                                  ? "Mark incomplete"
+                                  : "Mark complete"
+                              }: ${event.title}`}
+                              aria-pressed={isHealthCompletedOn(event, daySummaryDate)}
+                            >
+                              ✓
+                            </button>
+                          </div>
                         ) : (
                           <div className="day-summary-event-heading">
                             <span className="day-summary-event-heart" aria-hidden="true">
@@ -12687,10 +12771,12 @@ export default function Home() {
                             </div>
                           </div>
                         )}
-                        {!isFootballVisualEvent(event) && event.note?.trim() && (
+                        {!isFootballVisualEvent(event) &&
+                          !isHealthCompletionEvent(event) &&
+                          event.note?.trim() && (
                           <p className="day-summary-memo">{event.note}</p>
                         )}
-                        {!!event.todos?.length && (
+                        {!isHealthCompletionEvent(event) && !!event.todos?.length && (
                           <ul>{event.todos.map((todo, index) => <li key={`${event.id}-${index}`} className={event.todoStates?.[index] === "done" ? "done" : ""}><span>{event.todoStates?.[index] === "done" ? "✓" : "○"}</span>{todo}</li>)}</ul>
                         )}
                       </article>
@@ -14329,6 +14415,15 @@ function TodayScreen({
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
+  const timetableWindow = timetableGridWindow(classTimetable.classes);
+  const timetableHourMarks = Array.from(
+    { length: timetableWindow.hours + 1 },
+    (_, index) => timetableWindow.start + index * 60,
+  );
+  const timetableGridHeight = Math.min(
+    520,
+    Math.max(300, timetableWindow.hours * 52),
+  );
 
   const openClassTimetable = () => {
     setTimetableDraft({
@@ -14388,6 +14483,15 @@ function TodayScreen({
       end: "09:30",
       color: timetableColors[timetableDraft.classes.length % timetableColors.length],
     });
+  };
+
+  const beginEditTimetableClass = (classItem: TimetableClass) => {
+    setTimetableDraft({
+      ...classTimetable,
+      classes: classTimetable.classes.map((item) => ({ ...item })),
+    });
+    setTimetableEditing(true);
+    setTimetableClassDraft({ ...classItem });
   };
 
   const saveTimetableClass = () => {
@@ -14558,7 +14662,9 @@ function TodayScreen({
             onClick={() => {
               if (timetableLongPressedRef.current) {
                 timetableLongPressedRef.current = false;
+                return;
               }
+              openClassTimetable();
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -14641,7 +14747,7 @@ function TodayScreen({
             type="button"
             className={[
               "schedule-card",
-              `${comingUpEvent.color}-card`,
+              `${eventDisplayColor(comingUpEvent, selectedDate)}-card`,
               comingUpEvent.sportsCardStyle ? "match-day-schedule-card" : "",
               isFootballVisualEvent(comingUpEvent) ? "canonical-boca-match" : "",
             ].filter(Boolean).join(" ")}
@@ -14661,7 +14767,7 @@ function TodayScreen({
             onPointerCancel={cancelScheduleLongPress}
             onContextMenu={(contextEvent) => contextEvent.preventDefault()}
             onClick={() => openScheduleEvent(comingUpEvent)}
-            aria-label={`Open details for ${comingUpEvent.title}`}
+            aria-label={`Open details for ${scheduleEventTitle(comingUpEvent)}`}
             title="Hold to preview event"
           >
             <div className="time-block">
@@ -14675,7 +14781,7 @@ function TodayScreen({
                   ? `${comingUpEvent.sportsIcon ?? "♡"} MATCH DAY`
                   : comingUpEvent.calendar ?? "AÉREA"}
               </p>
-              <h4>{comingUpEvent.title}</h4>
+              <h4>{scheduleEventTitle(comingUpEvent)}</h4>
               <span>
                 {comingUpEvent.location ||
                   comingUpEvent.note ||
@@ -14720,7 +14826,7 @@ function TodayScreen({
                 type="button"
                 className={[
                   "schedule-card",
-                  `${event.color}-card`,
+                  `${eventDisplayColor(event, selectedDate)}-card`,
                   event.sportsCardStyle ? "match-day-schedule-card" : "",
                   isFootballVisualEvent(event) ? "canonical-boca-match" : "",
                 ].filter(Boolean).join(" ")}
@@ -14741,7 +14847,7 @@ function TodayScreen({
                 onPointerCancel={cancelScheduleLongPress}
                 onContextMenu={(contextEvent) => contextEvent.preventDefault()}
                 onClick={() => openScheduleEvent(event)}
-                aria-label={`Open details for ${event.title}`}
+                aria-label={`Open details for ${scheduleEventTitle(event)}`}
                 title="Hold to preview event"
               >
                 <div className="time-block">
@@ -14755,7 +14861,7 @@ function TodayScreen({
                       ? `${event.sportsIcon ?? "♡"} MATCH DAY`
                       : event.calendar ?? "AÉREA"}
                   </p>
-                  <h4>{event.title}</h4>
+                  <h4>{scheduleEventTitle(event)}</h4>
                   <span>
                     {event.location || event.note || "Saved in your calendar"}
                   </span>
@@ -14968,10 +15074,9 @@ function TodayScreen({
             aria-modal="true"
             aria-label="My class schedule"
           >
-            <span className="timetable-paperclip" aria-hidden="true">♡</span>
             <header className="timetable-heading">
               <div>
-                <p className="tiny-label">A LITTLE MAP OF MY WEEK</p>
+                <h2>My class timetable</h2>
                 {timetableEditing ? (
                   <div className="timetable-term-fields">
                     <label>
@@ -15002,10 +15107,10 @@ function TodayScreen({
                     </label>
                   </div>
                 ) : (
-                  <>
-                    <h2>{classTimetable.termName}</h2>
-                    <p>{classTimetable.termDates}</p>
-                  </>
+                  <p className="timetable-term-meta">
+                    <i aria-hidden="true" />
+                    {classTimetable.termName} · {classTimetable.termDates}
+                  </p>
                 )}
               </div>
               <div className="timetable-heading-actions">
@@ -15043,35 +15148,71 @@ function TodayScreen({
             </header>
 
             {!timetableEditing ? (
-              <div className="timetable-board" aria-label="Weekly classes">
-                {timetableDays.map((day, dayIndex) => {
+              <div
+                className="timetable-board"
+                role="grid"
+                aria-label="Weekly temporal class grid, Monday through Saturday"
+                data-grid-start={timetableWindow.start}
+                data-grid-end={timetableWindow.end}
+                style={
+                  {
+                    "--timetable-grid-height": `${timetableGridHeight}px`,
+                    "--timetable-hour-height": `${100 / timetableWindow.hours}%`,
+                  } as CSSProperties
+                }
+              >
+                <span className="timetable-grid-corner" aria-hidden="true">TIME</span>
+                {timetableDays.map((day) => (
+                  <h3 className="timetable-grid-day-label" key={`heading-${day.id}`}>
+                    {day.label}
+                  </h3>
+                ))}
+                <div className="timetable-time-axis" aria-hidden="true">
+                  {timetableHourMarks.map((minute) => {
+                    const label = formatTimeBlock(
+                      `${String(Math.floor(minute / 60) % 24).padStart(2, "0")}:00`,
+                    );
+                    return (
+                      <span
+                        key={minute}
+                        style={{
+                          top: `${((minute - timetableWindow.start) /
+                            (timetableWindow.end - timetableWindow.start)) * 100}%`,
+                        }}
+                      >
+                        <strong>{label.primary}</strong>
+                        <small>{label.secondary}</small>
+                      </span>
+                    );
+                  })}
+                </div>
+                {timetableDays.map((day) => {
                   const dayClasses = classTimetable.classes
                     .filter((classItem) => classItem.day === day.id)
                     .sort((first, second) => first.start.localeCompare(second.start));
                   return (
-                    <section className="timetable-day" key={day.id}>
-                      <h3 style={{ background: timetableColors[dayIndex] }}>
-                        {day.label}
-                      </h3>
-                      <div>
-                        {dayClasses.length === 0 ? (
-                          <span className="timetable-empty-day">♡</span>
-                        ) : (
-                          dayClasses.map((classItem) => (
-                            <article
-                              className="timetable-class-block"
-                              key={classItem.id}
-                              style={{ background: classItem.color }}
-                            >
-                              <strong>{classItem.name}</strong>
-                              <small>
-                                {classItem.start} — {classItem.end}
-                              </small>
-                            </article>
-                          ))
-                        )}
-                      </div>
-                    </section>
+                    <div className="timetable-grid-day" role="gridcell" key={day.id}>
+                      {dayClasses.map((classItem) => (
+                        <button
+                          className="timetable-class-block"
+                          type="button"
+                          key={classItem.id}
+                          style={{
+                            background: classItem.color,
+                            ...timetableClassPosition(
+                              classItem,
+                              timetableWindow.start,
+                              timetableWindow.end,
+                            ),
+                          }}
+                          onClick={() => beginEditTimetableClass(classItem)}
+                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${classItem.start} to ${classItem.end}`}
+                        >
+                          <strong>{classItem.name}</strong>
+                          <small>{formatTimeBlock(classItem.start).primary}</small>
+                        </button>
+                      ))}
+                    </div>
                   );
                 })}
               </div>
@@ -15303,9 +15444,12 @@ function TodayScreen({
               </button>
             )}
 
-            <p className="timetable-note">
-              Hold the little morning circle whenever you want to see this again.
-            </p>
+            {!timetableEditing && (
+              <footer className="timetable-note">
+                <span>☆&nbsp; Tap a class to edit or remove</span>
+                <span aria-hidden="true">♡</span>
+              </footer>
+            )}
           </section>
         </div>
       )}
