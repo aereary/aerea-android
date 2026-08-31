@@ -22,6 +22,8 @@ test("event reminders use stable occurrence identities and survive system change
   assert.match(notifications, /setExactAndAllowWhileIdle/);
   assert.match(notifications, /setAndAllowWhileIdle/);
   assert.match(notifications, /excludedDates/);
+  assert.match(notifications, /customRepeatEvery/);
+  assert.match(notifications, /scheduleQaNotification/);
   for (const action of ["BOOT_COMPLETED", "MY_PACKAGE_REPLACED", "TIME_SET", "TIMEZONE_CHANGED"]) assert.match(manifest, new RegExp(action));
   assert.match(page, /Las notificaciones están bloqueadas/);
 });
