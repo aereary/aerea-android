@@ -177,9 +177,19 @@ type AereaSportsNotificationsPlugin = {
   }): Promise<void>;
 };
 
+type AereaEventNotificationsPlugin = {
+  status(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
+  requestPermissions(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
+  openSettings(): Promise<void>;
+  sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
+};
+type AereaNavigationPlugin = { exitApp(): Promise<void> };
+
 const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
 const AereaSportsNotifications =
   registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
+const AereaEventNotifications = registerPlugin<AereaEventNotificationsPlugin>("AereaEventNotifications");
+const AereaNavigation = registerPlugin<AereaNavigationPlugin>("AereaNavigation");
 
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
@@ -218,9 +228,10 @@ type AereaStoragePlugin = {
   readFile(options: { id: string }): Promise<{
     name: string;
     mimeType: string;
-    dataUrl: string;
+    contentUri: string;
   }>;
   deleteFile(options: { id: string }): Promise<void>;
+  pickLibraryImages(): Promise<{ files: Array<{ id: string; name: string; mimeType: string; extension: string; size: number; contentUri: string }> }>;
 };
 
 const AereaStorage = registerPlugin<AereaStoragePlugin>("AereaStorage");
@@ -2067,6 +2078,7 @@ function eventRepeatLabel(event: CalendarEvent) {
 export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
+  const [tabHistory, setTabHistory] = useState<Tab[]>([]);
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
@@ -2305,6 +2317,7 @@ export default function Home() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const consumedAuthLinksRef = useRef(new Set<string>());
+  const lastExitBackRef = useRef(0);
   const undoStackRef = useRef<AereaHistoryEntry[]>([]);
   const redoStackRef = useRef<AereaHistoryEntry[]>([]);
   const [, setGlobalHistoryDepth] = useState({
@@ -2823,9 +2836,9 @@ export default function Home() {
     );
     const sync = async () => {
       if (sportsSettings.notifyBeforeMatches) {
-        await AereaSportsNotifications.requestPermissions().catch(
-          () => undefined,
-        );
+        await AereaSportsNotifications.requestPermissions().catch((error) => {
+          setHistoryMessage(error instanceof Error ? error.message : "No se pudo comprobar el permiso de notificaciones deportivas.");
+        });
       }
       const genericNotificationEvents = followedEvents.map((event) => {
         const team = INITIAL_SPORTS_TEAMS.find(
@@ -2872,6 +2885,24 @@ export default function Home() {
     };
     void sync().catch(() => undefined);
   }, [footballMatches, sportsEvents, sportsSettings, stateReady]);
+
+  useEffect(() => {
+    if (!stateReady || !isNative()) return;
+    const reminderEvents = calendarEvents.filter((event) =>
+      ["At start time", "10 minutes before", "30 minutes before", "1 hour before", "1 day before"].includes(event.reminder ?? ""),
+    );
+    const sync = async () => {
+      if (reminderEvents.length) {
+        const status = await AereaEventNotifications.status();
+        const resolved = status.permission === "granted" ? status : await AereaEventNotifications.requestPermissions();
+        if (resolved.permission !== "granted" || resolved.channel === "blocked") {
+          setHistoryMessage("Las notificaciones están bloqueadas. Ábrelas en Ajustes para recibir recordatorios.");
+        }
+      }
+      await AereaEventNotifications.sync({ eventsJson: JSON.stringify(reminderEvents) });
+    };
+    void sync().catch((error) => setHistoryMessage(error instanceof Error ? error.message : "No se pudieron programar los recordatorios."));
+  }, [calendarEvents, stateReady]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -4538,15 +4569,42 @@ export default function Home() {
     return item;
   };
 
+  const pickNativeLibraryImages = async () => {
+    if (!isNative()) return;
+    const picked = await AereaStorage.pickLibraryImages();
+    if (!picked.files.length) return;
+    const now = new Date().toISOString();
+    recordAction("Imported Library images");
+    setLibraryItems((current) => [
+      ...picked.files.map((file): LibraryItem => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        kind: "image",
+        mimeType: file.mimeType,
+        size: file.size,
+        nativeFileId: file.id,
+        nativeContentUri: file.contentUri,
+        createdAt: now,
+        updatedAt: now,
+        favorite: false,
+        collectionIds: [],
+        annotations: [],
+      })),
+      ...current,
+    ]);
+    setHistoryMessage(`${picked.files.length} imagen${picked.files.length === 1 ? "" : "es"} guardada${picked.files.length === 1 ? "" : "s"} en aérea.`);
+  };
+
   const openLibraryItem = async (item: LibraryItem) => {
     setLibraryImageFailed(false);
     const lastOpenedAt = new Date().toISOString();
     let dataUrl = item.dataUrl;
+    let nativeContentUri = item.nativeContentUri;
     let mimeType = item.mimeType;
     if (item.nativeFileId && isNative()) {
       try {
         const stored = await AereaStorage.readFile({ id: item.nativeFileId });
-        dataUrl = stored.dataUrl;
+        nativeContentUri = stored.contentUri;
         mimeType ||= stored.mimeType;
       } catch {
         // A cloud-backed copy may still be available below.
@@ -4561,7 +4619,7 @@ export default function Home() {
         setHistoryMessage("This file is temporarily unavailable offline.");
       }
     }
-    const opened = { ...item, dataUrl, mimeType, lastOpenedAt };
+    const opened = { ...item, dataUrl, nativeContentUri, mimeType, lastOpenedAt };
     setLibraryItems((current) =>
       current.map((candidate) =>
         candidate.id === item.id ? opened : candidate,
@@ -4992,10 +5050,51 @@ export default function Home() {
   }, [ao3LibraryOpen, brandOpensAo3]);
 
   const changeTab = (tab: Tab) => {
+    if (tab !== activeTab) setTabHistory((current) => [...current, activeTab]);
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
   };
+
+  useEffect(() => {
+    if (!isNative()) return;
+    const onAndroidBack = () => {
+      const consumesNavigation = Boolean(eventDeleteRequest || eventEditorOpen || selectedEventDetail || selectedFootballMatch || daySummaryDate || activeStudyFile || selectedLibraryItem || quickCaptureOpen || postItEditorOpen || habitEditorOpen || classEditorOpen || taskLinkEditorId || categoryEditorOpen || monthPickerOpen || calendarSearchOpen || settingsOpen || metricsOpen || ao3LibraryOpen || aereaHubOpen || sketchFullscreen || calendarExpanded || calendarScheduleOpen || calendarOpen || space !== "menu" || tabHistory.length || activeTab !== "today");
+      if (consumesNavigation) lastExitBackRef.current = 0;
+      if (eventDeleteRequest) return setEventDeleteRequest(null);
+      if (eventEditorOpen) { setEventEditorOpen(false); setEditingEventId(null); return; }
+      if (selectedEventDetail || selectedFootballMatch) { setSelectedEventDetail(null); setSelectedFootballMatch(null); setEventDetailReturnDayPocket(null); return; }
+      if (daySummaryDate) return setDaySummaryDate(null);
+      if (activeStudyFile) { setActiveStudyFile(null); setActiveEpubBook(null); return; }
+      if (selectedLibraryItem) return setSelectedLibraryItem(null);
+      if (quickCaptureOpen) return setQuickCaptureOpen(false);
+      if (postItEditorOpen) return setPostItEditorOpen(false);
+      if (habitEditorOpen) return setHabitEditorOpen(false);
+      if (classEditorOpen) return setClassEditorOpen(false);
+      if (taskLinkEditorId) return setTaskLinkEditorId(null);
+      if (categoryEditorOpen) return setCategoryEditorOpen(false);
+      if (monthPickerOpen) return setMonthPickerOpen(false);
+      if (calendarSearchOpen) return setCalendarSearchOpen(false);
+      if (settingsOpen) return setSettingsOpen(false);
+      if (metricsOpen) return setMetricsOpen(false);
+      if (ao3LibraryOpen) { window.history.back(); return; }
+      if (aereaHubOpen) return setAereaHubOpen(false);
+      if (sketchFullscreen) return setSketchFullscreen(false);
+      if (calendarExpanded) return setCalendarExpanded(false);
+      if (calendarScheduleOpen) return setCalendarScheduleOpen(false);
+      if (calendarOpen) return setCalendarOpen(false);
+      if (space !== "menu") return setSpace("menu");
+      const prior = tabHistory.at(-1);
+      if (prior) { setTabHistory((current) => current.slice(0, -1)); setActiveTab(prior); return; }
+      if (activeTab !== "today") { setActiveTab("today"); return; }
+      const now = Date.now();
+      if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
+      lastExitBackRef.current = now;
+      setHistoryMessage("Presiona Atrás otra vez para salir de aérea");
+    };
+    window.addEventListener("aereaAndroidBack", onAndroidBack);
+    return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
+  }, [activeStudyFile, selectedLibraryItem, eventDeleteRequest, eventEditorOpen, selectedEventDetail, selectedFootballMatch, daySummaryDate, quickCaptureOpen, postItEditorOpen, habitEditorOpen, classEditorOpen, taskLinkEditorId, categoryEditorOpen, monthPickerOpen, calendarSearchOpen, settingsOpen, metricsOpen, ao3LibraryOpen, aereaHubOpen, sketchFullscreen, calendarExpanded, calendarScheduleOpen, calendarOpen, space, activeTab, tabHistory]);
 
   const openMetrics = () => {
     setMetricsAnchorDate(new Date());
@@ -8574,6 +8673,7 @@ export default function Home() {
                     }
                   }}
                   onImportFiles={importStudyFiles}
+                  onPickImages={isNative() ? pickNativeLibraryImages : undefined}
                   collections={libraryCollections}
                   onCollectionsChange={(collections) => {
                     recordAction("Updated Library collections");
@@ -10414,7 +10514,7 @@ export default function Home() {
             </nav>
             <div className="library-reader-layout">
               <div className="library-document-stage">
-                {selectedLibraryItem.dataUrl &&
+                {(selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl) &&
                 (selectedLibraryItem.kind === "image" ||
                   selectedLibraryItem.mimeType?.startsWith("image/")) ? (
                   libraryImageFailed ? (
@@ -10425,7 +10525,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <img
-                      src={selectedLibraryItem.dataUrl}
+                      src={selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl}
                       alt={selectedLibraryItem.name}
                       onLoad={() => setLibraryImageFailed(false)}
                       onError={() => setLibraryImageFailed(true)}

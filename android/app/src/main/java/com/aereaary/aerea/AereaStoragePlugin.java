@@ -2,6 +2,9 @@ package com.aereaary.aerea;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.OpenableColumns;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -13,6 +16,8 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.ActivityCallback;
+import androidx.core.content.FileProvider;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -27,6 +32,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.io.InputStream;
 
 @CapacitorPlugin(name = "AereaStorage")
 public class AereaStoragePlugin extends Plugin {
@@ -70,6 +76,59 @@ public class AereaStoragePlugin extends Plugin {
             return stream.read() == 'P' && stream.read() == 'K';
         }
     }
+
+    @PluginMethod
+    public void pickLibraryImages(PluginCall call) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg","image/png","image/webp","image/gif","image/heic","image/heif","image/avif"});
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        startActivityForResult(call, intent, "pickedLibraryImages");
+    }
+
+    @ActivityCallback
+    private void pickedLibraryImages(PluginCall call, androidx.activity.result.ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != android.app.Activity.RESULT_OK || result.getData() == null) {
+            call.resolve(new JSObject().put("files", new JSArray())); return;
+        }
+        try {
+            JSArray files = new JSArray(); Intent data = result.getData();
+            if (data.getClipData() != null) {
+                for (int i=0;i<data.getClipData().getItemCount();i++) files.put(copyPickedImage(data.getClipData().getItemAt(i).getUri()));
+            } else if (data.getData() != null) files.put(copyPickedImage(data.getData()));
+            call.resolve(new JSObject().put("files", files));
+        } catch (Exception error) { call.reject("No se pudo copiar la imagen a aérea", error); }
+    }
+
+    private JSObject copyPickedImage(Uri uri) throws Exception {
+        String name = "image"; long declaredSize = -1;
+        try (Cursor cursor = getContext().getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE}, null,null,null)) {
+            if (cursor != null && cursor.moveToFirst()) { name=cursor.getString(0); declaredSize=cursor.isNull(1)?-1:cursor.getLong(1); }
+        }
+        String extension = extensionOf(name); String mime = normalizeImageMime(getContext().getContentResolver().getType(uri), extension, uri);
+        if (mime == null) throw new IllegalArgumentException("El archivo elegido no es una imagen compatible");
+        String id=UUID.randomUUID().toString(); long now=System.currentTimeMillis(); File directory=new File(getContext().getFilesDir(),"library");
+        if(!directory.exists()&&!directory.mkdirs())throw new IllegalStateException("Could not create Library directory");
+        File stored=new File(directory,id+(extension.isEmpty()?extensionForMime(mime):"."+extension)); long size=0;
+        try(InputStream input=getContext().getContentResolver().openInputStream(uri); FileOutputStream output=new FileOutputStream(stored)){
+            if(input==null)throw new IllegalStateException("El selector no permitió leer la imagen"); byte[] buffer=new byte[64*1024]; int read;
+            while((read=input.read(buffer))!=-1){size+=read;if(size>80L*1024L*1024L)throw new IllegalArgumentException("La imagen supera 80 MB");output.write(buffer,0,read);}
+        } catch(Exception e){stored.delete();throw e;}
+        ContentValues values=new ContentValues(); values.put("id",id);values.put("name",name);values.put("mime_type",mime);values.put("extension",extension);values.put("size",size);values.put("path",stored.getAbsolutePath());values.put("created_at",now);values.put("updated_at",now);
+        database.getWritableDatabase().insertOrThrow("library_files",null,values);
+        Uri content=FileProvider.getUriForFile(getContext(),getContext().getPackageName()+".fileprovider",stored);
+        return new JSObject().put("id",id).put("name",name).put("mimeType",mime).put("extension",extension).put("size",size).put("contentUri",content.toString());
+    }
+
+    private String normalizeImageMime(String mime,String ext,Uri uri)throws Exception{
+        if(mime!=null&&!mime.isBlank()&&!"application/octet-stream".equalsIgnoreCase(mime)&&mime.startsWith("image/"))return mime;
+        String byExt=switch(ext.toLowerCase()){case "jpg","jpeg"->"image/jpeg";case "png"->"image/png";case "webp"->"image/webp";case "gif"->"image/gif";case "heic"->"image/heic";case "heif"->"image/heif";case "avif"->"image/avif";default->null;}; if(byExt!=null)return byExt;
+        try(InputStream raw=getContext().getContentResolver().openInputStream(uri);BufferedInputStream in=new BufferedInputStream(raw)){byte[] h=new byte[16];int n=in.read(h);if(n>=3&&(h[0]&255)==255&&(h[1]&255)==216&&(h[2]&255)==255)return"image/jpeg";if(n>=8&&h[0]==(byte)137&&h[1]==80&&h[2]==78&&h[3]==71)return"image/png";if(n>=6&&h[0]=='G'&&h[1]=='I'&&h[2]=='F')return"image/gif";if(n>=12&&h[0]=='R'&&h[1]=='I'&&h[2]=='F'&&h[8]=='W'&&h[9]=='E'&&h[10]=='B'&&h[11]=='P')return"image/webp";if(n>=12&&h[4]=='f'&&h[5]=='t'&&h[6]=='y'&&h[7]=='p'){String brand=new String(h,8,4,StandardCharsets.US_ASCII);if(brand.startsWith("avi"))return"image/avif";if(brand.startsWith("hei")||brand.startsWith("mif"))return"image/heic";}}return null;
+    }
+    private String extensionOf(String name){int dot=name.lastIndexOf('.');return dot<0?"":name.substring(dot+1).replaceAll("[^A-Za-z0-9]","").toLowerCase();}
+    private String extensionForMime(String mime){return switch(mime){case"image/jpeg"->".jpg";case"image/png"->".png";case"image/webp"->".webp";case"image/gif"->".gif";case"image/avif"->".avif";default->".heic";};}
 
     @PluginMethod
     public void getState(PluginCall call) {
@@ -533,8 +592,7 @@ public class AereaStoragePlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("name", cursor.getString(0));
             result.put("mimeType", mimeType);
-            result.put("dataUrl", "data:" + mimeType + ";base64," +
-                    Base64.encodeToString(Files.readAllBytes(file.toPath()), Base64.NO_WRAP));
+            result.put("contentUri", FileProvider.getUriForFile(getContext(), getContext().getPackageName()+".fileprovider", file).toString());
             call.resolve(result);
         } catch (Exception error) {
             call.reject("Could not read Library file", error);
@@ -580,7 +638,7 @@ public class AereaStoragePlugin extends Plugin {
 
     static class AereaDatabase extends SQLiteOpenHelper {
         AereaDatabase(Context context) {
-            super(context, "aerea-private.db", null, 5);
+            super(context, "aerea-private.db", null, 6);
         }
 
         @Override
@@ -615,6 +673,8 @@ public class AereaStoragePlugin extends Plugin {
                     "id TEXT PRIMARY KEY NOT NULL," +
                     "name TEXT NOT NULL," +
                     "mime_type TEXT NOT NULL," +
+                    "extension TEXT," +
+                    "size INTEGER NOT NULL DEFAULT 0," +
                     "path TEXT NOT NULL," +
                     "created_at INTEGER NOT NULL," +
                     "updated_at INTEGER NOT NULL)");
@@ -658,6 +718,10 @@ public class AereaStoragePlugin extends Plugin {
                         "ON study_files(source_drive_file_id) WHERE source_drive_file_id IS NOT NULL");
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS study_files_ao3_work_idx " +
                         "ON study_files(source_work_id) WHERE source_work_id IS NOT NULL");
+            }
+            if (oldVersion < 6) {
+                db.execSQL("ALTER TABLE library_files ADD COLUMN extension TEXT");
+                db.execSQL("ALTER TABLE library_files ADD COLUMN size INTEGER NOT NULL DEFAULT 0");
             }
         }
     }
