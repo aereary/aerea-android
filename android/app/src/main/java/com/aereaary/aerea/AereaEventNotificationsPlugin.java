@@ -72,6 +72,18 @@ public class AereaEventNotificationsPlugin extends Plugin {
         } catch (Exception error) { call.reject("No se pudieron programar los recordatorios", error); }
     }
 
+    /** Explicit QA hook: schedules one ephemeral notification and stores no demo event. */
+    @PluginMethod public void scheduleQaNotification(PluginCall call) {
+        int seconds = Math.max(3, Math.min(30, call.getInt("delaySeconds", 5)));
+        String identity = "qa:" + System.currentTimeMillis();
+        long trigger = System.currentTimeMillis() + seconds * 1000L;
+        AlarmManager alarms = getContext().getSystemService(AlarmManager.class);
+        PendingIntent intent = pending(getContext(), identity, "Prueba de notificación de aérea", trigger, PendingIntent.FLAG_UPDATE_CURRENT);
+        if (canExact(getContext())) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
+        else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
+        JSObject result = new JSObject(); result.put("identity", identity); result.put("firesInSeconds", seconds); call.resolve(result);
+    }
+
     static void rescheduleStored(Context context) {
         String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
         try { scheduleJson(context, json); } catch (Exception ignored) { android.util.Log.e("aerea", "Could not restore event reminders", ignored); }
@@ -93,8 +105,8 @@ public class AereaEventNotificationsPlugin extends Plugin {
             String until = event.optString("repeatUntil"); if (!until.isEmpty()) end = min(end, LocalDate.parse(until));
             String repeat = event.optString("repeat", "Never"); JSONArray excluded = event.optJSONArray("excludedDates");
             for (LocalDate day=start; !day.isAfter(end); day=day.plusDays(1)) {
-                if (!occurs(start, day, repeat) || contains(excluded, day.toString())) continue;
-                String time = event.optBoolean("allDay", false) ? "09:00" : event.optString("time", "09:00");
+                if (!occurs(event, start, day, repeat) || contains(excluded, day.toString())) continue;
+                String time = event.optBoolean("allDay", false) ? "00:00" : event.optString("time", "00:00");
                 long trigger = LocalDateTime.parse(day + "T" + normalizeTime(time)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - lead * 60000L;
                 if (trigger <= now) continue;
                 String identity = event.getString("id") + ":" + day; nextIds.add(identity);
@@ -116,7 +128,7 @@ public class AereaEventNotificationsPlugin extends Plugin {
     static boolean canExact(Context c) { AlarmManager a=c.getSystemService(AlarmManager.class); return Build.VERSION.SDK_INT < 31 || a.canScheduleExactAlarms(); }
     static int leadMinutes(String value) { switch(value.toLowerCase()) { case "at start time": return 0; case "10 minutes before": return 10; case "30 minutes before": return 30; case "1 hour before": return 60; case "1 day before": return 1440; default:return -1; } }
     static boolean contains(JSONArray values,String value){ if(values==null)return false; for(int i=0;i<values.length();i++)if(value.equals(values.optString(i)))return true; return false; }
-    static boolean occurs(LocalDate start,LocalDate day,String repeat){ long d=ChronoUnit.DAYS.between(start,day); if(d<0)return false; if("Never".equals(repeat))return d==0; if("Daily".equals(repeat))return true; if("Weekly".equals(repeat))return d%7==0; if("Monthly".equals(repeat))return day.getDayOfMonth()==start.getDayOfMonth(); if("Yearly".equals(repeat))return day.getDayOfMonth()==start.getDayOfMonth()&&day.getMonth()==start.getMonth(); return d==0; }
+    static boolean occurs(JSONObject event,LocalDate start,LocalDate day,String repeat){ long d=ChronoUnit.DAYS.between(start,day); if(d<0)return false; if("Never".equals(repeat))return d==0; if("Daily".equals(repeat))return true; if("Weekly".equals(repeat))return d%7==0; if("Monthly".equals(repeat))return day.getDayOfMonth()==start.getDayOfMonth(); if("Yearly".equals(repeat))return day.getDayOfMonth()==start.getDayOfMonth()&&day.getMonth()==start.getMonth(); int every=Math.max(1,event.optInt("customRepeatEvery",1)); String unit=event.optString("customRepeatUnit","weeks"); if("days".equals(unit))return d%every==0; if("months".equals(unit)){long months=ChronoUnit.MONTHS.between(start.withDayOfMonth(1),day.withDayOfMonth(1));return months%every==0&&day.getDayOfMonth()==start.getDayOfMonth();} return d%(every*7L)==0; }
     static LocalDate min(LocalDate a,LocalDate b){return a.isBefore(b)?a:b;}
     static String normalizeTime(String value){ return value.matches("\\d{2}:\\d{2}")?value:value+":00"; }
 }

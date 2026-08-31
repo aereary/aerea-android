@@ -3,6 +3,7 @@ package com.aereaary.aerea;
 import static org.junit.Assert.*;
 import java.time.LocalDate;
 import org.junit.Test;
+import org.json.JSONObject;
 
 public class AereaEventNotificationsPluginTest {
     @Test public void mapsEveryReminderLead() {
@@ -14,11 +15,15 @@ public class AereaEventNotificationsPluginTest {
         assertEquals(-1, AereaEventNotificationsPlugin.leadMinutes("None"));
     }
 
-    @Test public void expandsCommonRepeatsWithoutDuplicateDays() {
+    @Test public void expandsCommonRepeatsWithoutDuplicateDays() throws Exception {
         LocalDate start = LocalDate.of(2026, 8, 29);
-        assertTrue(AereaEventNotificationsPlugin.occurs(start, start.plusDays(7), "Weekly"));
-        assertFalse(AereaEventNotificationsPlugin.occurs(start, start.plusDays(6), "Weekly"));
-        assertTrue(AereaEventNotificationsPlugin.occurs(start, LocalDate.of(2026, 9, 29), "Monthly"));
-        assertFalse(AereaEventNotificationsPlugin.occurs(start, start.plusDays(1), "Never"));
+        JSONObject event = new JSONObject();
+        assertTrue(AereaEventNotificationsPlugin.occurs(event, start, start.plusDays(7), "Weekly"));
+        assertFalse(AereaEventNotificationsPlugin.occurs(event, start, start.plusDays(6), "Weekly"));
+        assertTrue(AereaEventNotificationsPlugin.occurs(event, start, LocalDate.of(2026, 9, 29), "Monthly"));
+        assertFalse(AereaEventNotificationsPlugin.occurs(event, start, start.plusDays(1), "Never"));
+        event.put("customRepeatEvery", 2); event.put("customRepeatUnit", "weeks");
+        assertTrue(AereaEventNotificationsPlugin.occurs(event, start, start.plusDays(14), "Custom"));
+        assertFalse(AereaEventNotificationsPlugin.occurs(event, start, start.plusDays(7), "Custom"));
     }
 }
