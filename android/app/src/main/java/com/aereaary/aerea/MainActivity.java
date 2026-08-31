@@ -26,8 +26,17 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AereaStoragePlugin.class);
         registerPlugin(AereaAuthPlugin.class);
         registerPlugin(AereaSportsNotificationsPlugin.class);
+        registerPlugin(AereaEventNotificationsPlugin.class);
+        registerPlugin(AereaNavigationPlugin.class);
         configureEdgeToEdge();
         super.onCreate(savedInstanceState);
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                if (getBridge() != null) {
+                    getBridge().triggerWindowJSEvent("aereaAndroidBack", "{}");
+                }
+            }
+        });
         configureEdgeToEdge();
 
         if (getBridge() != null && getBridge().getWebView() != null) {

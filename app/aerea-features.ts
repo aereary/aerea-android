@@ -17,6 +17,7 @@ export type InboxItem = {
   size?: number;
   dataUrl?: string;
   nativeFileId?: string;
+  nativeContentUri?: string;
   cloudPath?: string;
   libraryItemId?: string;
   processedAs?: string[];
@@ -78,6 +79,7 @@ export type LibraryItem = {
   size?: number;
   dataUrl?: string;
   nativeFileId?: string;
+  nativeContentUri?: string;
   cloudPath?: string;
   textContent?: string;
   createdAt: string;
