@@ -130,9 +130,12 @@ async function fetchGeneralLibrary(): Promise<{
   signedIn: boolean;
   items: GeneralLibraryItem[];
 }> {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw sessionError;
-  if (!sessionData.session) return { signedIn: false, items: [] };
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (!user) return { signedIn: false, items: [] };
+  if (authError) throw authError;
 
   const [itemsResult, versionsResult] = await Promise.all([
     supabase
@@ -140,9 +143,13 @@ async function fetchGeneralLibrary(): Promise<{
       .select(
         "id,filename,title,author,kind,mime_type,extension,size_bytes,storage_path,source_modified_at,updated_at,archived",
       )
+      .eq("owner_user_id", user.id)
       .eq("archived", false)
       .order("source_modified_at", { ascending: false, nullsFirst: false }),
-    supabase.from("library_item_versions").select("library_item_id"),
+    supabase
+      .from("library_item_versions")
+      .select("library_item_id")
+      .eq("owner_user_id", user.id),
   ]);
 
   if (itemsResult.error) throw itemsResult.error;
