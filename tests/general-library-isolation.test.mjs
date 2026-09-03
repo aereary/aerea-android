@@ -80,8 +80,16 @@ test("General Library reads only its dedicated Supabase tables", () => {
   assert.match(routeSource, /supabase\s*\.from\("library_items"\)/);
   assert.match(routeSource, /supabase\s*\.from\("library_item_versions"\)/);
   assert.match(routeSource, /GENERAL_LIBRARY_BUCKET\s*=\s*"aerea-drive-library"/);
-  assert.match(routeSource, /\.download\(item\.storagePath\)/);
+  assert.match(routeSource, /content_object_path/);
+  assert.match(routeSource, /\.download\(item\.contentObjectPath\)/);
+  assert.doesNotMatch(routeSource, /\.download\(item\.storagePath\)/);
+  assert.doesNotMatch(routeSource, /storage_path/);
   assert.match(routeSource, /auth\.getUser\(\)/);
+  assert.ok(
+    routeSource.indexOf("if (authError) throw authError") <
+      routeSource.indexOf("if (!user) return"),
+    "Real auth errors must be handled before the signed-out state",
+  );
   assert.equal(
     [...routeSource.matchAll(/\.eq\("owner_user_id",\s*user\.id\)/g)].length,
     2,
@@ -112,6 +120,19 @@ test("General Library reads only its dedicated Supabase tables", () => {
     /\.storage\s*\.from\([^)]*\)\s*\.upload\s*\(/s,
   );
   assert.doesNotMatch(generalLibrarySource, /service[_-]?role/i);
+  assert.doesNotMatch(generalLibrarySource, /\bao3_/i);
+});
+
+test("General Library counts distinct version SHA values", () => {
+  assert.match(routeSource, /Map<string, Set<string>>/);
+  assert.match(routeSource, /\.select\("library_item_id,sha256"\)/);
+  assert.match(routeSource, /shas\.add\(sha\)/);
+  assert.match(routeSource, /versionShas\.get\(row\.id\)\?\.size/);
+});
+
+test("General Library inherits the active application theme", () => {
+  assert.doesNotMatch(routeSource, /data-theme\s*=\s*"otter"/);
+  assert.doesNotMatch(routeSource, /data-color-mode\s*=\s*"light"/);
 });
 
 test("General Library has no direct or transitive AO3 dependency", () => {

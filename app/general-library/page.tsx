@@ -24,7 +24,7 @@ type GeneralLibraryItem = {
   mimeType: string | null;
   extension: string | null;
   sizeBytes: number;
-  storagePath: string | null;
+  contentObjectPath: string | null;
   modifiedAt: string | null;
   versionCount: number;
 };
@@ -63,7 +63,7 @@ function fileTitle(filename: string): string {
 
 function normalizeLibraryItem(
   value: unknown,
-  versionCounts: Map<string, number>,
+  versionShas: Map<string, Set<string>>,
 ): GeneralLibraryItem | null {
   const row = asRecord(value);
   if (!row || typeof row.id !== "string" || typeof row.filename !== "string") {
@@ -86,9 +86,9 @@ function normalizeLibraryItem(
     mimeType: optionalText(row.mime_type),
     extension: optionalText(row.extension),
     sizeBytes: Number.isFinite(numericSize) && numericSize >= 0 ? numericSize : 0,
-    storagePath: optionalText(row.storage_path),
+    contentObjectPath: optionalText(row.content_object_path),
     modifiedAt: optionalText(row.source_modified_at) ?? optionalText(row.updated_at),
-    versionCount: versionCounts.get(row.id) ?? 0,
+    versionCount: versionShas.get(row.id)?.size ?? 0,
   };
 }
 
@@ -134,41 +134,46 @@ async function fetchGeneralLibrary(): Promise<{
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  if (!user) return { signedIn: false, items: [] };
   if (authError) throw authError;
+  if (!user) return { signedIn: false, items: [] };
 
   const [itemsResult, versionsResult] = await Promise.all([
     supabase
       .from("library_items")
       .select(
-        "id,filename,title,author,kind,mime_type,extension,size_bytes,storage_path,source_modified_at,updated_at,archived",
+        "id,filename,title,author,kind,mime_type,extension,size_bytes,content_object_path,source_modified_at,updated_at,archived",
       )
       .eq("owner_user_id", user.id)
       .eq("archived", false)
       .order("source_modified_at", { ascending: false, nullsFirst: false }),
     supabase
       .from("library_item_versions")
-      .select("library_item_id")
+      .select("library_item_id,sha256")
       .eq("owner_user_id", user.id),
   ]);
 
   if (itemsResult.error) throw itemsResult.error;
   if (versionsResult.error) throw versionsResult.error;
 
-  const versionCounts = new Map<string, number>();
+  const versionShas = new Map<string, Set<string>>();
   for (const value of versionsResult.data ?? []) {
     const row = asRecord(value);
-    if (!row || typeof row.library_item_id !== "string") continue;
-    versionCounts.set(
-      row.library_item_id,
-      (versionCounts.get(row.library_item_id) ?? 0) + 1,
-    );
+    if (
+      !row ||
+      typeof row.library_item_id !== "string" ||
+      typeof row.sha256 !== "string"
+    ) continue;
+    const sha = row.sha256.trim().toUpperCase();
+    if (!/^[A-F0-9]{64}$/.test(sha)) continue;
+    const shas = versionShas.get(row.library_item_id) ?? new Set<string>();
+    shas.add(sha);
+    versionShas.set(row.library_item_id, shas);
   }
 
   return {
     signedIn: true,
     items: (itemsResult.data ?? [])
-      .map((item) => normalizeLibraryItem(item, versionCounts))
+      .map((item) => normalizeLibraryItem(item, versionShas))
       .filter((item): item is GeneralLibraryItem => item !== null),
   };
 }
@@ -233,14 +238,14 @@ export default function GeneralLibraryPage() {
   );
 
   const openFile = async (item: GeneralLibraryItem) => {
-    if (!item.storagePath || openingId) return;
+    if (!item.contentObjectPath || openingId) return;
     setOpeningId(item.id);
     setOpenMessage("");
     clearReader();
     try {
       const { data, error } = await supabase.storage
         .from(GENERAL_LIBRARY_BUCKET)
-        .download(item.storagePath);
+        .download(item.contentObjectPath);
       if (error) throw error;
 
       if (item.kind === "pdf") {
@@ -282,11 +287,7 @@ export default function GeneralLibraryPage() {
   const totalVersions = items.reduce((total, item) => total + item.versionCount, 0);
 
   return (
-    <main
-      className={`app-shell ${styles.shell}`}
-      data-theme="otter"
-      data-color-mode="light"
-    >
+    <main className={`app-shell ${styles.shell}`}>
       <header className={styles.topbar}>
         <Link className={styles.brand} href="/" aria-label="Volver a aérea">
           <span className={styles.brandMark} aria-hidden="true">a</span>
@@ -373,7 +374,7 @@ export default function GeneralLibraryPage() {
         <section className={styles.grid} aria-label="Archivos de la Biblioteca General">
           {items.map((item) => {
             const opening = openingId === item.id;
-            const canOpen = Boolean(item.storagePath);
+            const canOpen = Boolean(item.contentObjectPath);
             return (
               <article className={styles.card} key={item.id}>
                 <header className={styles.cardHeader}>
@@ -417,7 +418,7 @@ export default function GeneralLibraryPage() {
                     ? "Abriendo…"
                     : canOpen
                       ? "Abrir archivo"
-                      : "Archivo no disponible"}
+                      : "Preparando archivo…"}
                 </button>
               </article>
             );
