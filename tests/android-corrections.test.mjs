@@ -8,6 +8,8 @@ const storage = await readFile(new URL("../android/app/src/main/java/com/aereaar
 const notifications = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationsPlugin.java", import.meta.url), "utf8");
 const activity = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/MainActivity.java", import.meta.url), "utf8");
 const microphone = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaMicrophonePlugin.java", import.meta.url), "utf8");
+const navigation = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaNavigationPlugin.java", import.meta.url), "utf8");
+const notificationReceiver = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationReceiver.java", import.meta.url), "utf8");
 
 test("Android Back closes layers, preserves real tab history, and double-confirms exit", () => {
   assert.match(activity, /getOnBackPressedDispatcher\(\)\.addCallback/);
@@ -63,6 +65,17 @@ test("Start recording explicitly requests Android microphone permission before g
   const permissionIndex = page.indexOf("AereaMicrophone.requestPermissions()");
   const captureIndex = page.indexOf("navigator.mediaDevices.getUserMedia({ audio: true })");
   assert.ok(permissionIndex >= 0 && captureIndex > permissionIndex);
+});
+
+test("approved Android notification and Back hint keep native compact appearance", () => {
+  assert.match(page, /AereaNavigation\.showExitHint\(\{ message: exitHint \}\)/);
+  assert.match(navigation, /Toast\.makeText\(getContext\(\), message, Toast\.LENGTH_SHORT\)\.show\(\)/);
+  assert.match(notifications, /Prueba de notificación de aérea/);
+  assert.match(notifications, /Tu notificación de prueba está funcionando/);
+  assert.match(notifications, /return pending\(c, id, title, "Tu evento comienza pronto", trigger, mode\)/);
+  assert.match(notificationReceiver, /new NotificationCompat\.Builder\(context, CHANNEL_ID\)/);
+  assert.match(notificationReceiver, /setSmallIcon\(R\.drawable\.ic_notification_aerea\)/);
+  assert.doesNotMatch(notificationReceiver, /RemoteViews|setCustomContentView|DecoratedCustomViewStyle/);
 });
 
 test("Library images are copied from the system picker without gallery-wide permission", () => {

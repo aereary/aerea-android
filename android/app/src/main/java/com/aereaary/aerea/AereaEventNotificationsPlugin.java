@@ -78,7 +78,15 @@ public class AereaEventNotificationsPlugin extends Plugin {
         String identity = "qa:" + System.currentTimeMillis();
         long trigger = System.currentTimeMillis() + seconds * 1000L;
         AlarmManager alarms = getContext().getSystemService(AlarmManager.class);
-        PendingIntent intent = pending(getContext(), identity, "Prueba de notificación de aérea", trigger, PendingIntent.FLAG_UPDATE_CURRENT);
+        // AEREA_RECOVERY_FIX_003: approved QA notification copy only.
+        PendingIntent intent = pending(
+            getContext(),
+            identity,
+            "Prueba de notificación de aérea",
+            "Tu notificación de prueba está funcionando",
+            trigger,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        );
         if (canExact(getContext())) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
         else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
         JSObject result = new JSObject(); result.put("identity", identity); result.put("firesInSeconds", seconds); call.resolve(result);
@@ -120,8 +128,12 @@ public class AereaEventNotificationsPlugin extends Plugin {
     }
 
     static PendingIntent pending(Context c, String id, String title, long trigger, int mode) {
+        return pending(c, id, title, "Tu evento comienza pronto", trigger, mode);
+    }
+
+    static PendingIntent pending(Context c, String id, String title, String when, long trigger, int mode) {
         Intent intent = new Intent(c, AereaEventNotificationReceiver.class).setAction("aerea.event."+id)
-            .putExtra("identity", id).putExtra("title", title).putExtra("when", "Tu evento comienza pronto");
+            .putExtra("identity", id).putExtra("title", title).putExtra("when", when);
         PendingIntent result = PendingIntent.getBroadcast(c, id.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | mode);
         return result;
     }

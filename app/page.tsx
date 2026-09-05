@@ -187,7 +187,10 @@ type AereaEventNotificationsPlugin = {
   }>;
   sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
 };
-type AereaNavigationPlugin = { exitApp(): Promise<void> };
+type AereaNavigationPlugin = {
+  exitApp(): Promise<void>;
+  showExitHint(options: { message: string }): Promise<void>;
+};
 type AereaMicrophonePlugin = {
   status(): Promise<{ permission: "granted" | "denied" }>;
   requestPermissions(): Promise<{ permission: "granted" | "denied" }>;
@@ -5161,7 +5164,11 @@ export default function Home() {
       const now = Date.now();
       if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
       lastExitBackRef.current = now;
-      setHistoryMessage("Presiona Atrás otra vez para salir de aérea");
+      const exitHint = "Presiona Atrás otra vez para salir de aérea";
+      setHistoryMessage(exitHint);
+      // AEREA_RECOVERY_FIX_003: use Android's native Toast so Samsung renders
+      // the compact system pill + app icon exactly like the approved reference.
+      void AereaNavigation.showExitHint({ message: exitHint });
     };
     window.addEventListener("aereaAndroidBack", onAndroidBack);
     return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
