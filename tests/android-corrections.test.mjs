@@ -28,6 +28,28 @@ test("event reminders use stable occurrence identities and survive system change
   assert.match(page, /Las notificaciones están bloqueadas/);
 });
 
+test("Settings exposes the native 5-second QA notification without saving a demo event", () => {
+  assert.match(page, /scheduleQaNotification\(options: \{ delaySeconds: number \}\)/);
+  assert.match(page, /Test notifications/);
+  assert.match(page, /Send test in 5 seconds/);
+  assert.match(page, /delaySeconds: 5/);
+  assert.match(page, /It does not create or save an event/);
+  assert.match(notifications, /scheduleQaNotification/);
+});
+
+test("Study Library inventory cannot resurrect files that are still in Trash", () => {
+  assert.match(page, /function isStudyFileTrashed/);
+  assert.match(page, /const trashItemsRef = useRef<TrashItem\[\]>\(trashItems\)/);
+  assert.match(page, /trashItemsRef\.current = trashItems/);
+  const guards =
+    page.match(/isStudyFileTrashed\(file\.id,\s*trashItemsRef\.current\)/g) ?? [];
+  assert.equal(
+    guards.length,
+    2,
+    "Trash filtering must guard both startup and post-import refresh",
+  );
+});
+
 test("Library images are copied from the system picker without gallery-wide permission", () => {
   assert.match(storage, /ACTION_OPEN_DOCUMENT/);
   assert.match(storage, /OpenableColumns\.DISPLAY_NAME/);

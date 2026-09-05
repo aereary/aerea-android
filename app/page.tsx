@@ -181,6 +181,10 @@ type AereaEventNotificationsPlugin = {
   status(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   requestPermissions(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   openSettings(): Promise<void>;
+  scheduleQaNotification(options: { delaySeconds: number }): Promise<{
+    identity: string;
+    firesInSeconds: number;
+  }>;
   sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
 };
 type AereaNavigationPlugin = { exitApp(): Promise<void> };
@@ -243,6 +247,25 @@ async function blobAsDataUrl(blob: Blob): Promise<string> {
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
+  });
+}
+
+// AEREA_RECOVERY_FIX_001
+function isStudyFileTrashed(fileId: string, items: TrashItem[]) {
+  return items.some((trashItem) => {
+    if (
+      trashItem.kind !== "file" ||
+      !trashItem.payload ||
+      typeof trashItem.payload !== "object"
+    ) {
+      return false;
+    }
+    const payload = trashItem.payload as { id?: unknown; mediaType?: unknown };
+    return (
+      typeof payload.id === "string" &&
+      payload.id === fileId &&
+      "mediaType" in payload
+    );
   });
 }
 
@@ -2179,6 +2202,10 @@ export default function Home() {
   >("contents");
   const [entityLinks, setEntityLinks] = useState<EntityLink[]>([]);
   const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
+  const trashItemsRef = useRef<TrashItem[]>(trashItems);
+  useLayoutEffect(() => {
+    trashItemsRef.current = trashItems;
+  }, [trashItems]);
   const [resetPreferences, setResetPreferences] = useState<ResetPreferences>(
     DEFAULT_RESET_PREFERENCES,
   );
@@ -3030,7 +3057,12 @@ export default function Home() {
             });
         if (!cancelled && Array.isArray(payload.files)) {
           setStudyFiles((current) =>
-            payload.files!.map((file) => {
+            payload.files!
+              .filter(
+                (file) =>
+                  !isStudyFileTrashed(file.id, trashItemsRef.current),
+              )
+              .map((file) => {
               const metadata = current.find((item) => item.id === file.id);
               return {
                 ...file,
@@ -5048,6 +5080,40 @@ export default function Home() {
       setAo3LibraryOpen(true);
     }
   }, [ao3LibraryOpen, brandOpensAo3]);
+
+  const sendQaNotification = async () => {
+    if (!isNative()) return;
+    try {
+      const current = await AereaEventNotifications.status();
+      const status =
+        current.permission === "granted"
+          ? current
+          : await AereaEventNotifications.requestPermissions();
+
+      if (
+        status.permission !== "granted" ||
+        status.channel === "blocked"
+      ) {
+        setHistoryMessage(
+          "Las notificaciones están bloqueadas. Ábrelas en Ajustes para recibir recordatorios.",
+        );
+        return;
+      }
+
+      const result = await AereaEventNotifications.scheduleQaNotification({
+        delaySeconds: 5,
+      });
+      setHistoryMessage(
+        `Prueba programada: llegará en ${result.firesInSeconds} segundos.`,
+      );
+    } catch (error) {
+      setHistoryMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo programar la notificación de prueba.",
+      );
+    }
+  };
 
   const changeTab = (tab: Tab) => {
     if (tab !== activeTab) setTabHistory((current) => [...current, activeTab]);
@@ -7663,7 +7729,11 @@ export default function Home() {
           return (await response.json()) as { files: StudyFileItem[] };
         });
     setStudyFiles((current) =>
-      (payload.files || []).map((file) => {
+      (payload.files || [])
+        .filter(
+          (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
+        )
+        .map((file) => {
         const metadata = current.find((item) => item.id === file.id);
         return {
           ...file,
@@ -14067,6 +14137,32 @@ export default function Home() {
                 </button>
               </div>
             </section>
+
+            {isNative() && (
+              <section className="mode-card" aria-label="Notification test">
+                <div>
+                  <p className="tiny-label">NOTIFICATIONS</p>
+                  <h3>Test notifications</h3>
+                  <p>
+                    Send one temporary test. It does not create or save an event.
+                  </p>
+                </div>
+                <div className="mode-switch">
+                  <button
+                    type="button"
+                    onClick={() => void sendQaNotification()}
+                  >
+                    Send test in 5 seconds
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void AereaEventNotifications.openSettings()}
+                  >
+                    Android settings
+                  </button>
+                </div>
+              </section>
+            )}
 
             <section className="theme-wardrobe" aria-label="Aérea themes">
               <div className="theme-wardrobe-heading">
