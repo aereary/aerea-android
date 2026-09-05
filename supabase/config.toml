@@ -4,3 +4,8 @@ project_id = "aerea-android"
 # itself still requires either SPORTS_SYNC_SECRET or the service-role token.
 [functions.sync-sports-events]
 verify_jwt = false
+
+# This endpoint receives a Google OAuth token from GenericLibrary.gs and
+# performs its own verified-email and library-owner checks.
+[functions.library-content-publish]
+verify_jwt = false
