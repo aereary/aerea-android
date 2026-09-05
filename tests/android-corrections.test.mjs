@@ -7,6 +7,7 @@ const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest
 const storage = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url), "utf8");
 const notifications = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationsPlugin.java", import.meta.url), "utf8");
 const activity = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/MainActivity.java", import.meta.url), "utf8");
+const microphone = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaMicrophonePlugin.java", import.meta.url), "utf8");
 
 test("Android Back closes layers, preserves real tab history, and double-confirms exit", () => {
   assert.match(activity, /getOnBackPressedDispatcher\(\)\.addCallback/);
@@ -48,6 +49,20 @@ test("Study Library inventory cannot resurrect files that are still in Trash", (
     2,
     "Trash filtering must guard both startup and post-import refresh",
   );
+});
+
+test("Start recording explicitly requests Android microphone permission before getUserMedia", () => {
+  assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
+  assert.match(activity, /registerPlugin\(AereaMicrophonePlugin\.class\)/);
+  assert.match(microphone, /name\s*=\s*"AereaMicrophone"/);
+  assert.match(microphone, /Manifest\.permission\.RECORD_AUDIO/);
+  assert.match(microphone, /requestPermissionForAlias\("microphone"/);
+  assert.match(page, /registerPlugin<AereaMicrophonePlugin>\("AereaMicrophone"\)/);
+  assert.match(page, /AereaMicrophone\.requestPermissions\(\)/);
+  assert.match(page, /Please allow microphone access to record a class\./);
+  const permissionIndex = page.indexOf("AereaMicrophone.requestPermissions()");
+  const captureIndex = page.indexOf("navigator.mediaDevices.getUserMedia({ audio: true })");
+  assert.ok(permissionIndex >= 0 && captureIndex > permissionIndex);
 });
 
 test("Library images are copied from the system picker without gallery-wide permission", () => {

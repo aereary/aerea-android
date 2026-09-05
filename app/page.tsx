@@ -188,12 +188,17 @@ type AereaEventNotificationsPlugin = {
   sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
 };
 type AereaNavigationPlugin = { exitApp(): Promise<void> };
+type AereaMicrophonePlugin = {
+  status(): Promise<{ permission: "granted" | "denied" }>;
+  requestPermissions(): Promise<{ permission: "granted" | "denied" }>;
+};
 
 const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
 const AereaSportsNotifications =
   registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
 const AereaEventNotifications = registerPlugin<AereaEventNotificationsPlugin>("AereaEventNotifications");
 const AereaNavigation = registerPlugin<AereaNavigationPlugin>("AereaNavigation");
+const AereaMicrophone = registerPlugin<AereaMicrophonePlugin>("AereaMicrophone");
 
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
@@ -6695,6 +6700,31 @@ export default function Home() {
 
   const startRecording = async () => {
     setRecordingError("");
+
+    // AEREA_RECOVERY_FIX_002
+    if (isNative()) {
+      try {
+        const current = await AereaMicrophone.status();
+        const permission =
+          current.permission === "granted"
+            ? current
+            : await AereaMicrophone.requestPermissions();
+        if (permission.permission !== "granted") {
+          setRecordingError(
+            "Please allow microphone access to record a class.",
+          );
+          return;
+        }
+      } catch (error) {
+        setRecordingError(
+          error instanceof Error
+            ? error.message
+            : "Please allow microphone access to record a class.",
+        );
+        return;
+      }
+    }
+
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setRecordingError("Audio recording is not available in this browser.");
       return;
