@@ -73,3 +73,10 @@ Antes de entregar:
 5. Confirma que existe `android/app/build/outputs/apk/debug/app-debug.apk`.
 6. Copia el resultado a `outputs/aerea.apk`.
 7. Comprueba inicio limpio, actualización sin pérdida de datos, teléfono, tableta y ambos widgets.
+
+## Recovery baseline and regression safety
+
+- Before changing an already-established feature, read `docs/AEREA_RECOVERY_MANIFEST.md`.
+- The recovery baseline is commit `78df166e6442540fde71612917247e7c0270d118`; do not replace current files wholesale with older variants to recover one behavior.
+- Treat `tests/recovery-baseline.test.mjs` and the existing Android correction tests as regression contracts. Strengthen them when fixing a regression; do not remove them to make a build pass.
+- Android recovery work must preserve images, microphone, notifications, Back behavior, 12-hour time, center-based post-it drag, the approved Boca card, AO3, and phone/tablet behavior unless the user explicitly asks to change that specific area.
