@@ -78,6 +78,18 @@ test("approved Android notification and Back hint keep native compact appearance
   assert.doesNotMatch(notificationReceiver, /RemoteViews|setCustomContentView|DecoratedCustomViewStyle/);
 });
 
+test("Android email-link sign-in immediately reloads the persisted day for Supabase restore", () => {
+  assert.match(
+    page,
+    /handleAereaAuthCallback\(url\)[\s\S]{0,900}currentAereaEmail\(\)[\s\S]{0,900}Private sync is on\. Reloading your saved day…[\s\S]{0,200}window\.location\.reload\(\)/,
+  );
+  const reloads = page.match(/window\.location\.reload\(\)/g) ?? [];
+  assert.ok(
+    reloads.length >= 2,
+    "both manual OTP and Android email-link auth should reload into startup reconciliation",
+  );
+});
+
 test("Library images are copied from the system picker without gallery-wide permission", () => {
   assert.match(storage, /ACTION_OPEN_DOCUMENT/);
   assert.match(storage, /OpenableColumns\.DISPLAY_NAME/);

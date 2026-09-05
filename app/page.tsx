@@ -2958,6 +2958,13 @@ export default function Home() {
         setSyncCodeSent(false);
         setSyncMessage(message);
         setAuthCallbackStatus({ kind: "success", message });
+        // AEREA_RECOVERY_FIX_004: the manual OTP flow already reloads here.
+        // Do the same after an Android email-link login so startup reconciliation
+        // immediately restores the newer private Supabase state after reinstall.
+        if (email) {
+          setSyncMessage("Private sync is on. Reloading your saved day…");
+          window.location.reload();
+        }
       } catch (error) {
         if (!active) return;
         const message =

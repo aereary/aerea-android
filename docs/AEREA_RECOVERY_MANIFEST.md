@@ -47,7 +47,7 @@ Do not rebuild the app from an older APK, old branch, stale artifact, or histori
 | Notification appearance | APK VERIFY | Preserve the previously approved notification appearance. Do not use notification recovery as an excuse to redesign unrelated UI or behavior. |
 | Image open end-to-end | APK VERIFY | Import -> open -> close -> reopen app -> open again must work. |
 | Microphone end-to-end | APK VERIFY | Permission request, record, stop/save and playback must work in the actual APK. |
-| Persistence after reinstall/sign-in | APK VERIFY / SEPARATE AUDIT | Do not conflate Android update persistence with cloud restore. Supabase restore/sync must be audited separately before claiming reinstall recovery. |
+| Persistence after reinstall/sign-in | RECOVERED + APK VERIFY | Manual OTP and Android email-link sign-in both reload into the existing local-first startup reconciliation, allowing newer private Supabase state to restore after reinstall. Verify with a real clean reinstall before marking complete. |
 
 ## General Library decision
 
