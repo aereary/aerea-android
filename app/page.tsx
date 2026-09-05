@@ -4,6 +4,7 @@ import {
   Ao3Library,
   type Ao3EpubDownloadTarget,
 } from "./ao3-library";
+import GenericLibraryBridge from "./generic-library-bridge";
 import {
   Capacitor,
   registerPlugin,
