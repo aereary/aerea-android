@@ -9931,9 +9931,12 @@ export default function Home() {
         </nav>}
       </section>
 
-      {ao3LibraryOpen && (
-        <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
-      )}
+     {ao3LibraryOpen && (
+  <>
+    <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+    <GenericLibraryBridge />
+  </>
+)}
 
       {aereaHubOpen && (
         <div
