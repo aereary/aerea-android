@@ -204,3 +204,11 @@ test("importing a Library image does not hide recordings by forcing the Files fi
   assert.doesNotMatch(importBlock, /setFilter\("files"\)/);
   assert.match(importBlock, /now in Library/);
 });
+
+
+test("native Library toast clears the elevated Android bottom navigation", () => {
+  assert.match(
+    globalsCss,
+    /AEREA_RECOVERY_FIX_008[\s\S]{0,320}html\[data-native="true"\] \.study-library-toast[\s\S]{0,140}bottom:\s*calc\(96px \+ var\(--aerea-safe-area-bottom\)\)/,
+  );
+});

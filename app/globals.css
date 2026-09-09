@@ -31086,3 +31086,11 @@ html[data-native="true"] .calendar-modal.calendar-extended-month > .extended-cal
     max-height: 55dvh;
   }
 }
+
+
+/* AEREA_RECOVERY_FIX_008
+   The native bottom nav is lifted by --aerea-safe-area-bottom.
+   Keep Library import feedback above it instead of underneath it. */
+html[data-native="true"] .study-library-toast {
+  bottom: calc(96px + var(--aerea-safe-area-bottom));
+}
