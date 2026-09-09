@@ -252,3 +252,9 @@ test("Site sync keeps Home and compact calendar Sunday-first", () => {
     "Cronograma keeps its approved Monday-first week",
   );
 });
+
+
+test("Site sync uses approved emojis for Library and Calendar", () => {
+  assert.match(page, /title="Library"[\s\S]{0,180}icon="📚"/);
+  assert.match(page, /title="Calendar"[\s\S]{0,180}icon="🗓️"/);
+});

@@ -8753,7 +8753,7 @@ export default function Home() {
                       title="Library"
                       subtitle="Notes, PDFs & books"
                       color="space-lilac"
-                      icon="▥"
+                      icon="📚"
                       note={`${studyNotes.length + studyFiles.length + libraryItems.length} saved items`}
                       onClick={() => setSpace("library")}
                     />
@@ -8769,7 +8769,7 @@ export default function Home() {
                       title="Calendar"
                       subtitle="Everything in one rhythm"
                       color="space-peach"
-                      icon="▦"
+                      icon="🗓️"
                       note="Android + aérea"
                       onClick={openCalendarAtToday}
                     />
