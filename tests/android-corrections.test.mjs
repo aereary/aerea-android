@@ -55,6 +55,7 @@ test("Study Library inventory cannot resurrect files that are still in Trash", (
 
 test("Start recording explicitly requests Android microphone permission before getUserMedia", () => {
   assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
+  assert.match(manifest, /android\.permission\.MODIFY_AUDIO_SETTINGS/);
   assert.match(activity, /registerPlugin\(AereaMicrophonePlugin\.class\)/);
   assert.match(microphone, /name\s*=\s*"AereaMicrophone"/);
   assert.match(microphone, /Manifest\.permission\.RECORD_AUDIO/);
