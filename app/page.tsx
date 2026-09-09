@@ -9814,7 +9814,7 @@ export default function Home() {
                             <strong>Place a neat text box</strong>
                           </div>
                           <textarea
-                            autoFocus
+
                             value={sketchTextEditor!.text}
                             onChange={(event) => setSketchTextEditor((current) => current ? { ...current, text: event.target.value } : current)}
                             placeholder="Type something for this spot…"
@@ -10177,7 +10177,7 @@ export default function Home() {
               </button>
             </header>
             <textarea
-              autoFocus
+
               value={quickCaptureText}
               onChange={(event) => setQuickCaptureText(event.target.value)}
               onKeyDown={(event) => {
@@ -10436,7 +10436,7 @@ export default function Home() {
                 <label>
                   <span>Title</span>
                   <input
-                    autoFocus
+
                     value={taskEditorDraft.title}
                     onChange={(event) =>
                       setTaskEditorDraft((current) => ({
@@ -10954,7 +10954,7 @@ export default function Home() {
                   <label className="event-title-input">
                     <span>Title</span>
                     <input
-                      autoFocus
+
                       value={eventDraft.title}
                       onChange={(event) => {
                         setEventTemplateSuggestionsDismissed(false);
@@ -11999,7 +11999,7 @@ export default function Home() {
                           aria-hidden="true"
                         />
                         <input
-                          autoFocus
+
                           type="search"
                           value={calendarSearchQuery}
                           onChange={(event) =>
@@ -13931,7 +13931,7 @@ export default function Home() {
             >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
-                autoFocus
+
                 value={postItDraft.text}
                 onChange={(event) =>
                   setPostItDraft((current) => ({
@@ -14470,7 +14470,7 @@ export default function Home() {
                   }))
                 }
                 placeholder="Drink a glass of water"
-                autoFocus
+
               />
             </label>
 
@@ -14563,7 +14563,7 @@ export default function Home() {
                   }))
                 }
                 placeholder="For example: Network Security"
-                autoFocus
+
               />
             </label>
             <div className="class-editor-row">
@@ -15586,7 +15586,7 @@ function TodayScreen({
                     <label className="timetable-class-name">
                       <span>Class name</span>
                       <input
-                        autoFocus
+
                         value={timetableClassDraft.name}
                         onChange={(event) =>
                           setTimetableClassDraft((current) =>
@@ -15824,7 +15824,7 @@ function NoteDetailDialog({
             className="note-detail-editor"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            autoFocus
+
           />
         ) : (
           <p className="note-detail-text">{draft}</p>

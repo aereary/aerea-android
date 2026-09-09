@@ -31094,3 +31094,42 @@ html[data-native="true"] .calendar-modal.calendar-extended-month > .extended-cal
 html[data-native="true"] .study-library-toast {
   bottom: calc(96px + var(--aerea-safe-area-bottom));
 }
+
+/* AEREA_RECOVERY_FIX_009
+   Native interaction should feel like an app, not a selectable web page.
+   Keep real writing fields and reader text selectable. */
+html[data-native="true"] .app-shell {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html[data-native="true"] .app-shell :where(
+  input,
+  textarea,
+  [contenteditable="true"],
+  .note-detail-text
+),
+html[data-native="true"] .study-reader,
+html[data-native="true"] .ao3-library-layer {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+html[data-native="true"] :where(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="gridcell"],
+  [role="menuitem"],
+  summary,
+  nav,
+  label,
+  .bottom-nav,
+  .post-it
+) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

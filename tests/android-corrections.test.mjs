@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 const globalsCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const studyLibrary = await readFile(new URL("../app/study-library.tsx", import.meta.url), "utf8");
+const ao3Library = await readFile(new URL("../app/ao3-library.tsx", import.meta.url), "utf8");
 const features = await readFile(new URL("../app/aerea-features.ts", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 const storage = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url), "utf8");
@@ -211,4 +212,22 @@ test("native Library toast clears the elevated Android bottom navigation", () =>
     globalsCss,
     /AEREA_RECOVERY_FIX_008[\s\S]{0,320}html\[data-native="true"\] \.study-library-toast[\s\S]{0,140}bottom:\s*calc\(96px \+ var\(--aerea-safe-area-bottom\)\)/,
   );
+});
+
+test("native touch UX does not auto-focus editors or select interface chrome", () => {
+  assert.doesNotMatch(page, /\bautoFocus\b/);
+  assert.doesNotMatch(studyLibrary, /\bautoFocus\b/);
+  assert.doesNotMatch(ao3Library, /\bautoFocus\b/);
+
+  assert.match(globalsCss, /AEREA_RECOVERY_FIX_009/);
+  assert.match(
+    globalsCss,
+    /html\[data-native="true"\] \.app-shell[\s\S]{0,220}user-select:\s*none/,
+  );
+  assert.match(
+    globalsCss,
+    /input,[\s\S]{0,120}textarea,[\s\S]{0,160}\[contenteditable="true"\][\s\S]{0,300}user-select:\s*text/,
+  );
+  assert.match(globalsCss, /html\[data-native="true"\] \.study-reader/);
+  assert.match(globalsCss, /html\[data-native="true"\] \.ao3-library-layer/);
 });

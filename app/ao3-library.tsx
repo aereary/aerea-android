@@ -1078,7 +1078,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     >
       <style>{AO3_LIBRARY_CSS}</style>
       <header className="ao3-screen-header">
-        <button type="button" onClick={onBack} autoFocus>
+        <button type="button" onClick={onBack} >
           ← Library
         </button>
       </header>

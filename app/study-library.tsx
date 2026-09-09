@@ -849,7 +849,7 @@ export function StudyLibrary({
               <div><p className="tiny-label">QUICK NOTE</p><h2>{hasNote(activeNoteEditor.id) ? "Keep writing" : "Catch the thought"}</h2></div>
               <button type="button" onClick={closeNoteEditor} aria-label="Close">×</button>
             </header>
-            <input className="study-note-title" autoFocus value={activeNoteEditor.title} onChange={(event) => setNoteEditor({ ...activeNoteEditor, title: event.target.value })} placeholder="Note title" />
+            <input className="study-note-title"  value={activeNoteEditor.title} onChange={(event) => setNoteEditor({ ...activeNoteEditor, title: event.target.value })} placeholder="Note title" />
             <textarea value={activeNoteEditor.body} onChange={(event) => setNoteEditor({ ...activeNoteEditor, body: event.target.value })} placeholder="Write anything…" />
             <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.pinned} onChange={(event) => setNoteEditor({ ...activeNoteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
             <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.favorite ?? false} onChange={(event) => setNoteEditor({ ...activeNoteEditor, favorite: event.target.checked })} /><span>♡ Keep in Favorites</span></label>
