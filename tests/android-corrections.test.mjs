@@ -67,6 +67,20 @@ test("Start recording explicitly requests Android microphone permission before g
   assert.ok(permissionIndex >= 0 && captureIndex > permissionIndex);
 });
 
+test("blocked Android microphone permission opens app settings instead of failing silently", () => {
+  assert.match(microphone, /PermissionState\.DENIED/);
+  assert.match(microphone, /Settings\.ACTION_APPLICATION_DETAILS_SETTINGS/);
+  assert.match(microphone, /Uri\.parse\("package:" \+ getContext\(\)\.getPackageName\(\)\)/);
+  assert.match(
+    microphone,
+    /state == PermissionState\.DENIED[\s\S]{0,260}openAppPermissionSettings\(\)/,
+  );
+  assert.match(
+    microphone,
+    /permissionResult\(PluginCall call\)[\s\S]{0,260}PermissionState\.DENIED[\s\S]{0,180}openAppPermissionSettings\(\)/,
+  );
+});
+
 test("approved Android notification and Back hint keep native compact appearance", () => {
   assert.match(page, /AereaNavigation\.showExitHint\(\{ message: exitHint \}\)/);
   assert.match(navigation, /Toast\.makeText\(getContext\(\), message, Toast\.LENGTH_SHORT\)\.show\(\)/);
