@@ -10638,26 +10638,15 @@ export default function Home() {
 
       {selectedLibraryItem && (
         <div className="modal-backdrop library-reader-backdrop" role="presentation">
-          <section className="library-reader" role="dialog" aria-modal="true">
-            <header>
+          <section className="library-reader-modal" role="dialog" aria-modal="true">
+            <header className="library-reader-header">
               <div>
                 <p className="tiny-label">LIBRARY</p>
                 <h2>{selectedLibraryItem.name}</h2>
               </div>
               <button type="button" onClick={() => { setSelectedLibraryItem(null); setLibraryImageFailed(false); }} aria-label="Close file">×</button>
             </header>
-            <nav aria-label="Reader tools">
-              {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
-                <button
-                  type="button"
-                  key={panel}
-                  className={libraryPanel === panel ? "active" : ""}
-                  onClick={() => setLibraryPanel(panel)}
-                >
-                  {panel}
-                </button>
-              ))}
-            </nav>
+
             <div className="library-reader-layout">
               <div className="library-document-stage">
                 {(selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl) &&
@@ -10671,7 +10660,11 @@ export default function Home() {
                     </div>
                   ) : (
                     <img
-                      src={selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl}
+                      src={
+                        selectedLibraryItem.nativeContentUri
+                          ? Capacitor.convertFileSrc(selectedLibraryItem.nativeContentUri)
+                          : selectedLibraryItem.dataUrl
+                      }
                       alt={selectedLibraryItem.name}
                       onLoad={() => setLibraryImageFailed(false)}
                       onError={() => setLibraryImageFailed(true)}
@@ -10684,6 +10677,18 @@ export default function Home() {
                 )}
               </div>
               <aside className="library-reader-panel">
+                <nav aria-label="Reader tools">
+                  {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
+                    <button
+                      type="button"
+                      key={panel}
+                      className={libraryPanel === panel ? "active" : ""}
+                      onClick={() => setLibraryPanel(panel)}
+                    >
+                      {panel}
+                    </button>
+                  ))}
+                </nav>
                 <p className="tiny-label">{libraryPanel.toUpperCase()}</p>
                 <p>Reader locations, bookmarks, highlights and notes stay attached to this original file.</p>
               </aside>

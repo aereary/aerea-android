@@ -156,3 +156,20 @@ test("Library images stay images in cards and legacy imported JPGs open in the i
     /const openStudyFile = async[\s\S]{0,1500}normalizedFileMimeType\(\{[\s\S]{0,120}name: readableFile\.name,[\s\S]{0,120}type: readableFile\.mediaType,[\s\S]{0,160}readableMimeType\.startsWith\("image\/"\)[\s\S]{0,500}setSelectedLibraryItem\(\{[\s\S]{0,180}kind: "image"/,
   );
 });
+
+test("native Library images use Capacitor's WebView-safe src and the styled reader structure", () => {
+  assert.match(
+    page,
+    /selectedLibraryItem\.nativeContentUri[\s\S]{0,120}Capacitor\.convertFileSrc\(selectedLibraryItem\.nativeContentUri\)/,
+  );
+  assert.doesNotMatch(
+    page,
+    /src=\{selectedLibraryItem\.nativeContentUri \|\| selectedLibraryItem\.dataUrl\}/,
+  );
+  assert.match(page, /className="library-reader-modal"/);
+  assert.match(page, /className="library-reader-header"/);
+  assert.match(
+    page,
+    /<aside className="library-reader-panel">[\s\S]{0,200}<nav aria-label="Reader tools">/,
+  );
+});
