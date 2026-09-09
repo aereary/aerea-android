@@ -366,7 +366,6 @@ export function StudyLibrary({
     setMessage(`Importing ${selected.length} file${selected.length === 1 ? "" : "s"}…`);
     try {
       await onImportFiles(selected);
-      setFilter("files");
       setMessage(`${selected.length} file${selected.length === 1 ? " is" : "s are"} now in Library.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Those files could not be imported.");

@@ -192,3 +192,15 @@ test("image-only Library viewer stays compact and hides document reader tools", 
     /\.library-image-viewer \.library-document-stage > img[\s\S]{0,320}max-height:\s*58dvh/,
   );
 });
+
+
+test("importing a Library image does not hide recordings by forcing the Files filter", () => {
+  const start = studyLibrary.indexOf("const importDocuments = async");
+  const end = studyLibrary.indexOf("const hasNote =", start);
+  assert.ok(start >= 0 && end > start, "importDocuments must exist");
+  const importBlock = studyLibrary.slice(start, end);
+
+  assert.match(importBlock, /await onImportFiles\(selected\)/);
+  assert.doesNotMatch(importBlock, /setFilter\("files"\)/);
+  assert.match(importBlock, /now in Library/);
+});
