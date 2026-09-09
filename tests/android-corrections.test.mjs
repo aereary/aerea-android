@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const studyLibrary = await readFile(new URL("../app/study-library.tsx", import.meta.url), "utf8");
 const features = await readFile(new URL("../app/aerea-features.ts", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 const storage = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url), "utf8");
@@ -136,5 +137,22 @@ test("Import a file recognizes Android images by extension and routes them to th
   assert.match(
     page,
     /const capturedFile = libraryItems\.find\([\s\S]{0,180}if \(capturedFile\) \{[\s\S]{0,100}openLibraryItem\(capturedFile\)/,
+  );
+});
+
+test("Library images stay images in cards and legacy imported JPGs open in the image viewer", () => {
+  assert.match(studyLibrary, /kind: "pdf" \| "epub" \| "image" \| "file"/);
+  assert.match(studyLibrary, /function studyFileIsImage/);
+  assert.match(studyLibrary, /file\.kind === "image"/);
+  assert.match(studyLibrary, /"IMAGE"/);
+  assert.match(studyLibrary, /"Open image"/);
+
+  assert.match(
+    page,
+    /function libraryItemAsStudyFile[\s\S]{0,450}item\.kind === "image"[\s\S]{0,80}\? "image"/,
+  );
+  assert.match(
+    page,
+    /const openStudyFile = async[\s\S]{0,1500}normalizedFileMimeType\(\{[\s\S]{0,120}name: readableFile\.name,[\s\S]{0,120}type: readableFile\.mediaType,[\s\S]{0,160}readableMimeType\.startsWith\("image\/"\)[\s\S]{0,500}setSelectedLibraryItem\(\{[\s\S]{0,180}kind: "image"/,
   );
 });

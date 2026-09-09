@@ -73,7 +73,7 @@ export type StudyFileItem = {
   id: string;
   name: string;
   mediaType: string;
-  kind: "pdf" | "epub" | "file";
+  kind: "pdf" | "epub" | "image" | "file";
   size: number;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +114,16 @@ function notePreview(body: string) {
 function readableRecordingDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(Math.max(0, seconds % 60)).padStart(2, "0")}`;
+}
+
+function studyFileIsImage(
+  file: Pick<StudyFileItem, "name" | "mediaType" | "kind">,
+) {
+  return (
+    file.kind === "image" ||
+    file.mediaType.toLowerCase().startsWith("image/") ||
+    /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(file.name)
+  );
 }
 
 export function StudyLibrary({
@@ -638,13 +648,15 @@ export function StudyLibrary({
               >
                 <button type="button" className="study-file-open" onClick={() => openFile(file)}>
                   <span className="study-file-cover">
-                    {file.mediaType.startsWith("image/") && file.dataUrl ? (
+                    {studyFileIsImage(file) && file.dataUrl ? (
                       <i
                         aria-hidden="true"
                         style={
                           { "--study-cover-image": `url("${file.dataUrl}")` } as CSSProperties
                         }
                       />
+                    ) : studyFileIsImage(file) ? (
+                      "IMAGE"
                     ) : file.mediaType.startsWith("audio/") ? (
                       "AUDIO"
                     ) : file.kind === "pdf" ? (
@@ -666,11 +678,13 @@ export function StudyLibrary({
                               ? ` · ${Math.round(file.readerLocation.percentage * 100)}%`
                               : ""
                           }`
-                        : file.kind === "pdf"
-                          ? "Open & annotate"
-                          : file.kind === "epub"
-                            ? "Open reader"
-                            : "Open file"} →
+                        : studyFileIsImage(file)
+                          ? "Open image"
+                          : file.kind === "pdf"
+                            ? "Open & annotate"
+                            : file.kind === "epub"
+                              ? "Open reader"
+                              : "Open file"} →
                   </em>
                 </button>
                 <details className="study-card-actions">

@@ -326,7 +326,9 @@ function libraryItemAsStudyFile(item: LibraryItem): StudyFileItem {
         ? "pdf"
         : item.kind === "epub"
           ? "epub"
-          : "file",
+          : item.kind === "image"
+            ? "image"
+            : "file",
     size: item.size ?? 0,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -7875,6 +7877,30 @@ export default function Home() {
       setActiveStudyFile(readableFile);
       return;
     }
+    const readableMimeType = normalizedFileMimeType({
+      name: readableFile.name,
+      type: readableFile.mediaType,
+    });
+    if (readableMimeType.startsWith("image/") && readableFile.dataUrl) {
+      setActiveStudyFile(null);
+      setActiveEpubBook(null);
+      setLibraryImageFailed(false);
+      setSelectedLibraryItem({
+        id: readableFile.id,
+        name: readableFile.name,
+        kind: "image",
+        mimeType: readableMimeType,
+        size: readableFile.size,
+        dataUrl: readableFile.dataUrl,
+        createdAt: readableFile.createdAt,
+        updatedAt: readableFile.updatedAt,
+        lastOpenedAt,
+        favorite: readableFile.favorite,
+        collectionIds: readableFile.collectionIds,
+      });
+      return;
+    }
+
     if (readableFile.kind === "epub") {
       setStudyReaderMessage("Opening your EPUB…");
       try {
