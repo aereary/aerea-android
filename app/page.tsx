@@ -1710,13 +1710,13 @@ function isFootballVisualEvent(
 
 function weekForDate(dateKey: string) {
   const anchor = dateFromKey(dateKey);
-  const mondayOffset = (anchor.getDay() + 6) % 7;
-  const monday = new Date(anchor);
-  monday.setDate(anchor.getDate() - mondayOffset);
+  const sundayOffset = anchor.getDay();
+  const sunday = new Date(anchor);
+  sunday.setDate(anchor.getDate() - sundayOffset);
 
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + index);
     return {
       key: localDateKey(date),
       day: date
@@ -3511,7 +3511,7 @@ export default function Home() {
     0,
   ).getDate();
   const leadingDays =
-    (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+    new Date(calendarYear, calendarMonth, 1).getDay();
   const extendedLeadingDays = new Date(
     calendarYear,
     calendarMonth,
@@ -12491,7 +12491,7 @@ export default function Home() {
                     onTouchEnd={finishCalendarSwipe}
                     aria-label="Calendar month. Swipe left or right to change month."
                   >
-                  {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
+                  {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
                   {Array.from({ length: leadingDays }, (_, index) => (

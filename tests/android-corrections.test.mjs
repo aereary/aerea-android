@@ -231,3 +231,24 @@ test("native touch UX does not auto-focus editors or select interface chrome", (
   assert.match(globalsCss, /html\[data-native="true"\] \.study-reader/);
   assert.match(globalsCss, /html\[data-native="true"\] \.ao3-library-layer/);
 });
+
+
+test("Site sync keeps Home and compact calendar Sunday-first", () => {
+  assert.match(
+    page,
+    /function weekForDate[\s\S]{0,360}const sundayOffset = anchor\.getDay\(\)[\s\S]{0,220}new Date\(sunday\)/,
+  );
+  assert.match(
+    page,
+    /const leadingDays =\s*new Date\(calendarYear, calendarMonth, 1\)\.getDay\(\)/,
+  );
+  assert.match(
+    page,
+    /\["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"\]\.map/,
+  );
+  assert.match(
+    page,
+    /function scheduleDatesFor[\s\S]{0,260}mondayOffset/,
+    "Cronograma keeps its approved Monday-first week",
+  );
+});
