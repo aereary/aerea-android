@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const globalsCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 const studyLibrary = await readFile(new URL("../app/study-library.tsx", import.meta.url), "utf8");
 const features = await readFile(new URL("../app/aerea-features.ts", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
@@ -166,10 +167,28 @@ test("native Library images use Capacitor's WebView-safe src and the styled read
     page,
     /src=\{selectedLibraryItem\.nativeContentUri \|\| selectedLibraryItem\.dataUrl\}/,
   );
-  assert.match(page, /className="library-reader-modal"/);
+  assert.match(page, /library-reader-modal/);
   assert.match(page, /className="library-reader-header"/);
   assert.match(
     page,
     /<aside className="library-reader-panel">[\s\S]{0,200}<nav aria-label="Reader tools">/,
+  );
+});
+
+
+test("image-only Library viewer stays compact and hides document reader tools", () => {
+  assert.match(page, /library-image-viewer/);
+  assert.match(globalsCss, /AEREA_RECOVERY_FIX_006D/);
+  assert.match(
+    globalsCss,
+    /\.library-reader-modal\.library-image-viewer[\s\S]{0,320}height:\s*auto/,
+  );
+  assert.match(
+    globalsCss,
+    /\.library-image-viewer \.library-reader-panel\s*\{[\s\S]{0,100}display:\s*none/,
+  );
+  assert.match(
+    globalsCss,
+    /\.library-image-viewer \.library-document-stage > img[\s\S]{0,320}max-height:\s*58dvh/,
   );
 });

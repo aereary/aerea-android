@@ -10638,7 +10638,16 @@ export default function Home() {
 
       {selectedLibraryItem && (
         <div className="modal-backdrop library-reader-backdrop" role="presentation">
-          <section className="library-reader-modal" role="dialog" aria-modal="true">
+          <section
+            className={`library-reader-modal ${
+              selectedLibraryItem.kind === "image" ||
+              selectedLibraryItem.mimeType?.startsWith("image/")
+                ? "library-image-viewer"
+                : ""
+            }`}
+            role="dialog"
+            aria-modal="true"
+          >
             <header className="library-reader-header">
               <div>
                 <p className="tiny-label">LIBRARY</p>

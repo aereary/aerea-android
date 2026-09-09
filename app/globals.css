@@ -31024,3 +31024,65 @@ html[data-native="true"] .calendar-modal.calendar-extended-month > .extended-cal
   .timetable-card { width:88vw; }
   .timetable-board { grid-template-columns:35px repeat(6,minmax(35px,1fr)); }
 }
+
+
+/* AEREA_RECOVERY_FIX_006D */
+.library-reader-modal.library-image-viewer {
+  height: auto;
+  max-height: calc(100dvh - 56px);
+  max-width: 620px;
+  width: calc(100vw - 34px);
+  grid-template-rows: auto auto;
+}
+
+.library-image-viewer .library-reader-layout {
+  display: block;
+  min-height: 0;
+}
+
+.library-image-viewer .library-reader-panel {
+  display: none;
+}
+
+.library-image-viewer .library-document-stage {
+  min-height: 0;
+  max-height: calc(100dvh - 170px);
+  overflow: auto;
+  padding: 14px;
+}
+
+.library-image-viewer .library-document-stage > img {
+  display: block;
+  height: auto;
+  margin: auto;
+  max-height: 58dvh;
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
+@media (max-width: 720px) {
+  .library-reader-modal.library-image-viewer {
+    max-height: calc(100dvh - 84px);
+    width: calc(100vw - 30px);
+  }
+
+  .library-image-viewer .library-reader-header {
+    padding: 12px 14px;
+  }
+
+  .library-image-viewer .library-reader-header h2 {
+    font-size: 1rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .library-image-viewer .library-document-stage {
+    max-height: calc(100dvh - 170px);
+    padding: 12px;
+  }
+
+  .library-image-viewer .library-document-stage > img {
+    max-height: 55dvh;
+  }
+}
