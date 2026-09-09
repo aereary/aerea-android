@@ -328,13 +328,40 @@ export function inferInboxKind(text: string, file?: File | null): InboxKind {
   return "text";
 }
 
+export function normalizedFileMimeType(
+  file: Pick<File, "name" | "type">,
+) {
+  const reportedType = file.type.trim().toLowerCase();
+  const lower = file.name.toLowerCase();
+  const extension = lower.includes(".") ? lower.split(".").pop() ?? "" : "";
+
+  const extensionTypes: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+    avif: "image/avif",
+    pdf: "application/pdf",
+    epub: "application/epub+zip",
+  };
+
+  if (reportedType && reportedType !== "application/octet-stream") {
+    return reportedType;
+  }
+  return extensionTypes[extension] ?? (reportedType || "application/octet-stream");
+}
+
 export function fileKind(file: File): LibraryKind {
   const lower = file.name.toLowerCase();
-  if (file.type === "application/pdf" || lower.endsWith(".pdf")) return "pdf";
-  if (lower.endsWith(".epub")) return "epub";
-  if (file.type.startsWith("image/")) return "image";
-  if (file.type.startsWith("audio/")) return "audio";
-  if (file.type.startsWith("text/") || /\.(docx?|odt|rtf|txt)$/i.test(lower)) {
+  const mimeType = normalizedFileMimeType(file);
+  if (mimeType === "application/pdf" || lower.endsWith(".pdf")) return "pdf";
+  if (mimeType === "application/epub+zip" || lower.endsWith(".epub")) return "epub";
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("audio/")) return "audio";
+  if (mimeType.startsWith("text/") || /\.(docx?|odt|rtf|txt)$/i.test(lower)) {
     return "document";
   }
   return "file";

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const features = await readFile(new URL("../app/aerea-features.ts", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 const storage = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url), "utf8");
 const notifications = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationsPlugin.java", import.meta.url), "utf8");
@@ -114,4 +115,26 @@ test("Library images are copied from the system picker without gallery-wide perm
   assert.doesNotMatch(manifest, /READ_EXTERNAL_STORAGE|READ_MEDIA_IMAGES/);
   const nativeLibraryRead = storage.slice(storage.indexOf("public void readFile"), storage.indexOf("public void deleteFile"));
   assert.doesNotMatch(nativeLibraryRead, /dataUrl|readAllBytes|Base64/);
+});
+
+test("Import a file recognizes Android images by extension and routes them to the image viewer path", () => {
+  assert.match(features, /export function normalizedFileMimeType/);
+  for (const format of ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "avif"]) {
+    assert.match(features, new RegExp(`${format}: "image/`));
+  }
+  assert.match(features, /reportedType !== "application\/octet-stream"/);
+  assert.match(features, /mimeType\.startsWith\("image\/"\)/);
+  assert.match(page, /normalizedFileMimeType,\s+inferInboxKind/);
+  assert.match(
+    page,
+    /const importLibraryFile = async \(file: File\)[\s\S]{0,500}const mimeType = normalizedFileMimeType\(file\)[\s\S]{0,500}AereaStorage\.saveFile\(\{[\s\S]{0,250}mimeType,/,
+  );
+  assert.match(
+    page,
+    /const importStudyFiles = async \(files: File\[\]\)[\s\S]{0,650}if \(fileKind\(file\) === "image"\) \{[\s\S]{0,120}await importLibraryFile\(file\);[\s\S]{0,80}continue;/,
+  );
+  assert.match(
+    page,
+    /const capturedFile = libraryItems\.find\([\s\S]{0,180}if \(capturedFile\) \{[\s\S]{0,100}openLibraryItem\(capturedFile\)/,
+  );
 });

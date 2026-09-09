@@ -39,6 +39,7 @@ import {
   addDays,
   createTrashItem,
   fileKind,
+  normalizedFileMimeType,
   inferInboxKind,
   isBocaSportsEvent,
   trashDaysRemaining,
@@ -4588,10 +4589,11 @@ export default function Home() {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
     const dataUrl = await blobAsDataUrl(file);
+    const mimeType = normalizedFileMimeType(file);
     const nativeFile = isNative()
       ? await AereaStorage.saveFile({
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
+          mimeType,
           dataUrl,
         })
       : null;
@@ -4601,7 +4603,7 @@ export default function Home() {
       id,
       name: file.name,
       kind: fileKind(file),
-      mimeType: file.type,
+      mimeType,
       size: file.size,
       dataUrl: nativeFile ? undefined : dataUrl,
       nativeFileId: nativeFile?.id,
@@ -7796,6 +7798,10 @@ export default function Home() {
       if (file.size === 0) continue;
       if (file.size > 40 * 1024 * 1024) {
         throw new Error(`${file.name} is larger than 40 MB.`);
+      }
+      if (fileKind(file) === "image") {
+        await importLibraryFile(file);
+        continue;
       }
       const lowerName = file.name.toLowerCase();
       const kind: StudyFileItem["kind"] =
