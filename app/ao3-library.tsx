@@ -1275,8 +1275,8 @@ const AO3_LIBRARY_CSS = String.raw`
   -webkit-overflow-scrolling: touch;
 }
 .ao3-screen-header {
-  position: sticky;
-  top: 0;
+  /* AEREA_FIX_014B: this belongs to page chrome, so it scrolls away. */
+  position: relative;
   z-index: 30;
   width: min(100%, 1180px);
   margin: 0 auto;
@@ -1316,7 +1316,7 @@ const AO3_LIBRARY_CSS = String.raw`
 .ao3-library * { box-sizing: border-box; }
 .ao3-library-tools {
   position: sticky;
-  top: 59px;
+  top: 0;
   z-index: 15;
   padding: 10px 2px 14px;
   margin-bottom: 14px;

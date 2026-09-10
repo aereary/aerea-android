@@ -24,3 +24,19 @@ test("generic bridge does not observe every body mutation", () => {
   assert.doesNotMatch(bridge, /observer\.observe\(document\.body/);
   assert.match(bridge, /window\.setInterval\(syncTarget, 120\)/);
 });
+
+
+test("Library back/header scrolls away while search tools own the sticky top", () => {
+  assert.match(
+    ao3,
+    /\.ao3-screen-header \{[\s\S]{0,160}position: relative;/,
+  );
+  assert.doesNotMatch(
+    ao3,
+    /\.ao3-screen-header \{[\s\S]{0,160}position: sticky;/,
+  );
+  assert.match(
+    ao3,
+    /\.ao3-library-tools \{[\s\S]{0,100}position: sticky;[\s\S]{0,40}top: 0;/,
+  );
+});
