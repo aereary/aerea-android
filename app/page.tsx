@@ -497,14 +497,33 @@ type JournalEntry = {
 };
 
 
-type Recording = StudyRecordingItem;
+type Recording = StudyRecordingItem & {
+  classItemId?: string;
+};
 
 type ClassItem = {
   id: string;
   name: string;
   icon: string;
   color: string;
+  sourceType?: "manual" | "timetable";
+  timetableClassIds?: string[];
 };
+
+function normalizedClassNameKey(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function recordingBelongsToClass(
+  recording: Recording,
+  classItem: ClassItem,
+) {
+  if (recording.classItemId) return recording.classItemId === classItem.id;
+  return (
+    normalizedClassNameKey(recording.className) ===
+    normalizedClassNameKey(classItem.name)
+  );
+}
 
 type TimetableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
@@ -2465,6 +2484,113 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState("");
+
+  // AEREA_FIX_015A: the semester timetable is also the source of truth for
+  // automatic Class Library shelves. Repeated weekdays with the same subject
+  // become one class here.
+  useEffect(() => {
+    if (!stateReady) return;
+
+    setClassItems((current) => {
+      const grouped = new Map<string, TimetableClass[]>();
+
+      classTimetable.classes.forEach((classItem) => {
+        const key = normalizedClassNameKey(classItem.name);
+        if (!key) return;
+        const group = grouped.get(key) ?? [];
+        group.push(classItem);
+        grouped.set(key, group);
+      });
+
+      const claimedExistingIds = new Set<string>();
+      const timetableShelves = Array.from(grouped.entries()).map(
+        ([key, timetableEntries]) => {
+          const timetableIds = timetableEntries.map((entry) => entry.id);
+          const linkedExisting = current.find(
+            (item) =>
+              item.sourceType === "timetable" &&
+              item.timetableClassIds?.some((id) => timetableIds.includes(id)),
+          );
+          const matchingExisting =
+            linkedExisting ??
+            current.find(
+              (item) =>
+                !claimedExistingIds.has(item.id) &&
+                normalizedClassNameKey(item.name) === key,
+            );
+
+          if (matchingExisting) {
+            claimedExistingIds.add(matchingExisting.id);
+          }
+
+          const first = timetableEntries[0];
+          return {
+            id: matchingExisting?.id ?? `timetable-class:${first.id}`,
+            name: first.name.trim(),
+            icon: matchingExisting?.icon ?? "🎓",
+            color: first.color,
+            sourceType: "timetable" as const,
+            timetableClassIds: timetableIds,
+          };
+        },
+      );
+
+      const manualShelves = current.filter(
+        (item) =>
+          item.sourceType !== "timetable" &&
+          !claimedExistingIds.has(item.id),
+      );
+      const next = [...manualShelves, ...timetableShelves];
+
+      return JSON.stringify(next) === JSON.stringify(current) ? current : next;
+    });
+  }, [classTimetable.classes, stateReady]);
+
+  // Give legacy recordings a stable class id once a shelf is known. This
+  // preserves them across timetable renames without creating duplicate audio.
+  useEffect(() => {
+    if (!stateReady || classItems.length === 0) return;
+
+    setRecordings((current) => {
+      let changed = false;
+      const next = current.map((recording) => {
+        const linkedClass = recording.classItemId
+          ? classItems.find((item) => item.id === recording.classItemId)
+          : classItems.find(
+              (item) =>
+                normalizedClassNameKey(item.name) ===
+                normalizedClassNameKey(recording.className),
+            );
+
+        if (!linkedClass) return recording;
+        if (
+          recording.classItemId === linkedClass.id &&
+          recording.className === linkedClass.name
+        ) {
+          return recording;
+        }
+
+        changed = true;
+        return {
+          ...recording,
+          classItemId: linkedClass.id,
+          className: linkedClass.name,
+        };
+      });
+      return changed ? next : current;
+    });
+  }, [classItems, stateReady]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    if (classItems.length === 0) {
+      if (selectedClass) setSelectedClass("");
+      return;
+    }
+    if (!classItems.some((item) => item.name === selectedClass)) {
+      setSelectedClass(classItems[0].name);
+    }
+  }, [classItems, selectedClass, stateReady]);
   const [editingRecordingId, setEditingRecordingId] = useState<number | null>(
     null,
   );
@@ -3510,12 +3636,14 @@ export default function Home() {
     [entityLinks, taskLinkEditor],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
-  const classRecordings = recordings.filter(
-    (recording) => recording.className === selectedClass,
-  );
   const selectedClassItem = classItems.find(
     (item) => item.name === selectedClass,
   );
+  const classRecordings = selectedClassItem
+    ? recordings.filter((recording) =>
+        recordingBelongsToClass(recording, selectedClassItem),
+      )
+    : [];
   const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
     if (!sportsSettings.addAutomatically) return [];
     return sportsEvents
@@ -6947,6 +7075,7 @@ export default function Home() {
           {
             id: Date.now(),
             className: selectedClass,
+            classItemId: selectedClassItem?.id,
             name:
               recordingName.trim() ||
               `Class #${current.filter((item) => item.className === selectedClass).length + 1}`,
@@ -9231,8 +9360,24 @@ export default function Home() {
                         >
                           <button
                             className="class-icon-edit"
-                            onClick={() => openClassEditor(item)}
-                            aria-label={`Edit ${item.name}`}
+                            onClick={() => {
+                              const timetableClassId =
+                                item.sourceType === "timetable"
+                                  ? item.timetableClassIds?.[0]
+                                  : null;
+                              if (timetableClassId) {
+                                setSpace("menu");
+                                setRequestedTimetableClassId(timetableClassId);
+                                changeTab("today");
+                                return;
+                              }
+                              openClassEditor(item);
+                            }}
+                            aria-label={
+                              item.sourceType === "timetable"
+                                ? `Edit ${item.name} in class schedule`
+                                : `Edit ${item.name}`
+                            }
                           >
                             {item.icon}
                           </button>
@@ -9248,9 +9393,8 @@ export default function Home() {
                               <strong>{item.name}</strong>
                               <small>
                                 {
-                                  recordings.filter(
-                                    (recording) =>
-                                      recording.className === item.name,
+                                  recordings.filter((recording) =>
+                                    recordingBelongsToClass(recording, item),
                                   ).length
                                 }{" "}
                                 saved audios
