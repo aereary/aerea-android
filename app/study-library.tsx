@@ -263,6 +263,21 @@ export function StudyLibrary({
     );
   };
 
+  const deleteRecording = (recording: StudyRecordingItem) => {
+    const confirmed = window.confirm(
+      `Delete "${recording.name}"? This recording will be permanently removed.`,
+    );
+    if (!confirmed) return;
+
+    if (recording.url?.startsWith("blob:")) {
+      URL.revokeObjectURL(recording.url);
+    }
+    onRecordingsChange(
+      recordings.filter((item) => item.id !== recording.id),
+    );
+    setMessage(`${recording.name} was deleted.`);
+  };
+
   const toggleCollection = (file: StudyFileItem, collectionId: string) => {
     const attached = file.collectionIds?.includes(collectionId) ?? false;
     onFilesChange(
@@ -776,6 +791,12 @@ export function StudyLibrary({
                         {recording.favorite
                           ? "Remove from Favorites"
                           : "Add to Favorites"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteRecording(recording)}
+                      >
+                        Delete recording
                       </button>
                       {collections.length > 0 && (
                         <fieldset>
