@@ -169,6 +169,7 @@ export function StudyLibrary({
   const [message, setMessage] = useState("");
   const [collectionFilter, setCollectionFilter] = useState<string | null>(null);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [openFileActionId, setOpenFileActionId] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const requestedNote = useMemo(
@@ -315,6 +316,19 @@ export function StudyLibrary({
     );
   };
 
+  const toggleFileSelection = (fileId: string) => {
+    setSelectedFileIds((current) =>
+      current.includes(fileId)
+        ? current.filter((id) => id !== fileId)
+        : [...current, fileId],
+    );
+  };
+
+  const finishFileSelection = () => {
+    setSelectedFileIds([]);
+    setOpenFileActionId(null);
+  };
+
   const addSelectedToCollection = (collectionId: string) => {
     if (!collectionId || selectedFileIds.length === 0) return;
     onFilesChange(
@@ -349,6 +363,12 @@ export function StudyLibrary({
   };
 
   const openFile = (file: StudyFileItem) => {
+    if (selectedFileIds.length > 0) {
+      toggleFileSelection(file.id);
+      setOpenFileActionId(null);
+      return;
+    }
+
     onFilesChange(
       files.map((item) =>
         item.id === file.id
@@ -640,7 +660,7 @@ export function StudyLibrary({
               >
                 Favorite
               </button>
-              <button type="button" onClick={() => setSelectedFileIds([])}>Done</button>
+              <button type="button" onClick={finishFileSelection}>Done</button>
             </div>
           )}
           <div className="study-file-grid">
@@ -653,11 +673,8 @@ export function StudyLibrary({
                 key={file.id}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  setSelectedFileIds((current) =>
-                    current.includes(file.id)
-                      ? current
-                      : [...current, file.id],
-                  );
+                  toggleFileSelection(file.id);
+                  setOpenFileActionId(null);
                 }}
               >
                 <button type="button" className="study-file-open" onClick={() => openFile(file)}>
@@ -701,22 +718,34 @@ export function StudyLibrary({
                               : "Open file"} →
                   </em>
                 </button>
-                <details className="study-card-actions">
+                <details
+                  className="study-card-actions"
+                  open={openFileActionId === file.id}
+                  onToggle={(event) => {
+                    const isOpen = event.currentTarget.open;
+                    setOpenFileActionId((current) =>
+                      isOpen ? file.id : current === file.id ? null : current,
+                    );
+                  }}
+                >
                   <summary aria-label={`Actions for ${file.name}`}>···</summary>
                   <div>
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedFileIds((current) =>
-                          current.includes(file.id)
-                            ? current.filter((id) => id !== file.id)
-                            : [...current, file.id],
-                        )
-                      }
+                      onClick={() => {
+                        toggleFileSelection(file.id);
+                        setOpenFileActionId(null);
+                      }}
                     >
                       {selectedFileIds.includes(file.id) ? "Unselect" : "Select"}
                     </button>
-                    <button type="button" onClick={() => toggleFavorite(file)}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleFavorite(file);
+                        setOpenFileActionId(null);
+                      }}
+                    >
                       {file.favorite ? "Remove from Favorites" : "Add to Favorites"}
                     </button>
                     {collections.length > 0 && (
@@ -737,7 +766,10 @@ export function StudyLibrary({
                     <button
                       type="button"
                       className="danger"
-                      onClick={() => onDeleteFile(file)}
+                      onClick={() => {
+                        setOpenFileActionId(null);
+                        onDeleteFile(file);
+                      }}
                     >
                       Move to Trash
                     </button>
