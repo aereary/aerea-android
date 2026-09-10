@@ -4,6 +4,7 @@ import {
   Ao3Library,
   type Ao3EpubDownloadTarget,
 } from "./ao3-library";
+import GenericLibraryBridge from "./generic-library-bridge";
 import {
   Capacitor,
   registerPlugin,
@@ -10263,7 +10264,10 @@ export default function Home() {
       </section>
 
       {ao3LibraryOpen && (
-        <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+        <>
+          <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+          <GenericLibraryBridge />
+        </>
       )}
 
       {aereaHubOpen && (
