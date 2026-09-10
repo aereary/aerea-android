@@ -871,9 +871,28 @@ test("never clears visible state between local and cloud hydration", () => {
 });
 
 test("updates only the native visual cache after appearance hydration", () => {
+  const appearanceGuard =
+    "if (!isNative() || !appearanceHydrated) return;";
+  const appearanceGuardIndex = pageSource.indexOf(appearanceGuard);
+  const appearanceEffectStart = pageSource.lastIndexOf(
+    "useLayoutEffect(() =>",
+    appearanceGuardIndex,
+  );
+  const appearanceEffectEndMarker =
+    "}, [appearanceHydrated, appTheme, colorMode, customTheme]);";
+  const appearanceEffectEnd =
+    pageSource.indexOf(appearanceEffectEndMarker, appearanceGuardIndex) +
+    appearanceEffectEndMarker.length;
   const appearanceEffectSource = pageSource.slice(
-    pageSource.indexOf("useLayoutEffect(() =>"),
-    pageSource.indexOf("useEffect(() =>", pageSource.indexOf("useLayoutEffect(() =>")),
+    appearanceEffectStart,
+    appearanceEffectEnd,
+  );
+
+  assert.ok(
+    appearanceGuardIndex >= 0 &&
+      appearanceEffectStart >= 0 &&
+      appearanceEffectEnd >= appearanceEffectEndMarker.length,
+    "native appearance layout effect should remain intact",
   );
 
   assert.match(
