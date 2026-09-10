@@ -401,12 +401,22 @@ export default function GenericLibraryBridge() {
       );
     };
 
+    let inputTimer: number | null = null;
+    const syncFiltersSoon = () => {
+      if (inputTimer !== null) window.clearTimeout(inputTimer);
+      inputTimer = window.setTimeout(() => {
+        inputTimer = null;
+        syncFilters();
+      }, 180);
+    };
+
     syncFilters();
-    layer.addEventListener("input", syncFilters, true);
+    layer.addEventListener("input", syncFiltersSoon, true);
     layer.addEventListener("change", syncFilters, true);
 
     return () => {
-      layer.removeEventListener("input", syncFilters, true);
+      if (inputTimer !== null) window.clearTimeout(inputTimer);
+      layer.removeEventListener("input", syncFiltersSoon, true);
       layer.removeEventListener("change", syncFilters, true);
     };
   }, [target]);

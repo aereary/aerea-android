@@ -840,6 +840,61 @@ function SeriesCard({
   );
 }
 
+function Ao3SearchInput({
+  value,
+  onValueChange,
+  onFocus,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  onFocus: () => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    setDraft(value);
+  }, [value]);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current !== null) {
+        window.clearTimeout(debounceRef.current);
+      }
+    },
+    [],
+  );
+
+  const commit = (nextValue: string) => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      onValueChange(nextValue);
+    }, 180);
+  };
+
+  return (
+    <input
+      className="ao3-search"
+      value={draft}
+      onChange={(event: ChangeEvent<HTMLInputElement>) => {
+        const nextValue = event.target.value;
+        setDraft(nextValue);
+        commit(nextValue);
+      }}
+      onFocus={onFocus}
+      placeholder="Buscar título, autor, ship, tag…"
+      type="search"
+    />
+  );
+}
+
 export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const libraryLayerRef = useRef<HTMLElement | null>(null);
   const lastScrollTopRef = useRef(0);
@@ -1114,16 +1169,13 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           </button>
         </div>
 
-        <input
-          className="ao3-search"
+        <Ao3SearchInput
           value={query}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+          onValueChange={(nextQuery) => {
             setActiveTag(null);
-            setQuery(event.target.value);
+            setQuery(nextQuery);
           }}
           onFocus={() => setSearchToolsHidden(false)}
-          placeholder="Buscar título, autor, ship, tag…"
-          type="search"
         />
 
         <div className="ao3-filter-row">
@@ -1367,6 +1419,14 @@ const AO3_LIBRARY_CSS = String.raw`
 .ao3-search { min-height: 48px; border-radius: 15px; padding: 0 14px; }
 .ao3-search:focus,
 .ao3-filter-row select:focus { border-color: var(--ao3-plum); box-shadow: 0 0 0 3px rgba(108,89,122,.12); }
+/* AEREA_FIX_014C: Android WebView should not repaint a blurred sticky layer
+   while the software keyboard is resizing the viewport. */
+html[data-native="true"] .ao3-library-tools {
+  background: #f7f4f8;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  will-change: auto;
+}
 .ao3-filter-row { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 8px; }
 .ao3-filter-row select { min-width: 0; min-height: 44px; border-radius: 12px; padding: 0 10px; }
 .ao3-filter-row select:last-child { grid-column: 1 / -1; }
