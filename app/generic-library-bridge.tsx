@@ -35,6 +35,52 @@ type GenericLibraryVersion = {
   captured_at: string | null;
 };
 
+type GenericLibraryCache = {
+  items: GenericLibraryItem[];
+  versions: GenericLibraryVersion[];
+  savedAt: number;
+};
+
+const GENERIC_LIBRARY_CACHE_KEY = "aerea-generic-library-cache-v1";
+
+function readGenericLibraryCache(): GenericLibraryCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GENERIC_LIBRARY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GenericLibraryCache>;
+    const items = validGenericItems(parsed.items);
+    const versions = validGenericVersions(parsed.versions);
+    if (!Array.isArray(parsed.items) || items.length !== parsed.items.length) {
+      return null;
+    }
+    return {
+      items,
+      versions,
+      savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeGenericLibraryCache(
+  items: GenericLibraryItem[],
+  versions: GenericLibraryVersion[],
+) {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: GenericLibraryCache = {
+      items,
+      versions,
+      savedAt: Date.now(),
+    };
+    window.localStorage.setItem(GENERIC_LIBRARY_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Cache is only a speed-up. Supabase remains the source of truth.
+  }
+}
+
 function normalizeSearch(value: string) {
   return value
     .normalize("NFD")
@@ -260,9 +306,8 @@ export default function GenericLibraryBridge() {
     };
 
     syncTarget();
-    const observer = new MutationObserver(syncTarget);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    const interval = window.setInterval(syncTarget, 120);
+    return () => window.clearInterval(interval);
   }, []);
 
   const refreshGenericLibrary = useCallback(async () => {
@@ -297,13 +342,23 @@ export default function GenericLibraryBridge() {
       );
     }
 
-    setItems(validGenericItems(itemsResult.data || []));
-    setVersions(validGenericVersions(versionsResult.data || []));
+    const nextItems = validGenericItems(itemsResult.data || []);
+    const nextVersions = validGenericVersions(versionsResult.data || []);
+    setItems(nextItems);
+    setVersions(nextVersions);
+    if (!versionsResult.error) {
+      writeGenericLibraryCache(nextItems, nextVersions);
+    }
   }, []);
 
   useEffect(() => {
-    if (!target) return;
+    const cached = readGenericLibraryCache();
+    if (cached) {
+      setItems(cached.items);
+      setVersions(cached.versions);
+    }
 
+    // Refresh immediately, not after AO3 finishes creating its grid.
     void refreshGenericLibrary();
 
     const channel = supabase
@@ -323,7 +378,7 @@ export default function GenericLibraryBridge() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [refreshGenericLibrary, target]);
+  }, [refreshGenericLibrary]);
 
   useEffect(() => {
     const layer = target?.closest<HTMLElement>(".ao3-library-layer");
