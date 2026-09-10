@@ -5,6 +5,7 @@ import test from "node:test";
 const data = readFileSync(new URL("../app/career-plan-data.ts", import.meta.url), "utf8");
 const bridge = readFileSync(new URL("../app/career-plan-bridge.tsx", import.meta.url), "utf8");
 const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+const nativeEntry = readFileSync(new URL("../app/native-entry.tsx", import.meta.url), "utf8");
 const migration = readFileSync(
   new URL(
     "../supabase/migrations/20260910115136_add_aerea_academic_profile.sql",
@@ -33,6 +34,7 @@ test("career plan is isolated from the protected page state", () => {
   assert.match(bridge, /Horario/);
   assert.match(bridge, /Mi carrera/);
   assert.match(layout, /<CareerPlanBridge \/>/);
+  assert.match(nativeEntry, /<CareerPlanBridge \/>/);
 });
 
 test("academic cloud state is private to the authenticated user", () => {
