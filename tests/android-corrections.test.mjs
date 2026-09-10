@@ -280,3 +280,62 @@ test("deleting a timetable class removes its generated Calendar series on semest
   assert.match(page, /setClassTimetable\(nextTimetable\)/);
   assert.match(page, /return unchanged \? current : \[\.\.\.manualEvents, \.\.\.generated\]/);
 });
+
+test("timetable-linked Calendar events are protected and route back to their class", () => {
+  assert.match(page, /sourceType\?: "timetable"/);
+  assert.match(page, /timetableClassId\?: string/);
+  assert.match(
+    page,
+    /const eventDraftIsTimetableClass =[\s\S]{0,180}eventDraft\.sourceType === "timetable"/,
+  );
+  assert.match(
+    page,
+    /const saveCalendarEvent = \(\) => \{[\s\S]{0,160}eventDraft\.sourceType === "timetable"\) return/,
+  );
+  assert.match(page, /Class · \{eventDraft\.title\} ·/);
+  assert.match(page, />\s*Edit class schedule\s*</);
+  assert.match(page, /className="timetable-linked-event-card"/);
+  assert.match(
+    page,
+    /className="event-editor-editable-fields"[\s\S]{0,120}inert=\{eventDraftIsTimetableClass \? true : undefined\}/,
+  );
+
+  assert.match(
+    page,
+    /const moveCalendarEvent =[\s\S]{0,320}event\.sourceType === "timetable"/,
+  );
+  assert.match(
+    page,
+    /const startCalendarEventDrag =[\s\S]{0,360}calendarEvent\.sourceType === "timetable"/,
+  );
+  assert.match(
+    page,
+    /const moveCalendarEventTime =[\s\S]{0,360}event\.sourceType === "timetable"/,
+  );
+  assert.match(
+    page,
+    /const startScheduleEventDrag =[\s\S]{0,360}event\.sourceType === "timetable"/,
+  );
+
+  assert.match(page, /requestedTimetableClassId/);
+  assert.match(
+    page,
+    /setTimetableOpen\(true\)[\s\S]{0,180}setTimetableEditing\(Boolean\(requestedClass\)\)[\s\S]{0,180}setTimetableClassDraft/,
+  );
+  assert.match(
+    page,
+    /calendarEvent\.eventType !== "sports_event" &&[\s\S]{0,120}calendarEvent\.sourceType !== "timetable"/,
+  );
+});
+
+test("linked timetable event editor styling stays compact and source-specific", () => {
+  assert.match(globalsCss, /AEREA_RECOVERY_FIX_012/);
+  assert.match(
+    globalsCss,
+    /\.event-editor\.timetable-source-event \.event-editor-editable-fields[\s\S]{0,90}display:\s*none/,
+  );
+  assert.match(
+    globalsCss,
+    /\.timetable-linked-event-card[\s\S]{0,260}grid-template-columns:\s*auto minmax\(0, 1fr\)/,
+  );
+});

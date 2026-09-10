@@ -1291,7 +1291,11 @@ test("renders one read-only Boca match across the current v156 surfaces", () => 
   assert.match(pageSource, /Automatic match · read-only/);
   assert.doesNotMatch(pageSource, /selectedFootballMatch[\s\S]{0,5000}Edit this event/);
   assert.match(pageSource, /calendarEvent\.eventType !== "sports_event" &&[\s\S]{0,100}startCalendarEventDrag/);
-  assert.match(pageSource, /if \(event\.eventType === "sports_event"\) return/);
+  assert.match(
+    pageSource,
+    /event\.eventType === "sports_event" \|\|[\s\S]{0,120}event\.sourceType === "timetable"/,
+    "schedule drag must reject both automatic sports events and timetable-owned class series",
+  );
   for (const surface of [
     "simplified-event-strip",
     "extended-event-pill",

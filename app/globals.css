@@ -31133,3 +31133,117 @@ html[data-native="true"] :where(
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* AEREA_RECOVERY_FIX_012
+   Timetable-generated Calendar events are a linked series. The Calendar
+   editor identifies the source and routes edits back to the timetable. */
+.event-linked-badge {
+  align-items: center;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.event-editor.timetable-source-event {
+  gap: 14px;
+}
+
+.timetable-linked-event-card {
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 16px;
+}
+
+.timetable-linked-event-icon {
+  align-items: center;
+  background: var(--lilac);
+  border-radius: 16px;
+  display: flex;
+  font-size: 22px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.timetable-linked-event-card > div {
+  min-width: 0;
+}
+
+.timetable-linked-event-card small {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.timetable-linked-event-card strong {
+  color: var(--ink);
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.timetable-linked-event-card p {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 7px 0 0;
+}
+
+.timetable-linked-range {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 7px;
+}
+
+.timetable-linked-event-card > button {
+  background: var(--lilac);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.event-editor.timetable-source-event .event-editor-editable-fields {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .timetable-linked-event-card {
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .timetable-linked-event-icon {
+    border-radius: 14px;
+    height: 44px;
+    width: 44px;
+  }
+
+  .timetable-linked-event-card strong {
+    font-size: 17px;
+  }
+}

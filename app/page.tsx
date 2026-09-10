@@ -2414,6 +2414,8 @@ export default function Home() {
   const [classTimetable, setClassTimetable] = useState<ClassTimetable>(
     defaultClassTimetable,
   );
+  const [requestedTimetableClassId, setRequestedTimetableClassId] =
+    useState<string | null>(null);
 
   // AEREA_FEATURE_011: timetable is the source of truth for class recurrences.
   useEffect(() => {
@@ -3688,6 +3690,9 @@ export default function Home() {
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const eventDraftRangeIsValid = eventDraftHasValidRange(eventDraft);
+  const eventDraftIsTimetableClass =
+    eventDraft.sourceType === "timetable" &&
+    Boolean(eventDraft.timetableClassId);
   const eventTitleSuggestions = useMemo(() => {
     const query = normalizeCalendarSearch(eventDraft.title);
     if (editingEventId || eventTemplateSuggestionsDismissed || query.length < 2) {
@@ -6409,7 +6414,28 @@ export default function Home() {
     setDaySummaryDate(returnDate);
   };
 
+  const editTimetableClassFromCalendar = () => {
+    if (
+      eventDraft.sourceType !== "timetable" ||
+      !eventDraft.timetableClassId
+    ) {
+      return;
+    }
+    const classId = eventDraft.timetableClassId;
+    setEventEditorOpen(false);
+    setEditingEventId(null);
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarOpen(false);
+    setDaySummaryDate(null);
+    setRequestedTimetableClassId(classId);
+    changeTab("today");
+  };
+
   const saveCalendarEvent = () => {
+    if (eventDraft.sourceType === "timetable") return;
     if (!eventDraft.title.trim() || !eventDraftHasValidRange(eventDraft)) return;
     const savedEvent: CalendarEvent = {
       ...eventDraft,
@@ -6511,6 +6537,10 @@ export default function Home() {
     if (!eventDeleteRequest) return;
     const deletedId = eventDeleteRequest.eventId;
     const event = calendarEvents.find((candidate) => candidate.id === deletedId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
     if (event) moveToTrash("event", event.title, event);
     setSelectedEventDetail((current) =>
       current?.id === deletedId ? null : current,
@@ -6520,8 +6550,13 @@ export default function Home() {
 
   const deleteOnlyOccurrence = () => {
     if (!eventDeleteRequest) return;
-    recordAction("Deleted event occurrence");
     const { eventId, occurrenceDate } = eventDeleteRequest;
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
+    recordAction("Deleted event occurrence");
     setCalendarEvents((current) =>
       current.map((event) => {
         if (event.id !== eventId) return event;
@@ -6538,8 +6573,13 @@ export default function Home() {
 
   const deleteThisAndFutureOccurrences = () => {
     if (!eventDeleteRequest) return;
-    recordAction("Deleted future event occurrences");
     const { eventId, occurrenceDate } = eventDeleteRequest;
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
+    recordAction("Deleted future event occurrences");
     setCalendarEvents((current) =>
       current.flatMap((event) => {
         if (event.id !== eventId) return [event];
@@ -6559,7 +6599,13 @@ export default function Home() {
 
   const moveCalendarEvent = (eventId: string, destinationDate: string) => {
     const event = calendarEvents.find((candidate) => candidate.id === eventId);
-    if (!event || event.date === destinationDate) return;
+    if (
+      !event ||
+      event.sourceType === "timetable" ||
+      event.date === destinationDate
+    ) {
+      return;
+    }
     const endDayOffset =
       event.endDate && event.endDate !== event.date
         ? Math.max(
@@ -6592,7 +6638,12 @@ export default function Home() {
     event: ReactPointerEvent<HTMLElement>,
     calendarEvent: CalendarEvent,
   ) => {
-    if (calendarEvent.eventType === "sports_event") return;
+    if (
+      calendarEvent.eventType === "sports_event" ||
+      calendarEvent.sourceType === "timetable"
+    ) {
+      return;
+    }
     event.stopPropagation();
     cancelCalendarLongPress();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -6641,7 +6692,14 @@ export default function Home() {
     duration: number,
   ) => {
     const event = calendarEvents.find((candidate) => candidate.id === eventId);
-    if (!event || event.allDay || event.eventType === "sports_event") return;
+    if (
+      !event ||
+      event.allDay ||
+      event.eventType === "sports_event" ||
+      event.sourceType === "timetable"
+    ) {
+      return;
+    }
 
     const latestMinute = 23 * 60 + 45;
     const safeDuration = Math.max(15, Math.min(duration, latestMinute));
@@ -6672,7 +6730,12 @@ export default function Home() {
     start: number,
     end: number,
   ) => {
-    if (event.eventType === "sports_event") return;
+    if (
+      event.eventType === "sports_event" ||
+      event.sourceType === "timetable"
+    ) {
+      return;
+    }
     pointerEvent.stopPropagation();
     pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
     const dayBounds = pointerEvent.currentTarget
@@ -8640,6 +8703,10 @@ export default function Home() {
               isNight={isNight}
               classTimetable={classTimetable}
               setClassTimetable={setClassTimetable}
+              requestedTimetableClassId={requestedTimetableClassId}
+              onTimetableRequestHandled={() =>
+                setRequestedTimetableClassId(null)
+              }
             />
           )}
 
@@ -11048,27 +11115,79 @@ export default function Home() {
                   </button>
                   <div>
                     <p className="tiny-label">
-                      {editingEventId ? "EDIT YOUR PLAN" : "A NEW LITTLE PLAN"}
+                      {eventDraftIsTimetableClass
+                        ? "CLASS SCHEDULE"
+                        : editingEventId
+                          ? "EDIT YOUR PLAN"
+                          : "A NEW LITTLE PLAN"}
                     </p>
-                    <h2>{editingEventId ? "Edit event" : "New event"}</h2>
+                    <h2>
+                      {eventDraftIsTimetableClass
+                        ? eventDraft.title
+                        : editingEventId
+                          ? "Edit event"
+                          : "New event"}
+                    </h2>
                   </div>
-                  <button
-                    className="event-save-button"
-                    type="button"
-                    onClick={saveCalendarEvent}
-                    disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
-                  >
-                    Save
-                  </button>
+                  {eventDraftIsTimetableClass ? (
+                    <span className="event-linked-badge">Linked</span>
+                  ) : (
+                    <button
+                      className="event-save-button"
+                      type="button"
+                      onClick={saveCalendarEvent}
+                      disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
+                    >
+                      Save
+                    </button>
+                  )}
                 </div>
 
                 <form
-                  className="event-editor"
+                  className={`event-editor ${
+                    eventDraftIsTimetableClass ? "timetable-source-event" : ""
+                  }`}
                   onSubmit={(event) => {
                     event.preventDefault();
                     saveCalendarEvent();
                   }}
                 >
+                  {eventDraftIsTimetableClass && (
+                    <section
+                      className="timetable-linked-event-card"
+                      aria-label="Class event managed by semester timetable"
+                    >
+                      <span className="timetable-linked-event-icon" aria-hidden="true">
+                        🎓
+                      </span>
+                      <div>
+                        <small>
+                          Class · {eventDraft.title} ·{" "}
+                          {eventDraft.timetableTermName ?? classTimetable.termName}
+                        </small>
+                        <strong>{eventDraft.title}</strong>
+                        <p>
+                          This weekly class is managed by your semester timetable.
+                          Change its day, time, dates or delete the class there so
+                          the whole series stays together.
+                        </p>
+                        <span className="timetable-linked-range">
+                          {timetableTermDateLabel(classTimetable)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={editTimetableClassFromCalendar}
+                      >
+                        Edit class schedule
+                      </button>
+                    </section>
+                  )}
+
+                  <div
+                    className="event-editor-editable-fields"
+                    inert={eventDraftIsTimetableClass ? true : undefined}
+                  >
                   <label className="event-title-input">
                     <span>Title</span>
                     <input
@@ -11612,6 +11731,7 @@ export default function Home() {
                   >
                     Save event
                   </button>
+                  </div>
                 </form>
               </>
             ) : (
@@ -12872,7 +12992,8 @@ export default function Home() {
                                 : ""}
                             </small>
                           </button>
-                          {calendarEvent.eventType !== "sports_event" && (
+                          {calendarEvent.eventType !== "sports_event" &&
+                            calendarEvent.sourceType !== "timetable" && (
                             <button
                               type="button"
                               className="event-chip-delete"
@@ -14771,6 +14892,8 @@ function TodayScreen({
   isNight,
   classTimetable,
   setClassTimetable,
+  requestedTimetableClassId,
+  onTimetableRequestHandled,
 }: {
   themeId: AppTheme;
   pending: Reminder[];
@@ -14796,6 +14919,8 @@ function TodayScreen({
   isNight: boolean;
   classTimetable: ClassTimetable;
   setClassTimetable: Dispatch<SetStateAction<ClassTimetable>>;
+  requestedTimetableClassId: string | null;
+  onTimetableRequestHandled: () => void;
 }) {
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
   const [timetableOpen, setTimetableOpen] = useState(false);
@@ -14905,6 +15030,25 @@ function TodayScreen({
     setTimetableEditing(true);
     setTimetableClassDraft({ ...classItem });
   };
+
+  useEffect(() => {
+    if (!requestedTimetableClassId) return;
+    const requestedClass = classTimetable.classes.find(
+      (classItem) => classItem.id === requestedTimetableClassId,
+    );
+    setTimetableDraft({
+      ...classTimetable,
+      classes: classTimetable.classes.map((classItem) => ({ ...classItem })),
+    });
+    setTimetableOpen(true);
+    setTimetableEditing(Boolean(requestedClass));
+    setTimetableClassDraft(requestedClass ? { ...requestedClass } : null);
+    onTimetableRequestHandled();
+  }, [
+    classTimetable,
+    onTimetableRequestHandled,
+    requestedTimetableClassId,
+  ]);
 
   const saveTimetableClass = () => {
     if (!timetableClassDraft?.name.trim()) return;
