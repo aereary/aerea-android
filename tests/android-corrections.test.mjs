@@ -258,3 +258,25 @@ test("Site sync uses approved emojis for Library and Calendar", () => {
   assert.match(page, /title="Library"[\s\S]{0,180}icon="📚"/);
   assert.match(page, /title="Calendar"[\s\S]{0,180}icon="🗓️"/);
 });
+
+test("class timetable owns recurring Calendar class events", () => {
+  assert.match(page, /termStart: string;[\s\S]{0,100}termEnd: string;/);
+  assert.match(page, /sourceType\?: "timetable";[\s\S]{0,120}timetableClassId\?: string;/);
+  assert.match(page, /function timetableClassCalendarEvent[\s\S]{0,1000}repeat: "Weekly"[\s\S]{0,180}repeatUntil: timetable\.termEnd/);
+  assert.match(page, /id: `timetable-event:\$\{classItem\.id\}`/);
+  assert.match(page, /calendar: "Classes"/);
+  assert.match(page, /event\.sourceType !== "timetable"/);
+});
+
+test("class timetable requires real semester dates for recurrences", () => {
+  assert.match(page, /<span>Semester starts<\/span>[\s\S]{0,140}type="date"/);
+  assert.match(page, /<span>Semester ends<\/span>[\s\S]{0,140}type="date"/);
+  assert.match(page, /timetableDraft\.classes\.length > 0 && !timetableDateRangeValid/);
+  assert.match(page, /timetableTermDateLabel\(classTimetable\)/);
+});
+
+test("deleting a timetable class removes its generated Calendar series on semester save", () => {
+  assert.match(page, /deleteTimetableClass[\s\S]{0,340}classItem\.id !== classId/);
+  assert.match(page, /setClassTimetable\(nextTimetable\)/);
+  assert.match(page, /return unchanged \? current : \[\.\.\.manualEvents, \.\.\.generated\]/);
+});

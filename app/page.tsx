@@ -519,6 +519,8 @@ type TimetableClass = {
 type ClassTimetable = {
   termName: string;
   termDates: string;
+  termStart: string;
+  termEnd: string;
   classes: TimetableClass[];
 };
 
@@ -543,6 +545,8 @@ const timetableColors = [
 const defaultClassTimetable: ClassTimetable = {
   termName: "Current semester",
   termDates: "Set your term dates",
+  termStart: "",
+  termEnd: "",
   classes: [],
 };
 
@@ -587,6 +591,9 @@ type CalendarEvent = {
   kickoffTimestamp?: number | null;
   footballMatch?: FootballMatch;
   sourceInboxId?: string;
+  sourceType?: "timetable";
+  timetableClassId?: string;
+  timetableTermName?: string;
   healthCompletedDates?: string[];
 };
 
@@ -621,6 +628,84 @@ type RepeatOption =
   | "Custom";
 
 type EventDraft = Omit<CalendarEvent, "id">;
+
+const timetableWeekdayNumber: Record<TimetableDay, number> = {
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+
+function timetableTermDateLabel(timetable: ClassTimetable) {
+  if (!timetable.termStart || !timetable.termEnd) {
+    return timetable.termDates || "Set your term dates";
+  }
+  const format = (dateKey: string) =>
+    dateFromKey(dateKey).toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  return `${format(timetable.termStart)} — ${format(timetable.termEnd)}`;
+}
+
+function firstTimetableOccurrence(termStart: string, day: TimetableDay) {
+  const date = dateFromKey(termStart);
+  const offset =
+    (timetableWeekdayNumber[day] - date.getDay() + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return localDateKey(date);
+}
+
+function timetableCalendarColor(color: string): EventColor {
+  const colors: Record<string, EventColor> = {
+    "#ddd8ff": "lilac",
+    "#ffe8a8": "yellow",
+    "#d7eddd": "emerald",
+    "#f8d9e8": "pink",
+    "#d5eafb": "blue",
+    "#f8d8c5": "coral",
+  };
+  return colors[color.toLowerCase()] ?? "emerald";
+}
+
+function timetableClassCalendarEvent(
+  timetable: ClassTimetable,
+  classItem: TimetableClass,
+): CalendarEvent | null {
+  if (
+    !timetable.termStart ||
+    !timetable.termEnd ||
+    timetable.termEnd < timetable.termStart
+  ) {
+    return null;
+  }
+
+  const date = firstTimetableOccurrence(timetable.termStart, classItem.day);
+  if (date > timetable.termEnd) return null;
+
+  return {
+    id: `timetable-event:${classItem.id}`,
+    date,
+    endDate: date,
+    title: classItem.name,
+    time: classItem.start,
+    endTime: classItem.end,
+    allDay: false,
+    calendar: "Classes",
+    color: timetableCalendarColor(classItem.color),
+    reminder: "None",
+    repeat: "Weekly",
+    repeatUntil: timetable.termEnd,
+    excludedDates: [],
+    note: `Synced from ${timetable.termName}`,
+    sourceType: "timetable",
+    timetableClassId: classItem.id,
+    timetableTermName: timetable.termName,
+  };
+}
 
 type CalendarSearchOccurrence = {
   event: CalendarEvent;
@@ -2264,6 +2349,7 @@ export default function Home() {
     color: "lavender",
   });
   const [stateReady, setStateReady] = useState(false);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -2328,6 +2414,38 @@ export default function Home() {
   const [classTimetable, setClassTimetable] = useState<ClassTimetable>(
     defaultClassTimetable,
   );
+
+  // AEREA_FEATURE_011: timetable is the source of truth for class recurrences.
+  useEffect(() => {
+    if (!stateReady) return;
+
+    const generated = classTimetable.classes
+      .map((classItem) => timetableClassCalendarEvent(classTimetable, classItem))
+      .filter((event): event is CalendarEvent => Boolean(event));
+
+    setCalendarEvents((current) => {
+      const manualEvents = current.filter(
+        (event) => event.sourceType !== "timetable",
+      );
+      const currentGenerated = current.filter(
+        (event) => event.sourceType === "timetable",
+      );
+
+      const unchanged =
+        currentGenerated.length === generated.length &&
+        generated.every((nextEvent) => {
+          const currentEvent = currentGenerated.find(
+            (event) => event.id === nextEvent.id,
+          );
+          return (
+            currentEvent !== undefined &&
+            JSON.stringify(currentEvent) === JSON.stringify(nextEvent)
+          );
+        });
+
+      return unchanged ? current : [...manualEvents, ...generated];
+    });
+  }, [classTimetable, stateReady]);
   const [selectedClass, setSelectedClass] = useState(
     starterClasses[0]?.name ?? "",
   );
@@ -14710,6 +14828,14 @@ function TodayScreen({
     520,
     Math.max(300, timetableWindow.hours * 52),
   );
+  const timetableDateRangeValid =
+    Boolean(timetableDraft.termStart) &&
+    Boolean(timetableDraft.termEnd) &&
+    timetableDraft.termEnd >= timetableDraft.termStart;
+  const timetableClassTimeValid = timetableClassDraft
+    ? minutesFromTime(timetableClassDraft.end) >
+      minutesFromTime(timetableClassDraft.start)
+    : true;
 
   const openClassTimetable = () => {
     setTimetableDraft({
@@ -14809,10 +14935,18 @@ function TodayScreen({
   };
 
   const saveClassTimetable = () => {
-    const nextTimetable = {
+    if (timetableDraft.classes.length > 0 && !timetableDateRangeValid) return;
+
+    const normalized: ClassTimetable = {
       ...timetableDraft,
       termName: timetableDraft.termName.trim() || "Current semester",
+      termStart: timetableDraft.termStart.trim(),
+      termEnd: timetableDraft.termEnd.trim(),
       termDates: timetableDraft.termDates.trim() || "Set your term dates",
+    };
+    const nextTimetable = {
+      ...normalized,
+      termDates: timetableTermDateLabel(normalized),
     };
     setClassTimetable(nextTimetable);
     setTimetableDraft(nextTimetable);
@@ -15379,23 +15513,37 @@ function TodayScreen({
                       />
                     </label>
                     <label>
-                      <span>Dates</span>
+                      <span>Semester starts</span>
                       <input
-                        value={timetableDraft.termDates}
+                        type="date"
+                        value={timetableDraft.termStart}
                         onChange={(event) =>
                           setTimetableDraft((current) => ({
                             ...current,
-                            termDates: event.target.value,
+                            termStart: event.target.value,
                           }))
                         }
-                        placeholder="August — December 2026"
+                      />
+                    </label>
+                    <label>
+                      <span>Semester ends</span>
+                      <input
+                        type="date"
+                        value={timetableDraft.termEnd}
+                        min={timetableDraft.termStart || undefined}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termEnd: event.target.value,
+                          }))
+                        }
                       />
                     </label>
                   </div>
                 ) : (
                   <p className="timetable-term-meta">
                     <i aria-hidden="true" />
-                    {classTimetable.termName} · {classTimetable.termDates}
+                    {classTimetable.termName} · {timetableTermDateLabel(classTimetable)}
                   </p>
                 )}
               </div>
@@ -15683,7 +15831,10 @@ function TodayScreen({
                       <button
                         className="timetable-save-class"
                         type="button"
-                        disabled={!timetableClassDraft.name.trim()}
+                        disabled={
+                          !timetableClassDraft.name.trim() ||
+                          !timetableClassTimeValid
+                        }
                         onClick={saveTimetableClass}
                       >
                         Save class
@@ -15708,7 +15859,14 @@ function TodayScreen({
                   >
                     Cancel
                   </button>
-                  <button type="button" onClick={saveClassTimetable}>
+                  <button
+                    type="button"
+                    onClick={saveClassTimetable}
+                    disabled={
+                      timetableDraft.classes.length > 0 &&
+                      !timetableDateRangeValid
+                    }
+                  >
                     Save semester
                   </button>
                 </footer>
