@@ -35,3 +35,15 @@ test("timetable-owned class shelf routes editing back to the timetable", () => {
   assert.match(page, /item\.timetableClassIds\?\.\[0\]/);
   assert.match(page, /setRequestedTimetableClassId\(timetableClassId\)/);
 });
+
+
+test("New Class Audio keeps its card styling without the decorative splash", () => {
+  assert.match(
+    css,
+    /\.record-card \{\s*\/\* AEREA_FIX_015B:[\s\S]{0,320}background:\s*linear-gradient\(145deg/,
+  );
+  assert.doesNotMatch(
+    css,
+    /\.record-card \{\s*\/\* AEREA_FIX_015B:[\s\S]{0,360}radial-gradient/,
+  );
+});

@@ -8463,8 +8463,8 @@ body {
 }
 
 .record-card {
+  /* AEREA_FIX_015B: keep the card exactly as-is, minus the decorative color splash. */
   background:
-    radial-gradient(circle at 94% 8%, color-mix(in srgb, var(--pink) 55%, transparent), transparent 9rem),
     linear-gradient(145deg, color-mix(in srgb, var(--blue) 14%, var(--paper)), var(--paper));
 }
 
