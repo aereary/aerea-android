@@ -1,0 +1,817 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #eef0f8;
+  color: #35384a;
+  font-family: var(--font-geist-sans), Inter, ui-rounded, "SF Pro Rounded",
+    "Segoe UI", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.overlay * {
+  box-sizing: border-box;
+}
+
+.overlay button,
+.overlay input {
+  font: inherit;
+}
+
+.overlay button {
+  color: inherit;
+}
+
+.screen,
+.professorsPanel {
+  width: min(100%, 430px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: linear-gradient(#fbfbff 0, #fff 24%);
+}
+
+.screen {
+  padding: env(safe-area-inset-top) 15px
+    calc(30px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  background: rgb(251 251 255 / 92%);
+  backdrop-filter: blur(18px);
+}
+
+.topbar > button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+}
+
+.topbar > div {
+  text-align: center;
+}
+
+.topbar strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 760;
+}
+
+.topbar small {
+  display: block;
+  margin-top: 2px;
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.hero,
+.professorIntro {
+  border: 1px solid #e9e7f8;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #f0efff, #f8fbff 55%, #fff5f8);
+}
+
+.hero {
+  padding: 18px;
+  box-shadow: 0 16px 38px rgb(70 67 100 / 10%);
+}
+
+.hero > small,
+.professorIntro > small {
+  color: #777b93;
+  font-size: 11px;
+}
+
+.hero h1 {
+  margin: 4px 0 16px;
+  font-size: 21px;
+  line-height: 1.15;
+  letter-spacing: -0.25px;
+}
+
+.progressHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.progressHead strong {
+  font-size: 28px;
+  letter-spacing: -1px;
+}
+
+.progressHead span {
+  padding-bottom: 4px;
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.progressTrack {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e5e4ef;
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #afa9ef, #a7c9ee);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.stats > div {
+  padding: 10px 8px;
+  border: 1px solid rgb(224 223 239 / 90%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 70%);
+}
+
+.stats strong {
+  display: block;
+  font-size: 17px;
+}
+
+.stats small {
+  display: block;
+  margin-top: 1px;
+  color: #888ca3;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.tabs {
+  position: sticky;
+  top: 62px;
+  z-index: 7;
+  display: flex;
+  gap: 7px;
+  padding: 12px 0 10px;
+  background: rgb(255 255 255 / 94%);
+  backdrop-filter: blur(15px);
+}
+
+.tabs button {
+  border: 0;
+  border-radius: 99px;
+  padding: 9px 13px;
+  background: #f4f4f8;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.tabs .activeTab {
+  background: #e9e7ff;
+  color: #555078;
+}
+
+.content {
+  min-height: 50dvh;
+}
+
+.section {
+  margin-top: 18px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 2px 9px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.sectionHead button {
+  border: 0;
+  background: transparent;
+  color: #7771a0;
+  font-size: 10px;
+}
+
+.sectionHead > span {
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid #e8e8f2;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.courseRow,
+.summaryRow {
+  width: 100%;
+  min-height: 61px;
+  border: 0;
+  border-bottom: 1px solid #f0f0f5;
+  background: #fff;
+  text-align: left;
+}
+
+.courseRow:last-child,
+.summaryRow:last-child {
+  border-bottom: 0;
+}
+
+.courseRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.courseRow:active,
+.summaryRow:active {
+  background: #fafaff;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.dot.approved,
+.legendDot.recommended {
+  background: #8fc8a7;
+}
+
+.dot.current {
+  background: #a7a1e6;
+}
+
+.dot.available,
+.legendDot.maybe {
+  background: #e4ba6c;
+}
+
+.dot.locked {
+  background: #c9cad3;
+}
+
+.legendDot.avoid {
+  background: #e59a9f;
+}
+
+.courseMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.courseMain strong,
+.summaryRow strong {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.courseMain small,
+.summaryRow small {
+  display: block;
+  margin-top: 4px;
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.badge,
+.detailBadge {
+  border-radius: 99px;
+  padding: 5px 7px;
+  background: #f4f4f8;
+  font-size: 9px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.badge.current,
+.detailBadge.current {
+  background: #ebe8ff;
+}
+
+.badge.approved,
+.detailBadge.approved {
+  background: #e6f6ed;
+}
+
+.badge.available,
+.detailBadge.available {
+  background: #fff4cf;
+}
+
+.badge.locked,
+.detailBadge.locked {
+  background: #f0f0f3;
+  color: #999;
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #ececf2;
+  border-radius: 16px;
+  background: #f4f4f8;
+}
+
+.searchBox span {
+  color: #777b93;
+}
+
+.searchBox input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #35384a;
+  font-size: 11px;
+}
+
+.searchBox input::placeholder {
+  color: #999cae;
+}
+
+.quarters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quarter {
+  overflow: hidden;
+  border: 1px solid #e8e8f2;
+  border-radius: 19px;
+  background: #fff;
+}
+
+.quarterHead {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border: 0;
+  background: #fff;
+  text-align: left;
+}
+
+.quarterNumber {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #f6f4ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quarterHead strong {
+  display: block;
+  font-size: 12px;
+}
+
+.quarterHead small {
+  display: block;
+  margin-top: 3px;
+  color: #888ca3;
+  font-size: 9px;
+}
+
+.quarterHead em {
+  color: #999;
+  font-size: 16px;
+  font-style: normal;
+  transition: transform 160ms ease;
+}
+
+.quarterOpen .quarterHead em {
+  transform: rotate(90deg);
+}
+
+.quarterBody {
+  border-top: 1px solid #f1f1f5;
+}
+
+.timetableSwitcher {
+  width: fit-content;
+  max-width: calc(100% - 28px);
+  display: flex;
+  gap: 5px;
+  margin: 2px auto 12px;
+  padding: 4px;
+  border: 1px solid rgb(216 214 231 / 85%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 62%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%);
+}
+
+.timetableSwitcher button {
+  min-width: 86px;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 13px;
+  background: transparent;
+  color: #76758a;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.timetableSwitcher .switcherActive {
+  background: #fff;
+  color: #54516c;
+  box-shadow: 0 3px 12px rgb(72 68 102 / 9%);
+}
+
+.sheetBackdrop,
+.formBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(37 38 51 / 30%);
+}
+
+.sheet,
+.professorForm {
+  width: min(100%, 430px);
+  max-height: 84dvh;
+  overflow: auto;
+  border-radius: 28px 28px 0 0;
+  background: #fff;
+  box-shadow: 0 -20px 60px rgb(20 20 30 / 18%);
+}
+
+.sheet {
+  padding: 9px 17px calc(23px + env(safe-area-inset-bottom));
+}
+
+.handle {
+  width: 42px;
+  height: 4px;
+  margin: 2px auto 16px;
+  border-radius: 5px;
+  background: #d8d8df;
+}
+
+.sheet h2,
+.professorForm h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.sheet > p {
+  margin: 5px 0 0;
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.detailBadge {
+  display: inline-flex;
+  margin-top: 10px;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.detailGrid > div {
+  padding: 9px 5px;
+  border: 1px solid #e8e8f2;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.detailGrid strong {
+  display: block;
+  font-size: 13px;
+}
+
+.detailGrid small {
+  color: #888ca3;
+  font-size: 8px;
+}
+
+.details {
+  margin: 14px 0 0;
+  border-top: 1px solid #e8e8f2;
+}
+
+.details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 1px;
+  border-bottom: 1px solid #f0f0f4;
+}
+
+.details dt {
+  color: #888ca3;
+  font-size: 10px;
+}
+
+.details dd {
+  max-width: 62%;
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.routeButton,
+.saveProfessorButton {
+  width: 100%;
+  border: 1px solid #e3e1f1;
+  border-radius: 15px;
+  background: #e9e7ff;
+  padding: 11px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.routeButton {
+  margin-top: 16px;
+}
+
+.routeBox {
+  margin-top: 10px;
+  padding: 13px;
+  border-radius: 16px;
+  background: #f8f8fb;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.routeBox > span {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.routeBox small {
+  color: #9292a2;
+}
+
+.routeBox i {
+  margin: 4px 0;
+  color: #aaa7bd;
+  font-style: normal;
+}
+
+.professorsPanel {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  padding: env(safe-area-inset-top) 15px
+    calc(28px + env(safe-area-inset-bottom));
+}
+
+.professorIntro {
+  padding: 18px;
+}
+
+.professorIntro h2 {
+  margin: 4px 0 6px;
+  font-size: 21px;
+}
+
+.professorIntro p {
+  margin: 0;
+  color: #888ca3;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.professorGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.professorGroup {
+  padding: 13px;
+  border: 1px solid #e8e8f2;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.professorGroupHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.professorGroupHead > span {
+  color: #888ca3;
+  font-size: 9px;
+}
+
+.professorGroupHead small {
+  display: block;
+  margin: 3px 0 0 16px;
+  color: #888ca3;
+  font-size: 9px;
+}
+
+.professorGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  display: inline-block;
+  border-radius: 99px;
+}
+
+.professorChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.professorChip {
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 8px 10px;
+  font-size: 9px;
+}
+
+.professorChip.recommended {
+  border-color: #d9eddf;
+  background: #edf8f1;
+  color: #4f755d;
+}
+
+.professorChip.maybe {
+  border-color: #f3e6b8;
+  background: #fff8df;
+  color: #806a36;
+}
+
+.professorChip.avoid {
+  border-color: #f1d6d9;
+  background: #fff0f1;
+  color: #8e555b;
+}
+
+.addProfessorButton {
+  position: sticky;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid #e4e2f1;
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgb(247 246 255 / 96%);
+  box-shadow: 0 9px 24px rgb(70 67 100 / 10%);
+  font-size: 10px;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+}
+
+.formBackdrop {
+  z-index: 30;
+}
+
+.professorForm {
+  padding: 10px 17px calc(22px + env(safe-area-inset-bottom));
+}
+
+.professorForm > input {
+  width: 100%;
+  margin-top: 13px;
+  border: 1px solid #e8e8f2;
+  border-radius: 15px;
+  outline: 0;
+  background: #fafafd;
+  padding: 12px 13px;
+  color: #35384a;
+  font-size: 11px;
+}
+
+.professorForm > input::placeholder {
+  color: #999cae;
+}
+
+.ratingChoices {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ratingChoices button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e8e8f2;
+  border-radius: 15px;
+  background: #fff;
+  padding: 11px 12px;
+  font-size: 10px;
+  text-align: left;
+}
+
+.ratingChoices .selectedRating {
+  outline: 2px solid #d9d5ff;
+  background: #faf9ff;
+}
+
+.saveProfessorButton {
+  margin-top: 12px;
+  border: 0;
+}
+
+@media (min-width: 700px) {
+  .screen,
+  .professorsPanel {
+    width: 500px;
+    max-width: calc(100vw - 44px);
+    min-height: calc(100dvh - 44px);
+    margin-top: 22px;
+    margin-bottom: 22px;
+    border-radius: 34px;
+    box-shadow: 0 20px 80px rgb(40 42 70 / 18%);
+  }
+
+  .screen {
+    overflow: clip;
+  }
+
+  .professorsPanel {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  .sheet,
+  .professorForm {
+    margin-bottom: 22px;
+    border-radius: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quarterHead em {
+    transition: none;
+  }
+}
