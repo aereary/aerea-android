@@ -34,6 +34,7 @@ test("career plan is isolated from the protected page state", () => {
   assert.match(bridge, /Horario/);
   assert.match(bridge, /Mi carrera/);
   assert.match(layout, /<CareerPlanBridge \/>/);
+  assert.match(nativeEntry, /<CareerPlanBridge \/>/);
 });
 
 test("academic cloud state is private to the authenticated user", () => {
