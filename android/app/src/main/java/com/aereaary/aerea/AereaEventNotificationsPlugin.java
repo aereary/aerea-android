@@ -69,7 +69,7 @@ public class AereaEventNotificationsPlugin extends Plugin {
             getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(EVENTS, json).apply();
             int count = scheduleJson(getContext(), json);
             JSObject result = new JSObject(); result.put("scheduled", count); result.put("exact", canExact(getContext())); call.resolve(result);
-        } catch (Exception error) { call.reject("No se pudieron programar los recordatorios", error); }
+        } catch (Exception error) { call.reject("Could not schedule reminders", error); }
     }
 
     /** Explicit QA hook: schedules one ephemeral notification and stores no demo event. */
@@ -82,8 +82,8 @@ public class AereaEventNotificationsPlugin extends Plugin {
         PendingIntent intent = pending(
             getContext(),
             identity,
-            "Prueba de notificación de aérea",
-            "Tu notificación de prueba está funcionando",
+            "aérea notification test",
+            "Your test notification is working",
             trigger,
             PendingIntent.FLAG_UPDATE_CURRENT
         );
@@ -118,7 +118,7 @@ public class AereaEventNotificationsPlugin extends Plugin {
                 long trigger = LocalDateTime.parse(day + "T" + normalizeTime(time)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - lead * 60000L;
                 if (trigger <= now) continue;
                 String identity = event.getString("id") + ":" + day; nextIds.add(identity);
-                PendingIntent pi = pending(context, identity, event.optString("title", "Evento de aérea"), trigger, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pi = pending(context, identity, event.optString("title", "aérea event"), trigger, PendingIntent.FLAG_UPDATE_CURRENT);
                 if (canExact(context)) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
                 else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
                 count++; if ("Never".equals(repeat)) break;
@@ -128,7 +128,7 @@ public class AereaEventNotificationsPlugin extends Plugin {
     }
 
     static PendingIntent pending(Context c, String id, String title, long trigger, int mode) {
-        return pending(c, id, title, "Tu evento comienza pronto", trigger, mode);
+        return pending(c, id, title, "Your event starts soon", trigger, mode);
     }
 
     static PendingIntent pending(Context c, String id, String title, String when, long trigger, int mode) {

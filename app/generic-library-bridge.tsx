@@ -93,22 +93,22 @@ function driveViewUrl(fileId: string) {
 }
 
 function kindLabel(item: GenericLibraryItem) {
-  if (item.kind === "epub") return "LIBRO · EPUB";
-  if (item.kind === "pdf") return "DOCUMENTO · PDF";
-  if (item.kind === "document") return "DOCUMENTO";
-  return "ARCHIVO";
+  if (item.kind === "epub") return "BOOK · EPUB";
+  if (item.kind === "pdf") return "DOCUMENT · PDF";
+  if (item.kind === "document") return "DOCUMENT";
+  return "FILE";
 }
 
 function kindHuman(kind: GenericLibraryKind) {
-  if (kind === "epub") return "Libro EPUB";
-  if (kind === "pdf") return "Documento PDF";
-  if (kind === "document") return "Documento";
-  return "Archivo";
+  if (kind === "epub") return "EPUB book";
+  if (kind === "pdf") return "PDF document";
+  if (kind === "document") return "Document";
+  return "File";
 }
 
 function fileSizeLabel(bytes: number | null) {
   if (bytes == null || !Number.isFinite(bytes) || bytes < 0) {
-    return "Tamaño no disponible";
+    return "Size unavailable";
   }
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
@@ -118,10 +118,10 @@ function fileSizeLabel(bytes: number | null) {
 }
 
 function dateLabel(value: string | null) {
-  if (!value) return "Fecha no disponible";
+  if (!value) return "Date unavailable";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
-  return new Intl.DateTimeFormat("es-PA", {
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -221,7 +221,7 @@ function GenericLibraryCard({
         <button
           className="ao3-copy-title"
           type="button"
-          title="Tocar para copiar el título"
+          title="Tap to copy title"
           onClick={() => void copyTitle()}
         >
           {item.title}
@@ -229,7 +229,7 @@ function GenericLibraryCard({
       </header>
 
       <div className="ao3-card-meta">
-        <strong>{item.author || "Sin autor guardado"}</strong>
+        <strong>{item.author || "No author saved"}</strong>
         <span>{item.filename}</span>
         <span className="ao3-status">{extension}</span>
       </div>
@@ -237,11 +237,11 @@ function GenericLibraryCard({
       <div className="ao3-card-body">
         <div className="ao3-context">
           <div>
-            <b>Tipo</b>
+            <b>Type</b>
             <span>{kindHuman(item.kind)}</span>
           </div>
           <div>
-            <b>Archivo</b>
+            <b>File</b>
             <span>{fileSizeLabel(item.size_bytes)}</span>
           </div>
         </div>
@@ -252,21 +252,21 @@ function GenericLibraryCard({
             target="_blank"
             rel="noreferrer"
           >
-            ↗ Abrir en Drive
+            ↗ Open in Drive
           </a>
         </div>
 
         {historicalVersions.length > 0 && (
           <details className="ao3-alternative">
             <summary>
-              + Versión anterior
-              {historicalVersions.length > 1 ? "es" : ""}
+              + Previous version
+              {historicalVersions.length > 1 ? "s" : ""}
             </summary>
             <div className="ao3-alternative-body">
               {historicalVersions.map((version) => (
                 <div className="ao3-alternative-item" key={version.id}>
                   <p>
-                    <strong>{version.title || "Versión anterior"}</strong>
+                    <strong>{version.title || "Previous version"}</strong>
                     {version.author ? ` · ${version.author}` : ""}
                     {" · "}
                     {dateLabel(version.captured_at)}
@@ -277,7 +277,7 @@ function GenericLibraryCard({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      ↗ Abrir versión protegida
+                      ↗ Open preserved version
                     </a>
                   </div>
                 </div>

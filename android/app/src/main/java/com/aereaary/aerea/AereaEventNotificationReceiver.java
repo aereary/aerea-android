@@ -14,8 +14,8 @@ public class AereaEventNotificationReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(
-            CHANNEL_ID, "Recordatorios de eventos", NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription("Avisos de eventos guardados en aérea");
+            CHANNEL_ID, "Event reminders", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("Reminders for events saved in aérea");
         manager.createNotificationChannel(channel);
         Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         PendingIntent content = PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -24,8 +24,8 @@ public class AereaEventNotificationReceiver extends BroadcastReceiver {
         String when = intent.getStringExtra("when");
         manager.notify(identity.hashCode(), new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_aerea)
-            .setContentTitle(title == null ? "Evento de aérea" : title)
-            .setContentText(when == null ? "Tu evento comienza pronto" : when)
+            .setContentTitle(title == null ? "aérea event" : title)
+            .setContentText(when == null ? "Your event starts soon" : when)
             .setAutoCancel(true).setContentIntent(content).setPriority(NotificationCompat.PRIORITY_HIGH).build());
     }
 }

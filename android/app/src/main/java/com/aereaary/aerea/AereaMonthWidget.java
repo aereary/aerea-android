@@ -176,13 +176,13 @@ public class AereaMonthWidget extends AppWidgetProvider {
         views.setTextViewText(
             R.id.month_widget_title,
             capitalize(
-                new SimpleDateFormat("MMMM yyyy", new Locale("es"))
+                new SimpleDateFormat("MMMM yyyy", Locale.US)
                     .format(month.getTime())
             )
         );
         views.setTextViewText(
             R.id.month_widget_today,
-            offset == 0 ? "Hoy" : "Volver"
+            offset == 0 ? "Today" : "Back"
         );
 
         Intent adapterIntent = new Intent(context, AereaMonthGridService.class);
@@ -216,10 +216,10 @@ public class AereaMonthWidget extends AppWidgetProvider {
         views.setTextViewText(
             R.id.month_widget_selected_date,
             offset == 0
-                ? "HOY · " + new SimpleDateFormat("d MMM", new Locale("es"))
-                    .format(agendaDate.getTime()).toUpperCase(new Locale("es"))
-                : new SimpleDateFormat("EEE d MMM", new Locale("es"))
-                    .format(agendaDate.getTime()).toUpperCase(new Locale("es"))
+                ? "TODAY · " + new SimpleDateFormat("d MMM", Locale.US)
+                    .format(agendaDate.getTime()).toUpperCase(Locale.US)
+                : new SimpleDateFormat("EEE d MMM", Locale.US)
+                    .format(agendaDate.getTime()).toUpperCase(Locale.US)
         );
         bindEvent(views, events.optJSONObject(0), 1, agendaDay.optString("mood"));
         bindEvent(views, events.optJSONObject(1), 2, agendaDay.optString("mood"));
@@ -272,7 +272,7 @@ public class AereaMonthWidget extends AppWidgetProvider {
             if (row == 1) {
                 views.setViewVisibility(containerId, View.VISIBLE);
                 views.setTextViewText(timeId, "");
-                views.setTextViewText(titleId, "Nada pendiente por aquí ♡");
+                views.setTextViewText(titleId, "Nothing pending here ♡");
                 views.setTextViewText(faceId, mood.isEmpty() ? "☁" : mood);
                 views.setInt(barId, "setBackgroundColor", 0xFF9FD8EB);
             } else {
@@ -283,7 +283,7 @@ public class AereaMonthWidget extends AppWidgetProvider {
 
         views.setViewVisibility(containerId, View.VISIBLE);
         views.setTextViewText(timeId, event.optString("time", ""));
-        views.setTextViewText(titleId, event.optString("title", "Algo bonito"));
+        views.setTextViewText(titleId, event.optString("title", "Something lovely"));
         views.setTextViewText(faceId, mood.isEmpty() ? "✦" : mood);
         views.setInt(
             barId,
@@ -322,6 +322,6 @@ public class AereaMonthWidget extends AppWidgetProvider {
 
     private static String capitalize(String value) {
         if (value == null || value.isEmpty()) return "";
-        return value.substring(0, 1).toUpperCase(new Locale("es")) + value.substring(1);
+        return value.substring(0, 1).toUpperCase(Locale.US) + value.substring(1);
     }
 }

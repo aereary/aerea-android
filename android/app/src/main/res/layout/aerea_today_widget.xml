@@ -21,7 +21,7 @@
             android:minWidth="54dp"
             android:paddingLeft="4dp"
             android:paddingRight="8dp"
-            android:text="Hoy"
+            android:text="Today"
             android:textColor="#315269"
             android:textSize="13sp"
             android:textStyle="bold" />

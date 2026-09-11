@@ -21,7 +21,7 @@
             android:minWidth="54dp"
             android:paddingLeft="4dp"
             android:paddingRight="8dp"
-            android:text="Hoy"
+            android:text="Today"
             android:textColor="#315269"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -44,7 +44,7 @@
             android:ellipsize="end"
             android:gravity="center"
             android:maxLines="1"
-            android:text="Julio 2026"
+            android:text="July 2026"
             android:textColor="#273D54"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -83,12 +83,12 @@
         android:layout_height="24dp"
         android:orientation="horizontal">
 
-        <TextView style="@style/AereaWidgetWeekday" android:text="D" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="L" />
+        <TextView style="@style/AereaWidgetWeekday" android:text="S" />
         <TextView style="@style/AereaWidgetWeekday" android:text="M" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="M" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="J" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="V" />
+        <TextView style="@style/AereaWidgetWeekday" android:text="T" />
+        <TextView style="@style/AereaWidgetWeekday" android:text="W" />
+        <TextView style="@style/AereaWidgetWeekday" android:text="T" />
+        <TextView style="@style/AereaWidgetWeekday" android:text="F" />
         <TextView style="@style/AereaWidgetWeekday" android:text="S" />
     </LinearLayout>
 
@@ -115,7 +115,7 @@
         android:paddingTop="3dp"
         android:paddingRight="9dp"
         android:paddingBottom="3dp"
-        android:text="HOY"
+        android:text="TODAY"
         android:textColor="#527780"
         android:textSize="9sp"
         android:textStyle="bold" />

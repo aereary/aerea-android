@@ -80,3 +80,20 @@ Antes de entregar:
 - The recovery baseline is commit `78df166e6442540fde71612917247e7c0270d118`; do not replace current files wholesale with older variants to recover one behavior.
 - Treat `tests/recovery-baseline.test.mjs` and the existing Android correction tests as regression contracts. Strengthen them when fixing a regression; do not remove them to make a build pass.
 - Android recovery work must preserve images, microphone, notifications, Back behavior, 12-hour time, center-based post-it drag, the approved Boca card, AO3, and phone/tablet behavior unless the user explicitly asks to change that specific area.
+
+
+## Interface language contract
+
+- The default language for all user-facing product UI is **English**.
+- Buttons, navigation, tabs, labels, placeholders, statuses, empty states,
+  confirmations, errors, accessibility labels, Android widgets and
+  notifications must use English unless the user explicitly requests otherwise.
+- Preserve user-authored, imported, official, and provider content in its
+  original language. This includes events, tasks, notes, filenames, professor
+  names, official degree/course names, AO3 titles, summaries, tags, fandoms,
+  relationships and series labels, sports team/competition names, and similar
+  external content.
+- Never translate stored data just to make the interface English. Translate
+  only the surrounding product chrome and mapped UI labels.
+- The product name remains **aérea**.
+- New Spanish UI copy requires explicit user approval.

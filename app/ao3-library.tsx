@@ -440,7 +440,7 @@ function TagCloud({
         key={tag}
         type="button"
         onClick={() => onTagSearch(tag)}
-        aria-label={`Buscar el tag ${tag}`}
+        aria-label={`Search tag ${tag}`}
         aria-pressed={selected}
       >
         <HighlightText text={tag} query={query} />
@@ -453,7 +453,7 @@ function TagCloud({
       {first.map(tagButton)}
       {hidden.length > 0 && (
         <details className="ao3-more-tags">
-          <summary>+{hidden.length} más</summary>
+          <summary>+{hidden.length} more</summary>
           <div className="ao3-more-tags-list">
             {hidden.map(tagButton)}
           </div>
@@ -488,7 +488,7 @@ function WorkActions({
       <div className="ao3-actions">
         {externalHref && (
           <a href={externalHref} target="_blank" rel="noreferrer">
-            ↗ {work.archived ? "Abrir copia en Drive" : "Abrir en AO3"}
+            ↗ {work.archived ? "Open copy in Drive" : "Open on AO3"}
           </a>
         )}
         {primary && (
@@ -511,7 +511,7 @@ function WorkActions({
       {alternatives.length > 0 && (
         <details className="ao3-alternative">
           <summary>
-            + Versión alternativa{alternatives.length > 1 ? "s" : ""}
+            + Alternate version{alternatives.length > 1 ? "s" : ""}
           </summary>
           <div className="ao3-alternative-body">
             {alternatives.map((version) => (
@@ -523,20 +523,20 @@ function WorkActions({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    ↗ Abrir en Drive
+                    ↗ Open in Drive
                   </a>
                   <button
                     type="button"
                     onClick={() =>
                       onDownload({
-                        title: `${work.title} · versión alternativa`,
+                        title: `${work.title} · alternate version`,
                         driveFileId: version.drive_file_id,
                         fileName: version.filename,
                         workId: work.work_id,
                       })
                     }
                   >
-                    ↓ Download EPUB alternativo
+                    ↓ Download alternate EPUB
                   </button>
                 </div>
               </div>
@@ -586,7 +586,7 @@ function WorkDetails({
 
       {secondarySeries.length > 0 && (
         <p className="ao3-secondary-series">
-          <b>También en:</b>{" "}
+          <b>Also in:</b>{" "}
           <HighlightText
             text={secondarySeries.map((membership) => membership.label).join(" · ")}
             query={query}
@@ -638,12 +638,12 @@ function FicCard({
     <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""}`}>
       <header className="ao3-card-header">
         <span className="ao3-eyebrow">
-          FIC{work.archived ? " · ARCHIVADO" : ""}
+          FIC{work.archived ? " · ARCHIVED" : ""}
         </span>
         <button
           className="ao3-copy-title"
           type="button"
-          title="Tocar para copiar el título"
+          title="Tap to copy title"
           onClick={() => onCopy(work.title)}
         >
           <HighlightText text={work.title} query={query} />
@@ -655,10 +655,10 @@ function FicCard({
           <HighlightText text={work.author || "Anonymous"} query={query} />
         </strong>
         <span>
-          {work.chapters || "? capítulos"} · {formatNumber(work.words)} palabras
+          {work.chapters || "? chapters"} · {formatNumber(work.words)} words
         </span>
         <span className="ao3-status">
-          {work.archived ? "Archivado · " : ""}
+          {work.archived ? "Archived · " : ""}
           {work.complete ? "Complete" : "WIP"}
         </span>
       </div>
@@ -701,8 +701,8 @@ function FicCard({
 
         {work.archived && (
           <p className="ao3-archive-note">
-            Copia preservada en Google Drive · la obra ya no está en tu listado
-            actual de AO3.
+            Preserved copy in Google Drive · this work is no longer in your current
+            AO3 list.
           </p>
         )}
 
@@ -739,11 +739,11 @@ function SeriesCard({
   return (
     <article className="ao3-card ao3-card-series">
       <header className="ao3-card-header">
-        <span className="ao3-eyebrow">SERIE</span>
+        <span className="ao3-eyebrow">SERIES</span>
         <button
           className="ao3-copy-title"
           type="button"
-          title="Tocar para copiar el título"
+          title="Tap to copy title"
           onClick={() => onCopy(entry.name)}
         >
           <HighlightText text={entry.name} query={query} />
@@ -753,15 +753,15 @@ function SeriesCard({
       <div className="ao3-card-meta">
         <strong>
           <HighlightText
-            text={authors.length === 1 ? authors[0] : `${authors.length} autores`}
+            text={authors.length === 1 ? authors[0] : `${authors.length} authors`}
             query={query}
           />
         </strong>
         <span>
-          {entry.works.length} obras · {formatNumber(entry.words)} palabras
+          {entry.works.length} works · {formatNumber(entry.words)} words
         </span>
         <span className="ao3-status">
-          {entry.complete ? "Serie completa" : "Serie en progreso"}
+          {entry.complete ? "Complete series" : "Series in progress"}
         </span>
       </div>
 
@@ -806,7 +806,7 @@ function SeriesCard({
       </div>
 
       <details className="ao3-series-parts" open={Boolean(query.trim())}>
-        <summary>Ver {entry.works.length} obras</summary>
+        <summary>View {entry.works.length} works</summary>
         <ol>
           {entry.works.map((work) => (
             <li key={work.work_id}>
@@ -817,10 +817,10 @@ function SeriesCard({
                   </strong>
                   <small>
                     {work.series?.[0]?.part
-                      ? `Parte ${work.series[0].part} · `
+                      ? `Part ${work.series[0].part} · `
                       : ""}
-                    {work.chapters || "? capítulos"} · {formatNumber(work.words)}
-                    {" palabras"}
+                    {work.chapters || "? chapters"} · {formatNumber(work.words)}
+                    {" words"}
                   </small>
                 </summary>
                 <WorkDetails
@@ -889,7 +889,7 @@ function Ao3SearchInput({
         commit(nextValue);
       }}
       onFocus={onFocus}
-      placeholder="Buscar título, autor, ship, tag…"
+      placeholder="Search title, author, ship, tag…"
       type="search"
     />
   );
@@ -1061,7 +1061,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
   const onCopy = async (title: string) => {
     const copied = await copyText(title);
-    setToast(copied ? "Título copiado ✓" : "No pude copiar el título");
+    setToast(copied ? "Title copied ✓" : "Couldn't copy title");
   };
 
   const handleLibraryScroll = useCallback(
@@ -1106,16 +1106,16 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       setDownloadTarget(null);
       setToast(
         result.alreadyStored
-          ? "Este EPUB ya está en Your Library ♡"
+          ? "This EPUB is already in Your Library ♡"
           : result.replaced
-            ? "EPUB actualizado en Your Library ♡"
-            : "EPUB guardado en Your Library ♡",
+            ? "EPUB updated in Your Library ♡"
+            : "EPUB saved to Your Library ♡",
       );
     } catch (reason) {
       setDownloadError(
         reason instanceof Error
           ? reason.message
-          : "No pude guardar este EPUB. Intentá de nuevo.",
+          : "Couldn't save this EPUB. Try again.",
       );
     } finally {
       setDownloadBusy(false);
@@ -1152,10 +1152,10 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           <div>
             <h2>My AO3 Library</h2>
             <p>
-              {works.length} fics · {entries.length} fichas ·{" "}
+              {works.length} fics · {entries.length} cards ·{" "}
               {entries.filter((entry) => entry.kind === "series").length} series
-              agrupadas · {archivedCount} archivados · {epubs.length} EPUBs
-              {alternativeCount ? ` · ${alternativeCount} alternativas` : ""}
+              grouped · {archivedCount} archived · {epubs.length} EPUBs
+              {alternativeCount ? ` · ${alternativeCount} alternates` : ""}
             </p>
           </div>
           <button
@@ -1185,7 +1185,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
               setTypeFilter(event.target.value as "all" | "fic" | "series")
             }
           >
-            <option value="all">Todo</option>
+            <option value="all">All</option>
             <option value="fic">Fics</option>
             <option value="series">Series</option>
           </select>
@@ -1195,15 +1195,15 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
               setStatusFilter(event.target.value as "all" | "complete" | "wip")
             }
           >
-            <option value="all">Cualquier estado</option>
-            <option value="complete">Completo</option>
+            <option value="all">Any status</option>
+            <option value="complete">Complete</option>
             <option value="wip">WIP</option>
           </select>
           <select
             value={fandomFilter}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => setFandomFilter(event.target.value)}
           >
-            <option value="all">Todos los fandoms</option>
+            <option value="all">All fandoms</option>
             {fandoms.map(([fandom, count]) => (
               <option key={fandom} value={fandom}>
                 {fandom} ({count})
@@ -1214,8 +1214,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
         <p className="ao3-result-count">
           {filtered.length === entries.length
-            ? `${entries.length} fichas`
-            : `${filtered.length} de ${entries.length} fichas`}
+            ? `${entries.length} cards`
+            : `${filtered.length} de ${entries.length} cards`}
         </p>
 
         {error && (
@@ -1264,8 +1264,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       {filtered.length === 0 && (
         <div className="ao3-empty">
           <span>♡</span>
-          <strong>No encontré ninguna fichita.</strong>
-          <p>Probá otra búsqueda o quitá algún filtro.</p>
+          <strong>No cards found.</strong>
+          <p>Try another search or remove a filter.</p>
         </div>
       )}
 
