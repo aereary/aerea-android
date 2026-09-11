@@ -102,12 +102,12 @@ function normalizeRemoteProfessors(value: unknown): CareerProfessor[] {
 
 function statusMeta(course: CareerCourse) {
   if (course.status === "APROBADO")
-    return { key: "approved", label: "Aprobada" } as const;
+    return { key: "approved", label: "Completed" } as const;
   if (course.status === "CURSANDO")
-    return { key: "current", label: "Cursando" } as const;
+    return { key: "current", label: "In progress" } as const;
   if (course.available)
-    return { key: "available", label: "Disponible" } as const;
-  return { key: "locked", label: "Bloqueada" } as const;
+    return { key: "available", label: "Available" } as const;
+  return { key: "locked", label: "Locked" } as const;
 }
 
 function courseByCode(code: string) {
@@ -145,7 +145,7 @@ function CourseRow({
       <span className={styles.courseMain}>
         <strong>{course.name}</strong>
         <small>
-          {course.code} · {course.credits} créd. · Cuatri {course.quarter}
+          {course.code} · {course.credits} credits · Term {course.quarter}
         </small>
       </span>
       <span className={`${styles.badge} ${styles[meta.key]}`}>
@@ -167,11 +167,11 @@ function ProfessorGroups({
   }[] = [
     {
       rating: "recommended",
-      title: "Recomendados",
-      note: "Los que sí volverías a tomar",
+      title: "Recommended",
+      note: "Would take again",
     },
-    { rating: "maybe", title: "Más o menos", note: "Con cautela" },
-    { rating: "avoid", title: "Nunca más", note: "Qué miedo 😭" },
+    { rating: "maybe", title: "Maybe", note: "Proceed with caution" },
+    { rating: "avoid", title: "Never again", note: "Absolutely not 😭" },
   ];
 
   return (
@@ -399,33 +399,33 @@ function CareerPlanOverlay({
       className={styles.overlay}
       role="dialog"
       aria-modal="true"
-      aria-label="Mi carrera"
+      aria-label="My degree"
     >
       <div className={styles.screen}>
         <header className={styles.topbar}>
-          <button type="button" onClick={onClose} aria-label="Volver al horario">
+          <button type="button" onClick={onClose} aria-label="Back to schedule">
             ‹
           </button>
           <div>
-            <strong>Mi carrera</strong>
+            <strong>My degree</strong>
             <small>Little day aérea</small>
           </div>
           <button
             type="button"
             onClick={() => setProfessorsOpen(true)}
-            aria-label="Profesores"
+            aria-label="Professors"
           >
             ⋯
           </button>
         </header>
 
         <section className={styles.hero}>
-          <small>Plan académico</small>
+          <small>Degree plan</small>
           <h1>Ingeniería Mecatrónica</h1>
           <div className={styles.progressHead}>
             <strong>{progress}%</strong>
             <span>
-              {approved.length} de {CAREER_COURSES.length} materias
+              {approved.length} of {CAREER_COURSES.length} courses
             </span>
           </div>
           <div className={styles.progressTrack}>
@@ -434,25 +434,25 @@ function CareerPlanOverlay({
           <div className={styles.stats}>
             <div>
               <strong>{approvedCredits}</strong>
-              <small>créditos aprobados</small>
+              <small>credits completed</small>
             </div>
             <div>
               <strong>{current.length}</strong>
-              <small>cursando ahora</small>
+              <small>in progress now</small>
             </div>
             <div>
               <strong>{available.length}</strong>
-              <small>disponibles</small>
+              <small>available</small>
             </div>
           </div>
         </section>
 
-        <nav className={styles.tabs} aria-label="Vistas de Mi carrera">
+        <nav className={styles.tabs} aria-label="My degree views">
           {(
             [
-              ["summary", "Resumen"],
+              ["summary", "Overview"],
               ["plan", "Plan"],
-              ["available", "Disponibles"],
+              ["available", "Available"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -471,9 +471,9 @@ function CareerPlanOverlay({
             <>
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
-                  <h2>Cursando ahora</h2>
+                  <h2>In progress</h2>
                   <button type="button" onClick={() => setView("plan")}>
-                    ver plan completo
+                    view full plan
                   </button>
                 </div>
                 <div className={styles.card}>
@@ -489,9 +489,9 @@ function CareerPlanOverlay({
 
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
-                  <h2>Tu avance</h2>
+                  <h2>Your progress</h2>
                   <button type="button" onClick={() => setView("available")}>
-                    qué puedo cursar
+                    what can I take
                   </button>
                 </div>
                 <div className={styles.card}>
@@ -502,11 +502,11 @@ function CareerPlanOverlay({
                   >
                     <span className={`${styles.dot} ${styles.approved}`} />
                     <span>
-                      <strong>{approved.length} materias completadas</strong>
-                      <small>{approvedCredits} créditos acumulados</small>
+                      <strong>{approved.length} courses completed</strong>
+                      <small>{approvedCredits} credits earned</small>
                     </span>
                     <em className={`${styles.badge} ${styles.approved}`}>
-                      Aprobadas
+                      Completed
                     </em>
                   </button>
                   <button
@@ -516,11 +516,11 @@ function CareerPlanOverlay({
                   >
                     <span className={`${styles.dot} ${styles.available}`} />
                     <span>
-                      <strong>{available.length} materias listas para tomar</strong>
-                      <small>No requieren desbloqueos adicionales</small>
+                      <strong>{available.length} courses ready to take</strong>
+                      <small>No additional prerequisites needed</small>
                     </span>
                     <em className={`${styles.badge} ${styles.available}`}>
-                      Disponibles
+                      Available
                     </em>
                   </button>
                   <button
@@ -530,11 +530,11 @@ function CareerPlanOverlay({
                   >
                     <span className={`${styles.dot} ${styles.locked}`} />
                     <span>
-                      <strong>{locked.length} materias todavía bloqueadas</strong>
-                      <small>Toca una materia para ver qué le falta</small>
+                      <strong>{locked.length} courses still locked</strong>
+                      <small>Tap a course to see what it needs</small>
                     </span>
                     <em className={`${styles.badge} ${styles.locked}`}>
-                      Bloqueadas
+                      Locked
                     </em>
                   </button>
                 </div>
@@ -549,8 +549,8 @@ function CareerPlanOverlay({
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar materia o código"
-                  aria-label="Buscar materia o código"
+                  placeholder="Search course or code"
+                  aria-label="Search course or code"
                 />
               </label>
               <div className={styles.quarters}>
@@ -590,11 +590,11 @@ function CareerPlanOverlay({
                         >
                           <span className={styles.quarterNumber}>{quarter}</span>
                           <span>
-                            <strong>Cuatrimestre {quarter}</strong>
+                            <strong>Term {quarter}</strong>
                             <small>
-                              {done} aprobadas
-                              {taking ? ` · ${taking} cursando` : ""} ·{" "}
-                              {allQuarter.length} materias
+                              {done} completed
+                              {taking ? ` · ${taking} in progress` : ""} ·{" "}
+                              {allQuarter.length} courses
                             </small>
                           </span>
                           <em>›</em>
@@ -622,8 +622,8 @@ function CareerPlanOverlay({
             <>
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
-                  <h2>Puedes cursar ahora</h2>
-                  <span>{available.length} materias</span>
+                  <h2>Available now</h2>
+                  <span>{available.length} courses</span>
                 </div>
                 <div className={styles.card}>
                   {available.map((course) => (
@@ -637,9 +637,9 @@ function CareerPlanOverlay({
               </section>
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
-                  <h2>Próximas por desbloquear</h2>
+                  <h2>Next to unlock</h2>
                   <button type="button" onClick={() => setView("plan")}>
-                    ver todas
+                    view all
                   </button>
                 </div>
                 <div className={styles.card}>
@@ -686,15 +686,15 @@ function CareerPlanOverlay({
             <div className={styles.detailGrid}>
               <div>
                 <strong>{selectedCourse.credits}</strong>
-                <small>créditos</small>
+                <small>credits</small>
               </div>
               <div>
                 <strong>{selectedCourse.theory}</strong>
-                <small>teoría</small>
+                <small>theory</small>
               </div>
               <div>
                 <strong>{selectedCourse.practice}</strong>
-                <small>práctica</small>
+                <small>practice</small>
               </div>
               <div>
                 <strong>{selectedCourse.lab}</strong>
@@ -703,30 +703,30 @@ function CareerPlanOverlay({
             </div>
             <dl className={styles.details}>
               <div>
-                <dt>Cuatrimestre</dt>
-                <dd>Cuatrimestre {selectedCourse.quarter}</dd>
+                <dt>Term</dt>
+                <dd>Term {selectedCourse.quarter}</dd>
               </div>
               <div>
-                <dt>Horas totales</dt>
+                <dt>Total hours</dt>
                 <dd>{selectedCourse.hours} h</dd>
               </div>
               <div>
-                <dt>Prerrequisito</dt>
+                <dt>Prerequisite</dt>
                 <dd>
                   {selectedCourse.prereq
                     ? courseByCode(selectedCourse.prereq)?.name ??
                       selectedCourse.prereq
-                    : "No tiene"}
+                    : "None"}
                 </dd>
               </div>
               <div>
-                <dt>Disponibilidad</dt>
+                <dt>Availability</dt>
                 <dd>
                   {selectedCourse.status === "APROBADO"
-                    ? "Completada"
+                    ? "Completed"
                     : selectedCourse.available
-                      ? "Sí"
-                      : "Bloqueada"}
+                      ? "Yes"
+                      : "Locked"}
                 </dd>
               </div>
             </dl>
@@ -735,12 +735,12 @@ function CareerPlanOverlay({
               className={styles.routeButton}
               onClick={() => setShowRoute((value) => !value)}
             >
-              {showRoute ? "Ocultar ruta" : "Ver ruta"}
+              {showRoute ? "Hide route" : "View route"}
             </button>
             {showRoute && (
               <div className={styles.routeBox}>
                 {route.length <= 1 ? (
-                  <span>Esta materia no tiene prerrequisitos.</span>
+                  <span>This course has no prerequisites.</span>
                 ) : (
                   route.map((course, index) => (
                     <span key={course.code}>
@@ -762,22 +762,21 @@ function CareerPlanOverlay({
             <button
               type="button"
               onClick={() => setProfessorsOpen(false)}
-              aria-label="Volver a Mi carrera"
+              aria-label="Back to My degree"
             >
               ‹
             </button>
             <div>
-              <strong>Profesores</strong>
-              <small>Recomendaciones guardadas</small>
+              <strong>Professors</strong>
+              <small>Saved recommendations</small>
             </div>
             <span />
           </header>
           <section className={styles.professorIntro}>
-            <small>Tu lista</small>
-            <h2>Profesores</h2>
+            <small>Your list</small>
+            <h2>Professors</h2>
             <p>
-              Verde recomendado, amarillo más o menos y rojo para no volver a
-              tomar.
+              Green is recommended, yellow is maybe, and red is never again.
             </p>
           </section>
           <ProfessorGroups professors={allProfessors} />
@@ -786,7 +785,7 @@ function CareerPlanOverlay({
             className={styles.addProfessorButton}
             onClick={() => setAddProfessorOpen(true)}
           >
-            ＋ Agregar profesor
+            ＋ Add professor
           </button>
         </div>
       )}
@@ -800,20 +799,20 @@ function CareerPlanOverlay({
         >
           <form className={styles.professorForm} onSubmit={saveProfessor}>
             <div className={styles.handle} />
-            <h2>Agregar profesor</h2>
+            <h2>Add professor</h2>
             <input
               autoFocus
               value={newProfessorName}
               onChange={(event) => setNewProfessorName(event.target.value)}
-              placeholder="Nombre del profesor"
-              aria-label="Nombre del profesor"
+              placeholder="Professor name"
+              aria-label="Professor name"
             />
             <div className={styles.ratingChoices}>
               {(
                 [
-                  ["recommended", "Recomendado"],
-                  ["maybe", "Más o menos"],
-                  ["avoid", "Nunca más 😭"],
+                  ["recommended", "Recommended"],
+                  ["maybe", "Maybe"],
+                  ["avoid", "Never again 😭"],
                 ] as const
               ).map(([rating, label]) => (
                 <button
@@ -832,7 +831,7 @@ function CareerPlanOverlay({
               ))}
             </div>
             <button type="submit" className={styles.saveProfessorButton}>
-              Guardar profesor
+              Save professor
             </button>
           </form>
         </div>
@@ -898,12 +897,12 @@ export default function CareerPlanBridge() {
       {slot &&
         !open &&
         createPortal(
-          <div className={styles.timetableSwitcher} aria-label="Sección académica">
+          <div className={styles.timetableSwitcher} aria-label="Academic section">
             <button type="button" className={styles.switcherActive}>
-              Horario
+              Schedule
             </button>
             <button type="button" onClick={() => setOpen(true)}>
-              Mi carrera
+              My degree
             </button>
           </div>,
           slot,

@@ -1557,7 +1557,7 @@ function footballMatchDateKey(match: FootballMatch) {
 
 function footballMatchTime(match: FootballMatch) {
   const kickoff = footballKickoff(match);
-  if (!kickoff) return "Hora por confirmar";
+  if (!kickoff) return "Time TBD";
   return `${String(kickoff.getHours()).padStart(2, "0")}:${String(
     kickoff.getMinutes(),
   ).padStart(2, "0")}`;
@@ -1760,7 +1760,7 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
           <img
             className="boca-pocket-stadium"
             src="/assets/bombonera-sticker.png"
-            alt="Ilustración de La Bombonera"
+            alt="Illustration of La Bombonera"
           />
           <span>LA BOMBONERA ♡</span>
         </div>
@@ -1936,13 +1936,13 @@ const moodScores: Record<string, number> = {
 };
 
 function eventCompactTimeLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   if (event.allDay) return "All day";
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   if (event.allDay) return "All day";
   const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return event.time;
@@ -1972,7 +1972,7 @@ function eventEndTimeLabel(event: CalendarEvent) {
 }
 
 function eventDetailTimeParts(event: CalendarEvent) {
-  if (event.timePending) return { range: "Hora por confirmar", period: "" };
+  if (event.timePending) return { range: "Time TBD", period: "" };
   if (event.allDay) return { range: "All day", period: "" };
 
   const formatPart = (value: string) => {
@@ -2176,7 +2176,7 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
 }
 
 function matchCountdownLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   const start = new Date(`${event.date}T${event.time || "00:00"}:00`);
   const difference = start.getTime() - Date.now();
   const hours = Math.ceil(difference / 3_600_000);
@@ -3122,7 +3122,7 @@ export default function Home() {
     const sync = async () => {
       if (sportsSettings.notifyBeforeMatches) {
         await AereaSportsNotifications.requestPermissions().catch((error) => {
-          setHistoryMessage(error instanceof Error ? error.message : "No se pudo comprobar el permiso de notificaciones deportivas.");
+          setHistoryMessage(error instanceof Error ? error.message : "Could not check sports notification permission.");
         });
       }
       const genericNotificationEvents = followedEvents.map((event) => {
@@ -3181,12 +3181,12 @@ export default function Home() {
         const status = await AereaEventNotifications.status();
         const resolved = status.permission === "granted" ? status : await AereaEventNotifications.requestPermissions();
         if (resolved.permission !== "granted" || resolved.channel === "blocked") {
-          setHistoryMessage("Las notificaciones están bloqueadas. Ábrelas en Ajustes para recibir recordatorios.");
+          setHistoryMessage("Notifications are blocked. Open Settings to receive reminders.");
         }
       }
       await AereaEventNotifications.sync({ eventsJson: JSON.stringify(reminderEvents) });
     };
-    void sync().catch((error) => setHistoryMessage(error instanceof Error ? error.message : "No se pudieron programar los recordatorios."));
+    void sync().catch((error) => setHistoryMessage(error instanceof Error ? error.message : "Could not schedule reminders."));
   }, [calendarEvents, stateReady]);
 
   useEffect(() => {
@@ -3990,9 +3990,9 @@ export default function Home() {
           .map((event) => ({
             title: event.title,
             time: event.timePending
-              ? "Hora por confirmar"
+              ? "Time TBD"
               : event.allDay
-                ? "Todo el día"
+                ? "All day"
                 : event.time,
             color: eventDisplayColor(event, dateKey),
           }));
@@ -4895,7 +4895,7 @@ export default function Home() {
       })),
       ...current,
     ]);
-    setHistoryMessage(`${picked.files.length} imagen${picked.files.length === 1 ? "" : "es"} guardada${picked.files.length === 1 ? "" : "s"} en aérea.`);
+    setHistoryMessage(`${picked.files.length} image${picked.files.length === 1 ? "" : "s"} saved to aérea.`);
   };
 
   const openLibraryItem = async (item: LibraryItem) => {
@@ -5267,19 +5267,19 @@ export default function Home() {
     const nextEvent = todayWidgetEvents[0];
     const widgetTheme = appTheme === "otter" ? "otter" : "storybook";
     void AereaWidget.sync({
-      date: dateFromKey(todayKey).toLocaleDateString("es", {
+      date: dateFromKey(todayKey).toLocaleDateString("en-US", {
         weekday: "long",
         day: "numeric",
         month: "long",
       }),
-      eventTitle: nextEvent?.title ?? "Sin eventos para hoy",
+      eventTitle: nextEvent?.title ?? "No events today",
       eventTime: nextEvent?.timePending
-        ? "Hora por confirmar"
+        ? "Time TBD"
         : nextEvent?.allDay
-          ? "Todo el día"
-          : nextEvent?.time || "Abre aérea para planear",
+          ? "All day"
+          : nextEvent?.time || "Open aérea to plan",
       temperature: activeTheme.icon,
-      progress: `${doneIds.length}/${reminders.length} recordatorios · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tareas`,
+      progress: `${doneIds.length}/${reminders.length} reminders · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tasks`,
       theme: widgetTheme,
       daysJson: widgetDaysJson,
     }).catch(() => {
@@ -5313,7 +5313,7 @@ export default function Home() {
 
   const saveAo3Epub = async (target: Ao3EpubDownloadTarget) => {
     if (!isNative()) {
-      throw new Error("Guardá este EPUB desde la app Android de aérea.");
+      throw new Error("Save this EPUB from the aérea Android app.");
     }
     const result = await AereaStorage.downloadAo3Epub({
       driveFileId: target.driveFileId,
@@ -5366,7 +5366,7 @@ export default function Home() {
         status.channel === "blocked"
       ) {
         setHistoryMessage(
-          "Las notificaciones están bloqueadas. Ábrelas en Ajustes para recibir recordatorios.",
+          "Notifications are blocked. Open Settings to receive reminders.",
         );
         return;
       }
@@ -5375,13 +5375,13 @@ export default function Home() {
         delaySeconds: 5,
       });
       setHistoryMessage(
-        `Prueba programada: llegará en ${result.firesInSeconds} segundos.`,
+        `Test scheduled: it will arrive in ${result.firesInSeconds} seconds.`,
       );
     } catch (error) {
       setHistoryMessage(
         error instanceof Error
           ? error.message
-          : "No se pudo programar la notificación de prueba.",
+          : "Could not schedule the test notification.",
       );
     }
   };
@@ -5427,7 +5427,7 @@ export default function Home() {
       const now = Date.now();
       if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
       lastExitBackRef.current = now;
-      const exitHint = "Presiona Atrás otra vez para salir de aérea";
+      const exitHint = "Press Back again to exit aérea";
       setHistoryMessage(exitHint);
       // AEREA_RECOVERY_FIX_003: use Android's native Toast so Samsung renders
       // the compact system pill + app icon exactly like the approved reference.

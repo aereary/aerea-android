@@ -18,7 +18,7 @@ const notificationReceiver = await readFile(new URL("../android/app/src/main/jav
 test("Android Back closes layers, preserves real tab history, and double-confirms exit", () => {
   assert.match(activity, /getOnBackPressedDispatcher\(\)\.addCallback/);
   assert.match(page, /aereaAndroidBack/);
-  assert.match(page, /Presiona Atrás otra vez para salir de aérea/);
+  assert.match(page, /Press Back again to exit aérea/);
   assert.match(page, /now - lastExitBackRef\.current <= 2000/);
   assert.match(page, /setTabHistory\(\(current\) => \[\.\.\.current, activeTab\]\)/);
 });
@@ -32,7 +32,7 @@ test("event reminders use stable occurrence identities and survive system change
   assert.match(notifications, /customRepeatEvery/);
   assert.match(notifications, /scheduleQaNotification/);
   for (const action of ["BOOT_COMPLETED", "MY_PACKAGE_REPLACED", "TIME_SET", "TIMEZONE_CHANGED"]) assert.match(manifest, new RegExp(action));
-  assert.match(page, /Las notificaciones están bloqueadas/);
+  assert.match(page, /Notifications are blocked/);
 });
 
 test("Settings exposes the native 5-second QA notification without saving a demo event", () => {
@@ -89,9 +89,9 @@ test("blocked Android microphone permission opens app settings instead of failin
 test("approved Android notification and Back hint keep native compact appearance", () => {
   assert.match(page, /AereaNavigation\.showExitHint\(\{ message: exitHint \}\)/);
   assert.match(navigation, /Toast\.makeText\(getContext\(\), message, Toast\.LENGTH_SHORT\)\.show\(\)/);
-  assert.match(notifications, /Prueba de notificación de aérea/);
-  assert.match(notifications, /Tu notificación de prueba está funcionando/);
-  assert.match(notifications, /return pending\(c, id, title, "Tu evento comienza pronto", trigger, mode\)/);
+  assert.match(notifications, /aérea notification test/);
+  assert.match(notifications, /Your test notification is working/);
+  assert.match(notifications, /return pending\(c, id, title, "Your event starts soon", trigger, mode\)/);
   assert.match(notificationReceiver, /new NotificationCompat\.Builder\(context, CHANNEL_ID\)/);
   assert.match(notificationReceiver, /setSmallIcon\(R\.drawable\.ic_notification_aerea\)/);
   assert.doesNotMatch(notificationReceiver, /RemoteViews|setCustomContentView|DecoratedCustomViewStyle/);

@@ -25,8 +25,8 @@ test("restores generic Drive books inside the AO3 Library without replacing AO3"
   assert.match(bridge, /\.from\("library_items"\)/);
   assert.match(bridge, /\.from\("library_item_versions"\)/);
   assert.match(bridge, /className="ao3-card aerea-generic-library-card"/);
-  assert.match(bridge, /↗ Abrir en Drive/);
-  assert.match(bridge, /Versión anterior/);
+  assert.match(bridge, /↗ Open in Drive/);
+  assert.match(bridge, /Previous version/);
   assert.match(bridge, /\.ao3-library-layer \.ao3-grid/);
   assert.match(bridge, /if \(!filtersNeutral\) return \[\]/);
 

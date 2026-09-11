@@ -1277,7 +1277,7 @@ test("renders one read-only Boca match across the current v156 surfaces", () => 
   assert.match(pageSource, /id: `football:\$\{match\.external_event_id\}`/);
   assert.match(pageSource, /sportsSource: "football_matches"/);
   assert.match(pageSource, /if \(!match\.time_confirmed \|\| !match\.kickoff_at\) return null/);
-  assert.match(pageSource, /if \(!kickoff\) return "Hora por confirmar"/);
+  assert.match(pageSource, /if \(!kickoff\) return "Time TBD"/);
   assert.match(pageSource, /kickoff\.getHours\(\)/);
   assert.match(pageSource, /footballMatchFinished\(event\.footballMatch\)/);
   assert.match(pageSource, /footballMatchCancelled\(event\.footballMatch\)/);
