@@ -425,7 +425,7 @@ function CareerPlanOverlay({
           <div className={styles.progressHead}>
             <strong>{progress}%</strong>
             <span>
-              {approved.length} de {CAREER_COURSES.length} courses
+              {approved.length} of {CAREER_COURSES.length} courses
             </span>
           </div>
           <div className={styles.progressTrack}>
@@ -438,7 +438,7 @@ function CareerPlanOverlay({
             </div>
             <div>
               <strong>{current.length}</strong>
-              <small>in progress ahora</small>
+              <small>in progress now</small>
             </div>
             <div>
               <strong>{available.length}</strong>
@@ -762,7 +762,7 @@ function CareerPlanOverlay({
             <button
               type="button"
               onClick={() => setProfessorsOpen(false)}
-              aria-label="Volver a My degree"
+              aria-label="Back to My degree"
             >
               ‹
             </button>

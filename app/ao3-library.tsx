@@ -597,7 +597,7 @@ function WorkDetails({
       <div className="ao3-synopsis">
         <b>Synopsis</b>
         <p>
-          <HighlightText text={work.summary || "Sin synopsis guardada."} query={query} />
+          <HighlightText text={work.summary || "No synopsis saved."} query={query} />
         </p>
       </div>
 
@@ -685,7 +685,7 @@ function FicCard({
         <div className="ao3-synopsis">
           <b>Synopsis</b>
           <p>
-            <HighlightText text={work.summary || "Sin synopsis guardada."} query={query} />
+            <HighlightText text={work.summary || "No synopsis saved."} query={query} />
           </p>
         </div>
 
@@ -788,7 +788,7 @@ function SeriesCard({
           <b>Synopsis</b>
           <p>
             <HighlightText
-              text={`Sinopsis de la primera obra (“${first.title}”): ${first.summary || "—"}`}
+              text={`Synopsis of the first work (“${first.title}”): ${first.summary || "—"}`}
               query={query}
             />
           </p>
@@ -1141,8 +1141,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       {loading && works.length === 0 ? (
         <div className="ao3-library ao3-library-state">
           <div className="ao3-loader" />
-          <strong>Preparando tu AO3 Library…</strong>
-          <span>La primera carga puede tardar un poquito.</span>
+          <strong>Preparing your AO3 Library…</strong>
+          <span>The first load may take a moment.</span>
         </div>
       ) : (
       <div className="ao3-library">
@@ -1215,14 +1215,14 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         <p className="ao3-result-count">
           {filtered.length === entries.length
             ? `${entries.length} cards`
-            : `${filtered.length} de ${entries.length} cards`}
+            : `${filtered.length} of ${entries.length} cards`}
         </p>
 
         {error && (
           <div className="ao3-error">
-            <strong>No pude actualizar la nube.</strong>
+            <strong>Couldn't refresh the cloud.</strong>
             <span>{error}</span>
-            {works.length > 0 && <small>Mostrando la copia guardada en este dispositivo.</small>}
+            {works.length > 0 && <small>Showing the saved copy on this device.</small>}
           </div>
         )}
       </div>

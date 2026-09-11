@@ -48,6 +48,9 @@ test("product chrome uses English while original-language content stays intact",
     "Tu avance",
     "Profesores",
     "Más o menos",
+    "{approved.length} de {CAREER_COURSES.length} courses",
+    "in progress ahora",
+    "Volver a My degree",
   ], "My degree");
 
   excludes(page, [
@@ -67,6 +70,13 @@ test("product chrome uses English while original-language content stays intact",
     "No encontré ninguna fichita",
     "Abrir en AO3",
     "También en:",
+    "Sin synopsis guardada.",
+    "Sinopsis de la primera obra",
+    "${filtered.length} de ${entries.length} cards",
+    "No pude actualizar la nube.",
+    "Mostrando la copia guardada en este dispositivo.",
+    "Preparando tu AO3 Library",
+    "La primera carga puede tardar",
   ], "AO3 UI");
 
   excludes(generic, [
