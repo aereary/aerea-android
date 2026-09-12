@@ -183,6 +183,7 @@ type AereaEventNotificationsPlugin = {
   status(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   requestPermissions(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   openSettings(): Promise<void>;
+  openExactAlarmSettings(): Promise<void>;
   scheduleQaNotification(options: { delaySeconds: number }): Promise<{
     identity: string;
     firesInSeconds: number;
@@ -477,7 +478,42 @@ type Reminder = {
   detail: string;
   icon: string;
   tint: string;
+  notificationsEnabled?: boolean;
+  notificationTimes?: string[];
 };
+
+const DEFAULT_HYDRATION_NOTIFICATION_TIMES = ["10:00", "14:00", "18:00"] as const;
+
+function isHydrationReminder(reminder: Pick<Reminder, "id" | "title" | "icon">) {
+  const normalized = reminder.title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    reminder.id === 1 ||
+    reminder.icon.includes("💧") ||
+    normalized.includes("water") ||
+    normalized.includes("drink") ||
+    normalized.includes("hydrat") ||
+    normalized.includes("agua")
+  );
+}
+
+function notificationTimesForReminder(reminder: Reminder) {
+  if (!isHydrationReminder(reminder) || reminder.notificationsEnabled === false) {
+    return [];
+  }
+
+  if (Array.isArray(reminder.notificationTimes)) {
+    return reminder.notificationTimes.filter((time) =>
+      /^\d{2}:\d{2}$/.test(time),
+    );
+  }
+
+  return [...DEFAULT_HYDRATION_NOTIFICATION_TIMES];
+}
 
 type Habit = {
   id: number;
@@ -716,7 +752,7 @@ function timetableClassCalendarEvent(
     allDay: false,
     calendar: "Classes",
     color: timetableCalendarColor(classItem.color),
-    reminder: "None",
+    reminder: "30 minutes before",
     repeat: "Weekly",
     repeatUntil: timetable.termEnd,
     excludedDates: [],
@@ -1168,6 +1204,8 @@ const starterReminders: Reminder[] = [
     detail: "Your first glass of the day",
     icon: "💧",
     tint: "blue",
+    notificationsEnabled: true,
+    notificationTimes: [...DEFAULT_HYDRATION_NOTIFICATION_TIMES],
   },
   {
     id: 2,
@@ -3114,6 +3152,24 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady || !isNative()) return;
+
+    const migrationKey = "aerea-notification-defaults-v1";
+    if (window.localStorage.getItem(migrationKey) === "1") return;
+
+    setSportsSettings((current) => ({
+      ...current,
+      notifyBeforeMatches: true,
+      notificationLeadMinutes:
+        current.notificationLeadMinutes > 0
+          ? current.notificationLeadMinutes
+          : 60,
+    }));
+
+    window.localStorage.setItem(migrationKey, "1");
+  }, [stateReady]);
+
+  useEffect(() => {
+    if (!stateReady || !isNative()) return;
     const followedEvents = sportsEvents.filter(
       (event) =>
         !isBocaSportsEvent(event) &&
@@ -3173,21 +3229,63 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady || !isNative()) return;
-    const reminderEvents = calendarEvents.filter((event) =>
+
+    const calendarReminderEvents = calendarEvents.filter((event) =>
       ["At start time", "10 minutes before", "30 minutes before", "1 hour before", "1 day before"].includes(event.reminder ?? ""),
     );
+
+    const hydrationReminderEvents: CalendarEvent[] = reminders.flatMap(
+      (reminder) =>
+        notificationTimesForReminder(reminder).map((time, index) => ({
+          id: `hydration:${reminder.id}:${index}`,
+          date: todayKey,
+          title: `${reminder.icon || "💧"} ${reminder.title}`,
+          time,
+          allDay: false,
+          calendar: "Habits",
+          color: "blue",
+          reminder: "At start time",
+          repeat: "Daily",
+          note: "Daily hydration reminder",
+        })),
+    );
+
+    const reminderEvents = [
+      ...calendarReminderEvents,
+      ...hydrationReminderEvents,
+    ];
+
     const sync = async () => {
       if (reminderEvents.length) {
         const status = await AereaEventNotifications.status();
-        const resolved = status.permission === "granted" ? status : await AereaEventNotifications.requestPermissions();
-        if (resolved.permission !== "granted" || resolved.channel === "blocked") {
-          setHistoryMessage("Notifications are blocked. Open Settings to receive reminders.");
+        const resolved =
+          status.permission === "granted"
+            ? status
+            : await AereaEventNotifications.requestPermissions();
+
+        if (
+          resolved.permission !== "granted" ||
+          resolved.channel === "blocked"
+        ) {
+          setHistoryMessage(
+            "Notifications are blocked. Open Settings to receive reminders.",
+          );
         }
       }
-      await AereaEventNotifications.sync({ eventsJson: JSON.stringify(reminderEvents) });
+
+      await AereaEventNotifications.sync({
+        eventsJson: JSON.stringify(reminderEvents),
+      });
     };
-    void sync().catch((error) => setHistoryMessage(error instanceof Error ? error.message : "Could not schedule reminders."));
-  }, [calendarEvents, stateReady]);
+
+    void sync().catch((error) =>
+      setHistoryMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not schedule reminders.",
+      ),
+    );
+  }, [calendarEvents, reminders, stateReady, todayKey]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -14637,6 +14735,14 @@ export default function Home() {
                   >
                     Android settings
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void AereaEventNotifications.openExactAlarmSettings()
+                    }
+                  >
+                    Precise timing
+                  </button>
                 </div>
               </section>
             )}
@@ -15736,6 +15842,71 @@ function TodayScreen({
                 }
               />
             </label>
+
+            {isHydrationReminder(reminderDraft) && (
+              <>
+                <label>
+                  <small>Water notifications</small>
+                  <select
+                    value={
+                      reminderDraft.notificationsEnabled === false ? "off" : "on"
+                    }
+                    onChange={(event) =>
+                      setReminderDraft((current) => {
+                        if (!current) return current;
+                        const enabled = event.target.value === "on";
+                        return {
+                          ...current,
+                          notificationsEnabled: enabled,
+                          notificationTimes:
+                            enabled && !current.notificationTimes
+                              ? [...DEFAULT_HYDRATION_NOTIFICATION_TIMES]
+                              : current.notificationTimes,
+                        };
+                      })
+                    }
+                  >
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                  </select>
+                </label>
+
+                {reminderDraft.notificationsEnabled !== false && (
+                  <div className="class-editor-row">
+                    {["Morning", "Afternoon", "Evening"].map((label, index) => {
+                      const times = notificationTimesForReminder(reminderDraft);
+                      return (
+                        <label key={label}>
+                          <small>{label}</small>
+                          <input
+                            type="time"
+                            value={
+                              times[index] ??
+                              DEFAULT_HYDRATION_NOTIFICATION_TIMES[index]
+                            }
+                            onChange={(event) =>
+                              setReminderDraft((current) => {
+                                if (!current) return current;
+                                const nextTimes = current.notificationTimes
+                                  ? [...current.notificationTimes]
+                                  : [...DEFAULT_HYDRATION_NOTIFICATION_TIMES];
+                                nextTimes[index] = event.target.value;
+                                return {
+                                  ...current,
+                                  notificationsEnabled: true,
+                                  notificationTimes: nextTimes,
+                                };
+                              })
+                            }
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
             <footer>
               {reminders.some((item) => item.id === reminderDraft.id) && (
                 <button

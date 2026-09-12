@@ -63,6 +63,20 @@ public class AereaEventNotificationsPlugin extends Plugin {
         getContext().startActivity(intent); call.resolve();
     }
 
+    @PluginMethod public void openExactAlarmSettings(PluginCall call) {
+        try {
+            if (Build.VERSION.SDK_INT >= 31 && !canExact(getContext())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    .setData(Uri.parse("package:" + getContext().getPackageName()))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(intent);
+            }
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Could not open precise timing settings", error);
+        }
+    }
+
     @PluginMethod public void sync(PluginCall call) {
         String json = call.getString("eventsJson", "[]");
         try {
@@ -109,10 +123,13 @@ public class AereaEventNotificationsPlugin extends Plugin {
         for (int i=0; i<events.length(); i++) {
             JSONObject event = events.getJSONObject(i); int lead = leadMinutes(event.optString("reminder"));
             if (lead < 0 || event.optString("date").isEmpty()) continue;
-            LocalDate start = LocalDate.parse(event.getString("date")); LocalDate end = start.plusDays(HORIZON_DAYS);
+            LocalDate start = LocalDate.parse(event.getString("date"));
+            LocalDate today = LocalDate.now();
+            LocalDate scanStart = start.isAfter(today) ? start : today;
+            LocalDate end = scanStart.plusDays(HORIZON_DAYS);
             String until = event.optString("repeatUntil"); if (!until.isEmpty()) end = min(end, LocalDate.parse(until));
             String repeat = event.optString("repeat", "Never"); JSONArray excluded = event.optJSONArray("excludedDates");
-            for (LocalDate day=start; !day.isAfter(end); day=day.plusDays(1)) {
+            for (LocalDate day=scanStart; !day.isAfter(end); day=day.plusDays(1)) {
                 if (!occurs(event, start, day, repeat) || contains(excluded, day.toString())) continue;
                 String time = event.optBoolean("allDay", false) ? "00:00" : event.optString("time", "00:00");
                 long trigger = LocalDateTime.parse(day + "T" + normalizeTime(time)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - lead * 60000L;
@@ -121,7 +138,8 @@ public class AereaEventNotificationsPlugin extends Plugin {
                 PendingIntent pi = pending(context, identity, event.optString("title", "aérea event"), trigger, PendingIntent.FLAG_UPDATE_CURRENT);
                 if (canExact(context)) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
                 else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
-                count++; if ("Never".equals(repeat)) break;
+                count++;
+                break;
             }
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet("identities", nextIds).apply(); return count;

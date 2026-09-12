@@ -27,5 +27,9 @@ public class AereaEventNotificationReceiver extends BroadcastReceiver {
             .setContentTitle(title == null ? "aérea event" : title)
             .setContentText(when == null ? "Your event starts soon" : when)
             .setAutoCancel(true).setContentIntent(content).setPriority(NotificationCompat.PRIORITY_HIGH).build());
+
+        // Keep recurring classes and habits alive without scheduling hundreds
+        // of alarms at once.
+        AereaEventNotificationsPlugin.rescheduleStored(context);
     }
 }
