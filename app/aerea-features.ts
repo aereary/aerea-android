@@ -276,7 +276,7 @@ export const DEFAULT_SPORTS_SETTINGS: SportsSettings = {
   followedTeamIds: [],
   addAutomatically: true,
   showSpecialCards: true,
-  notifyBeforeMatches: false,
+  notifyBeforeMatches: true,
   notificationLeadMinutes: 60,
   showLiveScore: false,
   showFinalScore: true,

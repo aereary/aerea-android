@@ -86,7 +86,22 @@ public class AereaSportsNotificationsPlugin extends Plugin {
                         .putExtra("body", body)
                         .putExtra("notification_id", requestCode);
                 PendingIntent pendingIntent = notificationIntent(context, requestCode, notification);
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmAt, pendingIntent);
+                if (
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                        alarmManager.canScheduleExactAlarms()
+                ) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            alarmAt,
+                            pendingIntent
+                    );
+                } else {
+                    alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            alarmAt,
+                            pendingIntent
+                    );
+                }
                 scheduledIds.add(String.valueOf(requestCode));
             }
         }
