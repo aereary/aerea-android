@@ -65,7 +65,13 @@ test("match notifications are enabled by default and migrated once", () => {
 test("recurring native reminders roll forward one occurrence at a time", () => {
   assert.match(events, /LocalDate scanStart/);
   assert.match(events, /count\+\+;\s*break;/);
-  assert.match(eventReceiver, /AereaEventNotificationsPlugin\.rescheduleStored\(context\)/);
+  assert.match(
+    eventReceiver,
+    /AereaEventNotificationsPlugin\.advanceStoredAfterDelivery\(context, identity\)/,
+  );
+  assert.match(events, /boolean cancelExisting/);
+  assert.match(events, /oldIds\.remove\(deliveredIdentity\)/);
+  assert.match(events, /cancelExisting \? new HashSet<>\(\) : new HashSet<>\(oldIds\)/);
 });
 
 test("Android exposes precise alarm access and sports uses exact alarms when allowed", () => {

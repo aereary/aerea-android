@@ -108,17 +108,57 @@ public class AereaEventNotificationsPlugin extends Plugin {
 
     static void rescheduleStored(Context context) {
         String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
-        try { scheduleJson(context, json); } catch (Exception ignored) { android.util.Log.e("aerea", "Could not restore event reminders", ignored); }
+        try {
+            scheduleJson(context, json);
+        } catch (Exception ignored) {
+            android.util.Log.e("aerea", "Could not restore event reminders", ignored);
+        }
+    }
+
+    static void advanceStoredAfterDelivery(Context context, String deliveredIdentity) {
+        String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
+        try {
+            scheduleJson(context, json, false, deliveredIdentity);
+        } catch (Exception ignored) {
+            android.util.Log.e("aerea", "Could not advance event reminders", ignored);
+        }
     }
 
     static int scheduleJson(Context context, String json) throws Exception {
+        return scheduleJson(context, json, true, null);
+    }
+
+    static int scheduleJson(
+        Context context,
+        String json,
+        boolean cancelExisting,
+        String deliveredIdentity
+    ) throws Exception {
         AlarmManager alarms = context.getSystemService(AlarmManager.class);
-        Set<String> oldIds = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet("identities", new HashSet<>());
-        for (String id : oldIds) {
-            PendingIntent existing = pending(context, id, null, 0, PendingIntent.FLAG_NO_CREATE);
-            if (existing != null) alarms.cancel(existing);
+        Set<String> oldIds = new HashSet<>(
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getStringSet("identities", new HashSet<>())
+        );
+
+        if (cancelExisting) {
+            for (String id : oldIds) {
+                PendingIntent existing = pending(
+                    context,
+                    id,
+                    null,
+                    0,
+                    PendingIntent.FLAG_NO_CREATE
+                );
+                if (existing != null) alarms.cancel(existing);
+            }
+        } else if (deliveredIdentity != null) {
+            oldIds.remove(deliveredIdentity);
         }
-        Set<String> nextIds = new HashSet<>(); int count = 0; long now = System.currentTimeMillis();
+
+        Set<String> nextIds =
+            cancelExisting ? new HashSet<>() : new HashSet<>(oldIds);
+        int count = 0;
+        long now = System.currentTimeMillis();
         JSONArray events = new JSONArray(json);
         for (int i=0; i<events.length(); i++) {
             JSONObject event = events.getJSONObject(i); int lead = leadMinutes(event.optString("reminder"));

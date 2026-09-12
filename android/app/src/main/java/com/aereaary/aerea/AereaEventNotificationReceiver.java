@@ -30,6 +30,6 @@ public class AereaEventNotificationReceiver extends BroadcastReceiver {
 
         // Keep recurring classes and habits alive without scheduling hundreds
         // of alarms at once.
-        AereaEventNotificationsPlugin.rescheduleStored(context);
+        AereaEventNotificationsPlugin.advanceStoredAfterDelivery(context, identity);
     }
 }
