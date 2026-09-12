@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import CareerPlanBridge from "./career-plan-bridge";
+import "@fontsource/patrick-hand/400.css";
 import "./globals.css";
 
 const geistSans = Geist({
