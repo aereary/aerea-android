@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Patrick+Hand&display=swap");
 
 :root {
   --ink: #2f3827;
@@ -20729,7 +20729,7 @@ body {
 .movable-post-it:nth-child(3n) .post-it-tape { background:rgba(129,116,183,.35); }
 
 .movable-post-it p {
-  font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
   font-size:17px;
   line-height:1.42;
   margin:0;
@@ -20836,7 +20836,7 @@ body {
   background:transparent;
   border:0;
   color:#282337;
-  font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
   font-size:var(--post-it-text-size,18px);
   height:100%;
   line-height:1.22;
