@@ -1234,6 +1234,13 @@ const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
 
+const primarySwipeTabs: Tab[] = [
+  "today",
+  "habits",
+  "journal",
+  "spaces",
+];
+
 const starterHabits: Habit[] = [
   {
     id: 1,
@@ -2256,6 +2263,15 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [tabHistory, setTabHistory] = useState<Tab[]>([]);
+  const pageSwipeStartRef = useRef<{
+    x: number;
+    y: number;
+    blocked: boolean;
+  } | null>(null);
+  const pageSwipeResetRef = useRef<number | null>(null);
+  const [pageSwipeAnimation, setPageSwipeAnimation] = useState<
+    "" | "page-swipe-next" | "page-swipe-previous"
+  >("");
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
@@ -5489,6 +5505,101 @@ export default function Home() {
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
+  };
+
+  const beginPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (
+      event.touches.length !== 1 ||
+      !primarySwipeTabs.includes(activeTab)
+    ) {
+      pageSwipeStartRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    const target =
+      event.target instanceof Element ? event.target : null;
+
+    const blocked = Boolean(
+      target?.closest(
+        [
+          "input",
+          "textarea",
+          "select",
+          "button",
+          "a",
+          "[role='button']",
+          "[contenteditable='true']",
+          "canvas",
+          ".movable-post-it",
+          ".post-it-editor-modal",
+        ].join(","),
+      ),
+    );
+
+    pageSwipeStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      blocked,
+    };
+  };
+
+  const finishPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = pageSwipeStartRef.current;
+    pageSwipeStartRef.current = null;
+
+    if (
+      !start ||
+      start.blocked ||
+      event.changedTouches.length !== 1 ||
+      !primarySwipeTabs.includes(activeTab)
+    ) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    // Ignore short gestures and normal vertical scrolling.
+    if (
+      Math.abs(deltaX) < 72 ||
+      Math.abs(deltaX) <= Math.abs(deltaY) * 1.25
+    ) {
+      return;
+    }
+
+    const currentIndex = primarySwipeTabs.indexOf(activeTab);
+    const nextIndex =
+      deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+
+    if (
+      nextIndex < 0 ||
+      nextIndex >= primarySwipeTabs.length
+    ) {
+      return;
+    }
+
+    if (pageSwipeResetRef.current !== null) {
+      window.clearTimeout(pageSwipeResetRef.current);
+    }
+
+    setPageSwipeAnimation("");
+
+    window.requestAnimationFrame(() => {
+      setPageSwipeAnimation(
+        deltaX < 0
+          ? "page-swipe-next"
+          : "page-swipe-previous",
+      );
+
+      changeTab(primarySwipeTabs[nextIndex]);
+
+      pageSwipeResetRef.current = window.setTimeout(() => {
+        setPageSwipeAnimation("");
+        pageSwipeResetRef.current = null;
+      }, 240);
+    });
   };
 
   useEffect(() => {
@@ -8904,7 +9015,17 @@ export default function Home() {
           </div>
         </header>}
 
-        <div className="main-content">
+        <div
+          className={[
+            "main-content",
+            pageSwipeAnimation,
+          ].filter(Boolean).join(" ")}
+          onTouchStart={beginPrimarySwipe}
+          onTouchEnd={finishPrimarySwipe}
+          onTouchCancel={() => {
+            pageSwipeStartRef.current = null;
+          }}
+        >
           {activeTab === "today" && (
             <TodayScreen
               themeId={appTheme}
