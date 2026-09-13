@@ -70,6 +70,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   readNativeAppearance,
   writeNativeAppearance,
@@ -2263,15 +2264,19 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [tabHistory, setTabHistory] = useState<Tab[]>([]);
+  const primarySwipeSurfaceRef = useRef<HTMLDivElement | null>(null);
   const pageSwipeStartRef = useRef<{
     x: number;
     y: number;
+    startedAt: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
     blocked: boolean;
   } | null>(null);
-  const pageSwipeResetRef = useRef<number | null>(null);
-  const [pageSwipeAnimation, setPageSwipeAnimation] = useState<
-    "" | "page-swipe-next" | "page-swipe-previous"
-  >("");
+  const pageSwipeFrameRef = useRef<number | null>(null);
+  const pageSwipeSettleRef = useRef<number | null>(null);
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
@@ -5507,6 +5512,23 @@ export default function Home() {
     if (tab === "today") setSelectedHomeDate(todayKey);
   };
 
+  const clearPrimarySwipeFrame = () => {
+    if (pageSwipeFrameRef.current !== null) {
+      window.cancelAnimationFrame(pageSwipeFrameRef.current);
+      pageSwipeFrameRef.current = null;
+    }
+  };
+
+  const resetPrimarySwipeSurface = (animate = false) => {
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
+
+    surface.style.transition = animate
+      ? "transform 96ms cubic-bezier(.2,.86,.24,1)"
+      : "none";
+    surface.style.transform = "translate3d(0,0,0)";
+  };
+
   const beginPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
     if (
       event.touches.length !== 1 ||
@@ -5516,11 +5538,20 @@ export default function Home() {
       return;
     }
 
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(false);
+
     const touch = event.touches[0];
     const target =
       event.target instanceof Element ? event.target : null;
 
     const blocked = Boolean(
+      (activeTab === "spaces" && space !== "menu") ||
       target?.closest(
         [
           "input",
@@ -5537,70 +5568,219 @@ export default function Home() {
       ),
     );
 
+    const now = performance.now();
+
     pageSwipeStartRef.current = {
       x: touch.clientX,
       y: touch.clientY,
+      startedAt: now,
+      lastX: touch.clientX,
+      lastAt: now,
+      velocityX: 0,
+      axis: "pending",
       blocked,
     };
+  };
+
+  const movePrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = pageSwipeStartRef.current;
+
+    if (
+      !start ||
+      start.blocked ||
+      event.touches.length !== 1
+    ) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    if (start.axis === "pending") {
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 7) {
+        return;
+      }
+
+      start.axis =
+        Math.abs(deltaX) > Math.abs(deltaY) * 1.08
+          ? "horizontal"
+          : "vertical";
+    }
+
+    if (start.axis !== "horizontal") return;
+
+    if (event.cancelable) event.preventDefault();
+
+    const now = performance.now();
+    const sampleDuration = Math.max(1, now - start.lastAt);
+
+    start.velocityX =
+      (touch.clientX - start.lastX) / sampleDuration;
+    start.lastX = touch.clientX;
+    start.lastAt = now;
+
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
+
+    const currentIndex = primarySwipeTabs.indexOf(activeTab);
+    const atFirstEdge = currentIndex === 0 && deltaX > 0;
+    const atLastEdge =
+      currentIndex === primarySwipeTabs.length - 1 &&
+      deltaX < 0;
+
+    // Samsung-like rubber resistance at the first/last page.
+    const displayedDelta =
+      atFirstEdge || atLastEdge ? deltaX * 0.18 : deltaX;
+
+    const width = surface.clientWidth || window.innerWidth;
+    const clampedDelta = Math.max(
+      -width,
+      Math.min(width, displayedDelta),
+    );
+
+    clearPrimarySwipeFrame();
+
+    pageSwipeFrameRef.current = window.requestAnimationFrame(() => {
+      surface.style.transition = "none";
+      surface.style.transform =
+        `translate3d(${clampedDelta}px,0,0)`;
+      pageSwipeFrameRef.current = null;
+    });
   };
 
   const finishPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
     const start = pageSwipeStartRef.current;
     pageSwipeStartRef.current = null;
 
+    clearPrimarySwipeFrame();
+
     if (
       !start ||
       start.blocked ||
+      start.axis !== "horizontal" ||
       event.changedTouches.length !== 1 ||
       !primarySwipeTabs.includes(activeTab)
     ) {
+      resetPrimarySwipeSurface(true);
       return;
     }
+
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
 
     const touch = event.changedTouches[0];
     const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
+    const elapsed = Math.max(
+      1,
+      performance.now() - start.startedAt,
+    );
 
-    // Ignore short gestures and normal vertical scrolling.
-    if (
-      Math.abs(deltaX) < 72 ||
-      Math.abs(deltaX) <= Math.abs(deltaY) * 1.25
-    ) {
-      return;
-    }
+    const averageVelocity = deltaX / elapsed;
+    const velocityX =
+      Math.abs(start.velocityX) > Math.abs(averageVelocity)
+        ? start.velocityX
+        : averageVelocity;
 
+    const direction = deltaX < 0 ? 1 : -1;
     const currentIndex = primarySwipeTabs.indexOf(activeTab);
-    const nextIndex =
-      deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    const nextIndex = currentIndex + direction;
 
-    if (
-      nextIndex < 0 ||
-      nextIndex >= primarySwipeTabs.length
-    ) {
-      return;
-    }
+    const width = surface.clientWidth || window.innerWidth;
+    const distanceThreshold = Math.min(64, width * 0.18);
 
-    if (pageSwipeResetRef.current !== null) {
-      window.clearTimeout(pageSwipeResetRef.current);
-    }
+    const canMove =
+      nextIndex >= 0 &&
+      nextIndex < primarySwipeTabs.length;
 
-    setPageSwipeAnimation("");
-
-    window.requestAnimationFrame(() => {
-      setPageSwipeAnimation(
-        deltaX < 0
-          ? "page-swipe-next"
-          : "page-swipe-previous",
+    const shouldCommit =
+      canMove &&
+      (
+        Math.abs(deltaX) >= distanceThreshold ||
+        Math.abs(velocityX) >= 0.42
       );
 
-      changeTab(primarySwipeTabs[nextIndex]);
+    if (!shouldCommit) {
+      resetPrimarySwipeSurface(true);
+      return;
+    }
 
-      pageSwipeResetRef.current = window.setTimeout(() => {
-        setPageSwipeAnimation("");
-        pageSwipeResetRef.current = null;
-      }, 240);
-    });
+    const outgoingTarget =
+      direction > 0 ? -width : width;
+
+    const remainingRatio =
+      Math.max(
+        0,
+        width - Math.min(width, Math.abs(deltaX)),
+      ) / width;
+
+    // Very short snap: the page already travelled with the finger.
+    const outgoingMs = Math.round(
+      Math.max(42, Math.min(76, 42 + remainingRatio * 34)),
+    );
+
+    surface.style.transition =
+      `transform ${outgoingMs}ms cubic-bezier(.18,.88,.22,1)`;
+    surface.style.transform =
+      `translate3d(${outgoingTarget}px,0,0)`;
+
+    pageSwipeSettleRef.current = window.setTimeout(() => {
+      flushSync(() => {
+        changeTab(primarySwipeTabs[nextIndex]);
+      });
+
+      // Incoming page starts immediately at the opposite edge.
+      surface.style.transition = "none";
+      surface.style.transform =
+        `translate3d(${direction > 0 ? width : -width}px,0,0)`;
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          surface.style.transition =
+            "transform 88ms cubic-bezier(.16,.9,.22,1)";
+          surface.style.transform = "translate3d(0,0,0)";
+
+          pageSwipeSettleRef.current = window.setTimeout(() => {
+            surface.style.transition = "";
+            surface.style.transform = "";
+            pageSwipeSettleRef.current = null;
+          }, 96);
+        });
+      });
+    }, outgoingMs);
   };
+
+  const cancelPrimarySwipe = () => {
+    pageSwipeStartRef.current = null;
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(true);
+  };
+
+  const returnToToday = () => {
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(false);
+
+    setTabHistory([]);
+    setActiveTab("today");
+    setSpace("menu");
+    setSelectedHomeDate(todayKey);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  };
+
+  useEffect(() => {
+    return () => {
+      clearPrimarySwipeFrame();
+
+      if (pageSwipeSettleRef.current !== null) {
+        window.clearTimeout(pageSwipeSettleRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isNative()) return;
@@ -9016,15 +9196,12 @@ export default function Home() {
         </header>}
 
         <div
-          className={[
-            "main-content",
-            pageSwipeAnimation,
-          ].filter(Boolean).join(" ")}
+          ref={primarySwipeSurfaceRef}
+          className="main-content primary-swipe-surface"
           onTouchStart={beginPrimarySwipe}
+          onTouchMove={movePrimarySwipe}
           onTouchEnd={finishPrimarySwipe}
-          onTouchCancel={() => {
-            pageSwipeStartRef.current = null;
-          }}
+          onTouchCancel={cancelPrimarySwipe}
         >
           {activeTab === "today" && (
             <TodayScreen
@@ -10601,29 +10778,23 @@ export default function Home() {
           </div>
         )}
 
-        {!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={[
-                "nav-item",
-                activeTab === tab.id ? "active" : "",
-                tab.id === "add" ? "quick-capture-nav" : "",
-              ].filter(Boolean).join(" ")}
-              aria-label={tab.id === "add" ? "Open Quick Capture" : tab.label}
-              onClick={() => {
-                if (tab.id === "add") {
-                  setQuickCaptureOpen(true);
-                  return;
-                }
-                changeTab(tab.id);
-              }}
+        {!sketchFullscreen && activeTab !== "today" && (
+          <button
+            type="button"
+            className="floating-home-button"
+            onClick={returnToToday}
+            aria-label="Back to Today"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
             >
-              <span>{tab.icon}</span>
-              {tab.id !== "add" && <small>{tab.label}</small>}
-            </button>
-          ))}
-        </nav>}
+              <path
+                d="M4.5 10.6 12 4.5l7.5 6.1v8a1.4 1.4 0 0 1-1.4 1.4h-4.2v-5.3h-3.8V20H5.9a1.4 1.4 0 0 1-1.4-1.4v-8Z"
+              />
+            </svg>
+          </button>
+        )}
       </section>
 
       {ao3LibraryOpen && (

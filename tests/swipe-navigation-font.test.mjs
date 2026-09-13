@@ -29,7 +29,7 @@ const packageJson = JSON.parse(
   ),
 );
 
-test("post-it handwriting is bundled locally for the APK", () => {
+test("post-it handwriting stays bundled locally", () => {
   assert.ok(
     packageJson.dependencies["@fontsource/patrick-hand"],
   );
@@ -48,45 +48,48 @@ test("post-it handwriting is bundled locally for the APK", () => {
     css,
     /font-family:"Patrick Hand"/,
   );
+});
 
+test("primary paging follows the finger instead of waiting for release", () => {
+  assert.match(page, /onTouchMove=\{movePrimarySwipe\}/);
+  assert.match(page, /velocityX/);
+  assert.match(page, /translate3d\(\$\{clampedDelta\}px,0,0\)/);
+  assert.match(page, /Math\.abs\(velocityX\) >= 0\.42/);
+  assert.match(page, /outgoingMs/);
+
+  assert.doesNotMatch(page, /pageSwipeAnimation/);
+  assert.doesNotMatch(css, /aerea-page-enter-from-right/);
+  assert.doesNotMatch(css, /aerea-page-enter-from-left/);
+});
+
+test("corner Quick Capture is gone and non-home screens get Home", () => {
   assert.doesNotMatch(
-    css,
-    /family=Patrick\+Hand/,
-  );
-});
-
-test("primary navigation is swipe-first", () => {
-  assert.match(
     page,
-    /const primarySwipeTabs: Tab\[\] = \[[\s\S]*"today"[\s\S]*"habits"[\s\S]*"journal"[\s\S]*"spaces"/,
-  );
-
-  assert.match(page, /beginPrimarySwipe/);
-  assert.match(page, /finishPrimarySwipe/);
-  assert.match(page, /Math\.abs\(deltaX\) < 72/);
-
-  assert.match(
-    page,
-    /onTouchStart=\{beginPrimarySwipe\}/,
+    /!sketchFullscreen && <nav className="bottom-nav"/,
   );
 
   assert.match(
     page,
-    /onTouchEnd=\{finishPrimarySwipe\}/,
-  );
-});
-
-test("the large bottom navigation is removed visually", () => {
-  assert.match(
-    css,
-    /\.nav-item:not\(\.quick-capture-nav\)[\s\S]*display: none !important/,
+    /activeTab !== "today"/,
   );
 
   assert.match(
-    css,
-    /\.agenda-v2-home-nav[\s\S]*display: none !important/,
+    page,
+    /className="floating-home-button"/,
   );
 
-  assert.match(css, /aerea-page-enter-from-right/);
-  assert.match(css, /aerea-page-enter-from-left/);
+  assert.match(
+    page,
+    /aria-label="Back to Today"/,
+  );
+
+  assert.match(
+    page,
+    /setActiveTab\("today"\)/,
+  );
+
+  assert.match(
+    css,
+    /\.floating-home-button/,
+  );
 });
