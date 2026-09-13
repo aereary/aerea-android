@@ -70,7 +70,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import {
   readNativeAppearance,
   writeNativeAppearance,
@@ -5510,6 +5509,12 @@ export default function Home() {
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
+
+    // Every primary screen opens from its own top instead of inheriting
+    // the previous screen's vertical scroll position.
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
   };
 
   const clearPrimarySwipeFrame = () => {
@@ -5629,14 +5634,15 @@ export default function Home() {
       currentIndex === primarySwipeTabs.length - 1 &&
       deltaX < 0;
 
-    // Samsung-like rubber resistance at the first/last page.
-    const displayedDelta =
-      atFirstEdge || atLastEdge ? deltaX * 0.18 : deltaX;
-
-    const width = surface.clientWidth || window.innerWidth;
+    // Keep the page attached to the finger, but only move it a little.
+    // Full-screen dragging made transitions feel floaty and caused
+    // accidental horizontal movement while vertically scrolling.
+    const dragResistance =
+      atFirstEdge || atLastEdge ? 0.08 : 0.22;
+    const displayedDelta = deltaX * dragResistance;
     const clampedDelta = Math.max(
-      -width,
-      Math.min(width, displayedDelta),
+      -44,
+      Math.min(44, displayedDelta),
     );
 
     clearPrimarySwipeFrame();
@@ -5705,47 +5711,34 @@ export default function Home() {
       return;
     }
 
-    const outgoingTarget =
-      direction > 0 ? -width : width;
-
-    const remainingRatio =
-      Math.max(
-        0,
-        width - Math.min(width, Math.abs(deltaX)),
-      ) / width;
-
-    // Very short snap: the page already travelled with the finger.
-    const outgoingMs = Math.round(
-      Math.max(42, Math.min(76, 42 + remainingRatio * 34)),
-    );
+    // Short, restrained transition. The previous implementation moved
+    // the whole interface one full screen out and then another full
+    // screen back in, which felt like a jump inside the Android WebView.
+    const outgoingTarget = direction > 0 ? -28 : 28;
+    const outgoingMs = 72;
 
     surface.style.transition =
-      `transform ${outgoingMs}ms cubic-bezier(.18,.88,.22,1)`;
+      `transform ${outgoingMs}ms cubic-bezier(.2,.86,.24,1)`;
     surface.style.transform =
       `translate3d(${outgoingTarget}px,0,0)`;
 
     pageSwipeSettleRef.current = window.setTimeout(() => {
-      flushSync(() => {
-        changeTab(primarySwipeTabs[nextIndex]);
-      });
+      changeTab(primarySwipeTabs[nextIndex]);
 
-      // Incoming page starts immediately at the opposite edge.
       surface.style.transition = "none";
       surface.style.transform =
-        `translate3d(${direction > 0 ? width : -width}px,0,0)`;
+        `translate3d(${direction > 0 ? 18 : -18}px,0,0)`;
 
       window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          surface.style.transition =
-            "transform 88ms cubic-bezier(.16,.9,.22,1)";
-          surface.style.transform = "translate3d(0,0,0)";
+        surface.style.transition =
+          "transform 120ms cubic-bezier(.2,.86,.24,1)";
+        surface.style.transform = "translate3d(0,0,0)";
 
-          pageSwipeSettleRef.current = window.setTimeout(() => {
-            surface.style.transition = "";
-            surface.style.transform = "";
-            pageSwipeSettleRef.current = null;
-          }, 96);
-        });
+        pageSwipeSettleRef.current = window.setTimeout(() => {
+          surface.style.transition = "";
+          surface.style.transform = "";
+          pageSwipeSettleRef.current = null;
+        }, 130);
       });
     }, outgoingMs);
   };
