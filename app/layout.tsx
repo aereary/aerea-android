@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import CareerPlanBridge from "./career-plan-bridge";
+import TimetableAgendaBridge from "./timetable-agenda-bridge";
 import "@fontsource/patrick-hand/400.css";
 import "./globals.css";
+import "./timetable-agenda.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +56,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <TimetableAgendaBridge />
         <CareerPlanBridge />
       </body>
     </html>
