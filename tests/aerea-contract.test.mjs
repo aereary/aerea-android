@@ -995,18 +995,17 @@ test("ships launcher-safe widgets with a useful empty first render", () => {
   assert.match(manifestSource, /AereaMonthWidget/);
 });
 
-test("uses the central plus for universal Inbox capture", () => {
-  assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
-  assert.match(pageSource, /tab\.id === "add" \? "Open Quick Capture" : tab\.label/);
-  assert.equal(
-    (pageSource.match(/\{tab\.id !== "add" && <small>\{tab\.label\}<\/small>\}/g) ?? []).length,
-    2,
-    "the center plus should not repeat the Add label in either bottom navigation",
+test("removes the primary Quick Capture bar for swipe-first navigation", () => {
+  assert.doesNotMatch(
+    pageSource,
+    /!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">/,
   );
+  assert.match(pageSource, /className="floating-home-button"/);
+  assert.match(pageSource, /aria-label="Back to Today"/);
   assert.equal(
     (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
-    2,
-    "only the two rendered variants of the central navigation plus may open Quick Capture",
+    1,
+    "only the legacy agenda navigation may retain its internal Quick Capture handler",
   );
   assert.doesNotMatch(
     pageSource,
