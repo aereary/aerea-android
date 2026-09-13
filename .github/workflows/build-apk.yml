@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - recovery/consolidation-2026-09-05
 
 permissions:
   contents: write
