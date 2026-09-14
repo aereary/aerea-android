@@ -10771,22 +10771,36 @@ export default function Home() {
           </div>
         )}
 
-        {!sketchFullscreen && activeTab !== "today" && (
-          <button
-            type="button"
-            className="floating-home-button"
-            onClick={returnToToday}
-            aria-label="Back to Today"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                d="M4.5 10.6 12 4.5l7.5 6.1v8a1.4 1.4 0 0 1-1.4 1.4h-4.2v-5.3h-3.8V20H5.9a1.4 1.4 0 0 1-1.4-1.4v-8Z"
-              />
-            </svg>
-          </button>
+        {!sketchFullscreen && (
+          <nav className="bottom-nav" aria-label="Primary navigation">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={[
+                  "nav-item",
+                  activeTab === tab.id ? "active" : "",
+                  tab.id === "add" ? "quick-capture-nav" : "",
+                ].filter(Boolean).join(" ")}
+                aria-label={
+                  tab.id === "add"
+                    ? "Open Quick Capture"
+                    : tab.label
+                }
+                onClick={() => {
+                  if (tab.id === "add") {
+                    setQuickCaptureOpen(true);
+                    return;
+                  }
+                  changeTab(tab.id);
+                }}
+              >
+                <span>{tab.icon}</span>
+                {tab.id !== "add" && (
+                  <small>{tab.label}</small>
+                )}
+              </button>
+            ))}
+          </nav>
         )}
       </section>
 

@@ -995,45 +995,31 @@ test("ships launcher-safe widgets with a useful empty first render", () => {
   assert.match(manifestSource, /AereaMonthWidget/);
 });
 
-test("removes the primary Quick Capture bar for swipe-first navigation", () => {
+test("restores the normal bottom navigation while keeping swipe navigation", () => {
+  assert.match(
+    pageSource,
+    /<nav className="bottom-nav" aria-label="Primary navigation">/,
+  );
+
+  assert.match(
+    pageSource,
+    /tab\.id === "add" \? "quick-capture-nav" : ""/,
+  );
+
+  assert.match(
+    pageSource,
+    /tab\.id === "add"[\s\S]*setQuickCaptureOpen\(true\)/,
+  );
+
   assert.doesNotMatch(
     pageSource,
-    /!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">/,
+    /className="floating-home-button"/,
   );
-  assert.match(pageSource, /className="floating-home-button"/);
-  assert.match(pageSource, /aria-label="Back to Today"/);
-  assert.equal(
-    (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
-    1,
-    "only the legacy agenda navigation may retain its internal Quick Capture handler",
-  );
+
   assert.doesNotMatch(
     pageSource,
-    /className="feature-space-toolbar"[\s\S]{0,500}setQuickCaptureOpen\(true\)/,
+    /aria-label="Back to Today"/,
   );
-  assert.match(pageSource, /Keep in Inbox/);
-  for (const kind of ["photo", "pdf", "file", "link"]) {
-    assert.match(featureSource, new RegExp(`\\| "${kind}"`));
-  }
-  for (const destination of ["event", "task", "post-it", "note", "library"]) {
-    assert.match(pageSource, new RegExp(`"${destination}"`));
-  }
-  assert.match(pageSource, /ensureInboxLibraryItem/);
-  assert.match(pageSource, /libraryItemAsStudyFile/);
-  assert.match(pageSource, /Capture is still here/);
-  assert.match(pageSource, /const openInboxDestination =/);
-  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/);
-  assert.match(pageSource, /className=\{converted \? "converted" : ""\}/);
-  assert.match(pageSource, /Open saved \$\{destination\}/);
-  assert.match(pageSource, /sourceInboxId: item\.id/);
-  assert.match(pageSource, /setRequestedStudyNoteId\(note\.id\)/);
-  assert.match(pageSource, /openTaskEditor\(task\)/);
-  assert.match(pageSource, /className="task-editor-basics"/);
-  assert.match(pageSource, />\s*Save task\s*</);
-  assert.match(pageSource, /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/);
-  assert.match(pageSource, /className="inbox-item-icon"/);
-  assert.match(pageSource, /className="inbox-item-copy"/);
-  assert.match(cssSource, /\.inbox-convert-actions button\.converted/);
 });
 
 test("keeps the Recordings class editor compact and centered", () => {

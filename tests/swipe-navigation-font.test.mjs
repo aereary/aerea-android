@@ -62,33 +62,33 @@ test("primary paging follows the finger instead of waiting for release", () => {
   assert.doesNotMatch(css, /aerea-page-enter-from-left/);
 });
 
-test("corner Quick Capture is gone and non-home screens get Home", () => {
+test("classic bottom navigation is restored alongside swipe paging", () => {
+  assert.match(
+    page,
+    /<nav className="bottom-nav" aria-label="Primary navigation">/,
+  );
+
+  assert.match(
+    page,
+    /tab\.id === "add" \? "quick-capture-nav" : ""/,
+  );
+
+  assert.match(
+    page,
+    /tab\.id === "add"[\s\S]*setQuickCaptureOpen\(true\)/,
+  );
+
   assert.doesNotMatch(
-    page,
-    /!sketchFullscreen && <nav className="bottom-nav"/,
-  );
-
-  assert.match(
-    page,
-    /activeTab !== "today"/,
-  );
-
-  assert.match(
     page,
     /className="floating-home-button"/,
   );
 
-  assert.match(
+  assert.doesNotMatch(
     page,
     /aria-label="Back to Today"/,
   );
 
-  assert.match(
-    page,
-    /setActiveTab\("today"\)/,
-  );
-
-  assert.match(
+  assert.doesNotMatch(
     css,
     /\.floating-home-button/,
   );
