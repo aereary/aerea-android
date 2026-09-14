@@ -113,3 +113,57 @@ test("health routine note is an overlay, not a Habits layout change", () => {
   assert.match(page, /className="health-routine-backdrop"/);
   assert.match(page, /aria-label="My daily rhythm"/);
 });
+
+test("weekday Health routines never reuse another weekday event id", () => {
+  const start = page.indexOf("const makeRoutineEvent =");
+  const end = page.indexOf("let nextEvents", start);
+
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+
+  const makeRoutineEvent = page.slice(start, end);
+
+  assert.match(
+    makeRoutineEvent,
+    /weekday === undefined/,
+  );
+
+  assert.match(
+    makeRoutineEvent,
+    /event\.healthRoutineWeekday === weekday/,
+  );
+
+  assert.doesNotMatch(
+    makeRoutineEvent,
+    /\?\? existingEvents\[0\]/,
+  );
+
+  assert.match(
+    makeRoutineEvent,
+    /`health-routine-event:\$\{groupId\}:\$\{suffix\}`/,
+  );
+});
+
+test("Certain days cannot save without selecting a weekday", () => {
+  assert.match(
+    page,
+    /healthRoutineDraft\.cadence === "weekdays"[\s\S]{0,100}healthRoutineDraft\.weekdays\.length === 0/,
+  );
+
+  assert.doesNotMatch(
+    page,
+    /healthRoutineDraft\.weekdays\.length[\s\S]{0,100}\[dateFromKey\(todayKey\)\.getDay\(\)\]/,
+  );
+});
+
+test("Health routine uses one canonical CSS implementation", () => {
+  assert.equal(
+    (css.match(/\/\* AEREA_HEALTH_ROUTINE_NOTE_V2 \*\//g) ?? []).length,
+    1,
+  );
+
+  assert.equal(
+    (css.match(/\/\* AEREA_HEALTH_ROUTINE_NOTE \*\//g) ?? []).length,
+    0,
+  );
+});

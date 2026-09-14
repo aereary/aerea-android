@@ -2483,6 +2483,13 @@ export default function Home() {
     const title = healthRoutineDraft.title.trim();
     if (!title) return;
 
+    if (
+      healthRoutineDraft.cadence === "weekdays" &&
+      healthRoutineDraft.weekdays.length === 0
+    ) {
+      return;
+    }
+
     const groupId =
       healthRoutineEditingGroupId ??
       `health-routine:${Date.now()}-${Math.random()
@@ -2521,11 +2528,14 @@ export default function Home() {
       customEvery?: number,
     ): CalendarEvent => {
       const matchingExisting =
-        existingEvents.find(
-          (event) =>
-            weekday !== undefined &&
-            event.healthRoutineWeekday === weekday,
-        ) ?? existingEvents[0];
+        weekday === undefined
+          ? existingEvents.length === 1
+            ? existingEvents[0]
+            : undefined
+          : existingEvents.find(
+              (event) =>
+                event.healthRoutineWeekday === weekday,
+            );
 
       return {
         id:
@@ -2565,11 +2575,7 @@ export default function Home() {
         ),
       ];
     } else if (healthRoutineDraft.cadence === "weekdays") {
-      const weekdays = (
-        healthRoutineDraft.weekdays.length
-          ? healthRoutineDraft.weekdays
-          : [dateFromKey(todayKey).getDay()]
-      )
+      const weekdays = healthRoutineDraft.weekdays
         .slice()
         .sort((a, b) => a - b);
 
@@ -9776,7 +9782,11 @@ export default function Home() {
                             type="button"
                             className="primary"
                             disabled={
-                              !healthRoutineDraft.title.trim()
+                              !healthRoutineDraft.title.trim() ||
+                              (
+                                healthRoutineDraft.cadence === "weekdays" &&
+                                healthRoutineDraft.weekdays.length === 0
+                              )
                             }
                             onClick={saveHealthRoutine}
                           >
