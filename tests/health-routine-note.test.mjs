@@ -98,9 +98,32 @@ test("idle swipe surface no longer traps fixed overlays", () => {
   );
   assert.doesNotMatch(block, /will-change:\s*transform/);
 
+  const resetStart = page.indexOf(
+    "const resetPrimarySwipeSurface =",
+  );
+  const resetEnd = page.indexOf(
+    "const beginPrimarySwipe =",
+    resetStart,
+  );
+
+  assert.notEqual(resetStart, -1);
+  assert.notEqual(resetEnd, -1);
+
+  const resetBlock = page.slice(resetStart, resetEnd);
+
   assert.match(
-    page,
-    /surface\.style\.transform = ""/,
+    resetBlock,
+    /if \(!animate\)[\s\S]*?surface\.style\.transform = ""/,
+  );
+
+  assert.match(
+    resetBlock,
+    /surface\.style\.transform = "translate3d\(0,0,0\)"/,
+  );
+
+  assert.match(
+    resetBlock,
+    /window\.setTimeout\([\s\S]*?surface\.style\.transform = ""/,
   );
 });
 

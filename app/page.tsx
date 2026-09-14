@@ -5791,10 +5791,31 @@ export default function Home() {
     const surface = primarySwipeSurfaceRef.current;
     if (!surface) return;
 
-    surface.style.transition = animate
-      ? "transform 96ms cubic-bezier(.2,.86,.24,1)"
-      : "none";
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    if (!animate) {
+      surface.style.transition = "";
+      surface.style.transform = "";
+      return;
+    }
+
+    surface.style.transition =
+      "transform 96ms cubic-bezier(.2,.86,.24,1)";
     surface.style.transform = "translate3d(0,0,0)";
+
+    pageSwipeSettleRef.current = window.setTimeout(() => {
+      if (primarySwipeSurfaceRef.current !== surface) {
+        pageSwipeSettleRef.current = null;
+        return;
+      }
+
+      surface.style.transition = "";
+      surface.style.transform = "";
+      pageSwipeSettleRef.current = null;
+    }, 112);
   };
 
   const beginPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
