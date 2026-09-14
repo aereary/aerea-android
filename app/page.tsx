@@ -606,6 +606,25 @@ const defaultClassTimetable: ClassTimetable = {
   classes: [],
 };
 
+type HealthRoutineCadence = "daily" | "alternate" | "weekdays";
+
+type HealthRoutineDraft = {
+  title: string;
+  cadence: HealthRoutineCadence;
+  weekdays: number[];
+  time: string;
+};
+
+const HEALTH_ROUTINE_DAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
+
 type CalendarEvent = {
   id: string;
   date: string;
@@ -647,9 +666,12 @@ type CalendarEvent = {
   kickoffTimestamp?: number | null;
   footballMatch?: FootballMatch;
   sourceInboxId?: string;
-  sourceType?: "timetable";
+  sourceType?: "timetable" | "health-routine";
   timetableClassId?: string;
   timetableTermName?: string;
+  healthRoutineGroupId?: string;
+  healthRoutineCadence?: HealthRoutineCadence;
+  healthRoutineWeekday?: number;
   healthCompletedDates?: string[];
 };
 
@@ -2348,6 +2370,247 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+  const [healthRoutineOpen, setHealthRoutineOpen] = useState(false);
+  const [healthRoutineEditorOpen, setHealthRoutineEditorOpen] = useState(false);
+  const [healthRoutineEditingGroupId, setHealthRoutineEditingGroupId] =
+    useState<string | null>(null);
+  const [healthRoutineDraft, setHealthRoutineDraft] =
+    useState<HealthRoutineDraft>(() => ({
+      title: "",
+      cadence: "daily",
+      weekdays: [dateFromKey(todayKey).getDay()],
+      time: "",
+    }));
+
+  const healthRoutineGroups = useMemo(() => {
+    const grouped = new Map<string, CalendarEvent[]>();
+
+    calendarEvents
+      .filter((event) => event.sourceType === "health-routine")
+      .forEach((event) => {
+        const groupId = event.healthRoutineGroupId ?? event.id;
+        const group = grouped.get(groupId) ?? [];
+        group.push(event);
+        grouped.set(groupId, group);
+      });
+
+    return Array.from(grouped.entries())
+      .map(([id, events]) => ({
+        id,
+        events: [...events].sort((first, second) =>
+          first.date.localeCompare(second.date),
+        ),
+      }))
+      .sort((first, second) =>
+        first.events[0].title.localeCompare(second.events[0].title),
+      );
+  }, [calendarEvents]);
+
+  const resetHealthRoutineDraft = () => {
+    setHealthRoutineEditingGroupId(null);
+    setHealthRoutineDraft({
+      title: "",
+      cadence: "daily",
+      weekdays: [dateFromKey(todayKey).getDay()],
+      time: "",
+    });
+  };
+
+  const openHealthRoutineNote = () => {
+    setHealthRoutineEditorOpen(false);
+    resetHealthRoutineDraft();
+    setHealthRoutineOpen(true);
+  };
+
+  const startNewHealthRoutine = () => {
+    resetHealthRoutineDraft();
+    setHealthRoutineEditorOpen(true);
+  };
+
+  const editHealthRoutine = (groupId: string) => {
+    const events = calendarEvents.filter(
+      (event) =>
+        event.sourceType === "health-routine" &&
+        (event.healthRoutineGroupId ?? event.id) === groupId,
+    );
+
+    if (!events.length) return;
+
+    const first = events[0];
+    const cadence = first.healthRoutineCadence ?? "daily";
+
+    const weekdays =
+      cadence === "weekdays"
+        ? Array.from(
+            new Set(
+              events.map(
+                (event) =>
+                  event.healthRoutineWeekday ??
+                  dateFromKey(event.date).getDay(),
+              ),
+            ),
+          ).sort((a, b) => a - b)
+        : [dateFromKey(first.date).getDay()];
+
+    setHealthRoutineEditingGroupId(groupId);
+    setHealthRoutineDraft({
+      title: first.title,
+      cadence,
+      weekdays,
+      time: first.allDay ? "" : first.time,
+    });
+    setHealthRoutineEditorOpen(true);
+  };
+
+  const deleteHealthRoutine = (groupId: string) => {
+    setCalendarEvents((current) =>
+      current.filter((event) => {
+        if (event.sourceType !== "health-routine") return true;
+        return (event.healthRoutineGroupId ?? event.id) !== groupId;
+      }),
+    );
+
+    if (healthRoutineEditingGroupId === groupId) {
+      setHealthRoutineEditorOpen(false);
+      resetHealthRoutineDraft();
+    }
+
+    recordAction("Deleted Health routine");
+  };
+
+  const saveHealthRoutine = () => {
+    const title = healthRoutineDraft.title.trim();
+    if (!title) return;
+
+    if (
+      healthRoutineDraft.cadence === "weekdays" &&
+      healthRoutineDraft.weekdays.length === 0
+    ) {
+      return;
+    }
+
+    const groupId =
+      healthRoutineEditingGroupId ??
+      `health-routine:${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
+    const existingEvents = calendarEvents.filter(
+      (event) =>
+        event.sourceType === "health-routine" &&
+        (event.healthRoutineGroupId ?? event.id) === groupId,
+    );
+
+    const completedDates = Array.from(
+      new Set(
+        existingEvents.flatMap(
+          (event) => event.healthCompletedDates ?? [],
+        ),
+      ),
+    ).sort();
+
+    const routineTime = healthRoutineDraft.time || "09:00";
+    const allDay = !healthRoutineDraft.time;
+
+    const dateForWeekday = (weekday: number) => {
+      const date = dateFromKey(todayKey);
+      const offset = (weekday - date.getDay() + 7) % 7;
+      date.setDate(date.getDate() + offset);
+      return localDateKey(date);
+    };
+
+    const makeRoutineEvent = (
+      suffix: string,
+      date: string,
+      repeat: RepeatOption,
+      weekday?: number,
+      customEvery?: number,
+    ): CalendarEvent => {
+      const matchingExisting =
+        weekday === undefined
+          ? existingEvents.length === 1
+            ? existingEvents[0]
+            : undefined
+          : existingEvents.find(
+              (event) =>
+                event.healthRoutineWeekday === weekday,
+            );
+
+      return {
+        id:
+          matchingExisting?.id ??
+          `health-routine-event:${groupId}:${suffix}`,
+        date,
+        title,
+        time: routineTime,
+        allDay,
+        calendar: "Health",
+        color: "cyan",
+        reminder: allDay ? undefined : "10 minutes before",
+        repeat,
+        customRepeatEvery: customEvery,
+        customRepeatUnit:
+          repeat === "Custom" ? "days" : undefined,
+        excludedDates: [],
+        priority: "gentle",
+        sourceType: "health-routine",
+        healthRoutineGroupId: groupId,
+        healthRoutineCadence: healthRoutineDraft.cadence,
+        healthRoutineWeekday: weekday,
+        healthCompletedDates: [...completedDates],
+      };
+    };
+
+    let nextEvents: CalendarEvent[];
+
+    if (healthRoutineDraft.cadence === "alternate") {
+      nextEvents = [
+        makeRoutineEvent(
+          "alternate",
+          todayKey,
+          "Custom",
+          undefined,
+          2,
+        ),
+      ];
+    } else if (healthRoutineDraft.cadence === "weekdays") {
+      const weekdays = healthRoutineDraft.weekdays
+        .slice()
+        .sort((a, b) => a - b);
+
+      nextEvents = weekdays.map((weekday) =>
+        makeRoutineEvent(
+          `weekday-${weekday}`,
+          dateForWeekday(weekday),
+          "Weekly",
+          weekday,
+        ),
+      );
+    } else {
+      nextEvents = [
+        makeRoutineEvent("daily", todayKey, "Daily"),
+      ];
+    }
+
+    setCalendarEvents((current) => [
+      ...current.filter((event) => {
+        if (event.sourceType !== "health-routine") return true;
+        return (event.healthRoutineGroupId ?? event.id) !== groupId;
+      }),
+      ...nextEvents,
+    ]);
+
+    recordAction(
+      healthRoutineEditingGroupId
+        ? "Updated Health routine"
+        : "Added Health routine",
+    );
+
+    setHealthRoutineEditorOpen(false);
+    resetHealthRoutineDraft();
+  };
+
   const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
@@ -5528,10 +5791,31 @@ export default function Home() {
     const surface = primarySwipeSurfaceRef.current;
     if (!surface) return;
 
-    surface.style.transition = animate
-      ? "transform 96ms cubic-bezier(.2,.86,.24,1)"
-      : "none";
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    if (!animate) {
+      surface.style.transition = "";
+      surface.style.transform = "";
+      return;
+    }
+
+    surface.style.transition =
+      "transform 96ms cubic-bezier(.2,.86,.24,1)";
     surface.style.transform = "translate3d(0,0,0)";
+
+    pageSwipeSettleRef.current = window.setTimeout(() => {
+      if (primarySwipeSurfaceRef.current !== surface) {
+        pageSwipeSettleRef.current = null;
+        return;
+      }
+
+      surface.style.transition = "";
+      surface.style.transform = "";
+      pageSwipeSettleRef.current = null;
+    }, 112);
   };
 
   const beginPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
@@ -9236,7 +9520,306 @@ export default function Home() {
                 title="Your habits"
                 copy="Consistency matters more than perfection. Tap today when a little promise is done."
                 sticker="🌿"
+                onStickerClick={openHealthRoutineNote}
               />
+
+              {healthRoutineOpen && (
+                <div
+                  className="health-routine-backdrop"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      setHealthRoutineOpen(false);
+                      setHealthRoutineEditorOpen(false);
+                    }
+                  }}
+                >
+                  <section
+                    className="health-routine-note"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="My daily rhythm"
+                  >
+                    <header className="health-routine-header">
+                      <div>
+                        <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
+                        <h3>My daily rhythm</h3>
+                        <p>
+                          Tiny things that quietly take care of you.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="health-routine-close"
+                        aria-label="Close daily rhythm"
+                        onClick={() => {
+                          setHealthRoutineOpen(false);
+                          setHealthRoutineEditorOpen(false);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </header>
+
+                    {!healthRoutineEditorOpen ? (
+                      <>
+                        <div className="health-routine-list">
+                          {healthRoutineGroups.length === 0 ? (
+                            <div className="health-routine-empty">
+                              <span aria-hidden="true">🌱</span>
+                              <strong>No little routines yet</strong>
+                              <p>
+                                Add skincare, hair wash days, vitamins,
+                                stretching, or anything that belongs to
+                                your health rhythm.
+                              </p>
+                            </div>
+                          ) : (
+                            healthRoutineGroups.map((routine) => {
+                              const first = routine.events[0];
+
+                              const todayOccurrence =
+                                routine.events.find((event) =>
+                                  eventOccursOn(event, todayKey),
+                                );
+
+                              const completedToday = todayOccurrence
+                                ? isHealthCompletedOn(
+                                    todayOccurrence,
+                                    todayKey,
+                                  )
+                                : false;
+
+                              const cadence =
+                                first.healthRoutineCadence ?? "daily";
+
+                              const cadenceLabel =
+                                cadence === "alternate"
+                                  ? "Every other day"
+                                  : cadence === "weekdays"
+                                    ? Array.from(
+                                        new Set(
+                                          routine.events.map(
+                                            (event) =>
+                                              event.healthRoutineWeekday ??
+                                              dateFromKey(
+                                                event.date,
+                                              ).getDay(),
+                                          ),
+                                        ),
+                                      )
+                                        .sort((a, b) => a - b)
+                                        .map(
+                                          (weekday) =>
+                                            HEALTH_ROUTINE_DAY_LABELS[
+                                              weekday
+                                            ],
+                                        )
+                                        .join(" · ")
+                                    : "Every day";
+
+                              return (
+                                <article
+                                  key={routine.id}
+                                  className={`health-routine-item ${
+                                    completedToday ? "complete" : ""
+                                  }`.trim()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="health-routine-check"
+                                    disabled={!todayOccurrence}
+                                    aria-pressed={completedToday}
+                                    aria-label={
+                                      todayOccurrence
+                                        ? `${
+                                            completedToday
+                                              ? "Mark incomplete"
+                                              : "Mark complete"
+                                          }: ${first.title}`
+                                        : `${first.title} is not scheduled today`
+                                    }
+                                    onClick={(clickEvent) => {
+                                      if (!todayOccurrence) return;
+                                      toggleHealthOccurrence(
+                                        clickEvent,
+                                        todayOccurrence,
+                                        todayKey,
+                                      );
+                                    }}
+                                  >
+                                    {completedToday ? "✓" : "○"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="health-routine-body"
+                                    onClick={() =>
+                                      editHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    <strong>{first.title}</strong>
+                                    <span>
+                                      {cadenceLabel}
+                                      {!first.allDay
+                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
+                                        : ""}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="health-routine-delete"
+                                    aria-label={`Delete ${first.title}`}
+                                    onClick={() =>
+                                      deleteHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    ×
+                                  </button>
+                                </article>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="health-routine-add"
+                          onClick={startNewHealthRoutine}
+                        >
+                          <span aria-hidden="true">＋</span>
+                          Add a little routine
+                        </button>
+                      </>
+                    ) : (
+                      <div className="health-routine-editor">
+                        <label>
+                          <span>Little routine</span>
+                          <input
+                            value={healthRoutineDraft.title}
+                            placeholder="Skincare, wash my hair…"
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>Rhythm</span>
+                          <select
+                            value={healthRoutineDraft.cadence}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                cadence:
+                                  event.target
+                                    .value as HealthRoutineCadence,
+                              }))
+                            }
+                          >
+                            <option value="daily">Every day</option>
+                            <option value="alternate">
+                              Every other day
+                            </option>
+                            <option value="weekdays">
+                              Certain days
+                            </option>
+                          </select>
+                        </label>
+
+                        {healthRoutineDraft.cadence === "weekdays" && (
+                          <div className="health-routine-weekdays">
+                            {HEALTH_ROUTINE_DAY_LABELS.map(
+                              (label, weekday) => {
+                                const selected =
+                                  healthRoutineDraft.weekdays.includes(
+                                    weekday,
+                                  );
+
+                                return (
+                                  <button
+                                    type="button"
+                                    key={label}
+                                    className={
+                                      selected ? "selected" : ""
+                                    }
+                                    aria-pressed={selected}
+                                    onClick={() =>
+                                      setHealthRoutineDraft(
+                                        (current) => ({
+                                          ...current,
+                                          weekdays: selected
+                                            ? current.weekdays.filter(
+                                                (item) =>
+                                                  item !== weekday,
+                                              )
+                                            : [
+                                                ...current.weekdays,
+                                                weekday,
+                                              ].sort(
+                                                (a, b) => a - b,
+                                              ),
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    {label.slice(0, 1)}
+                                  </button>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
+
+                        <label>
+                          <span>Time · optional</span>
+                          <input
+                            type="time"
+                            value={healthRoutineDraft.time}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                time: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <div className="health-routine-editor-actions">
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => {
+                              setHealthRoutineEditorOpen(false);
+                              resetHealthRoutineDraft();
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="primary"
+                            disabled={
+                              !healthRoutineDraft.title.trim() ||
+                              (
+                                healthRoutineDraft.cadence === "weekdays" &&
+                                healthRoutineDraft.weekdays.length === 0
+                              )
+                            }
+                            onClick={saveHealthRoutine}
+                          >
+                            Save routine
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}
+
               <div className="habit-summary card">
                 <div className="habit-ring">
                   <strong>{habitCompletions}</strong>
@@ -16775,11 +17358,13 @@ function ScreenIntro({
   title,
   copy,
   sticker,
+  onStickerClick,
 }: {
   label: string;
   title: string;
   copy: string;
   sticker: string;
+  onStickerClick?: () => void;
 }) {
   return (
     <header className="screen-intro">
@@ -16788,7 +17373,24 @@ function ScreenIntro({
         <h2>{title}</h2>
         <p>{copy}</p>
       </div>
-      <span className="screen-sticker">{sticker}</span>
+      <span
+        className="screen-sticker"
+        role={onStickerClick ? "button" : undefined}
+        tabIndex={onStickerClick ? 0 : undefined}
+        aria-label={onStickerClick ? "Open daily health routine" : undefined}
+        onClick={onStickerClick}
+        onKeyDown={(event) => {
+          if (
+            onStickerClick &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            onStickerClick();
+          }
+        }}
+      >
+        {sticker}
+      </span>
     </header>
   );
 }
