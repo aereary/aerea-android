@@ -1020,6 +1020,44 @@ test("restores the normal bottom navigation while keeping swipe navigation", () 
     pageSource,
     /aria-label="Back to Today"/,
   );
+
+  assert.doesNotMatch(
+    pageSource,
+    /className="feature-space-toolbar"[\s\S]{0,500}setQuickCaptureOpen\(true\)/,
+  );
+
+  assert.match(pageSource, /Keep in Inbox/);
+
+  for (const kind of ["photo", "pdf", "file", "link"]) {
+    assert.match(featureSource, new RegExp(`\\| "${kind}"`));
+  }
+
+  for (const destination of ["event", "task", "post-it", "note", "library"]) {
+    assert.match(pageSource, new RegExp(`"${destination}"`));
+  }
+
+  assert.match(pageSource, /ensureInboxLibraryItem/);
+  assert.match(pageSource, /libraryItemAsStudyFile/);
+  assert.match(pageSource, /Capture is still here/);
+  assert.match(pageSource, /const openInboxDestination =/);
+  assert.match(
+    pageSource,
+    /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/,
+  );
+  assert.match(pageSource, /className=\{converted \? "converted" : ""\}/);
+  assert.match(pageSource, /Open saved \$\{destination\}/);
+  assert.match(pageSource, /sourceInboxId: item\.id/);
+  assert.match(pageSource, /setRequestedStudyNoteId\(note\.id\)/);
+  assert.match(pageSource, /openTaskEditor\(task\)/);
+  assert.match(pageSource, /className="task-editor-basics"/);
+  assert.match(pageSource, />\s*Save task\s*</);
+  assert.match(
+    pageSource,
+    /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/,
+  );
+  assert.match(pageSource, /className="inbox-item-icon"/);
+  assert.match(pageSource, /className="inbox-item-copy"/);
+  assert.match(cssSource, /\.inbox-convert-actions button\.converted/);
 });
 
 test("keeps the Recordings class editor compact and centered", () => {
