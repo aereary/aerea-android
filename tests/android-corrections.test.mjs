@@ -261,7 +261,7 @@ test("Site sync uses approved emojis for Library and Calendar", () => {
 
 test("class timetable owns recurring Calendar class events", () => {
   assert.match(page, /termStart: string;[\s\S]{0,100}termEnd: string;/);
-  assert.match(page, /sourceType\?: "timetable";[\s\S]{0,120}timetableClassId\?: string;/);
+  assert.match(page, /sourceType\?: "timetable" \| "health-routine";[\s\S]{0,180}timetableClassId\?: string;/);
   assert.match(page, /function timetableClassCalendarEvent[\s\S]{0,1000}repeat: "Weekly"[\s\S]{0,180}repeatUntil: timetable\.termEnd/);
   assert.match(page, /id: `timetable-event:\$\{classItem\.id\}`/);
   assert.match(page, /calendar: "Classes"/);
