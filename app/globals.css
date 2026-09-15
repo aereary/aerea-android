@@ -31615,3 +31615,86 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_GLOBAL_MODAL_LAYERING_20260915 */
+
+/* AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+.event-detail-health-completion {
+  align-items: center;
+  background: #eff3e8;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0;
+  padding: 12px 14px;
+}
+
+.event-detail-health-completion.complete {
+  background: var(--lime-wash);
+}
+
+.event-detail-health-completion strong,
+.event-detail-health-completion small {
+  display: block;
+}
+
+.event-detail-health-completion small {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.event-detail-health-completion button {
+  align-items: center;
+  background: var(--paper);
+  border: 0;
+  border-radius: 50%;
+  color: var(--leaf);
+  display: flex;
+  font-size: 18px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.event-detail-health-completion.complete button {
+  background: var(--leaf);
+  color: white;
+}
+
+.calendar-expanded .calendar-day-status {
+  z-index: 3;
+}
+
+.calendar-expanded .calendar-event-dots {
+  z-index: 1;
+}
+
+@media (max-width: 700px) {
+  .phone-canvas .timetable-backdrop {
+    align-items: flex-start !important;
+    padding:
+      max(76px, calc(env(safe-area-inset-top) + 52px))
+      12px
+      max(18px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .phone-canvas .timetable-card {
+    display: flex;
+    flex-direction: column;
+    max-height:
+      calc(
+        100dvh
+        - max(76px, calc(env(safe-area-inset-top) + 52px))
+        - max(18px, env(safe-area-inset-bottom))
+      ) !important;
+    overflow: hidden;
+    padding: 14px 12px 12px;
+  }
+
+  .phone-canvas .timetable-board,
+  .phone-canvas .timetable-editor {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */

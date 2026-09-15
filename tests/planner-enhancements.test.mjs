@@ -119,3 +119,49 @@ test("timetable keeps MON through SAT and positions classes in a temporal grid",
   );
   assert.doesNotMatch(finalTimetableCss, /align-items:flex-end/);
 });
+
+test("Today Health details reuse the existing per-date completion state", () => {
+  assert.match(pageSource, /isHealthCompletionEvent\(selectedEventDetail\)/);
+  assert.match(pageSource, /isHealthCompletedOn\(\s*selectedEventDetail,\s*selectedEventDetail\.date/);
+  assert.match(pageSource, /toggleHealthOccurrence\(\s*clickEvent,\s*selectedEventDetail,\s*selectedEventDetail\.date/);
+  assert.match(pageSource, /openEventDetail\(calendarEvent, null, selectedDate\)/);
+  assert.match(pageSource, /setSelectedEventDetail\(\(current\) =>/);
+  assert.match(pageSource, /event-detail-health-completion/);
+  assert.match(cssSource, /\.event-detail-health-completion\.complete/);
+});
+
+test("non-Health event details do not render the Health completion control", () => {
+  const detail = pageSource.slice(
+    pageSource.indexOf('{selectedEventDetail &&'),
+    pageSource.indexOf('{selectedEventDetail &&') + 9500,
+  );
+  assert.match(detail, /isHealthCompletionEvent\(selectedEventDetail\) &&/);
+  assert.match(detail, /event-detail-health-completion/);
+});
+
+test("timetable classes have stable parent ids with independent meeting rows", () => {
+  assert.match(pageSource, /type TimetableMeeting/);
+  assert.match(pageSource, /meetings: TimetableMeeting\[\]/);
+  assert.match(pageSource, /normalizeTimetableClass/);
+  assert.match(pageSource, /classItem\.meetings\s*\.map\(\(meeting\) => timetableClassCalendarEvent/);
+  assert.match(pageSource, /id: `timetable-event:\$\{classItem\.id\}:\$\{meeting\.id\}`/);
+  assert.match(pageSource, /timetableClassIds: \[classItem\.id\]/);
+  assert.match(pageSource, /Add weekly meeting/);
+  assert.match(pageSource, /Remove meeting/);
+  assert.match(pageSource, /<span>Room<\/span>/);
+  assert.match(pageSource, /value=\{meeting\.room \?\? ""\}/);
+  assert.match(pageSource, /value=\{timetableClassDraft\.professor \?\? ""\}/);
+  assert.match(pageSource, /classItem\.day && classItem\.start && classItem\.end/);
+});
+
+test("timetable mobile overlay keeps the header reachable and schedule internally scrollable", () => {
+  assert.match(cssSource, /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items: flex-start !important;[\s\S]*max\(76px/);
+  assert.match(cssSource, /\.phone-canvas \.timetable-card \{[\s\S]*max-height:[\s\S]*overflow: hidden;/);
+  assert.match(cssSource, /\.phone-canvas \.timetable-board,[\s\S]*\.phone-canvas \.timetable-editor \{[\s\S]*overflow-y: auto;/);
+});
+
+test("Health calendar markers stack above event dots", () => {
+  const finalFix = cssSource.slice(cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"));
+  assert.match(finalFix, /\.calendar-expanded \.calendar-day-status \{[\s\S]*z-index: 3/);
+  assert.match(finalFix, /\.calendar-expanded \.calendar-event-dots \{[\s\S]*z-index: 1/);
+});
