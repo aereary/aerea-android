@@ -9054,278 +9054,6 @@ export default function Home() {
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
 
-  const renderUnifiedCalendarGrid = () => (
-    <div
-      key={`unified-${calendarYear}-${calendarMonth}`}
-      className={[
-        "month-grid",
-        "unified-month-grid",
-        calendarSlideDirection ? `calendar-slide-${calendarSlideDirection}` : "",
-      ].filter(Boolean).join(" ")}
-      style={{ "--calendar-weeks": extendedCalendarWeekCount } as CSSProperties}
-      onAnimationEnd={() => setCalendarSlideDirection(null)}
-      onTouchStart={startCalendarSwipe}
-      onTouchEnd={finishCalendarSwipe}
-      role="grid"
-      aria-label="Monthly calendar. Swipe left or right to change month."
-    >
-      {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((weekday) => (
-        <strong role="columnheader" key={weekday}>{weekday}</strong>
-      ))}
-      {extendedCalendarDays.map(({ date, currentMonth, previousMonth, nextMonth }) => {
-        const dayKey = localDateKey(date);
-        const dayEvents = allCalendarEvents
-          .filter(
-            (calendarEvent) =>
-              eventOccursOn(calendarEvent, dayKey) &&
-              !hiddenCalendarSources.includes(calendarEvent.calendar || "Personal"),
-          )
-          .sort((first, second) => first.time.localeCompare(second.time));
-        const dayMood = moods.find((mood) => mood.label === moodHistory[dayKey]);
-        const dayComplete = completedDays[dayKey] === true;
-        return (
-          <div
-            data-calendar-date={dayKey}
-            className={[
-              "unified-calendar-cell",
-              currentMonth ? "" : "outside-month",
-              previousMonth ? "previous-month month-spillover" : "",
-              nextMonth ? "month-spillover" : "",
-              selectedCalendarDate === dayKey ? "selected" : "",
-              date.getDay() === 0 ? "sunday" : "",
-              date.getDay() === 6 ? "saturday" : "",
-              date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
-              dayKey === todayKey ? "today" : "",
-              dayComplete ? "day-complete" : "",
-              calendarDragTarget === dayKey ? "drag-target" : "",
-            ].filter(Boolean).join(" ")}
-            key={dayKey}
-            role="gridcell"
-            tabIndex={0}
-            aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
-            onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
-            onPointerMove={moveCalendarLongPress}
-            onPointerUp={cancelCalendarLongPress}
-            onPointerCancel={cancelCalendarLongPress}
-            onContextMenu={(event) => event.preventDefault()}
-            onClick={() => {
-              if (calendarLongPressedRef.current) {
-                calendarLongPressedRef.current = false;
-                return;
-              }
-              setSelectedCalendarDate(dayKey);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                setSelectedCalendarDate(dayKey);
-              }
-            }}
-          >
-            <span className="calendar-day-number">{date.getDate()}</span>
-            {dayMood && (
-              <i className={`calendar-mood-sticker ${dayMood.color}`} title={dayMood.label}>
-                {dayMood.face}
-              </i>
-            )}
-            {dayComplete && (
-              <i className="calendar-day-status complete" title="Everything completed">✓</i>
-            )}
-            <div className="calendar-cell-events">
-              {dayEvents.slice(0, 3).map((calendarEvent) => {
-                const eventColor = eventColors.find(
-                  (color) => color.value === eventDisplayColor(calendarEvent, dayKey),
-                )?.hex ?? "#ae96d8";
-                return (
-                  <button
-                    type="button"
-                    className={`calendar-cell-event ${eventDisplayColor(calendarEvent, dayKey)} ${
-                      isFootballVisualEvent(calendarEvent) ? "canonical-boca-match" : ""
-                    }`}
-                    style={{ "--event-color": eventColor } as CSSProperties}
-                    key={`${calendarEvent.id}-${dayKey}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedCalendarDate(dayKey);
-                      openEventDetail(calendarEventAtOccurrence(calendarEvent, dayKey));
-                    }}
-                    title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
-                  >
-                    <strong>{calendarEvent.title}</strong>
-                    <small>{eventStartTimeLabel(calendarEvent)}</small>
-                  </button>
-                );
-              })}
-              {dayEvents.length > 3 && (
-                <small className="calendar-more-events">+{dayEvents.length - 3}</small>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const renderUnifiedCalendarView = (mode: "simplified" | "extended") => (
-    <>
-      <header className="unified-calendar-header">
-        {mode === "extended" && (
-          <button
-            className="unified-calendar-back"
-            type="button"
-            onClick={() => {
-              setMonthPickerOpen(false);
-              setCalendarExpanded(false);
-            }}
-            aria-label="Back to compact month"
-            title="Back to compact month"
-          >
-            ←
-          </button>
-        )}
-        <button
-          className="unified-calendar-title"
-          type="button"
-          onClick={() => setMonthPickerOpen((open) => !open)}
-          aria-expanded={monthPickerOpen}
-          aria-label="Choose month and year"
-        >
-          {viewMonth.toLocaleDateString("en", { month: "long", year: "numeric" })}
-          <span aria-hidden="true">⌄</span>
-        </button>
-        <nav className="unified-calendar-actions" aria-label="Calendar tools">
-          {mode === "extended" && (
-            <button
-              type="button"
-              onClick={() => {
-                setCalendarExpanded(false);
-                setMonthPickerOpen(false);
-                setCalendarScheduleOpen(true);
-              }}
-              aria-label="Open day schedule"
-              title="Open day schedule"
-            >
-              ☆
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => openCalendarCategoryEditor()}
-            aria-label="Edit visible event types"
-            title="Edit event types"
-          >
-            ⚙
-          </button>
-          {mode === "simplified" && (
-            <>
-              <button
-                type="button"
-                onClick={returnSimplifiedCalendarToToday}
-                aria-label="Return to today"
-                title="Today"
-              >
-                ✦
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="Open settings"
-                title="Settings"
-              >
-                ☷
-              </button>
-            </>
-          )}
-        </nav>
-      </header>
-
-      {monthPickerOpen && (
-        <section className="unified-month-picker" role="dialog" aria-label="Choose month and year">
-          <header>
-            <button
-              type="button"
-              onClick={() => setViewMonth(new Date(calendarYear - 1, calendarMonth, 1))}
-              aria-label="Previous year"
-            >
-              ‹
-            </button>
-            <strong>{calendarYear}</strong>
-            <button
-              type="button"
-              onClick={() => setViewMonth(new Date(calendarYear + 1, calendarMonth, 1))}
-              aria-label="Next year"
-            >
-              ›
-            </button>
-          </header>
-          <div>
-            {Array.from({ length: 12 }, (_, month) => (
-              <button
-                type="button"
-                key={month}
-                className={month === calendarMonth ? "active" : ""}
-                onClick={() => {
-                  const selectedDay = dateFromKey(selectedCalendarDate).getDate();
-                  const clampedDay = Math.min(
-                    selectedDay,
-                    new Date(calendarYear, month + 1, 0).getDate(),
-                  );
-                  setViewMonth(new Date(calendarYear, month, 1));
-                  setSelectedCalendarDate(calendarDateKey(calendarYear, month, clampedDay));
-                  setMonthPickerOpen(false);
-                }}
-              >
-                {new Date(calendarYear, month, 1).toLocaleDateString("en", { month: "short" })}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="unified-calendar-filters" aria-label="Visible calendars">
-        <div>
-          {extendedCalendarSources.map((source) => {
-            const hidden = hiddenCalendarSources.includes(source);
-            const category = calendarCategories.find(
-              (item) => item.name.toLowerCase() === source.toLowerCase(),
-            );
-            const sourceColor = eventColors.find(
-              (color) => color.value === category?.color,
-            )?.hex ?? "#ae96d8";
-            return (
-              <button
-                type="button"
-                key={source}
-                className={hidden ? "muted" : "active"}
-                style={{ "--unified-source-color": sourceColor } as CSSProperties}
-                onClick={() =>
-                  setHiddenCalendarSources((current) =>
-                    current.includes(source)
-                      ? current.filter((item) => item !== source)
-                      : [...current, source],
-                  )
-                }
-                aria-pressed={!hidden}
-              >
-                <span aria-hidden="true">{hidden ? "" : "✓"}</span>
-                {source}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={() => openCalendarCategoryEditor()}
-          aria-label="Edit calendar categories"
-          title="Edit calendars"
-        >
-          +
-        </button>
-      </section>
-
-      {renderUnifiedCalendarGrid()}
-    </>
-  );
-
   return (
     <main
       className="app-shell"
@@ -9357,7 +9085,276 @@ export default function Home() {
           className="simplified-calendar-screen"
           aria-label="Little aérea simplified monthly calendar"
         >
-          {renderUnifiedCalendarView("simplified")}
+          <header className="simplified-calendar-header">
+            <button
+              className="simplified-calendar-title"
+              type="button"
+              onClick={() => setMonthPickerOpen((open) => !open)}
+              aria-expanded={monthPickerOpen}
+              aria-label="Choose month and year"
+            >
+              {viewMonth.toLocaleDateString("en", {
+                month: "long",
+                year: "numeric",
+              })}
+              <span aria-hidden="true" />
+            </button>
+
+            <nav aria-label="Calendar shortcuts">
+              <button
+                type="button"
+                onClick={returnSimplifiedCalendarToToday}
+                aria-label="Return to today"
+                title="Today"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m12 7.4 1.35 2.73 3.02.44-2.18 2.13.51 3-2.7-1.42-2.7 1.42.51-3-2.18-2.13 3.02-.44L12 7.4Z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Open settings"
+                title="Settings"
+              >
+                <span className="simplified-controls-glyph" aria-hidden="true">
+                  <i />
+                  <i />
+                </span>
+              </button>
+            </nav>
+          </header>
+
+          {monthPickerOpen && (
+            <section
+              className="simplified-month-picker"
+              role="dialog"
+              aria-label="Choose month and year"
+            >
+              <header>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setViewMonth(new Date(calendarYear - 1, calendarMonth, 1))
+                  }
+                  aria-label="Previous year"
+                >
+                  ‹
+                </button>
+                <strong>{calendarYear}</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setViewMonth(new Date(calendarYear + 1, calendarMonth, 1))
+                  }
+                  aria-label="Next year"
+                >
+                  ›
+                </button>
+              </header>
+              <div>
+                {Array.from({ length: 12 }, (_, month) => (
+                  <button
+                    type="button"
+                    key={month}
+                    className={month === calendarMonth ? "active" : ""}
+                    onClick={() => {
+                      const selectedDay = dateFromKey(selectedCalendarDate).getDate();
+                      const clampedDay = Math.min(
+                        selectedDay,
+                        new Date(calendarYear, month + 1, 0).getDate(),
+                      );
+                      setViewMonth(new Date(calendarYear, month, 1));
+                      setSelectedCalendarDate(
+                        calendarDateKey(calendarYear, month, clampedDay),
+                      );
+                      setMonthPickerOpen(false);
+                    }}
+                  >
+                    {new Date(calendarYear, month, 1).toLocaleDateString("en", {
+                      month: "short",
+                    })}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section
+            className="simplified-calendar-filters"
+            aria-label="Visible calendars"
+          >
+            <div>
+              {extendedCalendarSources.map((source) => {
+                const hidden = hiddenCalendarSources.includes(source);
+                const category = calendarCategories.find(
+                  (item) => item.name.toLowerCase() === source.toLowerCase(),
+                );
+                const sourceColor = eventColors.find(
+                  (color) => color.value === category?.color,
+                )?.hex ?? "#ae96d8";
+                return (
+                  <button
+                    type="button"
+                    key={source}
+                    className={hidden ? "muted" : "active"}
+                    style={
+                      { "--simplified-source-color": sourceColor } as CSSProperties
+                    }
+                    onClick={() =>
+                      setHiddenCalendarSources((current) =>
+                        current.includes(source)
+                          ? current.filter((item) => item !== source)
+                          : [...current, source],
+                      )
+                    }
+                    aria-pressed={!hidden}
+                  >
+                    <span aria-hidden="true">{hidden ? "" : "✓"}</span>
+                    {source}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="simplified-filter-menu"
+              type="button"
+              onClick={() => openCalendarCategoryEditor()}
+              aria-label="Edit calendar categories"
+              title="Edit calendars"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m8 8 4 4 4-4M8 13l4 4 4-4" />
+              </svg>
+            </button>
+          </section>
+
+          <div
+            key={`simplified-${calendarYear}-${calendarMonth}`}
+            className={[
+              "simplified-month-grid",
+              calendarSlideDirection
+                ? `calendar-slide-${calendarSlideDirection}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={
+              {
+                "--simplified-calendar-weeks": extendedCalendarWeekCount,
+              } as CSSProperties
+            }
+            onAnimationEnd={() => setCalendarSlideDirection(null)}
+            onTouchStart={startCalendarSwipe}
+            onTouchEnd={finishCalendarSwipe}
+            role="grid"
+            aria-label="Monthly calendar. Swipe left or right to change month."
+          >
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+              (weekday) => (
+                <strong role="columnheader" key={weekday}>
+                  {weekday}
+                </strong>
+              ),
+            )}
+            {extendedCalendarDays.map((calendarDay) => {
+              const { date, currentMonth } = calendarDay;
+              const dayKey = localDateKey(date);
+              const dayEvents = allCalendarEvents
+                .filter(
+                  (calendarEvent) =>
+                    eventOccursOn(calendarEvent, dayKey) &&
+                    !hiddenCalendarSources.includes(
+                      calendarEvent.calendar || "Personal",
+                    ),
+                )
+                .sort((first, second) => first.time.localeCompare(second.time));
+
+              return (
+                <div
+                  className={[
+                    "simplified-calendar-cell",
+                    currentMonth ? "" : "outside-month",
+                    date.getDay() === 0 ? "sunday" : "",
+                    selectedCalendarDate === dayKey ? "selected" : "",
+                    dayKey === todayKey ? "today" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  key={dayKey}
+                  role="gridcell"
+                  tabIndex={0}
+                  aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
+                  onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
+                  onPointerMove={moveCalendarLongPress}
+                  onPointerUp={cancelCalendarLongPress}
+                  onPointerCancel={cancelCalendarLongPress}
+                  onContextMenu={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (calendarLongPressedRef.current) {
+                      calendarLongPressedRef.current = false;
+                      return;
+                    }
+                    setSelectedCalendarDate(dayKey);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      setSelectedCalendarDate(dayKey);
+                    }
+                  }}
+                >
+                  <span className="simplified-calendar-date">
+                    {date.getDate()}
+                  </span>
+                  <div className="simplified-calendar-events">
+                    {dayEvents.slice(0, 3).map((calendarEvent) => {
+                      const eventColor = eventColors.find(
+                        (color) =>
+                          color.value === eventDisplayColor(calendarEvent, dayKey),
+                      )?.hex ?? "#ae96d8";
+                      return (
+                        <button
+                          type="button"
+                          className={`simplified-event-strip ${
+                            isFootballVisualEvent(calendarEvent)
+                              ? "canonical-boca-match"
+                              : ""
+                          }`}
+                          style={
+                            { "--simplified-event-color": eventColor } as CSSProperties
+                          }
+                          key={`${calendarEvent.id}-${dayKey}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedCalendarDate(dayKey);
+                            openEventDetail(
+                              calendarEventAtOccurrence(calendarEvent, dayKey),
+                            );
+                          }}
+                          title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
+                        >
+                          {calendarEvent.title}
+                        </button>
+                      );
+                    })}
+                    {dayEvents.length > 3 && (
+                      <button
+                        type="button"
+                        className="simplified-more-events"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedCalendarDate(dayKey);
+                          setDaySummaryDate(dayKey);
+                        }}
+                      >
+                        +{dayEvents.length - 3}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <button
             className="simplified-calendar-add"
@@ -9369,6 +9366,55 @@ export default function Home() {
             <span aria-hidden="true" />
           </button>
 
+          <nav className="simplified-calendar-nav" aria-label="Calendar navigation">
+            <button
+              className="active"
+              type="button"
+              onClick={returnSimplifiedCalendarToToday}
+              aria-label="Month calendar"
+              aria-current="page"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4.5" y="5.5" width="15" height="14" rx="2" />
+                <path d="M8 3.8v3.4M16 3.8v3.4M4.5 9h15M8 12h2M12 12h2M16 12h.1M8 15.5h2M12 15.5h2M16 15.5h.1" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDaySummaryDate(selectedCalendarDate)}
+              aria-label="Selected day agenda"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4.5" y="5" width="15" height="4" rx="1" />
+                <rect x="4.5" y="10.5" width="15" height="4" rx="1" />
+                <rect x="4.5" y="16" width="15" height="3" rx="1" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                returnSimplifiedCalendarToToday();
+                setDaySummaryDate(todayKey);
+              }}
+              aria-label="Today agenda"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 9a5 5 0 0 1 10 0v3.5l2 3H5l2-3V9ZM10 19h4" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Open settings"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1" />
+                <rect x="14" y="4" width="6" height="6" rx="1" />
+                <rect x="4" y="14" width="6" height="6" rx="1" />
+                <rect x="14" y="14" width="6" height="6" rx="1" />
+              </svg>
+            </button>
+          </nav>
         </section>
       )}
       <div className="paper-grain" aria-hidden="true" />
@@ -12923,7 +12969,276 @@ export default function Home() {
                     className="extended-calendar-view"
                     aria-label="Extended monthly calendar"
                   >
-                    {renderUnifiedCalendarView("extended")}
+                    <header className="extended-calendar-header">
+                      <div className="extended-calendar-sky" aria-hidden="true">
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-left"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-cloud extended-sky-cloud-right"
+                          src="/assets/openmoji/cloud.svg"
+                          alt=""
+                        />
+                        <img
+                          className="extended-sky-moon"
+                          src="/assets/openmoji/moon.svg"
+                          alt=""
+                        />
+                      </div>
+                      <button
+                        className="extended-compact-button extended-back-button"
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          setCalendarExpanded(false);
+                        }}
+                        aria-label="Back to compact month"
+                        title="Back to compact month"
+                      >
+                        <span className="extended-compact-glyph" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M5 7h14M5 12h14M5 17h10" />
+                          </svg>
+                        </span>
+                      </button>
+                      <div className="extended-calendar-heading-copy">
+                        <div className="extended-calendar-month">
+                          <button
+                            className="extended-calendar-title"
+                            type="button"
+                            onClick={() => setMonthPickerOpen((open) => !open)}
+                            aria-expanded={monthPickerOpen}
+                          >
+                            {viewMonth.toLocaleDateString("en", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                            <span className="extended-month-chevron" aria-hidden="true">✧</span>
+                          </button>
+                        </div>
+                        <p>plan with purpose, live with intention ✦</p>
+                      </div>
+                      <nav
+                        className="extended-calendar-header-actions"
+                        aria-label="Calendar tools"
+                      >
+                        <button
+                          className="extended-schedule-button"
+                          type="button"
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setMonthPickerOpen(false);
+                            setCalendarScheduleOpen(true);
+                          }}
+                          aria-label="Open day schedule"
+                          title="Open day schedule"
+                        >
+                          <span className="extended-schedule-glyph" aria-hidden="true">☆</span>
+                        </button>
+                        <button
+                          className="extended-filter-control"
+                          type="button"
+                          onClick={() => openCalendarCategoryEditor()}
+                          aria-label="Edit visible event types"
+                          title="Edit event types"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h9M17 17h3" />
+                            <circle cx="16" cy="7" r="2" />
+                            <circle cx="10" cy="12" r="2" />
+                            <circle cx="15" cy="17" r="2" />
+                          </svg>
+                        </button>
+                      </nav>
+                    </header>
+
+                    {monthPickerOpen && (
+                      <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
+                        {Array.from({ length: 12 }, (_, month) => (
+                          <button
+                            type="button"
+                            key={month}
+                            className={month === calendarMonth ? "active" : ""}
+                            onClick={() => {
+                              setViewMonth(new Date(calendarYear, month, 1));
+                              setMonthPickerOpen(false);
+                            }}
+                          >
+                            {new Date(calendarYear, month, 1).toLocaleDateString("en", {
+                              month: "short",
+                            })}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <section className="extended-calendar-filters" aria-label="Visible event types">
+                      <div className="extended-filter-list">
+                        {extendedCalendarSources.map((source, index) => {
+                          const hidden = hiddenCalendarSources.includes(source);
+                          return (
+                            <button
+                              type="button"
+                              key={source}
+                              className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
+                              onClick={() =>
+                                setHiddenCalendarSources((current) =>
+                                  current.includes(source)
+                                    ? current.filter((item) => item !== source)
+                                    : [...current, source],
+                                )
+                              }
+                              aria-pressed={!hidden}
+                            >
+                              <span aria-hidden="true">
+                                {['♡', '▤', '✎', '▧'][index % 4]}
+                              </span>
+                              {source}
+                            </button>
+                          );
+                        })}
+                        {hiddenCalendarSources.length > 0 && (
+                          <button
+                            className="extended-filter-show-all"
+                            type="button"
+                            onClick={() => setHiddenCalendarSources([])}
+                          >
+                            Show all
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        className="extended-filter-menu"
+                        type="button"
+                        onClick={() => openCalendarCategoryEditor()}
+                        aria-label="Edit event types"
+                        title="Edit event types"
+                      >
+                        <span aria-hidden="true">＋</span>
+                      </button>
+                    </section>
+
+                    <div
+                      key={`${calendarYear}-${calendarMonth}`}
+                      className={[
+                        "extended-month-grid",
+                        calendarSlideDirection
+                          ? `calendar-slide-${calendarSlideDirection}`
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      style={
+                        {
+                          "--extended-calendar-weeks": extendedCalendarWeekCount,
+                        } as CSSProperties
+                      }
+                      onAnimationEnd={() => setCalendarSlideDirection(null)}
+                      onTouchStart={startCalendarSwipe}
+                      onTouchEnd={finishCalendarSwipe}
+                      aria-label="Extended calendar month. Swipe left or right to change month."
+                    >
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
+                        <strong key={weekday}>{weekday}</strong>
+                      ))}
+                      {extendedCalendarDays.map((calendarDay) => {
+                        const { date, currentMonth, previousMonth, nextMonth } = calendarDay;
+                        const dayKey = localDateKey(date);
+                        const dayEvents = allCalendarEvents
+                          .filter(
+                            (calendarEvent) =>
+                              eventOccursOn(calendarEvent, dayKey) &&
+                              !hiddenCalendarSources.includes(
+                                calendarEvent.calendar || "Personal",
+                              ),
+                          )
+                          .sort((first, second) => first.time.localeCompare(second.time));
+                        return (
+                          <div
+                            data-calendar-date={dayKey}
+                            className={[
+                              "extended-calendar-cell",
+                              currentMonth ? "" : "outside-month",
+                              previousMonth ? "previous-month month-spillover" : "",
+                              nextMonth ? "month-spillover" : "",
+                              selectedCalendarDate === dayKey ? "selected" : "",
+                              date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
+                              date.getDay() === 0 ? "sunday" : "",
+                              date.getDay() === 6 ? "saturday" : "",
+                              dayKey === todayKey ? "today" : "",
+                              calendarDragTarget === dayKey ? "drag-target" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={dayKey}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
+                            onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
+                            onPointerMove={moveCalendarLongPress}
+                            onPointerUp={cancelCalendarLongPress}
+                            onPointerCancel={cancelCalendarLongPress}
+                            onContextMenu={(event) => event.preventDefault()}
+                            onClick={() => setSelectedCalendarDate(dayKey)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                setSelectedCalendarDate(dayKey);
+                              }
+                            }}
+                          >
+                            <span className="extended-calendar-date">{date.getDate()}</span>
+                            <div className="extended-calendar-events">
+                              {dayEvents.slice(0, 3).map((calendarEvent) => (
+                                <button
+                                  type="button"
+                                  className={`extended-event-pill ${eventDisplayColor(calendarEvent, dayKey)} ${
+                                    isFootballVisualEvent(calendarEvent)
+                                      ? "canonical-boca-match"
+                                      : ""
+                                  }`}
+                                  key={`${calendarEvent.id}-${dayKey}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setSelectedCalendarDate(dayKey);
+                                    openEventDetail(
+                                      calendarEventAtOccurrence(calendarEvent, dayKey),
+                                    );
+                                  }}
+                                  title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
+                                >
+                                  <span>
+                                    <strong>{calendarEvent.title}</strong>
+                                  </span>
+                                </button>
+                              ))}
+                              {dayEvents.length > 3 && (
+                                <small>+{dayEvents.length - 3}</small>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <nav className="extended-calendar-nav" aria-label="Primary navigation">
+                      {extendedCalendarTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={tab.id === activeTab ? "active" : ""}
+                          onClick={() => {
+                            setCalendarExpanded(false);
+                            setCalendarOpen(false);
+                            changeTab(tab.id);
+                          }}
+                        >
+                          <span aria-hidden="true">{tab.icon}</span>
+                          {tab.id !== "add" && <small>{tab.label}</small>}
+                        </button>
+                      ))}
+                    </nav>
                   </section>
                 )}
                 {!calendarExpanded && !calendarScheduleOpen && (
