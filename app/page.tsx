@@ -563,13 +563,24 @@ function recordingBelongsToClass(
 
 type TimetableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
-type TimetableClass = {
+type TimetableMeeting = {
   id: string;
-  name: string;
   day: TimetableDay;
   start: string;
   end: string;
+  room?: string;
+};
+
+type TimetableClass = {
+  id: string;
+  name: string;
+  professor?: string;
   color: string;
+  meetings: TimetableMeeting[];
+  day?: TimetableDay;
+  start?: string;
+  end?: string;
+  room?: string;
 };
 
 type ClassTimetable = {
@@ -605,6 +616,45 @@ const defaultClassTimetable: ClassTimetable = {
   termEnd: "",
   classes: [],
 };
+
+function normalizeTimetableClass(classItem: Partial<TimetableClass> & { id: string }): TimetableClass {
+  const legacyMeeting =
+    classItem.day && classItem.start && classItem.end
+      ? [{
+          id: `${classItem.id}:meeting`,
+          day: classItem.day,
+          start: classItem.start,
+          end: classItem.end,
+          room: classItem.room,
+        }]
+      : [];
+  const meetings = Array.isArray(classItem.meetings) && classItem.meetings.length > 0
+    ? classItem.meetings.map((meeting, index) => ({
+        id: meeting.id || `${classItem.id}:meeting-${index + 1}`,
+        day: meeting.day,
+        start: meeting.start,
+        end: meeting.end,
+        room: meeting.room,
+      }))
+    : legacyMeeting;
+  return {
+    id: classItem.id,
+    name: classItem.name ?? "",
+    professor: classItem.professor,
+    color: classItem.color ?? timetableColors[0],
+    meetings,
+  };
+}
+
+function normalizeClassTimetable(value: Partial<ClassTimetable>): ClassTimetable {
+  return {
+    ...defaultClassTimetable,
+    ...value,
+    classes: Array.isArray(value.classes)
+      ? value.classes.map((classItem) => normalizeTimetableClass(classItem))
+      : [],
+  };
+}
 
 type HealthRoutineCadence = "daily" | "alternate" | "weekdays";
 
@@ -752,6 +802,7 @@ function timetableCalendarColor(color: string): EventColor {
 function timetableClassCalendarEvent(
   timetable: ClassTimetable,
   classItem: TimetableClass,
+  meeting: TimetableMeeting,
 ): CalendarEvent | null {
   if (
     !timetable.termStart ||
@@ -761,16 +812,16 @@ function timetableClassCalendarEvent(
     return null;
   }
 
-  const date = firstTimetableOccurrence(timetable.termStart, classItem.day);
+  const date = firstTimetableOccurrence(timetable.termStart, meeting.day);
   if (date > timetable.termEnd) return null;
 
   return {
-    id: `timetable-event:${classItem.id}`,
+    id: `timetable-event:${classItem.id}:${meeting.id}`,
     date,
     endDate: date,
     title: classItem.name,
-    time: classItem.start,
-    endTime: classItem.end,
+    time: meeting.start,
+    endTime: meeting.end,
     allDay: false,
     calendar: "Classes",
     color: timetableCalendarColor(classItem.color),
@@ -779,6 +830,7 @@ function timetableClassCalendarEvent(
     repeatUntil: timetable.termEnd,
     excludedDates: [],
     note: `Synced from ${timetable.termName}`,
+    location: meeting.room,
     sourceType: "timetable",
     timetableClassId: classItem.id,
     timetableTermName: timetable.termName,
@@ -2762,9 +2814,11 @@ export default function Home() {
   useEffect(() => {
     if (!stateReady) return;
 
-    const generated = classTimetable.classes
-      .map((classItem) => timetableClassCalendarEvent(classTimetable, classItem))
-      .filter((event): event is CalendarEvent => Boolean(event));
+    const generated = classTimetable.classes.flatMap((classItem) =>
+      classItem.meetings
+        .map((meeting) => timetableClassCalendarEvent(classTimetable, classItem, meeting))
+        .filter((event): event is CalendarEvent => Boolean(event)),
+    );
 
     setCalendarEvents((current) => {
       const manualEvents = current.filter(
@@ -2813,48 +2867,23 @@ export default function Home() {
     if (!stateReady) return;
 
     setClassItems((current) => {
-      const grouped = new Map<string, TimetableClass[]>();
-
-      classTimetable.classes.forEach((classItem) => {
-        const key = normalizedClassNameKey(classItem.name);
-        if (!key) return;
-        const group = grouped.get(key) ?? [];
-        group.push(classItem);
-        grouped.set(key, group);
-      });
-
       const claimedExistingIds = new Set<string>();
-      const timetableShelves = Array.from(grouped.entries()).map(
-        ([key, timetableEntries]) => {
-          const timetableIds = timetableEntries.map((entry) => entry.id);
-          const linkedExisting = current.find(
-            (item) =>
-              item.sourceType === "timetable" &&
-              item.timetableClassIds?.some((id) => timetableIds.includes(id)),
-          );
-          const matchingExisting =
-            linkedExisting ??
-            current.find(
-              (item) =>
-                !claimedExistingIds.has(item.id) &&
-                normalizedClassNameKey(item.name) === key,
-            );
-
-          if (matchingExisting) {
-            claimedExistingIds.add(matchingExisting.id);
-          }
-
-          const first = timetableEntries[0];
-          return {
-            id: matchingExisting?.id ?? `timetable-class:${first.id}`,
-            name: first.name.trim(),
-            icon: matchingExisting?.icon ?? "🎓",
-            color: first.color,
-            sourceType: "timetable" as const,
-            timetableClassIds: timetableIds,
-          };
-        },
-      );
+      const timetableShelves = classTimetable.classes.map((classItem) => {
+        const linkedExisting = current.find(
+          (item) =>
+            item.sourceType === "timetable" &&
+            item.timetableClassIds?.includes(classItem.id),
+        );
+        if (linkedExisting) claimedExistingIds.add(linkedExisting.id);
+        return {
+          id: linkedExisting?.id ?? `timetable-class:${classItem.id}`,
+          name: classItem.name.trim(),
+          icon: linkedExisting?.icon ?? "🎓",
+          color: classItem.color,
+          sourceType: "timetable" as const,
+          timetableClassIds: [classItem.id],
+        };
+      });
 
       const manualShelves = current.filter(
         (item) =>
@@ -3277,7 +3306,7 @@ export default function Home() {
         setClassTimetable({
           ...defaultClassTimetable,
           ...state.classTimetable,
-          classes: state.classTimetable.classes,
+          classes: normalizeClassTimetable(state.classTimetable).classes,
         });
       }
       if (Array.isArray(state.recordings)) {
@@ -7165,15 +7194,17 @@ export default function Home() {
   const openEventDetail = (
     calendarEvent: CalendarEvent,
     returnDayPocket: string | null = null,
+    occurrenceDate = calendarEvent.date,
   ) => {
+    const detailEvent = calendarEventAtOccurrence(calendarEvent, occurrenceDate);
     setEventDetailReturnDayPocket(returnDayPocket);
-    if (isFootballVisualEvent(calendarEvent)) {
+    if (isFootballVisualEvent(detailEvent)) {
       setSelectedEventDetail(null);
-      setSelectedFootballMatch(calendarEvent);
+      setSelectedFootballMatch(detailEvent);
       return;
     }
     setSelectedFootballMatch(null);
-    setSelectedEventDetail(calendarEvent);
+    setSelectedEventDetail(detailEvent);
   };
 
   const closeEventDetail = () => {
@@ -7625,6 +7656,9 @@ export default function Home() {
           ? toggleHealthCompletedOn(candidate, dateKey)
           : candidate,
       ),
+    );
+    setSelectedEventDetail((current) =>
+      current?.id === event.id ? toggleHealthCompletedOn(current, dateKey) : current,
     );
   };
 
@@ -14701,6 +14735,55 @@ export default function Home() {
 
                 <div className="event-detail-divider" aria-hidden="true" />
 
+                {isHealthCompletionEvent(selectedEventDetail) && (
+                  <div
+                    className={`event-detail-health-completion ${
+                      isHealthCompletedOn(
+                        selectedEventDetail,
+                        selectedEventDetail.date,
+                      )
+                        ? "complete"
+                        : ""
+                    }`.trim()}
+                  >
+                    <div>
+                      <strong>
+                        {isHealthCompletedOn(
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                          ? "Health completed"
+                          : "Complete this Health occurrence"}
+                      </strong>
+                      <small>{readableDate(selectedEventDetail.date)}</small>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(clickEvent) =>
+                        toggleHealthOccurrence(
+                          clickEvent,
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                      }
+                      aria-label={`${
+                        isHealthCompletedOn(
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                          ? "Mark incomplete"
+                          : "Mark complete"
+                      }: ${selectedEventDetail.title}`}
+                      aria-pressed={isHealthCompletedOn(
+                        selectedEventDetail,
+                        selectedEventDetail.date,
+                      )}
+                    >
+                      ✓
+                    </button>
+                  </div>
+                )}
+
                 <div
                   className="event-detail-time"
                   data-event-detail-edit="true"
@@ -16045,7 +16128,11 @@ function TodayScreen({
   selectedDate: string;
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
-  openEventDetail: (event: CalendarEvent) => void;
+  openEventDetail: (
+    event: CalendarEvent,
+    returnDayPocket?: string | null,
+    occurrenceDate?: string,
+  ) => void;
   now: Date;
   todayKey: string;
   weekDays: { key: string; day: string; date: string }[];
@@ -16082,7 +16169,10 @@ function TodayScreen({
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
-  const timetableWindow = timetableGridWindow(classTimetable.classes);
+  const timetableMeetings = classTimetable.classes.flatMap((classItem) =>
+    classItem.meetings.map((meeting) => ({ ...meeting, classItem })),
+  );
+  const timetableWindow = timetableGridWindow(timetableMeetings);
   const timetableHourMarks = Array.from(
     { length: timetableWindow.hours + 1 },
     (_, index) => timetableWindow.start + index * 60,
@@ -16096,8 +16186,9 @@ function TodayScreen({
     Boolean(timetableDraft.termEnd) &&
     timetableDraft.termEnd >= timetableDraft.termStart;
   const timetableClassTimeValid = timetableClassDraft
-    ? minutesFromTime(timetableClassDraft.end) >
-      minutesFromTime(timetableClassDraft.start)
+    ? timetableClassDraft.meetings.length > 0 && timetableClassDraft.meetings.every(
+        (meeting) => minutesFromTime(meeting.end) > minutesFromTime(meeting.start),
+      )
     : true;
 
   const openClassTimetable = () => {
@@ -16153,9 +16244,12 @@ function TodayScreen({
     setTimetableClassDraft({
       id: `timetable-${Date.now()}`,
       name: "",
-      day: "mon",
-      start: "08:00",
-      end: "09:30",
+      meetings: [{
+        id: `meeting-${Date.now()}`,
+        day: "mon",
+        start: "08:00",
+        end: "09:30",
+      }],
       color: timetableColors[timetableDraft.classes.length % timetableColors.length],
     });
   };
@@ -16166,7 +16260,10 @@ function TodayScreen({
       classes: classTimetable.classes.map((item) => ({ ...item })),
     });
     setTimetableEditing(true);
-    setTimetableClassDraft({ ...classItem });
+    setTimetableClassDraft({
+      ...classItem,
+      meetings: classItem.meetings.map((meeting) => ({ ...meeting })),
+    });
   };
 
   useEffect(() => {
@@ -16180,7 +16277,14 @@ function TodayScreen({
     });
     setTimetableOpen(true);
     setTimetableEditing(Boolean(requestedClass));
-    setTimetableClassDraft(requestedClass ? { ...requestedClass } : null);
+    setTimetableClassDraft(
+      requestedClass
+        ? {
+            ...requestedClass,
+            meetings: requestedClass.meetings.map((meeting) => ({ ...meeting })),
+          }
+        : null,
+    );
     onTimetableRequestHandled();
   }, [
     classTimetable,
@@ -16197,12 +16301,20 @@ function TodayScreen({
       )
         ? current.classes.map((classItem) =>
             classItem.id === timetableClassDraft.id
-              ? { ...timetableClassDraft, name: timetableClassDraft.name.trim() }
+              ? {
+                  ...timetableClassDraft,
+                  name: timetableClassDraft.name.trim(),
+                  meetings: timetableClassDraft.meetings.map((meeting) => ({ ...meeting })),
+                }
               : classItem,
           )
         : [
             ...current.classes,
-            { ...timetableClassDraft, name: timetableClassDraft.name.trim() },
+            {
+              ...timetableClassDraft,
+              name: timetableClassDraft.name.trim(),
+              meetings: timetableClassDraft.meetings.map((meeting) => ({ ...meeting })),
+            },
           ],
     }));
     setTimetableClassDraft(null);
@@ -16220,7 +16332,7 @@ function TodayScreen({
     if (timetableDraft.classes.length > 0 && !timetableDateRangeValid) return;
 
     const normalized: ClassTimetable = {
-      ...timetableDraft,
+      ...normalizeClassTimetable(timetableDraft),
       termName: timetableDraft.termName.trim() || "Current semester",
       termStart: timetableDraft.termStart.trim(),
       termEnd: timetableDraft.termEnd.trim(),
@@ -16261,7 +16373,7 @@ function TodayScreen({
     scheduleLongPressTimerRef.current = window.setTimeout(() => {
       scheduleLongPressedRef.current = true;
       scheduleLongPressTimerRef.current = null;
-      openEventDetail(calendarEvent);
+      openEventDetail(calendarEvent, null, selectedDate);
     }, 520);
   };
 
@@ -16282,7 +16394,7 @@ function TodayScreen({
       scheduleLongPressedRef.current = false;
       return;
     }
-    openEventDetail(calendarEvent);
+    openEventDetail(calendarEvent, null, selectedDate);
   };
 
   useEffect(
@@ -16968,29 +17080,29 @@ function TodayScreen({
                   })}
                 </div>
                 {timetableDays.map((day) => {
-                  const dayClasses = classTimetable.classes
-                    .filter((classItem) => classItem.day === day.id)
+                  const dayClasses = timetableMeetings
+                    .filter((entry) => entry.day === day.id)
                     .sort((first, second) => first.start.localeCompare(second.start));
                   return (
                     <div className="timetable-grid-day" role="gridcell" key={day.id}>
-                      {dayClasses.map((classItem) => (
+                      {dayClasses.map(({ classItem, ...meeting }) => (
                         <button
                           className="timetable-class-block"
                           type="button"
-                          key={classItem.id}
+                          key={`${classItem.id}-${meeting.id}`}
                           style={{
                             background: classItem.color,
                             ...timetableClassPosition(
-                              classItem,
+                              meeting,
                               timetableWindow.start,
                               timetableWindow.end,
                             ),
                           }}
                           onClick={() => beginEditTimetableClass(classItem)}
-                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${classItem.start} to ${classItem.end}`}
+                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${meeting.start} to ${meeting.end}`}
                         >
                           <strong>{classItem.name}</strong>
-                          <small>{formatTimeBlock(classItem.start).primary}</small>
+                          <small>{formatTimeBlock(meeting.start).primary}</small>
                         </button>
                       ))}
                     </div>
@@ -17022,11 +17134,7 @@ function TodayScreen({
                     </button>
                   ) : (
                     [...timetableDraft.classes]
-                      .sort((first, second) =>
-                        `${first.day}-${first.start}`.localeCompare(
-                          `${second.day}-${second.start}`,
-                        ),
-                      )
+                      .sort((first, second) => first.name.localeCompare(second.name))
                       .map((classItem) => (
                         <button
                           className="timetable-edit-row"
@@ -17038,8 +17146,7 @@ function TodayScreen({
                           <span>
                             <strong>{classItem.name}</strong>
                             <small>
-                              {timetableDays.find((day) => day.id === classItem.day)?.label}
-                              {' · '}{classItem.start} — {classItem.end}
+                              {classItem.meetings.length} weekly meeting{classItem.meetings.length === 1 ? "" : "s"}
                             </small>
                           </span>
                           <b aria-hidden="true">›</b>
@@ -17091,51 +17198,42 @@ function TodayScreen({
                         placeholder="For example: Applied Physics"
                       />
                     </label>
-                    <div className="timetable-class-form-grid">
-                      <label>
-                        <span>Day</span>
-                        <select
-                          value={timetableClassDraft.day}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    day: event.target.value as TimetableDay,
-                                  }
-                                : current,
-                            )
-                          }
-                        >
-                          {timetableDays.map((day) => (
-                            <option value={day.id} key={day.id}>{day.label}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>Starts</span>
-                        <input
-                          type="time"
-                          value={timetableClassDraft.start}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current ? { ...current, start: event.target.value } : current,
-                            )
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Ends</span>
-                        <input
-                          type="time"
-                          value={timetableClassDraft.end}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current ? { ...current, end: event.target.value } : current,
-                            )
-                          }
-                        />
-                      </label>
+                    <label className="timetable-class-name">
+                      <span>Professor</span>
+                      <input
+                        value={timetableClassDraft.professor ?? ""}
+                        onChange={(event) =>
+                          setTimetableClassDraft((current) =>
+                            current ? { ...current, professor: event.target.value } : current,
+                          )
+                        }
+                        placeholder="Optional"
+                      />
+                    </label>
+                    <div className="timetable-meeting-list">
+                      {timetableClassDraft.meetings.map((meeting, index) => (
+                        <div className="timetable-meeting-row" key={meeting.id}>
+                          <label>
+                            <span>Day</span>
+                            <select
+                              value={meeting.day}
+                              onChange={(event) =>
+                                setTimetableClassDraft((current) => current ? {
+                                  ...current,
+                                  meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, day: event.target.value as TimetableDay } : item),
+                                } : current)
+                              }
+                            >
+                              {timetableDays.map((day) => <option value={day.id} key={day.id}>{day.label}</option>)}
+                            </select>
+                          </label>
+                          <label><span>Starts</span><input type="time" value={meeting.start} onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, start: event.target.value } : item) } : current)} /></label>
+                          <label><span>Ends</span><input type="time" value={meeting.end} onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, end: event.target.value } : item) } : current)} /></label>
+                          <label><span>Room</span><input value={meeting.room ?? ""} placeholder="Optional" onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, room: event.target.value } : item) } : current)} /></label>
+                          <button type="button" onClick={() => setTimetableClassDraft((current) => current && current.meetings.length > 1 ? { ...current, meetings: current.meetings.filter((item) => item.id !== meeting.id) } : current)} disabled={timetableClassDraft.meetings.length === 1} aria-label={`Remove meeting ${index + 1}`}>×</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => setTimetableClassDraft((current) => current ? { ...current, meetings: [...current.meetings, { id: `meeting-${Date.now()}`, day: "mon", start: "08:00", end: "09:30" }] } : current)}>＋ Add weekly meeting</button>
                     </div>
                     <fieldset className="timetable-color-picker">
                       <legend>Color</legend>

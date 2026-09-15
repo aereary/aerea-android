@@ -5,17 +5,21 @@ import test from "node:test";
 const page = readFileSync("app/page.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
 
-test("Class Library derives automatic shelves from the semester timetable", () => {
+test("Class Library derives automatic shelves from parent timetable classes", () => {
   assert.match(page, /AEREA_FIX_015A/);
   assert.match(page, /sourceType\?: "manual" \| "timetable"/);
   assert.match(page, /timetableClassIds\?: string\[\]/);
-  assert.match(page, /const grouped = new Map<string, TimetableClass\[\]>/);
+  assert.match(page, /meetings:\s*TimetableMeeting\[\]/);
   assert.match(page, /sourceType: "timetable" as const/);
 });
 
-test("same subject on multiple weekdays becomes one recordings shelf", () => {
-  assert.match(page, /Array\.from\(grouped\.entries\(\)\)\.map/);
-  assert.match(page, /timetableEntries\.map\(\(entry\) => entry\.id\)/);
+test("one timetable class can own multiple weekly meetings", () => {
+  assert.match(page, /classItem\.meetings/);
+  assert.match(page, /timetableClassId: classItem\.id/);
+  assert.match(
+    page,
+    /id: `timetable-event:\$\{classItem\.id\}:\$\{meeting\.id\}`/,
+  );
 });
 
 test("manual shelves survive while timetable shelves follow the timetable", () => {
