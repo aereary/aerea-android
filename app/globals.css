@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap");
 
 :root {
   --ink: #2f3827;
@@ -23889,9 +23888,10 @@ body {
 .post-it-editor-preview { border:0; }
 .movable-post-it p,
 .post-it-editor-preview textarea {
-  font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive;
-  font-weight:700;
-  letter-spacing:.01em;
+  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+  font-weight:400;
+  font-synthesis:none;
+  letter-spacing:.015em;
 }
 .movable-post-it p,
 .post-it-editor-preview textarea {
@@ -31552,3 +31552,63 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_HEALTH_ROUTINE_NOTE_V2 */
+
+/* AEREA_GLOBAL_MODAL_LAYERING_20260915 */
+
+/*
+  Viewport overlays must own the screen without sharing React state
+  with the outer phone canvas.
+*/
+
+.phone-canvas:has(.timetable-backdrop) .primary-swipe-surface,
+.phone-canvas:has(.health-routine-backdrop) .primary-swipe-surface {
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+.phone-canvas:has(.timetable-backdrop) > .bottom-nav,
+.phone-canvas:has(.health-routine-backdrop) > .bottom-nav {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.phone-canvas:has(.timetable-backdrop) .post-it-layer,
+.phone-canvas:has(.health-routine-backdrop) .post-it-layer {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.phone-canvas .timetable-backdrop,
+.phone-canvas .health-routine-backdrop {
+  inset: 0 !important;
+  position: fixed !important;
+  z-index: 20000 !important;
+  overscroll-behavior: contain;
+}
+
+.phone-canvas .timetable-card,
+.phone-canvas .health-routine-note {
+  touch-action: pan-y;
+}
+
+.phone-canvas .timetable-backdrop {
+  align-items: center !important;
+  justify-content: center !important;
+  padding:
+    max(22px, env(safe-area-inset-top))
+    12px
+    max(22px, env(safe-area-inset-bottom)) !important;
+}
+
+.phone-canvas .timetable-card {
+  max-height:
+    calc(
+      100dvh
+      - max(22px, env(safe-area-inset-top))
+      - max(22px, env(safe-area-inset-bottom))
+      - 12px
+    ) !important;
+}
+
+/* END AEREA_GLOBAL_MODAL_LAYERING_20260915 */
