@@ -31698,3 +31698,81 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
+/* AEREA_MOBILE_TIMETABLE_CHECK_POSITION_FIX_20260915 */
+
+/*
+ * Compact calendar:
+ * the completion check belongs ABOVE the event dots visually.
+ * This is positioning, not merely stacking order.
+ */
+.month-grid > button .calendar-day-status {
+  bottom: 27px !important;
+  z-index: 5 !important;
+}
+
+.month-grid > button .calendar-event-dots {
+  bottom: 6px !important;
+  top: auto !important;
+  z-index: 1 !important;
+}
+
+/*
+ * Phone timetable:
+ * deliberately smaller than the viewport, with generous space
+ * for aérea's permanent top controls and bottom navigation.
+ */
+@media (max-width: 700px) {
+  .phone-canvas .timetable-backdrop {
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding:
+      max(118px, calc(env(safe-area-inset-top) + 92px))
+      14px
+      max(78px, calc(env(safe-area-inset-bottom) + 52px)) !important;
+  }
+
+  .phone-canvas .timetable-card {
+    border-radius: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: min(
+      68dvh,
+      calc(
+        100dvh
+        - max(118px, calc(env(safe-area-inset-top) + 92px))
+        - max(78px, calc(env(safe-area-inset-bottom) + 52px))
+      )
+    ) !important;
+    overflow: hidden !important;
+    padding: 12px 10px 10px !important;
+    width: min(84vw, 540px) !important;
+  }
+
+  .phone-canvas .timetable-heading {
+    margin-bottom: 8px !important;
+  }
+
+  .phone-canvas .timetable-heading h2 {
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+  }
+
+  .phone-canvas .timetable-board,
+  .phone-canvas .timetable-editor {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  .month-grid > button .calendar-day-status {
+    bottom: 27px !important;
+    right: 6px !important;
+  }
+
+  .month-grid > button .calendar-event-dots {
+    bottom: 6px !important;
+  }
+}
+
+/* END AEREA_MOBILE_TIMETABLE_CHECK_POSITION_FIX_20260915 */
