@@ -154,14 +154,36 @@ test("timetable classes have stable parent ids with independent meeting rows", (
   assert.match(pageSource, /classItem\.day && classItem\.start && classItem\.end/);
 });
 
-test("timetable mobile overlay keeps the header reachable and schedule internally scrollable", () => {
-  assert.match(cssSource, /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items: flex-start !important;[\s\S]*max\(76px/);
-  assert.match(cssSource, /\.phone-canvas \.timetable-card \{[\s\S]*max-height:[\s\S]*overflow: hidden;/);
-  assert.match(cssSource, /\.phone-canvas \.timetable-board,[\s\S]*\.phone-canvas \.timetable-editor \{[\s\S]*overflow-y: auto;/);
+test("timetable mobile overlay stays centered without compressing its contents", () => {
+  const finalFix = cssSource.slice(
+    cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"),
+  );
+
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items: center !important;[\s\S]*justify-content: center !important;/,
+  );
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-card \{[\s\S]*display: block !important;[\s\S]*max-height: min\(62dvh, 760px\) !important;[\s\S]*overflow: auto !important;/,
+  );
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-board \{[\s\S]*flex: none !important;/,
+  );
 });
 
-test("Health calendar markers stack above event dots", () => {
-  const finalFix = cssSource.slice(cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"));
-  assert.match(finalFix, /\.calendar-expanded \.calendar-day-status \{[\s\S]*z-index: 3/);
-  assert.match(finalFix, /\.calendar-expanded \.calendar-event-dots \{[\s\S]*z-index: 1/);
+test("compact calendar markers change stacking without changing position", () => {
+  const finalFix = cssSource.slice(
+    cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"),
+  );
+
+  assert.match(
+    finalFix,
+    /\.month-grid > button \.calendar-day-status \{\s*z-index: 5 !important;\s*\}/,
+  );
+  assert.match(
+    finalFix,
+    /\.month-grid > button \.calendar-event-dots \{\s*z-index: 1 !important;\s*\}/,
+  );
 });

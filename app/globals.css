@@ -31617,6 +31617,7 @@ html[data-native="true"] :where(
 /* END AEREA_GLOBAL_MODAL_LAYERING_20260915 */
 
 /* AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
 .event-detail-health-completion {
   align-items: center;
   background: #eff3e8;
@@ -31660,119 +31661,53 @@ html[data-native="true"] :where(
   color: white;
 }
 
-.calendar-expanded .calendar-day-status {
-  z-index: 3;
-}
-
-.calendar-expanded .calendar-event-dots {
-  z-index: 1;
-}
-
-@media (max-width: 700px) {
-  .phone-canvas .timetable-backdrop {
-    align-items: flex-start !important;
-    padding:
-      max(76px, calc(env(safe-area-inset-top) + 52px))
-      12px
-      max(18px, env(safe-area-inset-bottom)) !important;
-  }
-
-  .phone-canvas .timetable-card {
-    display: flex;
-    flex-direction: column;
-    max-height:
-      calc(
-        100dvh
-        - max(76px, calc(env(safe-area-inset-top) + 52px))
-        - max(18px, env(safe-area-inset-bottom))
-      ) !important;
-    overflow: hidden;
-    padding: 14px 12px 12px;
-  }
-
-  .phone-canvas .timetable-board,
-  .phone-canvas .timetable-editor {
-    min-height: 0;
-    overflow-y: auto;
-  }
-}
-
-/* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
-
-/* AEREA_MOBILE_TIMETABLE_CHECK_POSITION_FIX_20260915 */
-
 /*
  * Compact calendar:
- * the completion check belongs ABOVE the event dots visually.
- * This is positioning, not merely stacking order.
+ * LAYERING ONLY.
+ * Do not move either the completion check or the event dots.
  */
 .month-grid > button .calendar-day-status {
-  bottom: 27px !important;
   z-index: 5 !important;
 }
 
 .month-grid > button .calendar-event-dots {
-  bottom: 6px !important;
-  top: auto !important;
   z-index: 1 !important;
 }
 
 /*
  * Phone timetable:
- * deliberately smaller than the viewport, with generous space
- * for aérea's permanent top controls and bottom navigation.
+ * keep the original internal geometry untouched.
+ * Only center and constrain the outer dialog.
  */
 @media (max-width: 700px) {
   .phone-canvas .timetable-backdrop {
-    align-items: flex-start !important;
+    align-items: center !important;
     justify-content: center !important;
     padding:
-      max(118px, calc(env(safe-area-inset-top) + 92px))
-      14px
-      max(78px, calc(env(safe-area-inset-bottom) + 52px)) !important;
+      max(74px, calc(env(safe-area-inset-top) + 54px))
+      12px
+      max(74px, calc(env(safe-area-inset-bottom) + 54px)) !important;
   }
 
   .phone-canvas .timetable-card {
-    border-radius: 24px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    max-height: min(
-      68dvh,
-      calc(
-        100dvh
-        - max(118px, calc(env(safe-area-inset-top) + 92px))
-        - max(78px, calc(env(safe-area-inset-bottom) + 52px))
-      )
-    ) !important;
-    overflow: hidden !important;
-    padding: 12px 10px 10px !important;
-    width: min(84vw, 540px) !important;
+    display: block !important;
+    max-height: min(62dvh, 760px) !important;
+    overflow: auto !important;
+    padding: 16px 12px 14px !important;
+    width: min(82vw, 540px) !important;
   }
 
-  .phone-canvas .timetable-heading {
-    margin-bottom: 8px !important;
-  }
-
-  .phone-canvas .timetable-heading h2 {
-    font-size: 18px !important;
-    line-height: 1.05 !important;
-  }
-
-  .phone-canvas .timetable-board,
-  .phone-canvas .timetable-editor {
-    flex: 1 1 auto !important;
+  .phone-canvas .timetable-board {
+    flex: none !important;
     min-height: 0 !important;
-    overflow-y: auto !important;
+    overflow: auto !important;
   }
 
-  .month-grid > button .calendar-day-status {
-    bottom: 27px !important;
-    right: 6px !important;
-  }
-
-  .month-grid > button .calendar-event-dots {
-    bottom: 6px !important;
+  .phone-canvas .timetable-editor {
+    flex: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 }
 
-/* END AEREA_MOBILE_TIMETABLE_CHECK_POSITION_FIX_20260915 */
+/* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
