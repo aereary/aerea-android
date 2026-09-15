@@ -12138,6 +12138,97 @@ body {
   .calendar-expanded .calendar-mood-sticker { height:16px; width:16px; }
 }
 
+/* Unified monthly calendar: one white surface shared by both entry points. */
+.app-shell:has(.unified-month-grid),
+.app-shell:has(.unified-month-grid) .simplified-calendar-screen,
+.app-shell:has(.unified-month-grid) .calendar-modal.calendar-expanded,
+.app-shell:has(.unified-month-grid) .unified-month-grid {
+  background: #fff !important;
+}
+
+.unified-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: 34px repeat(6, minmax(0, 1fr));
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.unified-month-grid > strong {
+  align-items: center;
+  border-bottom: 1px solid #e9e9e9;
+  color: #6f6f76;
+  display: flex;
+  font-size: 10px;
+  justify-content: center;
+  letter-spacing: .1em;
+}
+
+.unified-calendar-cell {
+  background: #fff;
+  border-bottom: 1px solid #ededed;
+  border-right: 1px solid #ededed;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.unified-calendar-cell.weekend { background: #fffdf8; }
+.unified-calendar-cell.sunday { border-left: 2px solid #f2d7da; }
+.unified-calendar-cell.saturday { border-right: 2px solid #dce8f3; }
+.unified-calendar-cell.selected { box-shadow: inset 3px 0 0 #9d87c6; }
+.unified-calendar-cell.outside-month { background: #fafafa; opacity: .56; }
+.unified-calendar-cell .calendar-day-number { left: 50%; top: 7px; transform: translateX(-50%); }
+.unified-calendar-cell.today .calendar-day-number { background: #efbc65; border-radius: 999px; color: #fff; padding: 3px 7px; }
+
+.unified-calendar-cell .calendar-cell-events {
+  bottom: 4px;
+  gap: 3px;
+  left: 4px;
+  right: 4px;
+  top: 31px;
+}
+
+.unified-calendar-cell .calendar-cell-event {
+  align-content: center;
+  background: color-mix(in srgb, var(--event-color) 16%, #fff);
+  border: 1px solid color-mix(in srgb, var(--event-color) 32%, #fff);
+  border-radius: 7px;
+  color: var(--event-color);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 3px 5px;
+  text-align: center;
+}
+
+.unified-calendar-cell .calendar-cell-event > strong,
+.unified-calendar-cell .calendar-cell-event > small {
+  color: var(--event-color);
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unified-calendar-cell .calendar-cell-event > strong { font-size: clamp(7px, 1vw, 11px); }
+.unified-calendar-cell .calendar-cell-event > small { font-size: clamp(6px, .8vw, 9px); }
+.unified-calendar-cell .calendar-more-events { color: #777; font-size: 8px; }
+
+.app-shell:has(.unified-month-grid) :is(.extended-calendar-nav, .simplified-calendar-nav, .bottom-nav) {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .unified-month-grid { grid-template-rows: 25px repeat(6, minmax(0, 1fr)); }
+  .unified-calendar-cell .calendar-cell-events { bottom: 2px; left: 2px; right: 2px; top: 23px; }
+  .unified-calendar-cell .calendar-cell-event { display: block; padding: 2px; }
+  .unified-calendar-cell .calendar-cell-event > strong { display: block; font-size: clamp(6px, 1.8vw, 8px); }
+  .unified-calendar-cell .calendar-cell-event > small { display: none; }
+}
+
 /* Weekly schedule replaces the former extended month. */
 .calendar-expanded .month-grid-viewport { display:none; }
 .calendar-expanded .schedule-shell {

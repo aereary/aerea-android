@@ -9054,6 +9054,111 @@ export default function Home() {
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
   };
 
+  const renderUnifiedCalendarGrid = () => (
+    <div
+      key={`unified-${calendarYear}-${calendarMonth}`}
+      className={[
+        "month-grid",
+        "unified-month-grid",
+        calendarSlideDirection ? `calendar-slide-${calendarSlideDirection}` : "",
+      ].filter(Boolean).join(" ")}
+      style={{ "--calendar-weeks": extendedCalendarWeekCount } as CSSProperties}
+      onAnimationEnd={() => setCalendarSlideDirection(null)}
+      onTouchStart={startCalendarSwipe}
+      onTouchEnd={finishCalendarSwipe}
+      role="grid"
+      aria-label="Monthly calendar. Swipe left or right to change month."
+    >
+      {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((weekday) => (
+        <strong role="columnheader" key={weekday}>{weekday}</strong>
+      ))}
+      {extendedCalendarDays.map(({ date, currentMonth, previousMonth, nextMonth }) => {
+        const dayKey = localDateKey(date);
+        const dayEvents = allCalendarEvents
+          .filter(
+            (calendarEvent) =>
+              eventOccursOn(calendarEvent, dayKey) &&
+              !hiddenCalendarSources.includes(calendarEvent.calendar || "Personal"),
+          )
+          .sort((first, second) => first.time.localeCompare(second.time));
+        const dayMood = moods.find((mood) => mood.label === moodHistory[dayKey]);
+        const dayComplete = completedDays[dayKey] === true;
+        return (
+          <div
+            data-calendar-date={dayKey}
+            className={[
+              "unified-calendar-cell",
+              currentMonth ? "" : "outside-month",
+              previousMonth ? "previous-month month-spillover" : "",
+              nextMonth ? "month-spillover" : "",
+              selectedCalendarDate === dayKey ? "selected" : "",
+              date.getDay() === 0 ? "sunday" : "",
+              date.getDay() === 6 ? "saturday" : "",
+              date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
+              dayKey === todayKey ? "today" : "",
+              dayComplete ? "day-complete" : "",
+              calendarDragTarget === dayKey ? "drag-target" : "",
+            ].filter(Boolean).join(" ")}
+            key={dayKey}
+            role="gridcell"
+            tabIndex={0}
+            aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
+            onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
+            onPointerMove={moveCalendarLongPress}
+            onPointerUp={cancelCalendarLongPress}
+            onPointerCancel={cancelCalendarLongPress}
+            onContextMenu={(event) => event.preventDefault()}
+            onClick={() => setSelectedCalendarDate(dayKey)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                setSelectedCalendarDate(dayKey);
+              }
+            }}
+          >
+            <span className="calendar-day-number">{date.getDate()}</span>
+            {dayMood && (
+              <i className={`calendar-mood-sticker ${dayMood.color}`} title={dayMood.label}>
+                {dayMood.face}
+              </i>
+            )}
+            {dayComplete && (
+              <i className="calendar-day-status complete" title="Everything completed">✓</i>
+            )}
+            <div className="calendar-cell-events">
+              {dayEvents.slice(0, 3).map((calendarEvent) => {
+                const eventColor = eventColors.find(
+                  (color) => color.value === eventDisplayColor(calendarEvent, dayKey),
+                )?.hex ?? "#ae96d8";
+                return (
+                  <button
+                    type="button"
+                    className={`calendar-cell-event ${eventDisplayColor(calendarEvent, dayKey)} ${
+                      isFootballVisualEvent(calendarEvent) ? "canonical-boca-match" : ""
+                    }`}
+                    style={{ "--event-color": eventColor } as CSSProperties}
+                    key={`${calendarEvent.id}-${dayKey}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedCalendarDate(dayKey);
+                      openEventDetail(calendarEventAtOccurrence(calendarEvent, dayKey));
+                    }}
+                    title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
+                  >
+                    <strong>{calendarEvent.title}</strong>
+                    <small>{eventStartTimeLabel(calendarEvent)}</small>
+                  </button>
+                );
+              })}
+              {dayEvents.length > 3 && (
+                <small className="calendar-more-events">+{dayEvents.length - 3}</small>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <main
       className="app-shell"
@@ -9229,132 +9334,7 @@ export default function Home() {
             </button>
           </section>
 
-          <div
-            key={`simplified-${calendarYear}-${calendarMonth}`}
-            className={[
-              "simplified-month-grid",
-              calendarSlideDirection
-                ? `calendar-slide-${calendarSlideDirection}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            style={
-              {
-                "--simplified-calendar-weeks": extendedCalendarWeekCount,
-              } as CSSProperties
-            }
-            onAnimationEnd={() => setCalendarSlideDirection(null)}
-            onTouchStart={startCalendarSwipe}
-            onTouchEnd={finishCalendarSwipe}
-            role="grid"
-            aria-label="Monthly calendar. Swipe left or right to change month."
-          >
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-              (weekday) => (
-                <strong role="columnheader" key={weekday}>
-                  {weekday}
-                </strong>
-              ),
-            )}
-            {extendedCalendarDays.map((calendarDay) => {
-              const { date, currentMonth } = calendarDay;
-              const dayKey = localDateKey(date);
-              const dayEvents = allCalendarEvents
-                .filter(
-                  (calendarEvent) =>
-                    eventOccursOn(calendarEvent, dayKey) &&
-                    !hiddenCalendarSources.includes(
-                      calendarEvent.calendar || "Personal",
-                    ),
-                )
-                .sort((first, second) => first.time.localeCompare(second.time));
-
-              return (
-                <div
-                  className={[
-                    "simplified-calendar-cell",
-                    currentMonth ? "" : "outside-month",
-                    date.getDay() === 0 ? "sunday" : "",
-                    selectedCalendarDate === dayKey ? "selected" : "",
-                    dayKey === todayKey ? "today" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  key={dayKey}
-                  role="gridcell"
-                  tabIndex={0}
-                  aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
-                  onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
-                  onPointerMove={moveCalendarLongPress}
-                  onPointerUp={cancelCalendarLongPress}
-                  onPointerCancel={cancelCalendarLongPress}
-                  onContextMenu={(event) => event.preventDefault()}
-                  onClick={() => {
-                    if (calendarLongPressedRef.current) {
-                      calendarLongPressedRef.current = false;
-                      return;
-                    }
-                    setSelectedCalendarDate(dayKey);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      setSelectedCalendarDate(dayKey);
-                    }
-                  }}
-                >
-                  <span className="simplified-calendar-date">
-                    {date.getDate()}
-                  </span>
-                  <div className="simplified-calendar-events">
-                    {dayEvents.slice(0, 3).map((calendarEvent) => {
-                      const eventColor = eventColors.find(
-                        (color) =>
-                          color.value === eventDisplayColor(calendarEvent, dayKey),
-                      )?.hex ?? "#ae96d8";
-                      return (
-                        <button
-                          type="button"
-                          className={`simplified-event-strip ${
-                            isFootballVisualEvent(calendarEvent)
-                              ? "canonical-boca-match"
-                              : ""
-                          }`}
-                          style={
-                            { "--simplified-event-color": eventColor } as CSSProperties
-                          }
-                          key={`${calendarEvent.id}-${dayKey}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedCalendarDate(dayKey);
-                            openEventDetail(
-                              calendarEventAtOccurrence(calendarEvent, dayKey),
-                            );
-                          }}
-                          title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
-                        >
-                          {calendarEvent.title}
-                        </button>
-                      );
-                    })}
-                    {dayEvents.length > 3 && (
-                      <button
-                        type="button"
-                        className="simplified-more-events"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedCalendarDate(dayKey);
-                          setDaySummaryDate(dayKey);
-                        }}
-                      >
-                        +{dayEvents.length - 3}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {renderUnifiedCalendarGrid()}
 
           <button
             className="simplified-calendar-add"
@@ -9366,55 +9346,6 @@ export default function Home() {
             <span aria-hidden="true" />
           </button>
 
-          <nav className="simplified-calendar-nav" aria-label="Calendar navigation">
-            <button
-              className="active"
-              type="button"
-              onClick={returnSimplifiedCalendarToToday}
-              aria-label="Month calendar"
-              aria-current="page"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4.5" y="5.5" width="15" height="14" rx="2" />
-                <path d="M8 3.8v3.4M16 3.8v3.4M4.5 9h15M8 12h2M12 12h2M16 12h.1M8 15.5h2M12 15.5h2M16 15.5h.1" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDaySummaryDate(selectedCalendarDate)}
-              aria-label="Selected day agenda"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4.5" y="5" width="15" height="4" rx="1" />
-                <rect x="4.5" y="10.5" width="15" height="4" rx="1" />
-                <rect x="4.5" y="16" width="15" height="3" rx="1" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                returnSimplifiedCalendarToToday();
-                setDaySummaryDate(todayKey);
-              }}
-              aria-label="Today agenda"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M7 9a5 5 0 0 1 10 0v3.5l2 3H5l2-3V9ZM10 19h4" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Open settings"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4" y="4" width="6" height="6" rx="1" />
-                <rect x="14" y="4" width="6" height="6" rx="1" />
-                <rect x="4" y="14" width="6" height="6" rx="1" />
-                <rect x="14" y="14" width="6" height="6" rx="1" />
-              </svg>
-            </button>
-          </nav>
         </section>
       )}
       <div className="paper-grain" aria-hidden="true" />
@@ -13120,125 +13051,7 @@ export default function Home() {
                       </button>
                     </section>
 
-                    <div
-                      key={`${calendarYear}-${calendarMonth}`}
-                      className={[
-                        "extended-month-grid",
-                        calendarSlideDirection
-                          ? `calendar-slide-${calendarSlideDirection}`
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      style={
-                        {
-                          "--extended-calendar-weeks": extendedCalendarWeekCount,
-                        } as CSSProperties
-                      }
-                      onAnimationEnd={() => setCalendarSlideDirection(null)}
-                      onTouchStart={startCalendarSwipe}
-                      onTouchEnd={finishCalendarSwipe}
-                      aria-label="Extended calendar month. Swipe left or right to change month."
-                    >
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((weekday) => (
-                        <strong key={weekday}>{weekday}</strong>
-                      ))}
-                      {extendedCalendarDays.map((calendarDay) => {
-                        const { date, currentMonth, previousMonth, nextMonth } = calendarDay;
-                        const dayKey = localDateKey(date);
-                        const dayEvents = allCalendarEvents
-                          .filter(
-                            (calendarEvent) =>
-                              eventOccursOn(calendarEvent, dayKey) &&
-                              !hiddenCalendarSources.includes(
-                                calendarEvent.calendar || "Personal",
-                              ),
-                          )
-                          .sort((first, second) => first.time.localeCompare(second.time));
-                        return (
-                          <div
-                            data-calendar-date={dayKey}
-                            className={[
-                              "extended-calendar-cell",
-                              currentMonth ? "" : "outside-month",
-                              previousMonth ? "previous-month month-spillover" : "",
-                              nextMonth ? "month-spillover" : "",
-                              selectedCalendarDate === dayKey ? "selected" : "",
-                              date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
-                              date.getDay() === 0 ? "sunday" : "",
-                              date.getDay() === 6 ? "saturday" : "",
-                              dayKey === todayKey ? "today" : "",
-                              calendarDragTarget === dayKey ? "drag-target" : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            key={dayKey}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`${readableDate(dayKey)}, ${dayEvents.length} events`}
-                            onPointerDown={(event) => beginCalendarLongPress(dayKey, event)}
-                            onPointerMove={moveCalendarLongPress}
-                            onPointerUp={cancelCalendarLongPress}
-                            onPointerCancel={cancelCalendarLongPress}
-                            onContextMenu={(event) => event.preventDefault()}
-                            onClick={() => setSelectedCalendarDate(dayKey)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                setSelectedCalendarDate(dayKey);
-                              }
-                            }}
-                          >
-                            <span className="extended-calendar-date">{date.getDate()}</span>
-                            <div className="extended-calendar-events">
-                              {dayEvents.slice(0, 3).map((calendarEvent) => (
-                                <button
-                                  type="button"
-                                  className={`extended-event-pill ${eventDisplayColor(calendarEvent, dayKey)} ${
-                                    isFootballVisualEvent(calendarEvent)
-                                      ? "canonical-boca-match"
-                                      : ""
-                                  }`}
-                                  key={`${calendarEvent.id}-${dayKey}`}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setSelectedCalendarDate(dayKey);
-                                    openEventDetail(
-                                      calendarEventAtOccurrence(calendarEvent, dayKey),
-                                    );
-                                  }}
-                                  title={`${calendarEvent.title} · ${eventStartTimeLabel(calendarEvent)}`}
-                                >
-                                  <span>
-                                    <strong>{calendarEvent.title}</strong>
-                                  </span>
-                                </button>
-                              ))}
-                              {dayEvents.length > 3 && (
-                                <small>+{dayEvents.length - 3}</small>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <nav className="extended-calendar-nav" aria-label="Primary navigation">
-                      {extendedCalendarTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          className={tab.id === activeTab ? "active" : ""}
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setCalendarOpen(false);
-                            changeTab(tab.id);
-                          }}
-                        >
-                          <span aria-hidden="true">{tab.icon}</span>
-                          {tab.id !== "add" && <small>{tab.label}</small>}
-                        </button>
-                      ))}
-                    </nav>
+                    {renderUnifiedCalendarGrid()}
                   </section>
                 )}
                 {!calendarExpanded && !calendarScheduleOpen && (
