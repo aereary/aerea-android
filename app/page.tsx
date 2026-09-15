@@ -9108,7 +9108,13 @@ export default function Home() {
             onPointerUp={cancelCalendarLongPress}
             onPointerCancel={cancelCalendarLongPress}
             onContextMenu={(event) => event.preventDefault()}
-            onClick={() => setSelectedCalendarDate(dayKey)}
+            onClick={() => {
+              if (calendarLongPressedRef.current) {
+                calendarLongPressedRef.current = false;
+                return;
+              }
+              setSelectedCalendarDate(dayKey);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 setSelectedCalendarDate(dayKey);
@@ -9159,6 +9165,167 @@ export default function Home() {
     </div>
   );
 
+  const renderUnifiedCalendarView = (mode: "simplified" | "extended") => (
+    <>
+      <header className="unified-calendar-header">
+        {mode === "extended" && (
+          <button
+            className="unified-calendar-back"
+            type="button"
+            onClick={() => {
+              setMonthPickerOpen(false);
+              setCalendarExpanded(false);
+            }}
+            aria-label="Back to compact month"
+            title="Back to compact month"
+          >
+            ←
+          </button>
+        )}
+        <button
+          className="unified-calendar-title"
+          type="button"
+          onClick={() => setMonthPickerOpen((open) => !open)}
+          aria-expanded={monthPickerOpen}
+          aria-label="Choose month and year"
+        >
+          {viewMonth.toLocaleDateString("en", { month: "long", year: "numeric" })}
+          <span aria-hidden="true">⌄</span>
+        </button>
+        <nav className="unified-calendar-actions" aria-label="Calendar tools">
+          {mode === "extended" && (
+            <button
+              type="button"
+              onClick={() => {
+                setCalendarExpanded(false);
+                setMonthPickerOpen(false);
+                setCalendarScheduleOpen(true);
+              }}
+              aria-label="Open day schedule"
+              title="Open day schedule"
+            >
+              ☆
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => openCalendarCategoryEditor()}
+            aria-label="Edit visible event types"
+            title="Edit event types"
+          >
+            ⚙
+          </button>
+          {mode === "simplified" && (
+            <>
+              <button
+                type="button"
+                onClick={returnSimplifiedCalendarToToday}
+                aria-label="Return to today"
+                title="Today"
+              >
+                ✦
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Open settings"
+                title="Settings"
+              >
+                ☷
+              </button>
+            </>
+          )}
+        </nav>
+      </header>
+
+      {monthPickerOpen && (
+        <section className="unified-month-picker" role="dialog" aria-label="Choose month and year">
+          <header>
+            <button
+              type="button"
+              onClick={() => setViewMonth(new Date(calendarYear - 1, calendarMonth, 1))}
+              aria-label="Previous year"
+            >
+              ‹
+            </button>
+            <strong>{calendarYear}</strong>
+            <button
+              type="button"
+              onClick={() => setViewMonth(new Date(calendarYear + 1, calendarMonth, 1))}
+              aria-label="Next year"
+            >
+              ›
+            </button>
+          </header>
+          <div>
+            {Array.from({ length: 12 }, (_, month) => (
+              <button
+                type="button"
+                key={month}
+                className={month === calendarMonth ? "active" : ""}
+                onClick={() => {
+                  const selectedDay = dateFromKey(selectedCalendarDate).getDate();
+                  const clampedDay = Math.min(
+                    selectedDay,
+                    new Date(calendarYear, month + 1, 0).getDate(),
+                  );
+                  setViewMonth(new Date(calendarYear, month, 1));
+                  setSelectedCalendarDate(calendarDateKey(calendarYear, month, clampedDay));
+                  setMonthPickerOpen(false);
+                }}
+              >
+                {new Date(calendarYear, month, 1).toLocaleDateString("en", { month: "short" })}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="unified-calendar-filters" aria-label="Visible calendars">
+        <div>
+          {extendedCalendarSources.map((source) => {
+            const hidden = hiddenCalendarSources.includes(source);
+            const category = calendarCategories.find(
+              (item) => item.name.toLowerCase() === source.toLowerCase(),
+            );
+            const sourceColor = eventColors.find(
+              (color) => color.value === category?.color,
+            )?.hex ?? "#ae96d8";
+            return (
+              <button
+                type="button"
+                key={source}
+                className={hidden ? "muted" : "active"}
+                style={{ "--unified-source-color": sourceColor } as CSSProperties}
+                onClick={() =>
+                  setHiddenCalendarSources((current) =>
+                    current.includes(source)
+                      ? current.filter((item) => item !== source)
+                      : [...current, source],
+                  )
+                }
+                aria-pressed={!hidden}
+              >
+                <span aria-hidden="true">{hidden ? "" : "✓"}</span>
+                {source}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={() => openCalendarCategoryEditor()}
+          aria-label="Edit calendar categories"
+          title="Edit calendars"
+        >
+          +
+        </button>
+      </section>
+
+      {renderUnifiedCalendarGrid()}
+    </>
+  );
+
   return (
     <main
       className="app-shell"
@@ -9190,151 +9357,7 @@ export default function Home() {
           className="simplified-calendar-screen"
           aria-label="Little aérea simplified monthly calendar"
         >
-          <header className="simplified-calendar-header">
-            <button
-              className="simplified-calendar-title"
-              type="button"
-              onClick={() => setMonthPickerOpen((open) => !open)}
-              aria-expanded={monthPickerOpen}
-              aria-label="Choose month and year"
-            >
-              {viewMonth.toLocaleDateString("en", {
-                month: "long",
-                year: "numeric",
-              })}
-              <span aria-hidden="true" />
-            </button>
-
-            <nav aria-label="Calendar shortcuts">
-              <button
-                type="button"
-                onClick={returnSimplifiedCalendarToToday}
-                aria-label="Return to today"
-                title="Today"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m12 7.4 1.35 2.73 3.02.44-2.18 2.13.51 3-2.7-1.42-2.7 1.42.51-3-2.18-2.13 3.02-.44L12 7.4Z" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="Open settings"
-                title="Settings"
-              >
-                <span className="simplified-controls-glyph" aria-hidden="true">
-                  <i />
-                  <i />
-                </span>
-              </button>
-            </nav>
-          </header>
-
-          {monthPickerOpen && (
-            <section
-              className="simplified-month-picker"
-              role="dialog"
-              aria-label="Choose month and year"
-            >
-              <header>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setViewMonth(new Date(calendarYear - 1, calendarMonth, 1))
-                  }
-                  aria-label="Previous year"
-                >
-                  ‹
-                </button>
-                <strong>{calendarYear}</strong>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setViewMonth(new Date(calendarYear + 1, calendarMonth, 1))
-                  }
-                  aria-label="Next year"
-                >
-                  ›
-                </button>
-              </header>
-              <div>
-                {Array.from({ length: 12 }, (_, month) => (
-                  <button
-                    type="button"
-                    key={month}
-                    className={month === calendarMonth ? "active" : ""}
-                    onClick={() => {
-                      const selectedDay = dateFromKey(selectedCalendarDate).getDate();
-                      const clampedDay = Math.min(
-                        selectedDay,
-                        new Date(calendarYear, month + 1, 0).getDate(),
-                      );
-                      setViewMonth(new Date(calendarYear, month, 1));
-                      setSelectedCalendarDate(
-                        calendarDateKey(calendarYear, month, clampedDay),
-                      );
-                      setMonthPickerOpen(false);
-                    }}
-                  >
-                    {new Date(calendarYear, month, 1).toLocaleDateString("en", {
-                      month: "short",
-                    })}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section
-            className="simplified-calendar-filters"
-            aria-label="Visible calendars"
-          >
-            <div>
-              {extendedCalendarSources.map((source) => {
-                const hidden = hiddenCalendarSources.includes(source);
-                const category = calendarCategories.find(
-                  (item) => item.name.toLowerCase() === source.toLowerCase(),
-                );
-                const sourceColor = eventColors.find(
-                  (color) => color.value === category?.color,
-                )?.hex ?? "#ae96d8";
-                return (
-                  <button
-                    type="button"
-                    key={source}
-                    className={hidden ? "muted" : "active"}
-                    style={
-                      { "--simplified-source-color": sourceColor } as CSSProperties
-                    }
-                    onClick={() =>
-                      setHiddenCalendarSources((current) =>
-                        current.includes(source)
-                          ? current.filter((item) => item !== source)
-                          : [...current, source],
-                      )
-                    }
-                    aria-pressed={!hidden}
-                  >
-                    <span aria-hidden="true">{hidden ? "" : "✓"}</span>
-                    {source}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              className="simplified-filter-menu"
-              type="button"
-              onClick={() => openCalendarCategoryEditor()}
-              aria-label="Edit calendar categories"
-              title="Edit calendars"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m8 8 4 4 4-4M8 13l4 4 4-4" />
-              </svg>
-            </button>
-          </section>
-
-          {renderUnifiedCalendarGrid()}
+          {renderUnifiedCalendarView("simplified")}
 
           <button
             className="simplified-calendar-add"
@@ -12900,158 +12923,7 @@ export default function Home() {
                     className="extended-calendar-view"
                     aria-label="Extended monthly calendar"
                   >
-                    <header className="extended-calendar-header">
-                      <div className="extended-calendar-sky" aria-hidden="true">
-                        <img
-                          className="extended-sky-cloud extended-sky-cloud-left"
-                          src="/assets/openmoji/cloud.svg"
-                          alt=""
-                        />
-                        <img
-                          className="extended-sky-cloud extended-sky-cloud-right"
-                          src="/assets/openmoji/cloud.svg"
-                          alt=""
-                        />
-                        <img
-                          className="extended-sky-moon"
-                          src="/assets/openmoji/moon.svg"
-                          alt=""
-                        />
-                      </div>
-                      <button
-                        className="extended-compact-button extended-back-button"
-                        type="button"
-                        onClick={() => {
-                          setMonthPickerOpen(false);
-                          setCalendarExpanded(false);
-                        }}
-                        aria-label="Back to compact month"
-                        title="Back to compact month"
-                      >
-                        <span className="extended-compact-glyph" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" focusable="false">
-                            <path d="M5 7h14M5 12h14M5 17h10" />
-                          </svg>
-                        </span>
-                      </button>
-                      <div className="extended-calendar-heading-copy">
-                        <div className="extended-calendar-month">
-                          <button
-                            className="extended-calendar-title"
-                            type="button"
-                            onClick={() => setMonthPickerOpen((open) => !open)}
-                            aria-expanded={monthPickerOpen}
-                          >
-                            {viewMonth.toLocaleDateString("en", {
-                              month: "long",
-                              year: "numeric",
-                            })}
-                            <span className="extended-month-chevron" aria-hidden="true">✧</span>
-                          </button>
-                        </div>
-                        <p>plan with purpose, live with intention ✦</p>
-                      </div>
-                      <nav
-                        className="extended-calendar-header-actions"
-                        aria-label="Calendar tools"
-                      >
-                        <button
-                          className="extended-schedule-button"
-                          type="button"
-                          onClick={() => {
-                            setCalendarExpanded(false);
-                            setMonthPickerOpen(false);
-                            setCalendarScheduleOpen(true);
-                          }}
-                          aria-label="Open day schedule"
-                          title="Open day schedule"
-                        >
-                          <span className="extended-schedule-glyph" aria-hidden="true">☆</span>
-                        </button>
-                        <button
-                          className="extended-filter-control"
-                          type="button"
-                          onClick={() => openCalendarCategoryEditor()}
-                          aria-label="Edit visible event types"
-                          title="Edit event types"
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h9M17 17h3" />
-                            <circle cx="16" cy="7" r="2" />
-                            <circle cx="10" cy="12" r="2" />
-                            <circle cx="15" cy="17" r="2" />
-                          </svg>
-                        </button>
-                      </nav>
-                    </header>
-
-                    {monthPickerOpen && (
-                      <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
-                        {Array.from({ length: 12 }, (_, month) => (
-                          <button
-                            type="button"
-                            key={month}
-                            className={month === calendarMonth ? "active" : ""}
-                            onClick={() => {
-                              setViewMonth(new Date(calendarYear, month, 1));
-                              setMonthPickerOpen(false);
-                            }}
-                          >
-                            {new Date(calendarYear, month, 1).toLocaleDateString("en", {
-                              month: "short",
-                            })}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <section className="extended-calendar-filters" aria-label="Visible event types">
-                      <div className="extended-filter-list">
-                        {extendedCalendarSources.map((source, index) => {
-                          const hidden = hiddenCalendarSources.includes(source);
-                          return (
-                            <button
-                              type="button"
-                              key={source}
-                              className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
-                              onClick={() =>
-                                setHiddenCalendarSources((current) =>
-                                  current.includes(source)
-                                    ? current.filter((item) => item !== source)
-                                    : [...current, source],
-                                )
-                              }
-                              aria-pressed={!hidden}
-                            >
-                              <span aria-hidden="true">
-                                {['♡', '▤', '✎', '▧'][index % 4]}
-                              </span>
-                              {source}
-                            </button>
-                          );
-                        })}
-                        {hiddenCalendarSources.length > 0 && (
-                          <button
-                            className="extended-filter-show-all"
-                            type="button"
-                            onClick={() => setHiddenCalendarSources([])}
-                          >
-                            Show all
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        className="extended-filter-menu"
-                        type="button"
-                        onClick={() => openCalendarCategoryEditor()}
-                        aria-label="Edit event types"
-                        title="Edit event types"
-                      >
-                        <span aria-hidden="true">＋</span>
-                      </button>
-                    </section>
-
-                    {renderUnifiedCalendarGrid()}
+                    {renderUnifiedCalendarView("extended")}
                   </section>
                 )}
                 {!calendarExpanded && !calendarScheduleOpen && (

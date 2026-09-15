@@ -1508,7 +1508,8 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /calendarCategories,/);
   assert.match(pageSource, /openCalendarCategoryEditor/);
   assert.match(pageSource, /className="category-editor-modal"/);
-  assert.match(pageSource, /className="extended-filter-list"/);
+  assert.match(pageSource, /const renderUnifiedCalendarView =/);
+  assert.match(pageSource, /className="unified-calendar-filters"/);
   assert.match(pageSource, /const renderUnifiedCalendarGrid =/);
   assert.match(pageSource, /className=\{`calendar-cell-event/);
   assert.doesNotMatch(pageSource, /date: null/);
@@ -1533,12 +1534,9 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(cssSource, /Extended month — the same glass, rhythm, and event anatomy as the schedule/);
   assert.match(cssSource, /\.extended-calendar-add \{ display:none!important; \}/);
   assert.match(cssSource, /the extended month is the screen, never a card behind controls/);
-  assert.match(pageSource, /className="extended-calendar-header-actions"/);
-  assert.match(pageSource, /className="extended-schedule-button"/);
-  assert.match(pageSource, /className="extended-compact-glyph"/);
-  assert.match(pageSource, /className="extended-compact-button extended-back-button"/);
-  assert.match(pageSource, /className="extended-filter-control"/);
-  assert.match(pageSource, /className="extended-filter-menu"/);
+  assert.match(pageSource, /className="unified-calendar-header"/);
+  assert.match(pageSource, /className="unified-month-picker"/);
+  assert.match(pageSource, /className="unified-calendar-actions"/);
   assert.match(pageSource, /calendar-slide-\$\{calendarSlideDirection\}/);
   assert.match(cssSource, /Unified monthly calendar: one white surface shared by both entry points/);
   assert.match(cssSource, /\.unified-month-grid[\s\S]*background: #fff !important/);
@@ -1593,9 +1591,9 @@ test("offers a persisted Little aérea simplified calendar-only screen", () => {
   assert.match(pageSource, /aria-label="Little aérea simplified"/);
   assert.match(pageSource, />\s*Just calendar\s*<\/button>/);
   assert.match(pageSource, /className="simplified-calendar-screen"/);
-  assert.match(pageSource, /className="simplified-calendar-filters"/);
+  assert.match(pageSource, /className="unified-calendar-filters"/);
   assert.match(pageSource, /className="simplified-calendar-add"/);
-  assert.match(pageSource, /renderUnifiedCalendarGrid\(\)/);
+  assert.match(pageSource, /renderUnifiedCalendarView\("simplified"\)/);
   assert.match(cssSource, /Unified monthly calendar: one white surface shared by both entry points/);
   assert.match(cssSource, /data-simplified-calendar="true"\] > \.paper-grain/);
   assert.match(cssSource, /data-simplified-calendar="true"\] > \.phone-canvas[\s\S]*display:none/);
