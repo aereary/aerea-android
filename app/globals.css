@@ -12138,174 +12138,6 @@ body {
   .calendar-expanded .calendar-mood-sticker { height:16px; width:16px; }
 }
 
-/* Unified monthly calendar: one white surface shared by both entry points. */
-.app-shell:has(.unified-month-grid),
-.app-shell:has(.unified-month-grid) .simplified-calendar-screen,
-.app-shell:has(.unified-month-grid) .calendar-modal.calendar-expanded,
-.app-shell:has(.unified-month-grid) .unified-month-grid {
-  background: #fff !important;
-}
-
-.unified-month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: 34px repeat(6, minmax(0, 1fr));
-  gap: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.unified-month-grid > strong {
-  align-items: center;
-  border-bottom: 1px solid #e9e9e9;
-  color: #6f6f76;
-  display: flex;
-  font-size: 10px;
-  justify-content: center;
-  letter-spacing: .1em;
-}
-
-.unified-calendar-header {
-  align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #e9e9e9;
-  display: flex;
-  gap: 10px;
-  min-height: 54px;
-  padding: 8px 10px;
-}
-
-.unified-calendar-back,
-.unified-calendar-title,
-.unified-calendar-actions button,
-.unified-calendar-filters button,
-.unified-month-picker button {
-  background: #fff;
-  border: 1px solid #e5e5e8;
-  color: #55555d;
-}
-
-.unified-calendar-back,
-.unified-calendar-actions button {
-  align-items: center;
-  border-radius: 50%;
-  display: inline-flex;
-  height: 34px;
-  justify-content: center;
-  min-width: 34px;
-  padding: 0;
-}
-
-.unified-calendar-title {
-  align-items: center;
-  border: 0;
-  display: inline-flex;
-  font-size: clamp(19px, 3vw, 30px);
-  font-weight: 700;
-  gap: 8px;
-  justify-content: flex-start;
-  margin: 0;
-  min-width: 0;
-  padding: 4px 6px;
-}
-
-.unified-calendar-title span { color: #9d87c6; font-size: 18px; }
-.unified-calendar-actions { display: flex; gap: 6px; margin-left: auto; }
-
-.unified-month-picker {
-  background: #fff;
-  border-bottom: 1px solid #e9e9e9;
-  padding: 8px 10px;
-}
-
-.unified-month-picker > header,
-.unified-month-picker > div { align-items: center; display: flex; gap: 6px; }
-.unified-month-picker > header { justify-content: space-between; margin-bottom: 7px; }
-.unified-month-picker > div { flex-wrap: wrap; }
-.unified-month-picker button { border-radius: 999px; font-size: 11px; padding: 5px 8px; }
-.unified-month-picker button.active { border-color: #9d87c6; color: #765ca4; font-weight: 800; }
-
-.unified-calendar-filters {
-  align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #e9e9e9;
-  display: flex;
-  gap: 7px;
-  min-height: 42px;
-  overflow-x: auto;
-  padding: 5px 8px;
-}
-
-.unified-calendar-filters > div { display: flex; flex: 1; gap: 6px; min-width: max-content; }
-.unified-calendar-filters button { border-radius: 999px; font-size: 10px; padding: 5px 9px; white-space: nowrap; }
-.unified-calendar-filters button.active { border-color: color-mix(in srgb, var(--unified-source-color) 48%, #fff); color: #55555d; }
-.unified-calendar-filters button.muted { opacity: .45; }
-.unified-calendar-filters > button:last-child { font-size: 16px; min-width: 32px; padding: 2px; }
-
-.unified-calendar-cell {
-  background: #fff;
-  border-bottom: 1px solid #ededed;
-  border-right: 1px solid #ededed;
-  min-height: 0;
-  overflow: hidden;
-  position: relative;
-}
-
-.unified-calendar-cell.weekend { background: #fff; }
-.unified-calendar-cell.sunday { border-left: 2px solid #f2d7da; }
-.unified-calendar-cell.saturday { border-right: 2px solid #dce8f3; }
-.unified-calendar-cell.selected { box-shadow: inset 3px 0 0 #9d87c6; }
-.unified-calendar-cell.outside-month { background: #fff; opacity: .56; }
-.unified-calendar-cell .calendar-day-number { left: 50%; top: 7px; transform: translateX(-50%); }
-.unified-calendar-cell.today .calendar-day-number { background: #efbc65; border-radius: 999px; color: #fff; padding: 3px 7px; }
-
-.unified-calendar-cell .calendar-cell-events {
-  bottom: 4px;
-  gap: 3px;
-  left: 4px;
-  right: 4px;
-  top: 31px;
-}
-
-.unified-calendar-cell .calendar-cell-event {
-  align-content: center;
-  background: color-mix(in srgb, var(--event-color) 16%, #fff);
-  border: 1px solid color-mix(in srgb, var(--event-color) 32%, #fff);
-  border-radius: 7px;
-  color: var(--event-color);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 0;
-  overflow: hidden;
-  padding: 3px 5px;
-  text-align: center;
-}
-
-.unified-calendar-cell .calendar-cell-event > strong,
-.unified-calendar-cell .calendar-cell-event > small {
-  color: var(--event-color);
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.unified-calendar-cell .calendar-cell-event > strong { font-size: clamp(7px, 1vw, 11px); }
-.unified-calendar-cell .calendar-cell-event > small { font-size: clamp(6px, .8vw, 9px); }
-.unified-calendar-cell .calendar-more-events { color: #777; font-size: 8px; }
-
-.app-shell:has(.unified-month-grid) :is(.extended-calendar-nav, .simplified-calendar-nav, .bottom-nav) {
-  display: none !important;
-}
-
-@media (max-width: 720px) {
-  .unified-month-grid { grid-template-rows: 25px repeat(6, minmax(0, 1fr)); }
-  .unified-calendar-cell .calendar-cell-events { bottom: 2px; left: 2px; right: 2px; top: 23px; }
-  .unified-calendar-cell .calendar-cell-event { display: block; padding: 2px; }
-  .unified-calendar-cell .calendar-cell-event > strong { display: block; font-size: clamp(6px, 1.8vw, 8px); }
-  .unified-calendar-cell .calendar-cell-event > small { display: none; }
-}
-
 /* Weekly schedule replaces the former extended month. */
 .calendar-expanded .month-grid-viewport { display:none; }
 .calendar-expanded .schedule-shell {
@@ -31838,16 +31670,8 @@ html[data-native="true"] :where(
   z-index: 5 !important;
 }
 
-.unified-month-grid .unified-calendar-cell .calendar-day-status {
-  z-index: 5 !important;
-}
-
 .month-grid > button .calendar-event-dots {
   z-index: 1 !important;
-}
-
-.unified-month-grid .unified-calendar-cell .calendar-cell-events {
-  z-index: 1;
 }
 
 /*
@@ -31887,3 +31711,48 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
+/* AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
+
+/*
+ * Preserve the existing Just calendar design.
+ * Changes:
+ * - pure white page
+ * - no bottom navigation
+ * - no floating +
+ * - calendar expands into all freed space
+ */
+
+.app-shell[data-simplified-calendar="true"] {
+  background: #ffffff !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+  --simplified-surface: #ffffff !important;
+  background: #ffffff !important;
+
+  /* header + filters + calendar; no fourth nav row */
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr) !important;
+
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+
+  /* only preserve the Android system-bar safe area */
+  padding-bottom:
+    calc(4px + var(--aerea-safe-area-bottom)) !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-nav,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-add {
+  display: none !important;
+}
+
+/* END AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
