@@ -31711,3 +31711,48 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
+/* AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
+
+/*
+ * Preserve the existing Just calendar design.
+ * Changes:
+ * - pure white page
+ * - no bottom navigation
+ * - no floating +
+ * - calendar expands into all freed space
+ */
+
+.app-shell[data-simplified-calendar="true"] {
+  background: #ffffff !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+  --simplified-surface: #ffffff !important;
+  background: #ffffff !important;
+
+  /* header + filters + calendar; no fourth nav row */
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr) !important;
+
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+
+  /* only preserve the Android system-bar safe area */
+  padding-bottom:
+    calc(4px + var(--aerea-safe-area-bottom)) !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-nav,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-add {
+  display: none !important;
+}
+
+/* END AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
