@@ -242,21 +242,39 @@ function ProfessorGroups({
   onAddProfessor: (rating: ProfessorRating) => void;
 }) {
   const longPressRef = useRef<number | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const clearLongPress = () => {
     if (longPressRef.current !== null) {
       window.clearTimeout(longPressRef.current);
       longPressRef.current = null;
     }
+    longPressStartRef.current = null;
   };
 
-  const beginLongPress = (rating: ProfessorRating) => {
+  const beginLongPress = (
+    rating: ProfessorRating,
+    x: number,
+    y: number,
+  ) => {
     clearLongPress();
+    longPressStartRef.current = { x, y };
+
     longPressRef.current = window.setTimeout(() => {
       longPressRef.current = null;
+      longPressStartRef.current = null;
       navigator.vibrate?.(18);
       onAddProfessor(rating);
     }, 520);
+  };
+
+  const moveLongPress = (x: number, y: number) => {
+    const start = longPressStartRef.current;
+    if (!start) return;
+
+    if (Math.hypot(x - start.x, y - start.y) > 12) {
+      clearLongPress();
+    }
   };
 
   const groups: {
@@ -286,11 +304,19 @@ function ProfessorGroups({
             key={group.rating}
             role="group"
             aria-label={`${group.title} professors. Press and hold to add.`}
-            onPointerDown={() => beginLongPress(group.rating)}
+            onPointerDown={(event) =>
+              beginLongPress(
+                group.rating,
+                event.clientX,
+                event.clientY,
+              )
+            }
             onPointerUp={clearLongPress}
             onPointerCancel={clearLongPress}
             onPointerLeave={clearLongPress}
-            onPointerMove={clearLongPress}
+            onPointerMove={(event) =>
+              moveLongPress(event.clientX, event.clientY)
+            }
             onContextMenu={(event) => {
               event.preventDefault();
               clearLongPress();
