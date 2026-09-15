@@ -63,10 +63,10 @@ test("class timetable is centered against the viewport", () => {
   );
 });
 
-test("post-its use bundled Patrick Hand with Latin accents", () => {
+test("post-its use bundled Gaegu with Spanish accents", () => {
   assert.match(
     nativeEntry,
-    /@fontsource\/patrick-hand\/400\.css/,
+    /@fontsource\/gaegu\/700\.css/,
   );
 
   assert.doesNotMatch(
@@ -86,8 +86,8 @@ test("post-its use bundled Patrick Hand with Latin accents", () => {
 
   const finalFontRule = fontRules.at(-1) ?? "";
 
-  assert.match(finalFontRule, /font-family:"Patrick Hand"/);
-  assert.match(finalFontRule, /font-weight:400/);
+  assert.match(finalFontRule, /font-family:"Gaegu"/);
+  assert.match(finalFontRule, /font-weight:700/);
   assert.match(finalFontRule, /font-synthesis:none/);
-  assert.doesNotMatch(finalFontRule, /Gaegu/);
+  assert.doesNotMatch(finalFontRule, /Patrick Hand/);
 });

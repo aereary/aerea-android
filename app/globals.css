@@ -20623,7 +20623,10 @@ body {
 }
 
 .post-it-layer {
-  inset:0;
+  top:0;
+  left:0;
+  right:0;
+  height:100dvh;
   overflow:visible;
   pointer-events:none;
   position:absolute;
@@ -23888,10 +23891,10 @@ body {
 .post-it-editor-preview { border:0; }
 .movable-post-it p,
 .post-it-editor-preview textarea {
-  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
-  font-weight:400;
+  font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive;
+  font-weight:700;
   font-synthesis:none;
-  letter-spacing:.015em;
+  letter-spacing:.01em;
 }
 .movable-post-it p,
 .post-it-editor-preview textarea {

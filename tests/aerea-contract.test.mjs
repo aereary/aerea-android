@@ -1422,7 +1422,7 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /style=\{postItVisualStyle\(postItDraft\.text\)\}/);
   assert.match(cssSource, /Movable paper notes/);
   assert.match(cssSource, /Full monthly calendar/);
-  assert.match(cssSource, /font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive/);
+  assert.match(cssSource, /font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive/);
   assert.match(cssSource, /\.post-it-editor-preview \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.movable-post-it \{[\s\S]*height:var\(--post-it-height,174px\);[\s\S]*width:var\(--post-it-width,184px\);/);
   assert.match(cssSource, /\.post-it-editor-options fieldset \{[\s\S]*margin:0 auto;[\s\S]*width:max-content;/);

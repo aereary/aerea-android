@@ -31,22 +31,22 @@ const packageJson = JSON.parse(
 
 test("post-it handwriting stays bundled locally", () => {
   assert.ok(
-    packageJson.dependencies["@fontsource/patrick-hand"],
+    packageJson.dependencies["@fontsource/gaegu"],
   );
 
   assert.match(
     nativeEntry,
-    /@fontsource\/patrick-hand\/400\.css/,
+    /@fontsource\/gaegu\/700\.css/,
   );
 
   assert.match(
     layout,
-    /@fontsource\/patrick-hand\/400\.css/,
+    /@fontsource\/gaegu\/700\.css/,
   );
 
   assert.match(
     css,
-    /font-family:"Patrick Hand"/,
+    /font-family:"Gaegu"/,
   );
 });
 
