@@ -2997,6 +2997,7 @@ export default function Home() {
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
   const phoneCanvasRef = useRef<HTMLElement | null>(null);
+  const postItLayerRef = useRef<HTMLDivElement | null>(null);
   const postItDragRef = useRef<{
     id: string;
     pointerId: number;
@@ -6525,9 +6526,9 @@ export default function Home() {
       return;
     }
     raisePostItOnTouch(postIt);
-    const canvas = phoneCanvasRef.current;
-    if (!canvas) return;
-    const bounds = canvas.getBoundingClientRect();
+    const layer = postItLayerRef.current;
+    if (!layer) return;
+    const bounds = layer.getBoundingClientRect();
     const centerX = bounds.left + (postIt.x / 100) * bounds.width;
     const centerY = bounds.top + (postIt.y / 100) * bounds.height;
     const groupPositions = postIt.groupId
@@ -6537,7 +6538,7 @@ export default function Home() {
       : [{ id: postIt.id, x: postIt.x, y: postIt.y }];
     const groupIds = new Set(groupPositions.map((item) => item.id));
     const previewElements = Array.from(
-      canvas.querySelectorAll<HTMLElement>("[data-post-it-id]"),
+      layer.querySelectorAll<HTMLElement>("[data-post-it-id]"),
     )
       .filter((element) => {
         const id = element.dataset.postItId;
@@ -6580,14 +6581,14 @@ export default function Home() {
 
   const movePostIt = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = postItDragRef.current;
-    const canvas = phoneCanvasRef.current;
-    if (!drag || !canvas || drag.pointerId !== event.pointerId) return;
+    const layer = postItLayerRef.current;
+    if (!drag || !layer || drag.pointerId !== event.pointerId) return;
     if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 10) {
       if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
       postItLongPressRef.current = null;
     }
     if (drag.locked) return;
-    const bounds = canvas.getBoundingClientRect();
+    const bounds = layer.getBoundingClientRect();
     const x = Math.max(
       9,
       Math.min(91, ((event.clientX - bounds.left - drag.offsetX) / bounds.width) * 100),
@@ -11301,6 +11302,7 @@ export default function Home() {
 
         {!sketchFullscreen && visiblePostIts.length > 0 && (
           <div
+            ref={postItLayerRef}
             className="post-it-layer"
             aria-label={`Your movable post-its on ${currentPostItPage}`}
           >

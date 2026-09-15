@@ -30,7 +30,12 @@ test("career plan is isolated from the protected page state", () => {
   assert.match(bridge, /aereaAndroidBack/);
   assert.match(bridge, /aerea_academic_profile/);
   assert.match(bridge, /aerea-academic-profile-v1/);
-  assert.match(bridge, /＋ Add professor/);
+  assert.doesNotMatch(bridge, /＋ Add professor/);
+  assert.match(bridge, /courseStates/);
+  assert.match(bridge, /Update course status/);
+  assert.match(bridge, /Withdrawn/);
+  assert.match(bridge, /onAddProfessor/);
+  assert.match(bridge, /Press and hold a color section/);
   assert.match(bridge, /Schedule/);
   assert.match(bridge, /My degree/);
   assert.match(layout, /<CareerPlanBridge \/>/);

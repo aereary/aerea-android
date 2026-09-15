@@ -22,15 +22,46 @@ const LOCAL_KEY = "aerea-academic-profile-v1";
 
 type CareerView = "summary" | "plan" | "available";
 
+type CourseProgressState =
+  | "completed"
+  | "inProgress"
+  | "withdrawn"
+  | "pending";
+
 type StoredAcademicProfile = {
   customProfessors: CareerProfessor[];
+  courseStates: Record<string, CourseProgressState>;
   updatedAt: number;
 };
 
 const EMPTY_PROFILE: StoredAcademicProfile = {
   customProfessors: [],
+  courseStates: {},
   updatedAt: 0,
 };
+
+function normalizeCourseStates(
+  value: unknown,
+): Record<string, CourseProgressState> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  const validCodes = new Set(CAREER_COURSES.map((course) => course.code));
+  const validStates = new Set<CourseProgressState>([
+    "completed",
+    "inProgress",
+    "withdrawn",
+    "pending",
+  ]);
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([code, state]) =>
+        validCodes.has(code) &&
+        typeof state === "string" &&
+        validStates.has(state as CourseProgressState),
+    ),
+  ) as Record<string, CourseProgressState>;
+}
 
 function readLocalProfile(): StoredAcademicProfile {
   if (typeof window === "undefined") return EMPTY_PROFILE;
@@ -51,6 +82,7 @@ function readLocalProfile(): StoredAcademicProfile {
       : [];
     return {
       customProfessors,
+      courseStates: normalizeCourseStates(parsed?.courseStates),
       updatedAt:
         typeof parsed?.updatedAt === "number" && Number.isFinite(parsed.updatedAt)
           ? parsed.updatedAt
@@ -77,7 +109,10 @@ async function pushAcademicProfile(profile: StoredAcademicProfile) {
   await supabase.from("aerea_academic_profile").upsert(
     {
       user_id: userId,
-      state: { customProfessors: profile.customProfessors },
+      state: {
+        customProfessors: profile.customProfessors,
+        courseStates: profile.courseStates,
+      },
       client_updated_at: profile.updatedAt,
       updated_at: new Date(profile.updatedAt || Date.now()).toISOString(),
     },
@@ -100,18 +135,56 @@ function normalizeRemoteProfessors(value: unknown): CareerProfessor[] {
   );
 }
 
-function statusMeta(course: CareerCourse) {
-  if (course.status === "APROBADO")
+function baselineCourseState(
+  course: CareerCourse,
+): CourseProgressState {
+  if (course.status === "APROBADO") return "completed";
+  if (course.status === "CURSANDO") return "inProgress";
+  return "pending";
+}
+
+function courseState(
+  course: CareerCourse,
+  states: Record<string, CourseProgressState>,
+): CourseProgressState {
+  return states[course.code] ?? baselineCourseState(course);
+}
+
+function statusMeta(
+  state: CourseProgressState,
+  available: boolean,
+) {
+  if (state === "completed")
     return { key: "approved", label: "Completed" } as const;
-  if (course.status === "CURSANDO")
+  if (state === "inProgress")
     return { key: "current", label: "In progress" } as const;
-  if (course.available)
+  if (state === "withdrawn")
+    return { key: "withdrawn", label: "Withdrawn" } as const;
+  if (available)
     return { key: "available", label: "Available" } as const;
   return { key: "locked", label: "Locked" } as const;
 }
 
 function courseByCode(code: string) {
   return CAREER_COURSES.find((course) => course.code === code) ?? null;
+}
+
+function isCourseAvailable(
+  course: CareerCourse,
+  states: Record<string, CourseProgressState>,
+) {
+  if (!course.prereq) return course.available;
+
+  const prerequisite = courseByCode(course.prereq);
+  if (!prerequisite) return course.available;
+
+  return courseState(prerequisite, states) === "completed";
+}
+
+function professorRatingLabel(rating: ProfessorRating) {
+  if (rating === "recommended") return "Recommended";
+  if (rating === "maybe") return "Maybe";
+  return "Never again";
 }
 
 function prerequisiteRoute(course: CareerCourse) {
@@ -130,11 +203,17 @@ function prerequisiteRoute(course: CareerCourse) {
 function CourseRow({
   course,
   onOpen,
+  courseStates,
 }: {
   course: CareerCourse;
   onOpen: (course: CareerCourse) => void;
+  courseStates: Record<string, CourseProgressState>;
 }) {
-  const meta = statusMeta(course);
+  const state = courseState(course, courseStates);
+  const meta = statusMeta(
+    state,
+    isCourseAvailable(course, courseStates),
+  );
   return (
     <button
       className={styles.courseRow}
@@ -157,9 +236,29 @@ function CourseRow({
 
 function ProfessorGroups({
   professors,
+  onAddProfessor,
 }: {
   professors: readonly CareerProfessor[];
+  onAddProfessor: (rating: ProfessorRating) => void;
 }) {
+  const longPressRef = useRef<number | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressRef.current !== null) {
+      window.clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
+  const beginLongPress = (rating: ProfessorRating) => {
+    clearLongPress();
+    longPressRef.current = window.setTimeout(() => {
+      longPressRef.current = null;
+      navigator.vibrate?.(18);
+      onAddProfessor(rating);
+    }, 520);
+  };
+
   const groups: {
     rating: ProfessorRating;
     title: string;
@@ -180,9 +279,24 @@ function ProfessorGroups({
         const items = professors.filter(
           (professor) => professor.rating === group.rating,
         );
-        if (!items.length) return null;
+
         return (
-          <section className={styles.professorGroup} key={group.rating}>
+          <section
+            className={styles.professorGroup}
+            key={group.rating}
+            role="group"
+            aria-label={`${group.title} professors. Press and hold to add.`}
+            onPointerDown={() => beginLongPress(group.rating)}
+            onPointerUp={clearLongPress}
+            onPointerCancel={clearLongPress}
+            onPointerLeave={clearLongPress}
+            onPointerMove={clearLongPress}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              clearLongPress();
+              onAddProfessor(group.rating);
+            }}
+          >
             <div className={styles.professorGroupHead}>
               <div>
                 <div className={styles.professorGroupTitle}>
@@ -195,17 +309,24 @@ function ProfessorGroups({
               </div>
               <span>{items.length}</span>
             </div>
+
             <div className={styles.professorChips}>
-              {items.map((professor) => (
-                <span
-                  className={`${styles.professorChip} ${
-                    styles[professor.rating]
-                  }`}
-                  key={professor.id}
-                >
-                  {professor.name}
+              {items.length ? (
+                items.map((professor) => (
+                  <span
+                    className={`${styles.professorChip} ${
+                      styles[professor.rating]
+                    }`}
+                    key={professor.id}
+                  >
+                    {professor.name}
+                  </span>
+                ))
+              ) : (
+                <span className={styles.emptyProfessorGroup}>
+                  Press and hold here to add one
                 </span>
-              ))}
+              )}
             </div>
           </section>
         );
@@ -236,32 +357,57 @@ function CareerPlanOverlay({
   profileRef.current = profile;
 
   const approved = useMemo(
-    () => CAREER_COURSES.filter((course) => course.status === "APROBADO"),
-    [],
+    () =>
+      CAREER_COURSES.filter(
+        (course) =>
+          courseState(course, profile.courseStates) === "completed",
+      ),
+    [profile.courseStates],
   );
+
   const current = useMemo(
-    () => CAREER_COURSES.filter((course) => course.status === "CURSANDO"),
-    [],
+    () =>
+      CAREER_COURSES.filter(
+        (course) =>
+          courseState(course, profile.courseStates) === "inProgress",
+      ),
+    [profile.courseStates],
   );
+
   const available = useMemo(
     () =>
-      CAREER_COURSES.filter(
-        (course) => course.status === "PENDIENTE" && course.available,
-      ),
-    [],
+      CAREER_COURSES.filter((course) => {
+        const state = courseState(course, profile.courseStates);
+        return (
+          (state === "pending" || state === "withdrawn") &&
+          isCourseAvailable(course, profile.courseStates)
+        );
+      }),
+    [profile.courseStates],
   );
+
   const locked = useMemo(
     () =>
-      CAREER_COURSES.filter(
-        (course) => course.status === "PENDIENTE" && !course.available,
-      ),
-    [],
+      CAREER_COURSES.filter((course) => {
+        const state = courseState(course, profile.courseStates);
+        return (
+          (state === "pending" || state === "withdrawn") &&
+          !isCourseAvailable(course, profile.courseStates)
+        );
+      }),
+    [profile.courseStates],
   );
+
   const approvedCredits = approved.reduce(
     (total, course) => total + course.credits,
     0,
   );
-  const progress = Math.round((approved.length / CAREER_COURSES.length) * 1000) / 10;
+
+  const progress =
+    Math.round(
+      (approved.length / CAREER_COURSES.length) * 1000,
+    ) / 10;
+
   const allProfessors = useMemo(
     () => [...CAREER_PROFESSORS, ...profile.customProfessors],
     [profile.customProfessors],
@@ -300,6 +446,11 @@ function CareerPlanOverlay({
 
       const remote: StoredAcademicProfile = {
         customProfessors: normalizeRemoteProfessors(data.state),
+        courseStates: normalizeCourseStates(
+          data.state && typeof data.state === "object"
+            ? (data.state as { courseStates?: unknown }).courseStates
+            : undefined,
+        ),
         updatedAt:
           typeof data.client_updated_at === "number"
             ? data.client_updated_at
@@ -311,7 +462,14 @@ function CareerPlanOverlay({
         setProfile(remote);
       } else if (local.updatedAt > remote.updatedAt) {
         void pushAcademicProfile(local);
-      } else if (remote.customProfessors.length && !local.customProfessors.length) {
+      } else if (
+        (
+          remote.customProfessors.length > 0 ||
+          Object.keys(remote.courseStates).length > 0
+        ) &&
+        local.customProfessors.length === 0 &&
+        Object.keys(local.courseStates).length === 0
+      ) {
         writeLocalProfile(remote);
         setProfile(remote);
       }
@@ -375,6 +533,7 @@ function CareerPlanOverlay({
     };
     const next: StoredAcademicProfile = {
       customProfessors: [...profileRef.current.customProfessors, nextProfessor],
+      courseStates: profileRef.current.courseStates,
       updatedAt: Date.now(),
     };
 
@@ -383,6 +542,24 @@ function CareerPlanOverlay({
     setNewProfessorName("");
     setNewProfessorRating("recommended");
     setAddProfessorOpen(false);
+    void pushAcademicProfile(next);
+  };
+
+  const updateCourseState = (
+    course: CareerCourse,
+    state: CourseProgressState,
+  ) => {
+    const next: StoredAcademicProfile = {
+      customProfessors: profileRef.current.customProfessors,
+      courseStates: {
+        ...profileRef.current.courseStates,
+        [course.code]: state,
+      },
+      updatedAt: Date.now(),
+    };
+
+    writeLocalProfile(next);
+    setProfile(next);
     void pushAcademicProfile(next);
   };
 
@@ -481,6 +658,7 @@ function CareerPlanOverlay({
                     <CourseRow
                       course={course}
                       onOpen={setSelectedCourse}
+                      courseStates={profile.courseStates}
                       key={course.code}
                     />
                   ))}
@@ -564,10 +742,14 @@ function CareerPlanOverlay({
                     );
                     if (!items.length) return null;
                     const done = allQuarter.filter(
-                      (course) => course.status === "APROBADO",
+                      (course) =>
+                        courseState(course, profile.courseStates) ===
+                        "completed",
                     ).length;
                     const taking = allQuarter.filter(
-                      (course) => course.status === "CURSANDO",
+                      (course) =>
+                        courseState(course, profile.courseStates) ===
+                        "inProgress",
                     ).length;
                     const expanded =
                       Boolean(search.trim()) || openQuarter === quarter;
@@ -605,6 +787,7 @@ function CareerPlanOverlay({
                               <CourseRow
                                 course={course}
                                 onOpen={setSelectedCourse}
+                      courseStates={profile.courseStates}
                                 key={course.code}
                               />
                             ))}
@@ -630,6 +813,7 @@ function CareerPlanOverlay({
                     <CourseRow
                       course={course}
                       onOpen={setSelectedCourse}
+                      courseStates={profile.courseStates}
                       key={course.code}
                     />
                   ))}
@@ -647,6 +831,7 @@ function CareerPlanOverlay({
                     <CourseRow
                       course={course}
                       onOpen={setSelectedCourse}
+                      courseStates={profile.courseStates}
                       key={course.code}
                     />
                   ))}
@@ -678,11 +863,52 @@ function CareerPlanOverlay({
             <p>{selectedCourse.code}</p>
             <span
               className={`${styles.detailBadge} ${
-                styles[statusMeta(selectedCourse).key]
+                styles[
+                  statusMeta(
+                    courseState(selectedCourse, profile.courseStates),
+                    isCourseAvailable(selectedCourse, profile.courseStates),
+                  ).key
+                ]
               }`}
             >
-              {statusMeta(selectedCourse).label}
+              {statusMeta(
+                courseState(selectedCourse, profile.courseStates),
+                isCourseAvailable(selectedCourse, profile.courseStates),
+              ).label}
             </span>
+
+            <div className={styles.courseStatusEditor}>
+              <small>Update course status</small>
+              <div className={styles.courseStatusChoices}>
+                {(
+                  [
+                    ["pending", "Pending"],
+                    ["inProgress", "In progress"],
+                    ["completed", "Completed"],
+                    ["withdrawn", "Withdrawn"],
+                  ] as const
+                ).map(([state, label]) => (
+                  <button
+                    type="button"
+                    className={
+                      courseState(
+                        selectedCourse,
+                        profile.courseStates,
+                      ) === state
+                        ? styles.selectedCourseStatus
+                        : ""
+                    }
+                    onClick={() =>
+                      updateCourseState(selectedCourse, state)
+                    }
+                    key={state}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className={styles.detailGrid}>
               <div>
                 <strong>{selectedCourse.credits}</strong>
@@ -722,11 +948,27 @@ function CareerPlanOverlay({
               <div>
                 <dt>Availability</dt>
                 <dd>
-                  {selectedCourse.status === "APROBADO"
+                  {courseState(
+                    selectedCourse,
+                    profile.courseStates,
+                  ) === "completed"
                     ? "Completed"
-                    : selectedCourse.available
-                      ? "Yes"
-                      : "Locked"}
+                    : courseState(
+                          selectedCourse,
+                          profile.courseStates,
+                        ) === "inProgress"
+                      ? "In progress"
+                      : courseState(
+                            selectedCourse,
+                            profile.courseStates,
+                          ) === "withdrawn"
+                        ? "Withdrawn"
+                        : isCourseAvailable(
+                              selectedCourse,
+                              profile.courseStates,
+                            )
+                          ? "Yes"
+                          : "Locked"}
                 </dd>
               </div>
             </dl>
@@ -776,17 +1018,17 @@ function CareerPlanOverlay({
             <small>Your list</small>
             <h2>Professors</h2>
             <p>
-              Green is recommended, yellow is maybe, and red is never again.
+              Green is recommended, yellow is maybe, and red is never again. Press and hold a color section to add a professor there.
             </p>
           </section>
-          <ProfessorGroups professors={allProfessors} />
-          <button
-            type="button"
-            className={styles.addProfessorButton}
-            onClick={() => setAddProfessorOpen(true)}
-          >
-            ＋ Add professor
-          </button>
+          <ProfessorGroups
+            professors={allProfessors}
+            onAddProfessor={(rating) => {
+              setNewProfessorName("");
+              setNewProfessorRating(rating);
+              setAddProfessorOpen(true);
+            }}
+          />
         </div>
       )}
 
@@ -799,7 +1041,19 @@ function CareerPlanOverlay({
         >
           <form className={styles.professorForm} onSubmit={saveProfessor}>
             <div className={styles.handle} />
-            <h2>Add professor</h2>
+            <h2>Add to {professorRatingLabel(newProfessorRating)}</h2>
+            <div
+              className={`${styles.professorTarget} ${
+                styles[newProfessorRating]
+              }`}
+            >
+              <span
+                className={`${styles.legendDot} ${
+                  styles[newProfessorRating]
+                }`}
+              />
+              {professorRatingLabel(newProfessorRating)}
+            </div>
             <input
               autoFocus
               value={newProfessorName}
@@ -807,29 +1061,6 @@ function CareerPlanOverlay({
               placeholder="Professor name"
               aria-label="Professor name"
             />
-            <div className={styles.ratingChoices}>
-              {(
-                [
-                  ["recommended", "Recommended"],
-                  ["maybe", "Maybe"],
-                  ["avoid", "Never again 😭"],
-                ] as const
-              ).map(([rating, label]) => (
-                <button
-                  type="button"
-                  className={
-                    newProfessorRating === rating ? styles.selectedRating : ""
-                  }
-                  onClick={() => setNewProfessorRating(rating)}
-                  key={rating}
-                >
-                  <span
-                    className={`${styles.legendDot} ${styles[rating]}`}
-                  />
-                  {label}
-                </button>
-              ))}
-            </div>
             <button type="submit" className={styles.saveProfessorButton}>
               Save professor
             </button>
