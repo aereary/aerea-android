@@ -10,10 +10,13 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite --host 0.0.0.0 --port 3000 --strictPort",
     "build": "bash scripts/build-verified.sh",
     "build:native": "vite build --config vite.native.config.ts && node scripts/finalize-native-build.mjs",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:types": "tsc --noEmit",
+    "check:repo": "npm run check:boundaries && npm run check:types && npm run lint && npm test",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && npm run build:native && node --test tests/*.test.mjs",
     "validate:artifact": "bash scripts/validate-artifact.sh",
-    "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .vinext --ignore-pattern .wrangler --ignore-pattern outputs --ignore-pattern native-shell --ignore-pattern public/pdf.worker.min.mjs --ignore-pattern android/app/src/main/assets/public",
+    "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .vinext --ignore-pattern .wrangler --ignore-pattern outputs --ignore-pattern native-shell --ignore-pattern public/pdf.worker.min.mjs --ignore-pattern android/app/src/main/assets/public --ignore-pattern android/app/build",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate"
   },
   "dependencies": {

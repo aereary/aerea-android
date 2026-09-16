@@ -391,13 +391,14 @@ export default function GenericLibraryBridge() {
 
     const syncFilters = () => {
       const search = layer.querySelector<HTMLInputElement>(".ao3-search");
-      const selects = layer.querySelectorAll<HTMLSelectElement>(
-        ".ao3-filter-row select",
-      );
+      const selects = layer.querySelectorAll(".ao3-filter-row select");
 
       setQuery(search?.value || "");
       setFiltersNeutral(
-        Array.from(selects).every((select) => select.value === "all"),
+        Array.from(selects).every(
+          (select) =>
+            select instanceof HTMLSelectElement && select.value === "all",
+        ),
       );
     };
 

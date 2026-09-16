@@ -114,6 +114,7 @@ import {
   timetableGridWindow,
   toggleHealthCompletedOn,
 } from "./planner-logic";
+import { DEFAULT_HYDRATION_NOTIFICATION_TIMES } from "./config/app-config";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 const AO3_HISTORY_MARKER = "aereaAo3LibraryOpen";
@@ -481,8 +482,6 @@ type Reminder = {
   notificationsEnabled?: boolean;
   notificationTimes?: string[];
 };
-
-const DEFAULT_HYDRATION_NOTIFICATION_TIMES = ["10:00", "14:00", "18:00"] as const;
 
 function isHydrationReminder(reminder: Pick<Reminder, "id" | "title" | "icon">) {
   const normalized = reminder.title
@@ -13235,7 +13234,7 @@ export default function Home() {
                           }}
                         >
                           <span aria-hidden="true">{tab.icon}</span>
-                          {tab.id !== "add" && <small>{tab.label}</small>}
+                          <small>{tab.label}</small>
                         </button>
                       ))}
                     </nav>

@@ -1,37 +1,5 @@
 @import "tailwindcss";
-
-:root {
-  --ink: #2f3827;
-  --ink-soft: #59624e;
-  --muted: #7d846f;
-  --cream: #fff9ed;
-  --cream-deep: #f8f0df;
-  --paper: #fffdf7;
-  --lime-wash: #eef8c9;
-  --lime-soft: #dcedaa;
-  --leaf: #8db654;
-  --leaf-deep: #648c3f;
-  --yellow: #ffcf55;
-  --yellow-soft: #ffedaa;
-  --orange: #e87531;
-  --orange-soft: #f8c39f;
-  --coral: #e98276;
-  --pink: #f7d7d5;
-  --blue: #cceaf2;
-  --lilac: #ded6f3;
-  --sage: #dbe9c3;
-  --hero: #b9df79;
-  --app-backdrop:
-    radial-gradient(circle at 8% 8%, rgba(255, 207, 85, 0.44), transparent 24rem),
-    radial-gradient(circle at 92% 15%, rgba(141, 182, 84, 0.25), transparent 28rem),
-    linear-gradient(145deg, #f3f8d8 0%, #e4f3b5 48%, #f9f1d7 100%);
-  --line: rgba(69, 82, 55, 0.12);
-  --shadow: 0 18px 48px rgba(83, 100, 57, 0.13);
-  --shadow-soft: 0 8px 24px rgba(83, 100, 57, 0.09);
-  --radius-xl: 32px;
-  --radius-lg: 24px;
-  --radius-md: 18px;
-}
+@import "./styles/manual-customization.css";
 
 * {
   box-sizing: border-box;
@@ -55,12 +23,9 @@ html {
 }
 
 body {
-  min-width: 320px;
+  min-width: var(--app-min-width);
   margin: 0;
-  background:
-    radial-gradient(circle at 8% 8%, rgba(255, 207, 85, 0.44), transparent 24rem),
-    radial-gradient(circle at 92% 15%, rgba(141, 182, 84, 0.25), transparent 28rem),
-    linear-gradient(145deg, #f3f8d8 0%, #e4f3b5 48%, #f9f1d7 100%);
+  background: var(--app-backdrop);
   color: var(--ink);
   font-family: var(--font-geist-sans), "Nunito Sans", "Segoe UI", sans-serif;
   font-size: 16px;
@@ -112,7 +77,7 @@ p {
 .app-shell {
   background: var(--app-backdrop);
   min-height: 100vh;
-  padding: 24px;
+  padding: var(--app-shell-padding);
   position: relative;
   transition: background 0.28s ease, color 0.28s ease;
 }

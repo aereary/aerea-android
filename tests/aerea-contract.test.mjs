@@ -18,10 +18,15 @@ const webLayoutSource = await readFile(
   new URL("../app/layout.tsx", import.meta.url),
   "utf8",
 );
-const cssSource = await readFile(
+const globalCssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
 );
+const manualCustomizationCssSource = await readFile(
+  new URL("../app/styles/manual-customization.css", import.meta.url),
+  "utf8",
+);
+const cssSource = `${manualCustomizationCssSource}\n${globalCssSource}`;
 const workflowSource = await readFile(
   new URL("../.github/workflows/build-apk.yml", import.meta.url),
   "utf8",

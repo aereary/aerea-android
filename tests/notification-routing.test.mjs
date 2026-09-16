@@ -6,6 +6,10 @@ const page = await readFile(
   new URL("../app/page.tsx", import.meta.url),
   "utf8",
 );
+const appConfig = await readFile(
+  new URL("../app/config/app-config.ts", import.meta.url),
+  "utf8",
+);
 const features = await readFile(
   new URL("../app/aerea-features.ts", import.meta.url),
   "utf8",
@@ -45,9 +49,10 @@ test("class timetable automatically routes to a 30-minute reminder", () => {
 
 test("hydration reminder schedules editable daily notification times", () => {
   assert.match(
-    page,
-    /DEFAULT_HYDRATION_NOTIFICATION_TIMES = \["10:00", "14:00", "18:00"\]/,
+    appConfig,
+    /hydrationNotificationTimes: \["10:00", "14:00", "18:00"\]/,
   );
+  assert.match(page, /DEFAULT_HYDRATION_NOTIFICATION_TIMES/);
   assert.match(page, /notificationTimesForReminder/);
   assert.match(page, /id: `hydration:\$\{reminder\.id\}:\$\{index\}`/);
   assert.match(page, /repeat: "Daily"/);
