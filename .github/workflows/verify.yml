@@ -1,0 +1,64 @@
+name: Verify aérea
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aerea-verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Web, native and Android checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run repository checks
+        run: npm run check:repo
+
+      - name: Restore Android binary resources
+        run: node ci/restore-android-binaries.mjs
+
+      - name: Create temporary debug signing key
+        run: keytool -genkeypair -noprompt -keystore ci/aerea-debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=aerea,C=PA" -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: Synchronize Capacitor
+        run: npx cap sync android
+
+      - name: Build Android debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Confirm APK output
+        run: test -f android/app/build/outputs/apk/debug/app-debug.apk

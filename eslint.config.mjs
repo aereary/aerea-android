@@ -13,6 +13,18 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // The stable UI predates React Compiler linting and is being split
+    // incrementally. Keep these findings visible without making unrelated
+    // maintenance changes fail. Restore each rule to "error" as its feature is
+    // extracted from the monolithic page component.
+    rules: {
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

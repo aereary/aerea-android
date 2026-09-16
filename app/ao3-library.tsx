@@ -1220,7 +1220,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
         {error && (
           <div className="ao3-error">
-            <strong>Couldn't refresh the cloud.</strong>
+            <strong>Couldn&apos;t refresh the cloud.</strong>
             <span>{error}</span>
             {works.length > 0 && <small>Showing the saved copy on this device.</small>}
           </div>
