@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 const stableRef =
   process.env.AEREA_STABLE_REF ??
-  "origin/fix/restore-just-calendar-baseline-20260915";
+  "origin/main";
 
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

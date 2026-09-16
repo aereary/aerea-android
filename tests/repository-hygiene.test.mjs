@@ -12,9 +12,11 @@ test("repository documentation describes aérea instead of the starter", async (
   assert.match(readme, /docs\/BRANCH_POLICY\.md/);
 });
 
-test("release automation follows the current stable line", async () => {
+test("release automation follows main and tags the built commit", async () => {
   const workflow = await read(".github/workflows/build-apk.yml");
-  assert.match(workflow, /fix\/restore-just-calendar-baseline-20260915/);
+  assert.match(workflow, /branches:\s*\n\s*- main/);
+  assert.match(workflow, /target_commitish:\s*\$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(workflow, /fix\/restore-just-calendar-baseline-20260915/);
   assert.doesNotMatch(workflow, /recovery\/consolidation-2026-09-05/);
 });
 

@@ -54,6 +54,16 @@
   never enter a commit.
 - Added regression coverage for repository hygiene.
 
+## Branch cleanup and promotion
+
+- Thirty fully merged historical branches were removed.
+- Seven divergent prototype branches were archived as immutable tags before
+  removal.
+- The tested stable line was reconciled with the old `main` history without a
+  force push and promoted as the repository source of truth.
+- Release creation now sets `target_commitish` to the exact workflow commit so
+  a tag cannot accidentally point at an older default-branch revision.
+
 ## Recommended sequence
 
 1. Archive unique historical branch tips, remove fully merged branches, and

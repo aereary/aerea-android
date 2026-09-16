@@ -2,20 +2,20 @@
 
 ## Fuente de verdad actual
 
-La rama estable es:
+La rama estable y fuente de verdad es:
 
 ```text
-fix/restore-just-calendar-baseline-20260915
+main
 ```
 
 Contiene la última línea acumulativa de Android, Career, Health, horarios,
-post-its, calendario, bibliotecas y mantenimiento. Hasta que termine la
-promoción controlada, `main` es histórica y no debe usarse como base de trabajo.
+post-its, calendario, bibliotecas y mantenimiento. La línea histórica anterior
+de `main` quedó preservada antes de la promoción.
 
 ## Reglas
 
 1. Toda rama nueva parte de la rama estable.
-2. Un Pull Request apunta a la rama estable mientras `main` siga en transición.
+2. Los Pull Requests apuntan a `main`.
 3. Las ramas fusionadas se eliminan después de comprobar que el workflow está
    verde.
 4. Una rama con commits únicos no se elimina hasta crear una etiqueta de
@@ -34,32 +34,20 @@ npm run audit:branches
 ```
 
 El informe marca una rama como `merged` únicamente si su commit final ya es
-ancestro de la rama estable. `branchOnly` mayor que cero significa que todavía
-existe historia exclusiva y que la rama no debe borrarse sin archivarla.
+ancestro de `main`. `branchOnly` mayor que cero significa que todavía existe
+historia exclusiva y que la rama no debe borrarse sin archivarla.
 
-## Estado del inventario del 16 de septiembre de 2026
+## Limpieza del 16 de septiembre de 2026
 
-- 39 ramas remotas encontradas.
-- 31 ramas están completamente contenidas en la rama estable: la propia rama
-  estable y 30 ramas históricas eliminables.
-- `main` conserva cinco commits de una integración antigua de Generic Library;
-  la implementación estable actual es posterior y está cubierta por pruebas,
-  pero la historia se preservará antes de promover la rama estable.
-- Seis ramas antiguas conservan prototipos AO3, Boca o General Library no
-  ancestrales. Antes de eliminarlas deben convertirse en etiquetas bajo
-  `archive/2026-09-16/`.
-- `recovery/consolidation-2026-09-05` solo añade un merge histórico; no contiene
-  un árbol de código más nuevo que la rama estable.
+- Se auditaron 39 ramas remotas.
+- Se eliminaron 30 ramas completamente fusionadas.
+- Siete ramas con historia exclusiva se conservaron como etiquetas bajo
+  `archive/2026-09-16/` antes de eliminarlas.
+- La antigua `main` se preservó como
+  `archive/2026-09-16/main-before-stable-promotion`.
+- La promoción reconcilió ambas historias mediante un merge normal, sin
+  reescritura ni `force push`.
 
-## Promoción de `main`
-
-La promoción se hará en un cambio separado después de:
-
-1. una compilación Android verde;
-2. una actualización instalada sobre la APK anterior sin pérdida de datos;
-3. una comprobación rápida en teléfono y tableta;
-4. una etiqueta de respaldo para la `main` anterior;
-5. una reconciliación de su historia sin reemplazar el árbol estable.
-
-Hasta completar esos pasos, cambiar la rama predeterminada o forzar `main`
-sería una operación destructiva innecesaria.
+La rama temporal `fix/restore-just-calendar-baseline-20260915` puede eliminarse
+cuando el Pull Request de promoción esté fusionado y su verificación quede en
+verde.

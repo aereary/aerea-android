@@ -7,9 +7,9 @@ widgets Agenda y Mes.
 
 ## Estado del proyecto
 
-- Rama estable actual: `fix/restore-just-calendar-baseline-20260915`.
-- `main` conserva una línea antigua y no debe usarse como base hasta completar
-  su promoción controlada.
+- Rama estable y fuente de verdad: `main`.
+- La historia anterior y los prototipos retirados se conservan mediante
+  etiquetas bajo `archive/2026-09-16/`.
 - Los Pull Requests ejecutan web, TypeScript, lint, la suite de regresión,
   sincronización de Capacitor y compilación Android.
 - Las Releases instalables usan una clave privada guardada exclusivamente en
