@@ -7,6 +7,11 @@ const page = await readFile(
   "utf8",
 );
 
+const screenShell = await readFile(
+  new URL("../app/components/screen-shell.tsx", import.meta.url),
+  "utf8",
+);
+
 const css = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
@@ -16,13 +21,13 @@ test("Habits keeps the same leaf sticker and uses it as the hidden routine trigg
   assert.match(page, /sticker="🌿"/);
   assert.match(page, /onStickerClick=\{openHealthRoutineNote\}/);
   assert.match(
-    page,
+    screenShell,
     /<span[\s\S]{0,180}className="screen-sticker"/,
   );
 
   // Do not replace the visible leaf with a new physical button/card.
   assert.doesNotMatch(
-    page,
+    screenShell,
     /<button[^>]*className="screen-sticker"/,
   );
 });
