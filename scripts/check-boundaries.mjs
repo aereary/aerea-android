@@ -10,7 +10,7 @@ const safeFiles = [
 const forbiddenPatterns = [
   { pattern: /from\s+["'][^"']*supabase-sync["']/, label: "Supabase import" },
   { pattern: /from\s+["'][^"']*ao3-library["']/, label: "AO3 import" },
-  { pattern: /from\s+["'][^"']*chatgpt-auth["']/, label: "authentication import" },
+  { pattern: /from\s+["'][^"']*api\/user["']/, label: "authentication import" },
   { pattern: /registerPlugin\s*</, label: "native plugin registration" },
   { pattern: /\b(?:localStorage|sessionStorage)\b/, label: "browser storage" },
   { pattern: /\bfetch\s*\(/, label: "network request" },

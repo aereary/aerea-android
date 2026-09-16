@@ -10,6 +10,7 @@
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vite --host 0.0.0.0 --port 3000 --strictPort",
     "build": "bash scripts/build-verified.sh",
     "build:native": "vite build --config vite.native.config.ts && node scripts/finalize-native-build.mjs",
+    "audit:branches": "node scripts/audit-branches.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:types": "tsc --noEmit",
     "check:repo": "npm run check:boundaries && npm run check:types && npm run lint && npm test",
