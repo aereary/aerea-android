@@ -50,7 +50,8 @@ jobs:
       - name: Restore Android binary resources
         run: node ci/restore-android-binaries.mjs
 
-      - name: Synchronize Capacitor
+      - name: Create temporary debug signing key
+        run: keytool -genkeypair -noprompt -keystore ci/aerea-debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=aerea,C=PA" -keyalg RSA -keysize 2048 -validity 10000
         run: npx cap sync android
 
       - name: Build Android debug APK
