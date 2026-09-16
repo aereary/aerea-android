@@ -119,3 +119,71 @@ test("timetable keeps MON through SAT and positions classes in a temporal grid",
   );
   assert.doesNotMatch(finalTimetableCss, /align-items:flex-end/);
 });
+
+test("Today Health details reuse the existing per-date completion state", () => {
+  assert.match(pageSource, /isHealthCompletionEvent\(selectedEventDetail\)/);
+  assert.match(pageSource, /isHealthCompletedOn\(\s*selectedEventDetail,\s*selectedEventDetail\.date/);
+  assert.match(pageSource, /toggleHealthOccurrence\(\s*clickEvent,\s*selectedEventDetail,\s*selectedEventDetail\.date/);
+  assert.match(pageSource, /openEventDetail\(calendarEvent, null, selectedDate\)/);
+  assert.match(pageSource, /setSelectedEventDetail\(\(current\) =>/);
+  assert.match(pageSource, /event-detail-health-completion/);
+  assert.match(cssSource, /\.event-detail-health-completion\.complete/);
+});
+
+test("non-Health event details do not render the Health completion control", () => {
+  const detail = pageSource.slice(
+    pageSource.indexOf('{selectedEventDetail &&'),
+    pageSource.indexOf('{selectedEventDetail &&') + 9500,
+  );
+  assert.match(detail, /isHealthCompletionEvent\(selectedEventDetail\) &&/);
+  assert.match(detail, /event-detail-health-completion/);
+});
+
+test("timetable classes have stable parent ids with independent meeting rows", () => {
+  assert.match(pageSource, /type TimetableMeeting/);
+  assert.match(pageSource, /meetings: TimetableMeeting\[\]/);
+  assert.match(pageSource, /normalizeTimetableClass/);
+  assert.match(pageSource, /classItem\.meetings\s*\.map\(\(meeting\) => timetableClassCalendarEvent/);
+  assert.match(pageSource, /id: `timetable-event:\$\{classItem\.id\}:\$\{meeting\.id\}`/);
+  assert.match(pageSource, /timetableClassIds: \[classItem\.id\]/);
+  assert.match(pageSource, /Add weekly meeting/);
+  assert.match(pageSource, /Remove meeting/);
+  assert.match(pageSource, /<span>Room<\/span>/);
+  assert.match(pageSource, /value=\{meeting\.room \?\? ""\}/);
+  assert.match(pageSource, /value=\{timetableClassDraft\.professor \?\? ""\}/);
+  assert.match(pageSource, /classItem\.day && classItem\.start && classItem\.end/);
+});
+
+test("timetable mobile overlay stays centered without compressing its contents", () => {
+  const finalFix = cssSource.slice(
+    cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"),
+  );
+
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items: center !important;[\s\S]*justify-content: center !important;/,
+  );
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-card \{[\s\S]*display: block !important;[\s\S]*max-height: min\(62dvh, 760px\) !important;[\s\S]*overflow: auto !important;/,
+  );
+  assert.match(
+    finalFix,
+    /\.phone-canvas \.timetable-board \{[\s\S]*flex: none !important;/,
+  );
+});
+
+test("compact calendar markers change stacking without changing position", () => {
+  const finalFix = cssSource.slice(
+    cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"),
+  );
+
+  assert.match(
+    finalFix,
+    /\.month-grid > button \.calendar-day-status \{\s*z-index: 5 !important;\s*\}/,
+  );
+  assert.match(
+    finalFix,
+    /\.month-grid > button \.calendar-event-dots \{\s*z-index: 1 !important;\s*\}/,
+  );
+});

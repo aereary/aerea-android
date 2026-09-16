@@ -18,10 +18,15 @@ const webLayoutSource = await readFile(
   new URL("../app/layout.tsx", import.meta.url),
   "utf8",
 );
-const cssSource = await readFile(
+const globalCssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
 );
+const manualCustomizationCssSource = await readFile(
+  new URL("../app/styles/manual-customization.css", import.meta.url),
+  "utf8",
+);
+const cssSource = `${manualCustomizationCssSource}\n${globalCssSource}`;
 const workflowSource = await readFile(
   new URL("../.github/workflows/build-apk.yml", import.meta.url),
   "utf8",
@@ -871,9 +876,28 @@ test("never clears visible state between local and cloud hydration", () => {
 });
 
 test("updates only the native visual cache after appearance hydration", () => {
+  const appearanceGuard =
+    "if (!isNative() || !appearanceHydrated) return;";
+  const appearanceGuardIndex = pageSource.indexOf(appearanceGuard);
+  const appearanceEffectStart = pageSource.lastIndexOf(
+    "useLayoutEffect(() =>",
+    appearanceGuardIndex,
+  );
+  const appearanceEffectEndMarker =
+    "}, [appearanceHydrated, appTheme, colorMode, customTheme]);";
+  const appearanceEffectEnd =
+    pageSource.indexOf(appearanceEffectEndMarker, appearanceGuardIndex) +
+    appearanceEffectEndMarker.length;
   const appearanceEffectSource = pageSource.slice(
-    pageSource.indexOf("useLayoutEffect(() =>"),
-    pageSource.indexOf("useEffect(() =>", pageSource.indexOf("useLayoutEffect(() =>")),
+    appearanceEffectStart,
+    appearanceEffectEnd,
+  );
+
+  assert.ok(
+    appearanceGuardIndex >= 0 &&
+      appearanceEffectStart >= 0 &&
+      appearanceEffectEnd >= appearanceEffectEndMarker.length,
+    "native appearance layout effect should remain intact",
   );
 
   assert.match(
@@ -976,35 +1000,55 @@ test("ships launcher-safe widgets with a useful empty first render", () => {
   assert.match(manifestSource, /AereaMonthWidget/);
 });
 
-test("uses the central plus for universal Inbox capture", () => {
-  assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
-  assert.match(pageSource, /tab\.id === "add" \? "Open Quick Capture" : tab\.label/);
-  assert.equal(
-    (pageSource.match(/\{tab\.id !== "add" && <small>\{tab\.label\}<\/small>\}/g) ?? []).length,
-    2,
-    "the center plus should not repeat the Add label in either bottom navigation",
+test("restores the normal bottom navigation while keeping swipe navigation", () => {
+  assert.match(
+    pageSource,
+    /<nav className="bottom-nav" aria-label="Primary navigation">/,
   );
-  assert.equal(
-    (pageSource.match(/setQuickCaptureOpen\(true\)/g) ?? []).length,
-    2,
-    "only the two rendered variants of the central navigation plus may open Quick Capture",
+
+  assert.match(
+    pageSource,
+    /tab\.id === "add" \? "quick-capture-nav" : ""/,
   );
+
+  assert.match(
+    pageSource,
+    /tab\.id === "add"[\s\S]*setQuickCaptureOpen\(true\)/,
+  );
+
+  assert.doesNotMatch(
+    pageSource,
+    /className="floating-home-button"/,
+  );
+
+  assert.doesNotMatch(
+    pageSource,
+    /aria-label="Back to Today"/,
+  );
+
   assert.doesNotMatch(
     pageSource,
     /className="feature-space-toolbar"[\s\S]{0,500}setQuickCaptureOpen\(true\)/,
   );
+
   assert.match(pageSource, /Keep in Inbox/);
+
   for (const kind of ["photo", "pdf", "file", "link"]) {
     assert.match(featureSource, new RegExp(`\\| "${kind}"`));
   }
+
   for (const destination of ["event", "task", "post-it", "note", "library"]) {
     assert.match(pageSource, new RegExp(`"${destination}"`));
   }
+
   assert.match(pageSource, /ensureInboxLibraryItem/);
   assert.match(pageSource, /libraryItemAsStudyFile/);
   assert.match(pageSource, /Capture is still here/);
   assert.match(pageSource, /const openInboxDestination =/);
-  assert.match(pageSource, /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/);
+  assert.match(
+    pageSource,
+    /if \(item\.processedAs\?\.includes\(destination\)\) \{[\s\S]{0,180}openInboxDestination\(item, destination\)/,
+  );
   assert.match(pageSource, /className=\{converted \? "converted" : ""\}/);
   assert.match(pageSource, /Open saved \$\{destination\}/);
   assert.match(pageSource, /sourceInboxId: item\.id/);
@@ -1012,7 +1056,10 @@ test("uses the central plus for universal Inbox capture", () => {
   assert.match(pageSource, /openTaskEditor\(task\)/);
   assert.match(pageSource, /className="task-editor-basics"/);
   assert.match(pageSource, />\s*Save task\s*</);
-  assert.match(pageSource, /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/);
+  assert.match(
+    pageSource,
+    /setHistoryMessage\(`Saved as \$\{destinationLabel\} ♡`\)/,
+  );
   assert.match(pageSource, /className="inbox-item-icon"/);
   assert.match(pageSource, /className="inbox-item-copy"/);
   assert.match(cssSource, /\.inbox-convert-actions button\.converted/);
@@ -1258,7 +1305,7 @@ test("renders one read-only Boca match across the current v156 surfaces", () => 
   assert.match(pageSource, /id: `football:\$\{match\.external_event_id\}`/);
   assert.match(pageSource, /sportsSource: "football_matches"/);
   assert.match(pageSource, /if \(!match\.time_confirmed \|\| !match\.kickoff_at\) return null/);
-  assert.match(pageSource, /if \(!kickoff\) return "Hora por confirmar"/);
+  assert.match(pageSource, /if \(!kickoff\) return "Time TBD"/);
   assert.match(pageSource, /kickoff\.getHours\(\)/);
   assert.match(pageSource, /footballMatchFinished\(event\.footballMatch\)/);
   assert.match(pageSource, /footballMatchCancelled\(event\.footballMatch\)/);
@@ -1272,7 +1319,11 @@ test("renders one read-only Boca match across the current v156 surfaces", () => 
   assert.match(pageSource, /Automatic match · read-only/);
   assert.doesNotMatch(pageSource, /selectedFootballMatch[\s\S]{0,5000}Edit this event/);
   assert.match(pageSource, /calendarEvent\.eventType !== "sports_event" &&[\s\S]{0,100}startCalendarEventDrag/);
-  assert.match(pageSource, /if \(event\.eventType === "sports_event"\) return/);
+  assert.match(
+    pageSource,
+    /event\.eventType === "sports_event" \|\|[\s\S]{0,120}event\.sourceType === "timetable"/,
+    "schedule drag must reject both automatic sports events and timetable-owned class series",
+  );
   for (const surface of [
     "simplified-event-strip",
     "extended-event-pill",

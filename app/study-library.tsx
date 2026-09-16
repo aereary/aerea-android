@@ -73,7 +73,7 @@ export type StudyFileItem = {
   id: string;
   name: string;
   mediaType: string;
-  kind: "pdf" | "epub" | "file";
+  kind: "pdf" | "epub" | "image" | "file";
   size: number;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +114,16 @@ function notePreview(body: string) {
 function readableRecordingDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(Math.max(0, seconds % 60)).padStart(2, "0")}`;
+}
+
+function studyFileIsImage(
+  file: Pick<StudyFileItem, "name" | "mediaType" | "kind">,
+) {
+  return (
+    file.kind === "image" ||
+    file.mediaType.toLowerCase().startsWith("image/") ||
+    /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(file.name)
+  );
 }
 
 export function StudyLibrary({
@@ -159,6 +169,7 @@ export function StudyLibrary({
   const [message, setMessage] = useState("");
   const [collectionFilter, setCollectionFilter] = useState<string | null>(null);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [openFileActionId, setOpenFileActionId] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const requestedNote = useMemo(
@@ -253,6 +264,21 @@ export function StudyLibrary({
     );
   };
 
+  const deleteRecording = (recording: StudyRecordingItem) => {
+    const confirmed = window.confirm(
+      `Delete "${recording.name}"? This recording will be permanently removed.`,
+    );
+    if (!confirmed) return;
+
+    if (recording.url?.startsWith("blob:")) {
+      URL.revokeObjectURL(recording.url);
+    }
+    onRecordingsChange(
+      recordings.filter((item) => item.id !== recording.id),
+    );
+    setMessage(`${recording.name} was deleted.`);
+  };
+
   const toggleCollection = (file: StudyFileItem, collectionId: string) => {
     const attached = file.collectionIds?.includes(collectionId) ?? false;
     onFilesChange(
@@ -290,6 +316,19 @@ export function StudyLibrary({
     );
   };
 
+  const toggleFileSelection = (fileId: string) => {
+    setSelectedFileIds((current) =>
+      current.includes(fileId)
+        ? current.filter((id) => id !== fileId)
+        : [...current, fileId],
+    );
+  };
+
+  const finishFileSelection = () => {
+    setSelectedFileIds([]);
+    setOpenFileActionId(null);
+  };
+
   const addSelectedToCollection = (collectionId: string) => {
     if (!collectionId || selectedFileIds.length === 0) return;
     onFilesChange(
@@ -324,6 +363,12 @@ export function StudyLibrary({
   };
 
   const openFile = (file: StudyFileItem) => {
+    if (selectedFileIds.length > 0) {
+      toggleFileSelection(file.id);
+      setOpenFileActionId(null);
+      return;
+    }
+
     onFilesChange(
       files.map((item) =>
         item.id === file.id
@@ -356,7 +401,6 @@ export function StudyLibrary({
     setMessage(`Importing ${selected.length} file${selected.length === 1 ? "" : "s"}…`);
     try {
       await onImportFiles(selected);
-      setFilter("files");
       setMessage(`${selected.length} file${selected.length === 1 ? " is" : "s are"} now in Library.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Those files could not be imported.");
@@ -616,7 +660,7 @@ export function StudyLibrary({
               >
                 Favorite
               </button>
-              <button type="button" onClick={() => setSelectedFileIds([])}>Done</button>
+              <button type="button" onClick={finishFileSelection}>Done</button>
             </div>
           )}
           <div className="study-file-grid">
@@ -629,22 +673,21 @@ export function StudyLibrary({
                 key={file.id}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  setSelectedFileIds((current) =>
-                    current.includes(file.id)
-                      ? current
-                      : [...current, file.id],
-                  );
+                  toggleFileSelection(file.id);
+                  setOpenFileActionId(null);
                 }}
               >
                 <button type="button" className="study-file-open" onClick={() => openFile(file)}>
                   <span className="study-file-cover">
-                    {file.mediaType.startsWith("image/") && file.dataUrl ? (
+                    {studyFileIsImage(file) && file.dataUrl ? (
                       <i
                         aria-hidden="true"
                         style={
                           { "--study-cover-image": `url("${file.dataUrl}")` } as CSSProperties
                         }
                       />
+                    ) : studyFileIsImage(file) ? (
+                      "IMAGE"
                     ) : file.mediaType.startsWith("audio/") ? (
                       "AUDIO"
                     ) : file.kind === "pdf" ? (
@@ -666,29 +709,43 @@ export function StudyLibrary({
                               ? ` · ${Math.round(file.readerLocation.percentage * 100)}%`
                               : ""
                           }`
-                        : file.kind === "pdf"
-                          ? "Open & annotate"
-                          : file.kind === "epub"
-                            ? "Open reader"
-                            : "Open file"} →
+                        : studyFileIsImage(file)
+                          ? "Open image"
+                          : file.kind === "pdf"
+                            ? "Open & annotate"
+                            : file.kind === "epub"
+                              ? "Open reader"
+                              : "Open file"} →
                   </em>
                 </button>
-                <details className="study-card-actions">
+                <details
+                  className="study-card-actions"
+                  open={openFileActionId === file.id}
+                  onToggle={(event) => {
+                    const isOpen = event.currentTarget.open;
+                    setOpenFileActionId((current) =>
+                      isOpen ? file.id : current === file.id ? null : current,
+                    );
+                  }}
+                >
                   <summary aria-label={`Actions for ${file.name}`}>···</summary>
                   <div>
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedFileIds((current) =>
-                          current.includes(file.id)
-                            ? current.filter((id) => id !== file.id)
-                            : [...current, file.id],
-                        )
-                      }
+                      onClick={() => {
+                        toggleFileSelection(file.id);
+                        setOpenFileActionId(null);
+                      }}
                     >
                       {selectedFileIds.includes(file.id) ? "Unselect" : "Select"}
                     </button>
-                    <button type="button" onClick={() => toggleFavorite(file)}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleFavorite(file);
+                        setOpenFileActionId(null);
+                      }}
+                    >
                       {file.favorite ? "Remove from Favorites" : "Add to Favorites"}
                     </button>
                     {collections.length > 0 && (
@@ -709,7 +766,10 @@ export function StudyLibrary({
                     <button
                       type="button"
                       className="danger"
-                      onClick={() => onDeleteFile(file)}
+                      onClick={() => {
+                        setOpenFileActionId(null);
+                        onDeleteFile(file);
+                      }}
                     >
                       Move to Trash
                     </button>
@@ -763,6 +823,12 @@ export function StudyLibrary({
                         {recording.favorite
                           ? "Remove from Favorites"
                           : "Add to Favorites"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteRecording(recording)}
+                      >
+                        Delete recording
                       </button>
                       {collections.length > 0 && (
                         <fieldset>
@@ -836,7 +902,7 @@ export function StudyLibrary({
               <div><p className="tiny-label">QUICK NOTE</p><h2>{hasNote(activeNoteEditor.id) ? "Keep writing" : "Catch the thought"}</h2></div>
               <button type="button" onClick={closeNoteEditor} aria-label="Close">×</button>
             </header>
-            <input className="study-note-title" autoFocus value={activeNoteEditor.title} onChange={(event) => setNoteEditor({ ...activeNoteEditor, title: event.target.value })} placeholder="Note title" />
+            <input className="study-note-title"  value={activeNoteEditor.title} onChange={(event) => setNoteEditor({ ...activeNoteEditor, title: event.target.value })} placeholder="Note title" />
             <textarea value={activeNoteEditor.body} onChange={(event) => setNoteEditor({ ...activeNoteEditor, body: event.target.value })} placeholder="Write anything…" />
             <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.pinned} onChange={(event) => setNoteEditor({ ...activeNoteEditor, pinned: event.target.checked })} /><span>◆ Pin this note</span></label>
             <label className="study-pin-toggle"><input type="checkbox" checked={activeNoteEditor.favorite ?? false} onChange={(event) => setNoteEditor({ ...activeNoteEditor, favorite: event.target.checked })} /><span>♡ Keep in Favorites</span></label>

@@ -35,6 +35,52 @@ type GenericLibraryVersion = {
   captured_at: string | null;
 };
 
+type GenericLibraryCache = {
+  items: GenericLibraryItem[];
+  versions: GenericLibraryVersion[];
+  savedAt: number;
+};
+
+const GENERIC_LIBRARY_CACHE_KEY = "aerea-generic-library-cache-v1";
+
+function readGenericLibraryCache(): GenericLibraryCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(GENERIC_LIBRARY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GenericLibraryCache>;
+    const items = validGenericItems(parsed.items);
+    const versions = validGenericVersions(parsed.versions);
+    if (!Array.isArray(parsed.items) || items.length !== parsed.items.length) {
+      return null;
+    }
+    return {
+      items,
+      versions,
+      savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeGenericLibraryCache(
+  items: GenericLibraryItem[],
+  versions: GenericLibraryVersion[],
+) {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: GenericLibraryCache = {
+      items,
+      versions,
+      savedAt: Date.now(),
+    };
+    window.localStorage.setItem(GENERIC_LIBRARY_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Cache is only a speed-up. Supabase remains the source of truth.
+  }
+}
+
 function normalizeSearch(value: string) {
   return value
     .normalize("NFD")
@@ -47,22 +93,22 @@ function driveViewUrl(fileId: string) {
 }
 
 function kindLabel(item: GenericLibraryItem) {
-  if (item.kind === "epub") return "LIBRO · EPUB";
-  if (item.kind === "pdf") return "DOCUMENTO · PDF";
-  if (item.kind === "document") return "DOCUMENTO";
-  return "ARCHIVO";
+  if (item.kind === "epub") return "BOOK · EPUB";
+  if (item.kind === "pdf") return "DOCUMENT · PDF";
+  if (item.kind === "document") return "DOCUMENT";
+  return "FILE";
 }
 
 function kindHuman(kind: GenericLibraryKind) {
-  if (kind === "epub") return "Libro EPUB";
-  if (kind === "pdf") return "Documento PDF";
-  if (kind === "document") return "Documento";
-  return "Archivo";
+  if (kind === "epub") return "EPUB book";
+  if (kind === "pdf") return "PDF document";
+  if (kind === "document") return "Document";
+  return "File";
 }
 
 function fileSizeLabel(bytes: number | null) {
   if (bytes == null || !Number.isFinite(bytes) || bytes < 0) {
-    return "Tamaño no disponible";
+    return "Size unavailable";
   }
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
@@ -72,10 +118,10 @@ function fileSizeLabel(bytes: number | null) {
 }
 
 function dateLabel(value: string | null) {
-  if (!value) return "Fecha no disponible";
+  if (!value) return "Date unavailable";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Fecha no disponible";
-  return new Intl.DateTimeFormat("es-PA", {
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -175,7 +221,7 @@ function GenericLibraryCard({
         <button
           className="ao3-copy-title"
           type="button"
-          title="Tocar para copiar el título"
+          title="Tap to copy title"
           onClick={() => void copyTitle()}
         >
           {item.title}
@@ -183,7 +229,7 @@ function GenericLibraryCard({
       </header>
 
       <div className="ao3-card-meta">
-        <strong>{item.author || "Sin autor guardado"}</strong>
+        <strong>{item.author || "No author saved"}</strong>
         <span>{item.filename}</span>
         <span className="ao3-status">{extension}</span>
       </div>
@@ -191,11 +237,11 @@ function GenericLibraryCard({
       <div className="ao3-card-body">
         <div className="ao3-context">
           <div>
-            <b>Tipo</b>
+            <b>Type</b>
             <span>{kindHuman(item.kind)}</span>
           </div>
           <div>
-            <b>Archivo</b>
+            <b>File</b>
             <span>{fileSizeLabel(item.size_bytes)}</span>
           </div>
         </div>
@@ -206,21 +252,21 @@ function GenericLibraryCard({
             target="_blank"
             rel="noreferrer"
           >
-            ↗ Abrir en Drive
+            ↗ Open in Drive
           </a>
         </div>
 
         {historicalVersions.length > 0 && (
           <details className="ao3-alternative">
             <summary>
-              + Versión anterior
-              {historicalVersions.length > 1 ? "es" : ""}
+              + Previous version
+              {historicalVersions.length > 1 ? "s" : ""}
             </summary>
             <div className="ao3-alternative-body">
               {historicalVersions.map((version) => (
                 <div className="ao3-alternative-item" key={version.id}>
                   <p>
-                    <strong>{version.title || "Versión anterior"}</strong>
+                    <strong>{version.title || "Previous version"}</strong>
                     {version.author ? ` · ${version.author}` : ""}
                     {" · "}
                     {dateLabel(version.captured_at)}
@@ -231,7 +277,7 @@ function GenericLibraryCard({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      ↗ Abrir versión protegida
+                      ↗ Open preserved version
                     </a>
                   </div>
                 </div>
@@ -260,9 +306,8 @@ export default function GenericLibraryBridge() {
     };
 
     syncTarget();
-    const observer = new MutationObserver(syncTarget);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    const interval = window.setInterval(syncTarget, 120);
+    return () => window.clearInterval(interval);
   }, []);
 
   const refreshGenericLibrary = useCallback(async () => {
@@ -297,13 +342,23 @@ export default function GenericLibraryBridge() {
       );
     }
 
-    setItems(validGenericItems(itemsResult.data || []));
-    setVersions(validGenericVersions(versionsResult.data || []));
+    const nextItems = validGenericItems(itemsResult.data || []);
+    const nextVersions = validGenericVersions(versionsResult.data || []);
+    setItems(nextItems);
+    setVersions(nextVersions);
+    if (!versionsResult.error) {
+      writeGenericLibraryCache(nextItems, nextVersions);
+    }
   }, []);
 
   useEffect(() => {
-    if (!target) return;
+    const cached = readGenericLibraryCache();
+    if (cached) {
+      setItems(cached.items);
+      setVersions(cached.versions);
+    }
 
+    // Refresh immediately, not after AO3 finishes creating its grid.
     void refreshGenericLibrary();
 
     const channel = supabase
@@ -323,7 +378,7 @@ export default function GenericLibraryBridge() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [refreshGenericLibrary, target]);
+  }, [refreshGenericLibrary]);
 
   useEffect(() => {
     const layer = target?.closest<HTMLElement>(".ao3-library-layer");
@@ -336,22 +391,33 @@ export default function GenericLibraryBridge() {
 
     const syncFilters = () => {
       const search = layer.querySelector<HTMLInputElement>(".ao3-search");
-      const selects = layer.querySelectorAll<HTMLSelectElement>(
-        ".ao3-filter-row select",
-      );
+      const selects = layer.querySelectorAll(".ao3-filter-row select");
 
       setQuery(search?.value || "");
       setFiltersNeutral(
-        Array.from(selects).every((select) => select.value === "all"),
+        Array.from(selects).every(
+          (select) =>
+            select instanceof HTMLSelectElement && select.value === "all",
+        ),
       );
     };
 
+    let inputTimer: number | null = null;
+    const syncFiltersSoon = () => {
+      if (inputTimer !== null) window.clearTimeout(inputTimer);
+      inputTimer = window.setTimeout(() => {
+        inputTimer = null;
+        syncFilters();
+      }, 180);
+    };
+
     syncFilters();
-    layer.addEventListener("input", syncFilters, true);
+    layer.addEventListener("input", syncFiltersSoon, true);
     layer.addEventListener("change", syncFilters, true);
 
     return () => {
-      layer.removeEventListener("input", syncFilters, true);
+      if (inputTimer !== null) window.clearTimeout(inputTimer);
+      layer.removeEventListener("input", syncFiltersSoon, true);
       layer.removeEventListener("change", syncFilters, true);
     };
   }, [target]);

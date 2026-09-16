@@ -99,7 +99,7 @@ public class AereaStoragePlugin extends Plugin {
                 for (int i=0;i<data.getClipData().getItemCount();i++) files.put(copyPickedImage(data.getClipData().getItemAt(i).getUri()));
             } else if (data.getData() != null) files.put(copyPickedImage(data.getData()));
             call.resolve(new JSObject().put("files", files));
-        } catch (Exception error) { call.reject("No se pudo copiar la imagen a aérea", error); }
+        } catch (Exception error) { call.reject("Could not copy the image into aérea", error); }
     }
 
     private JSObject copyPickedImage(Uri uri) throws Exception {
@@ -108,13 +108,13 @@ public class AereaStoragePlugin extends Plugin {
             if (cursor != null && cursor.moveToFirst()) { name=cursor.getString(0); declaredSize=cursor.isNull(1)?-1:cursor.getLong(1); }
         }
         String extension = extensionOf(name); String mime = normalizeImageMime(getContext().getContentResolver().getType(uri), extension, uri);
-        if (mime == null) throw new IllegalArgumentException("El archivo elegido no es una imagen compatible");
+        if (mime == null) throw new IllegalArgumentException("The selected file is not a supported image");
         String id=UUID.randomUUID().toString(); long now=System.currentTimeMillis(); File directory=new File(getContext().getFilesDir(),"library");
         if(!directory.exists()&&!directory.mkdirs())throw new IllegalStateException("Could not create Library directory");
         File stored=new File(directory,id+(extension.isEmpty()?extensionForMime(mime):"."+extension)); long size=0;
         try(InputStream input=getContext().getContentResolver().openInputStream(uri); FileOutputStream output=new FileOutputStream(stored)){
-            if(input==null)throw new IllegalStateException("El selector no permitió leer la imagen"); byte[] buffer=new byte[64*1024]; int read;
-            while((read=input.read(buffer))!=-1){size+=read;if(size>80L*1024L*1024L)throw new IllegalArgumentException("La imagen supera 80 MB");output.write(buffer,0,read);}
+            if(input==null)throw new IllegalStateException("The system picker could not read the image"); byte[] buffer=new byte[64*1024]; int read;
+            while((read=input.read(buffer))!=-1){size+=read;if(size>80L*1024L*1024L)throw new IllegalArgumentException("The image is larger than 80 MB");output.write(buffer,0,read);}
         } catch(Exception e){stored.delete();throw e;}
         ContentValues values=new ContentValues(); values.put("id",id);values.put("name",name);values.put("mime_type",mime);values.put("extension",extension);values.put("size",size);values.put("path",stored.getAbsolutePath());values.put("created_at",now);values.put("updated_at",now);
         database.getWritableDatabase().insertOrThrow("library_files",null,values);

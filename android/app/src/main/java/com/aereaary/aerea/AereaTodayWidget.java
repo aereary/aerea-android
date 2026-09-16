@@ -172,11 +172,11 @@ public class AereaTodayWidget extends AppWidgetProvider {
         );
         views.setTextViewText(
             R.id.widget_today,
-            offset == 0 ? "Hoy" : "Volver a hoy"
+            offset == 0 ? "Today" : "Back to today"
         );
         views.setTextViewText(
             R.id.widget_date,
-            new SimpleDateFormat("EEE, d MMM", new Locale("es"))
+            new SimpleDateFormat("EEE, d MMM", Locale.US)
                 .format(selectedDate.getTime())
         );
         views.setTextViewText(
@@ -194,7 +194,7 @@ public class AereaTodayWidget extends AppWidgetProvider {
                     "No events yet ♡"
                 )
                 : day.optBoolean("complete", false)
-                    ? "día completado ✓"
+                    ? "day completed ✓"
                     : ""
         );
         views.setViewVisibility(
@@ -242,7 +242,7 @@ public class AereaTodayWidget extends AppWidgetProvider {
             if (row == 1) {
                 views.setViewVisibility(containerId, View.VISIBLE);
                 views.setTextViewText(timeId, "");
-                views.setTextViewText(titleId, "Un día suave, sin eventos ♡");
+                views.setTextViewText(titleId, "A gentle day, no events ♡");
                 views.setTextViewText(faceId, mood.isEmpty() ? "☁" : mood);
                 views.setInt(barId, "setBackgroundColor", 0xFF9FD8EB);
             } else {
@@ -253,7 +253,7 @@ public class AereaTodayWidget extends AppWidgetProvider {
 
         views.setViewVisibility(containerId, View.VISIBLE);
         views.setTextViewText(timeId, event.optString("time", ""));
-        views.setTextViewText(titleId, event.optString("title", "Algo bonito"));
+        views.setTextViewText(titleId, event.optString("title", "Something lovely"));
         views.setTextViewText(faceId, mood.isEmpty() ? "✦" : mood);
         views.setInt(
             barId,

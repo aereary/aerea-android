@@ -63,13 +63,27 @@ public class AereaEventNotificationsPlugin extends Plugin {
         getContext().startActivity(intent); call.resolve();
     }
 
+    @PluginMethod public void openExactAlarmSettings(PluginCall call) {
+        try {
+            if (Build.VERSION.SDK_INT >= 31 && !canExact(getContext())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    .setData(Uri.parse("package:" + getContext().getPackageName()))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(intent);
+            }
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Could not open precise timing settings", error);
+        }
+    }
+
     @PluginMethod public void sync(PluginCall call) {
         String json = call.getString("eventsJson", "[]");
         try {
             getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(EVENTS, json).apply();
             int count = scheduleJson(getContext(), json);
             JSObject result = new JSObject(); result.put("scheduled", count); result.put("exact", canExact(getContext())); call.resolve(result);
-        } catch (Exception error) { call.reject("No se pudieron programar los recordatorios", error); }
+        } catch (Exception error) { call.reject("Could not schedule reminders", error); }
     }
 
     /** Explicit QA hook: schedules one ephemeral notification and stores no demo event. */
@@ -78,7 +92,15 @@ public class AereaEventNotificationsPlugin extends Plugin {
         String identity = "qa:" + System.currentTimeMillis();
         long trigger = System.currentTimeMillis() + seconds * 1000L;
         AlarmManager alarms = getContext().getSystemService(AlarmManager.class);
-        PendingIntent intent = pending(getContext(), identity, "Prueba de notificación de aérea", trigger, PendingIntent.FLAG_UPDATE_CURRENT);
+        // AEREA_RECOVERY_FIX_003: approved QA notification copy only.
+        PendingIntent intent = pending(
+            getContext(),
+            identity,
+            "aérea notification test",
+            "Your test notification is working",
+            trigger,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        );
         if (canExact(getContext())) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
         else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
         JSObject result = new JSObject(); result.put("identity", identity); result.put("firesInSeconds", seconds); call.resolve(result);
@@ -86,42 +108,90 @@ public class AereaEventNotificationsPlugin extends Plugin {
 
     static void rescheduleStored(Context context) {
         String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
-        try { scheduleJson(context, json); } catch (Exception ignored) { android.util.Log.e("aerea", "Could not restore event reminders", ignored); }
+        try {
+            scheduleJson(context, json);
+        } catch (Exception ignored) {
+            android.util.Log.e("aerea", "Could not restore event reminders", ignored);
+        }
+    }
+
+    static void advanceStoredAfterDelivery(Context context, String deliveredIdentity) {
+        String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
+        try {
+            scheduleJson(context, json, false, deliveredIdentity);
+        } catch (Exception ignored) {
+            android.util.Log.e("aerea", "Could not advance event reminders", ignored);
+        }
     }
 
     static int scheduleJson(Context context, String json) throws Exception {
+        return scheduleJson(context, json, true, null);
+    }
+
+    static int scheduleJson(
+        Context context,
+        String json,
+        boolean cancelExisting,
+        String deliveredIdentity
+    ) throws Exception {
         AlarmManager alarms = context.getSystemService(AlarmManager.class);
-        Set<String> oldIds = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet("identities", new HashSet<>());
-        for (String id : oldIds) {
-            PendingIntent existing = pending(context, id, null, 0, PendingIntent.FLAG_NO_CREATE);
-            if (existing != null) alarms.cancel(existing);
+        Set<String> oldIds = new HashSet<>(
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getStringSet("identities", new HashSet<>())
+        );
+
+        if (cancelExisting) {
+            for (String id : oldIds) {
+                PendingIntent existing = pending(
+                    context,
+                    id,
+                    null,
+                    0,
+                    PendingIntent.FLAG_NO_CREATE
+                );
+                if (existing != null) alarms.cancel(existing);
+            }
+        } else if (deliveredIdentity != null) {
+            oldIds.remove(deliveredIdentity);
         }
-        Set<String> nextIds = new HashSet<>(); int count = 0; long now = System.currentTimeMillis();
+
+        Set<String> nextIds =
+            cancelExisting ? new HashSet<>() : new HashSet<>(oldIds);
+        int count = 0;
+        long now = System.currentTimeMillis();
         JSONArray events = new JSONArray(json);
         for (int i=0; i<events.length(); i++) {
             JSONObject event = events.getJSONObject(i); int lead = leadMinutes(event.optString("reminder"));
             if (lead < 0 || event.optString("date").isEmpty()) continue;
-            LocalDate start = LocalDate.parse(event.getString("date")); LocalDate end = start.plusDays(HORIZON_DAYS);
+            LocalDate start = LocalDate.parse(event.getString("date"));
+            LocalDate today = LocalDate.now();
+            LocalDate scanStart = start.isAfter(today) ? start : today;
+            LocalDate end = scanStart.plusDays(HORIZON_DAYS);
             String until = event.optString("repeatUntil"); if (!until.isEmpty()) end = min(end, LocalDate.parse(until));
             String repeat = event.optString("repeat", "Never"); JSONArray excluded = event.optJSONArray("excludedDates");
-            for (LocalDate day=start; !day.isAfter(end); day=day.plusDays(1)) {
+            for (LocalDate day=scanStart; !day.isAfter(end); day=day.plusDays(1)) {
                 if (!occurs(event, start, day, repeat) || contains(excluded, day.toString())) continue;
                 String time = event.optBoolean("allDay", false) ? "00:00" : event.optString("time", "00:00");
                 long trigger = LocalDateTime.parse(day + "T" + normalizeTime(time)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() - lead * 60000L;
                 if (trigger <= now) continue;
                 String identity = event.getString("id") + ":" + day; nextIds.add(identity);
-                PendingIntent pi = pending(context, identity, event.optString("title", "Evento de aérea"), trigger, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pi = pending(context, identity, event.optString("title", "aérea event"), trigger, PendingIntent.FLAG_UPDATE_CURRENT);
                 if (canExact(context)) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
                 else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
-                count++; if ("Never".equals(repeat)) break;
+                count++;
+                break;
             }
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet("identities", nextIds).apply(); return count;
     }
 
     static PendingIntent pending(Context c, String id, String title, long trigger, int mode) {
+        return pending(c, id, title, "Your event starts soon", trigger, mode);
+    }
+
+    static PendingIntent pending(Context c, String id, String title, String when, long trigger, int mode) {
         Intent intent = new Intent(c, AereaEventNotificationReceiver.class).setAction("aerea.event."+id)
-            .putExtra("identity", id).putExtra("title", title).putExtra("when", "Tu evento comienza pronto");
+            .putExtra("identity", id).putExtra("title", title).putExtra("when", when);
         PendingIntent result = PendingIntent.getBroadcast(c, id.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | mode);
         return result;
     }

@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import CareerPlanBridge from "./career-plan-bridge";
+import TimetableAgendaBridge from "./timetable-agenda-bridge";
+import "@fontsource/gaegu/700.css";
+import { APP_APPEARANCE, APP_IDENTITY, UI_DEFAULTS } from "./config/app-config";
 import "./globals.css";
+import "./timetable-agenda.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,15 +18,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "aérea — your gentle little day",
-  description:
-    "A cozy pastel calendar, notes, habits, focus timer, recordings, moods, and sketchbook.",
-  applicationName: "aérea",
+  title: APP_IDENTITY.pageTitle,
+  description: APP_IDENTITY.pageDescription,
+  applicationName: APP_IDENTITY.name,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "aérea",
+    title: APP_IDENTITY.name,
   },
   other: {
     "codex-preview": "development",
@@ -37,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#bfe7f7",
+  themeColor: APP_APPEARANCE.browserThemeColor,
   viewportFit: "cover",
 };
 
@@ -47,11 +51,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang={UI_DEFAULTS.language}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <TimetableAgendaBridge />
+        <CareerPlanBridge />
       </body>
     </html>
   );

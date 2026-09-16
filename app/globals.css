@@ -1,38 +1,5 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap");
-
-:root {
-  --ink: #2f3827;
-  --ink-soft: #59624e;
-  --muted: #7d846f;
-  --cream: #fff9ed;
-  --cream-deep: #f8f0df;
-  --paper: #fffdf7;
-  --lime-wash: #eef8c9;
-  --lime-soft: #dcedaa;
-  --leaf: #8db654;
-  --leaf-deep: #648c3f;
-  --yellow: #ffcf55;
-  --yellow-soft: #ffedaa;
-  --orange: #e87531;
-  --orange-soft: #f8c39f;
-  --coral: #e98276;
-  --pink: #f7d7d5;
-  --blue: #cceaf2;
-  --lilac: #ded6f3;
-  --sage: #dbe9c3;
-  --hero: #b9df79;
-  --app-backdrop:
-    radial-gradient(circle at 8% 8%, rgba(255, 207, 85, 0.44), transparent 24rem),
-    radial-gradient(circle at 92% 15%, rgba(141, 182, 84, 0.25), transparent 28rem),
-    linear-gradient(145deg, #f3f8d8 0%, #e4f3b5 48%, #f9f1d7 100%);
-  --line: rgba(69, 82, 55, 0.12);
-  --shadow: 0 18px 48px rgba(83, 100, 57, 0.13);
-  --shadow-soft: 0 8px 24px rgba(83, 100, 57, 0.09);
-  --radius-xl: 32px;
-  --radius-lg: 24px;
-  --radius-md: 18px;
-}
+@import "./styles/manual-customization.css";
 
 * {
   box-sizing: border-box;
@@ -56,12 +23,9 @@ html {
 }
 
 body {
-  min-width: 320px;
+  min-width: var(--app-min-width);
   margin: 0;
-  background:
-    radial-gradient(circle at 8% 8%, rgba(255, 207, 85, 0.44), transparent 24rem),
-    radial-gradient(circle at 92% 15%, rgba(141, 182, 84, 0.25), transparent 28rem),
-    linear-gradient(145deg, #f3f8d8 0%, #e4f3b5 48%, #f9f1d7 100%);
+  background: var(--app-backdrop);
   color: var(--ink);
   font-family: var(--font-geist-sans), "Nunito Sans", "Segoe UI", sans-serif;
   font-size: 16px;
@@ -113,7 +77,7 @@ p {
 .app-shell {
   background: var(--app-backdrop);
   min-height: 100vh;
-  padding: 24px;
+  padding: var(--app-shell-padding);
   position: relative;
   transition: background 0.28s ease, color 0.28s ease;
 }
@@ -8463,8 +8427,8 @@ body {
 }
 
 .record-card {
+  /* AEREA_FIX_015B: keep the card exactly as-is, minus the decorative color splash. */
   background:
-    radial-gradient(circle at 94% 8%, color-mix(in srgb, var(--pink) 55%, transparent), transparent 9rem),
     linear-gradient(145deg, color-mix(in srgb, var(--blue) 14%, var(--paper)), var(--paper));
 }
 
@@ -20624,7 +20588,10 @@ body {
 }
 
 .post-it-layer {
-  inset:0;
+  top:0;
+  left:0;
+  right:0;
+  height:100dvh;
   overflow:visible;
   pointer-events:none;
   position:absolute;
@@ -20729,7 +20696,7 @@ body {
 .movable-post-it:nth-child(3n) .post-it-tape { background:rgba(129,116,183,.35); }
 
 .movable-post-it p {
-  font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
   font-size:17px;
   line-height:1.42;
   margin:0;
@@ -20836,7 +20803,7 @@ body {
   background:transparent;
   border:0;
   color:#282337;
-  font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+  font-family:"Patrick Hand","Segoe Print","Comic Sans MS","Bradley Hand",cursive;
   font-size:var(--post-it-text-size,18px);
   height:100%;
   line-height:1.22;
@@ -23891,6 +23858,7 @@ body {
 .post-it-editor-preview textarea {
   font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive;
   font-weight:700;
+  font-synthesis:none;
   letter-spacing:.01em;
 }
 .movable-post-it p,
@@ -31024,3 +30992,732 @@ html[data-native="true"] .calendar-modal.calendar-extended-month > .extended-cal
   .timetable-card { width:88vw; }
   .timetable-board { grid-template-columns:35px repeat(6,minmax(35px,1fr)); }
 }
+
+
+/* AEREA_RECOVERY_FIX_006D */
+.library-reader-modal.library-image-viewer {
+  height: auto;
+  max-height: calc(100dvh - 56px);
+  max-width: 620px;
+  width: calc(100vw - 34px);
+  grid-template-rows: auto auto;
+}
+
+.library-image-viewer .library-reader-layout {
+  display: block;
+  min-height: 0;
+}
+
+.library-image-viewer .library-reader-panel {
+  display: none;
+}
+
+.library-image-viewer .library-document-stage {
+  min-height: 0;
+  max-height: calc(100dvh - 170px);
+  overflow: auto;
+  padding: 14px;
+}
+
+.library-image-viewer .library-document-stage > img {
+  display: block;
+  height: auto;
+  margin: auto;
+  max-height: 58dvh;
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
+
+@media (max-width: 720px) {
+  .library-reader-modal.library-image-viewer {
+    max-height: calc(100dvh - 84px);
+    width: calc(100vw - 30px);
+  }
+
+  .library-image-viewer .library-reader-header {
+    padding: 12px 14px;
+  }
+
+  .library-image-viewer .library-reader-header h2 {
+    font-size: 1rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .library-image-viewer .library-document-stage {
+    max-height: calc(100dvh - 170px);
+    padding: 12px;
+  }
+
+  .library-image-viewer .library-document-stage > img {
+    max-height: 55dvh;
+  }
+}
+
+
+/* AEREA_RECOVERY_FIX_008
+   The native bottom nav is lifted by --aerea-safe-area-bottom.
+   Keep Library import feedback above it instead of underneath it. */
+html[data-native="true"] .study-library-toast {
+  bottom: calc(96px + var(--aerea-safe-area-bottom));
+}
+
+/* AEREA_RECOVERY_FIX_009
+   Native interaction should feel like an app, not a selectable web page.
+   Keep real writing fields and reader text selectable. */
+html[data-native="true"] .app-shell {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html[data-native="true"] .app-shell :where(
+  input,
+  textarea,
+  [contenteditable="true"],
+  .note-detail-text
+),
+html[data-native="true"] .study-reader,
+html[data-native="true"] .ao3-library-layer {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+html[data-native="true"] :where(
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="gridcell"],
+  [role="menuitem"],
+  summary,
+  nav,
+  label,
+  .bottom-nav,
+  .post-it
+) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* AEREA_RECOVERY_FIX_012
+   Timetable-generated Calendar events are a linked series. The Calendar
+   editor identifies the source and routes edits back to the timetable. */
+.event-linked-badge {
+  align-items: center;
+  background: var(--cream-deep);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.event-editor.timetable-source-event {
+  gap: 14px;
+}
+
+.timetable-linked-event-card {
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 16px;
+}
+
+.timetable-linked-event-icon {
+  align-items: center;
+  background: var(--lilac);
+  border-radius: 16px;
+  display: flex;
+  font-size: 22px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.timetable-linked-event-card > div {
+  min-width: 0;
+}
+
+.timetable-linked-event-card small {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.timetable-linked-event-card strong {
+  color: var(--ink);
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.timetable-linked-event-card p {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 7px 0 0;
+}
+
+.timetable-linked-range {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 7px;
+}
+
+.timetable-linked-event-card > button {
+  background: var(--lilac);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.event-editor.timetable-source-event .event-editor-editable-fields {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .timetable-linked-event-card {
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .timetable-linked-event-icon {
+    border-radius: 14px;
+    height: 44px;
+    width: 44px;
+  }
+
+  .timetable-linked-event-card strong {
+    font-size: 17px;
+  }
+}
+
+/* AEREA_SWIPE_FIRST_NAVIGATION
+   Finger-following horizontal paging with a fast native-style snap. */
+
+.agenda-v2-home-nav {
+  display: none !important;
+}
+
+.primary-swipe-surface {
+  backface-visibility: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-swipe-surface {
+    transition: none !important;
+  }
+}
+
+/* AEREA_HEALTH_ROUTINE_NOTE_V2 */
+
+.health-routine-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1.1rem, env(safe-area-inset-top))
+    1.05rem
+    max(1.1rem, env(safe-area-inset-bottom));
+  background: rgba(58, 54, 78, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.health-routine-note {
+  width: min(100%, 27rem);
+  max-height: min(82dvh, 46rem);
+  overflow: auto;
+  padding: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 2rem;
+  color: var(--ink, #393651);
+  background:
+    radial-gradient(
+      circle at 92% 6%,
+      rgba(202, 232, 245, 0.7),
+      transparent 8rem
+    ),
+    radial-gradient(
+      circle at 4% 94%,
+      rgba(222, 238, 210, 0.58),
+      transparent 9rem
+    ),
+    var(--paper, #fffdf8);
+  box-shadow:
+    0 1.4rem 3rem rgba(76, 70, 96, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62);
+}
+
+.health-routine-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.health-routine-header h3 {
+  margin: 0.15rem 0 0.18rem;
+  font-size: 1.55rem;
+  line-height: 1.05;
+}
+
+.health-routine-header p:not(.tiny-label) {
+  margin: 0;
+  color: var(--muted, #8b86a0);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.health-routine-close,
+.health-routine-delete {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.health-routine-close {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  font-size: 1.7rem;
+  line-height: 1;
+  background: rgba(231, 224, 245, 0.66);
+}
+
+.health-routine-list {
+  display: grid;
+  gap: 0.62rem;
+}
+
+.health-routine-empty {
+  display: grid;
+  place-items: center;
+  padding: 1.35rem 1rem;
+  text-align: center;
+  border: 1px dashed rgba(122, 145, 137, 0.22);
+  border-radius: 1.4rem;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.health-routine-empty > span {
+  font-size: 1.75rem;
+}
+
+.health-routine-empty strong {
+  margin-top: 0.3rem;
+}
+
+.health-routine-empty p {
+  max-width: 18rem;
+  margin: 0.28rem 0 0;
+  color: var(--muted, #8b86a0);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.health-routine-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.68rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(104, 188, 207, 0.2);
+  border-radius: 1.3rem;
+  background: rgba(218, 241, 247, 0.58);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.health-routine-item.complete {
+  border-color: rgba(120, 176, 127, 0.24);
+  background: rgba(218, 240, 217, 0.78);
+}
+
+.health-routine-check {
+  width: 2.55rem;
+  height: 2.55rem;
+  border: 1px solid rgba(79, 151, 168, 0.22);
+  border-radius: 0.95rem;
+  color: #4d8794;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.health-routine-item.complete .health-routine-check {
+  color: #507a55;
+  border-color: rgba(91, 143, 96, 0.25);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.health-routine-check:disabled {
+  opacity: 0.38;
+}
+
+.health-routine-body {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+}
+
+.health-routine-body strong,
+.health-routine-body span {
+  display: block;
+}
+
+.health-routine-body strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.health-routine-body span {
+  margin-top: 0.18rem;
+  color: var(--muted, #8b86a0);
+  font-size: 0.72rem;
+}
+
+.health-routine-delete {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  color: var(--muted, #8b86a0);
+  font-size: 1.15rem;
+}
+
+.health-routine-add {
+  width: 100%;
+  margin-top: 0.78rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed rgba(112, 143, 130, 0.3);
+  border-radius: 1.2rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.48);
+  font-weight: 750;
+}
+
+.health-routine-add span {
+  margin-right: 0.35rem;
+}
+
+.health-routine-editor {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.health-routine-editor label {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.health-routine-editor label > span {
+  padding-left: 0.15rem;
+  color: var(--muted, #8b86a0);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.health-routine-editor input,
+.health-routine-editor select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(117, 111, 143, 0.15);
+  border-radius: 1rem;
+  outline: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.72);
+  font: inherit;
+}
+
+.health-routine-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+
+.health-routine-weekdays button {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 0.9rem;
+  color: var(--muted, #8b86a0);
+  background: rgba(236, 240, 231, 0.82);
+  font-weight: 800;
+}
+
+.health-routine-weekdays button.selected {
+  color: #426b5a;
+  border-color: rgba(97, 154, 126, 0.2);
+  background: rgba(202, 231, 215, 0.92);
+}
+
+.health-routine-editor-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
+}
+
+.health-routine-editor-actions button {
+  min-height: 2.9rem;
+  border-radius: 1rem;
+  font-weight: 800;
+}
+
+.health-routine-editor-actions .secondary {
+  border: 1px solid rgba(117, 111, 143, 0.14);
+  color: inherit;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.health-routine-editor-actions .primary {
+  border: 0;
+  color: #355f50;
+  background: rgba(205, 234, 217, 0.95);
+}
+
+.health-routine-editor-actions .primary:disabled {
+  opacity: 0.42;
+}
+
+/* END AEREA_HEALTH_ROUTINE_NOTE_V2 */
+
+/* AEREA_GLOBAL_MODAL_LAYERING_20260915 */
+
+/*
+  Viewport overlays must own the screen without sharing React state
+  with the outer phone canvas.
+*/
+
+.phone-canvas:has(.timetable-backdrop) .primary-swipe-surface,
+.phone-canvas:has(.health-routine-backdrop) .primary-swipe-surface {
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+.phone-canvas:has(.timetable-backdrop) > .bottom-nav,
+.phone-canvas:has(.health-routine-backdrop) > .bottom-nav {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.phone-canvas:has(.timetable-backdrop) .post-it-layer,
+.phone-canvas:has(.health-routine-backdrop) .post-it-layer {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.phone-canvas .timetable-backdrop,
+.phone-canvas .health-routine-backdrop {
+  inset: 0 !important;
+  position: fixed !important;
+  z-index: 20000 !important;
+  overscroll-behavior: contain;
+}
+
+.phone-canvas .timetable-card,
+.phone-canvas .health-routine-note {
+  touch-action: pan-y;
+}
+
+.phone-canvas .timetable-backdrop {
+  align-items: center !important;
+  justify-content: center !important;
+  padding:
+    max(22px, env(safe-area-inset-top))
+    12px
+    max(22px, env(safe-area-inset-bottom)) !important;
+}
+
+.phone-canvas .timetable-card {
+  max-height:
+    calc(
+      100dvh
+      - max(22px, env(safe-area-inset-top))
+      - max(22px, env(safe-area-inset-bottom))
+      - 12px
+    ) !important;
+}
+
+/* END AEREA_GLOBAL_MODAL_LAYERING_20260915 */
+
+/* AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
+.event-detail-health-completion {
+  align-items: center;
+  background: #eff3e8;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  margin: 14px 0;
+  padding: 12px 14px;
+}
+
+.event-detail-health-completion.complete {
+  background: var(--lime-wash);
+}
+
+.event-detail-health-completion strong,
+.event-detail-health-completion small {
+  display: block;
+}
+
+.event-detail-health-completion small {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.event-detail-health-completion button {
+  align-items: center;
+  background: var(--paper);
+  border: 0;
+  border-radius: 50%;
+  color: var(--leaf);
+  display: flex;
+  font-size: 18px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.event-detail-health-completion.complete button {
+  background: var(--leaf);
+  color: white;
+}
+
+/*
+ * Compact calendar:
+ * LAYERING ONLY.
+ * Do not move either the completion check or the event dots.
+ */
+.month-grid > button .calendar-day-status {
+  z-index: 5 !important;
+}
+
+.month-grid > button .calendar-event-dots {
+  z-index: 1 !important;
+}
+
+/*
+ * Phone timetable:
+ * keep the original internal geometry untouched.
+ * Only center and constrain the outer dialog.
+ */
+@media (max-width: 700px) {
+  .phone-canvas .timetable-backdrop {
+    align-items: center !important;
+    justify-content: center !important;
+    padding:
+      max(74px, calc(env(safe-area-inset-top) + 54px))
+      12px
+      max(74px, calc(env(safe-area-inset-bottom) + 54px)) !important;
+  }
+
+  .phone-canvas .timetable-card {
+    display: block !important;
+    max-height: min(62dvh, 760px) !important;
+    overflow: auto !important;
+    padding: 16px 12px 14px !important;
+    width: min(82vw, 540px) !important;
+  }
+
+  .phone-canvas .timetable-board {
+    flex: none !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+
+  .phone-canvas .timetable-editor {
+    flex: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+}
+
+/* END AEREA_TARGETED_HEALTH_TIMETABLE_FIXES */
+
+/* AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
+
+/*
+ * Preserve the existing Just calendar design.
+ * Changes:
+ * - pure white page
+ * - no bottom navigation
+ * - no floating +
+ * - calendar expands into all freed space
+ */
+
+.app-shell[data-simplified-calendar="true"] {
+  background: #ffffff !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+  --simplified-surface: #ffffff !important;
+  background: #ffffff !important;
+
+  /* header + filters + calendar; no fourth nav row */
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr) !important;
+
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+
+  /* only preserve the Android system-bar safe area */
+  padding-bottom:
+    calc(4px + var(--aerea-safe-area-bottom)) !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-nav,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-add {
+  display: none !important;
+}
+
+/* END AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */

@@ -40,6 +40,7 @@ import {
   addDays,
   createTrashItem,
   fileKind,
+  normalizedFileMimeType,
   inferInboxKind,
   isBocaSportsEvent,
   trashDaysRemaining,
@@ -113,6 +114,7 @@ import {
   timetableGridWindow,
   toggleHealthCompletedOn,
 } from "./planner-logic";
+import { DEFAULT_HYDRATION_NOTIFICATION_TIMES } from "./config/app-config";
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 const AO3_HISTORY_MARKER = "aereaAo3LibraryOpen";
@@ -182,15 +184,28 @@ type AereaEventNotificationsPlugin = {
   status(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   requestPermissions(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   openSettings(): Promise<void>;
+  openExactAlarmSettings(): Promise<void>;
+  scheduleQaNotification(options: { delaySeconds: number }): Promise<{
+    identity: string;
+    firesInSeconds: number;
+  }>;
   sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
 };
-type AereaNavigationPlugin = { exitApp(): Promise<void> };
+type AereaNavigationPlugin = {
+  exitApp(): Promise<void>;
+  showExitHint(options: { message: string }): Promise<void>;
+};
+type AereaMicrophonePlugin = {
+  status(): Promise<{ permission: "granted" | "denied" }>;
+  requestPermissions(): Promise<{ permission: "granted" | "denied" }>;
+};
 
 const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
 const AereaSportsNotifications =
   registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
 const AereaEventNotifications = registerPlugin<AereaEventNotificationsPlugin>("AereaEventNotifications");
 const AereaNavigation = registerPlugin<AereaNavigationPlugin>("AereaNavigation");
+const AereaMicrophone = registerPlugin<AereaMicrophonePlugin>("AereaMicrophone");
 
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
@@ -247,6 +262,25 @@ async function blobAsDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+// AEREA_RECOVERY_FIX_001
+function isStudyFileTrashed(fileId: string, items: TrashItem[]) {
+  return items.some((trashItem) => {
+    if (
+      trashItem.kind !== "file" ||
+      !trashItem.payload ||
+      typeof trashItem.payload !== "object"
+    ) {
+      return false;
+    }
+    const payload = trashItem.payload as { id?: unknown; mediaType?: unknown };
+    return (
+      typeof payload.id === "string" &&
+      payload.id === fileId &&
+      "mediaType" in payload
+    );
+  });
+}
+
 async function purgeExpiredTrashFiles(items: TrashItem[]) {
   await Promise.allSettled(
     items.flatMap((trashItem) => {
@@ -295,7 +329,9 @@ function libraryItemAsStudyFile(item: LibraryItem): StudyFileItem {
         ? "pdf"
         : item.kind === "epub"
           ? "epub"
-          : "file",
+          : item.kind === "image"
+            ? "image"
+            : "file",
     size: item.size ?? 0,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -443,7 +479,40 @@ type Reminder = {
   detail: string;
   icon: string;
   tint: string;
+  notificationsEnabled?: boolean;
+  notificationTimes?: string[];
 };
+
+function isHydrationReminder(reminder: Pick<Reminder, "id" | "title" | "icon">) {
+  const normalized = reminder.title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    reminder.id === 1 ||
+    reminder.icon.includes("💧") ||
+    normalized.includes("water") ||
+    normalized.includes("drink") ||
+    normalized.includes("hydrat") ||
+    normalized.includes("agua")
+  );
+}
+
+function notificationTimesForReminder(reminder: Reminder) {
+  if (!isHydrationReminder(reminder) || reminder.notificationsEnabled === false) {
+    return [];
+  }
+
+  if (Array.isArray(reminder.notificationTimes)) {
+    return reminder.notificationTimes.filter((time) =>
+      /^\d{2}:\d{2}$/.test(time),
+    );
+  }
+
+  return [...DEFAULT_HYDRATION_NOTIFICATION_TIMES];
+}
 
 type Habit = {
   id: number;
@@ -463,29 +532,61 @@ type JournalEntry = {
 };
 
 
-type Recording = StudyRecordingItem;
+type Recording = StudyRecordingItem & {
+  classItemId?: string;
+};
 
 type ClassItem = {
   id: string;
   name: string;
   icon: string;
   color: string;
+  sourceType?: "manual" | "timetable";
+  timetableClassIds?: string[];
 };
 
+function normalizedClassNameKey(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function recordingBelongsToClass(
+  recording: Recording,
+  classItem: ClassItem,
+) {
+  if (recording.classItemId) return recording.classItemId === classItem.id;
+  return (
+    normalizedClassNameKey(recording.className) ===
+    normalizedClassNameKey(classItem.name)
+  );
+}
+
 type TimetableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
+type TimetableMeeting = {
+  id: string;
+  day: TimetableDay;
+  start: string;
+  end: string;
+  room?: string;
+};
 
 type TimetableClass = {
   id: string;
   name: string;
-  day: TimetableDay;
-  start: string;
-  end: string;
+  professor?: string;
   color: string;
+  meetings: TimetableMeeting[];
+  day?: TimetableDay;
+  start?: string;
+  end?: string;
+  room?: string;
 };
 
 type ClassTimetable = {
   termName: string;
   termDates: string;
+  termStart: string;
+  termEnd: string;
   classes: TimetableClass[];
 };
 
@@ -510,8 +611,68 @@ const timetableColors = [
 const defaultClassTimetable: ClassTimetable = {
   termName: "Current semester",
   termDates: "Set your term dates",
+  termStart: "",
+  termEnd: "",
   classes: [],
 };
+
+function normalizeTimetableClass(classItem: Partial<TimetableClass> & { id: string }): TimetableClass {
+  const legacyMeeting =
+    classItem.day && classItem.start && classItem.end
+      ? [{
+          id: `${classItem.id}:meeting`,
+          day: classItem.day,
+          start: classItem.start,
+          end: classItem.end,
+          room: classItem.room,
+        }]
+      : [];
+  const meetings = Array.isArray(classItem.meetings) && classItem.meetings.length > 0
+    ? classItem.meetings.map((meeting, index) => ({
+        id: meeting.id || `${classItem.id}:meeting-${index + 1}`,
+        day: meeting.day,
+        start: meeting.start,
+        end: meeting.end,
+        room: meeting.room,
+      }))
+    : legacyMeeting;
+  return {
+    id: classItem.id,
+    name: classItem.name ?? "",
+    professor: classItem.professor,
+    color: classItem.color ?? timetableColors[0],
+    meetings,
+  };
+}
+
+function normalizeClassTimetable(value: Partial<ClassTimetable>): ClassTimetable {
+  return {
+    ...defaultClassTimetable,
+    ...value,
+    classes: Array.isArray(value.classes)
+      ? value.classes.map((classItem) => normalizeTimetableClass(classItem))
+      : [],
+  };
+}
+
+type HealthRoutineCadence = "daily" | "alternate" | "weekdays";
+
+type HealthRoutineDraft = {
+  title: string;
+  cadence: HealthRoutineCadence;
+  weekdays: number[];
+  time: string;
+};
+
+const HEALTH_ROUTINE_DAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
 
 type CalendarEvent = {
   id: string;
@@ -554,6 +715,12 @@ type CalendarEvent = {
   kickoffTimestamp?: number | null;
   footballMatch?: FootballMatch;
   sourceInboxId?: string;
+  sourceType?: "timetable" | "health-routine";
+  timetableClassId?: string;
+  timetableTermName?: string;
+  healthRoutineGroupId?: string;
+  healthRoutineCadence?: HealthRoutineCadence;
+  healthRoutineWeekday?: number;
   healthCompletedDates?: string[];
 };
 
@@ -588,6 +755,86 @@ type RepeatOption =
   | "Custom";
 
 type EventDraft = Omit<CalendarEvent, "id">;
+
+const timetableWeekdayNumber: Record<TimetableDay, number> = {
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+};
+
+function timetableTermDateLabel(timetable: ClassTimetable) {
+  if (!timetable.termStart || !timetable.termEnd) {
+    return timetable.termDates || "Set your term dates";
+  }
+  const format = (dateKey: string) =>
+    dateFromKey(dateKey).toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  return `${format(timetable.termStart)} — ${format(timetable.termEnd)}`;
+}
+
+function firstTimetableOccurrence(termStart: string, day: TimetableDay) {
+  const date = dateFromKey(termStart);
+  const offset =
+    (timetableWeekdayNumber[day] - date.getDay() + 7) % 7;
+  date.setDate(date.getDate() + offset);
+  return localDateKey(date);
+}
+
+function timetableCalendarColor(color: string): EventColor {
+  const colors: Record<string, EventColor> = {
+    "#ddd8ff": "lilac",
+    "#ffe8a8": "yellow",
+    "#d7eddd": "emerald",
+    "#f8d9e8": "pink",
+    "#d5eafb": "blue",
+    "#f8d8c5": "coral",
+  };
+  return colors[color.toLowerCase()] ?? "emerald";
+}
+
+function timetableClassCalendarEvent(
+  timetable: ClassTimetable,
+  classItem: TimetableClass,
+  meeting: TimetableMeeting,
+): CalendarEvent | null {
+  if (
+    !timetable.termStart ||
+    !timetable.termEnd ||
+    timetable.termEnd < timetable.termStart
+  ) {
+    return null;
+  }
+
+  const date = firstTimetableOccurrence(timetable.termStart, meeting.day);
+  if (date > timetable.termEnd) return null;
+
+  return {
+    id: `timetable-event:${classItem.id}:${meeting.id}`,
+    date,
+    endDate: date,
+    title: classItem.name,
+    time: meeting.start,
+    endTime: meeting.end,
+    allDay: false,
+    calendar: "Classes",
+    color: timetableCalendarColor(classItem.color),
+    reminder: "30 minutes before",
+    repeat: "Weekly",
+    repeatUntil: timetable.termEnd,
+    excludedDates: [],
+    note: `Synced from ${timetable.termName}`,
+    location: meeting.room,
+    sourceType: "timetable",
+    timetableClassId: classItem.id,
+    timetableTermName: timetable.termName,
+  };
+}
 
 type CalendarSearchOccurrence = {
   event: CalendarEvent;
@@ -1030,6 +1277,8 @@ const starterReminders: Reminder[] = [
     detail: "Your first glass of the day",
     icon: "💧",
     tint: "blue",
+    notificationsEnabled: true,
+    notificationTimes: [...DEFAULT_HYDRATION_NOTIFICATION_TIMES],
   },
   {
     id: 2,
@@ -1057,6 +1306,13 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
 const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
+
+const primarySwipeTabs: Tab[] = [
+  "today",
+  "habits",
+  "journal",
+  "spaces",
+];
 
 const starterHabits: Habit[] = [
   {
@@ -1419,7 +1675,7 @@ function footballMatchDateKey(match: FootballMatch) {
 
 function footballMatchTime(match: FootballMatch) {
   const kickoff = footballKickoff(match);
-  if (!kickoff) return "Hora por confirmar";
+  if (!kickoff) return "Time TBD";
   return `${String(kickoff.getHours()).padStart(2, "0")}:${String(
     kickoff.getMinutes(),
   ).padStart(2, "0")}`;
@@ -1622,7 +1878,7 @@ function BocaDayPocketTicket({ event }: { event: FootballVisualEvent }) {
           <img
             className="boca-pocket-stadium"
             src="/assets/bombonera-sticker.png"
-            alt="Ilustración de La Bombonera"
+            alt="Illustration of La Bombonera"
           />
           <span>LA BOMBONERA ♡</span>
         </div>
@@ -1677,13 +1933,13 @@ function isFootballVisualEvent(
 
 function weekForDate(dateKey: string) {
   const anchor = dateFromKey(dateKey);
-  const mondayOffset = (anchor.getDay() + 6) % 7;
-  const monday = new Date(anchor);
-  monday.setDate(anchor.getDate() - mondayOffset);
+  const sundayOffset = anchor.getDay();
+  const sunday = new Date(anchor);
+  sunday.setDate(anchor.getDate() - sundayOffset);
 
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + index);
     return {
       key: localDateKey(date),
       day: date
@@ -1798,13 +2054,13 @@ const moodScores: Record<string, number> = {
 };
 
 function eventCompactTimeLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   if (event.allDay) return "All day";
   return event.endTime ? `${event.time}–${event.endTime}` : event.time;
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   if (event.allDay) return "All day";
   const match = event.time.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return event.time;
@@ -1834,7 +2090,7 @@ function eventEndTimeLabel(event: CalendarEvent) {
 }
 
 function eventDetailTimeParts(event: CalendarEvent) {
-  if (event.timePending) return { range: "Hora por confirmar", period: "" };
+  if (event.timePending) return { range: "Time TBD", period: "" };
   if (event.allDay) return { range: "All day", period: "" };
 
   const formatPart = (value: string) => {
@@ -2038,7 +2294,7 @@ function layoutScheduleEvents(events: CalendarEvent[]) {
 }
 
 function matchCountdownLabel(event: CalendarEvent) {
-  if (event.timePending) return "Hora por confirmar";
+  if (event.timePending) return "Time TBD";
   const start = new Date(`${event.date}T${event.time || "00:00"}:00`);
   const difference = start.getTime() - Date.now();
   const hours = Math.ceil(difference / 3_600_000);
@@ -2080,6 +2336,19 @@ export default function Home() {
   const todayKey = localDateKey();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [tabHistory, setTabHistory] = useState<Tab[]>([]);
+  const primarySwipeSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const pageSwipeStartRef = useRef<{
+    x: number;
+    y: number;
+    startedAt: number;
+    lastX: number;
+    lastAt: number;
+    velocityX: number;
+    axis: "pending" | "horizontal" | "vertical";
+    blocked: boolean;
+  } | null>(null);
+  const pageSwipeFrameRef = useRef<number | null>(null);
+  const pageSwipeSettleRef = useRef<number | null>(null);
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
@@ -2152,6 +2421,247 @@ export default function Home() {
   );
   const [todoDraft, setTodoDraft] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+  const [healthRoutineOpen, setHealthRoutineOpen] = useState(false);
+  const [healthRoutineEditorOpen, setHealthRoutineEditorOpen] = useState(false);
+  const [healthRoutineEditingGroupId, setHealthRoutineEditingGroupId] =
+    useState<string | null>(null);
+  const [healthRoutineDraft, setHealthRoutineDraft] =
+    useState<HealthRoutineDraft>(() => ({
+      title: "",
+      cadence: "daily",
+      weekdays: [dateFromKey(todayKey).getDay()],
+      time: "",
+    }));
+
+  const healthRoutineGroups = useMemo(() => {
+    const grouped = new Map<string, CalendarEvent[]>();
+
+    calendarEvents
+      .filter((event) => event.sourceType === "health-routine")
+      .forEach((event) => {
+        const groupId = event.healthRoutineGroupId ?? event.id;
+        const group = grouped.get(groupId) ?? [];
+        group.push(event);
+        grouped.set(groupId, group);
+      });
+
+    return Array.from(grouped.entries())
+      .map(([id, events]) => ({
+        id,
+        events: [...events].sort((first, second) =>
+          first.date.localeCompare(second.date),
+        ),
+      }))
+      .sort((first, second) =>
+        first.events[0].title.localeCompare(second.events[0].title),
+      );
+  }, [calendarEvents]);
+
+  const resetHealthRoutineDraft = () => {
+    setHealthRoutineEditingGroupId(null);
+    setHealthRoutineDraft({
+      title: "",
+      cadence: "daily",
+      weekdays: [dateFromKey(todayKey).getDay()],
+      time: "",
+    });
+  };
+
+  const openHealthRoutineNote = () => {
+    setHealthRoutineEditorOpen(false);
+    resetHealthRoutineDraft();
+    setHealthRoutineOpen(true);
+  };
+
+  const startNewHealthRoutine = () => {
+    resetHealthRoutineDraft();
+    setHealthRoutineEditorOpen(true);
+  };
+
+  const editHealthRoutine = (groupId: string) => {
+    const events = calendarEvents.filter(
+      (event) =>
+        event.sourceType === "health-routine" &&
+        (event.healthRoutineGroupId ?? event.id) === groupId,
+    );
+
+    if (!events.length) return;
+
+    const first = events[0];
+    const cadence = first.healthRoutineCadence ?? "daily";
+
+    const weekdays =
+      cadence === "weekdays"
+        ? Array.from(
+            new Set(
+              events.map(
+                (event) =>
+                  event.healthRoutineWeekday ??
+                  dateFromKey(event.date).getDay(),
+              ),
+            ),
+          ).sort((a, b) => a - b)
+        : [dateFromKey(first.date).getDay()];
+
+    setHealthRoutineEditingGroupId(groupId);
+    setHealthRoutineDraft({
+      title: first.title,
+      cadence,
+      weekdays,
+      time: first.allDay ? "" : first.time,
+    });
+    setHealthRoutineEditorOpen(true);
+  };
+
+  const deleteHealthRoutine = (groupId: string) => {
+    setCalendarEvents((current) =>
+      current.filter((event) => {
+        if (event.sourceType !== "health-routine") return true;
+        return (event.healthRoutineGroupId ?? event.id) !== groupId;
+      }),
+    );
+
+    if (healthRoutineEditingGroupId === groupId) {
+      setHealthRoutineEditorOpen(false);
+      resetHealthRoutineDraft();
+    }
+
+    recordAction("Deleted Health routine");
+  };
+
+  const saveHealthRoutine = () => {
+    const title = healthRoutineDraft.title.trim();
+    if (!title) return;
+
+    if (
+      healthRoutineDraft.cadence === "weekdays" &&
+      healthRoutineDraft.weekdays.length === 0
+    ) {
+      return;
+    }
+
+    const groupId =
+      healthRoutineEditingGroupId ??
+      `health-routine:${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
+    const existingEvents = calendarEvents.filter(
+      (event) =>
+        event.sourceType === "health-routine" &&
+        (event.healthRoutineGroupId ?? event.id) === groupId,
+    );
+
+    const completedDates = Array.from(
+      new Set(
+        existingEvents.flatMap(
+          (event) => event.healthCompletedDates ?? [],
+        ),
+      ),
+    ).sort();
+
+    const routineTime = healthRoutineDraft.time || "09:00";
+    const allDay = !healthRoutineDraft.time;
+
+    const dateForWeekday = (weekday: number) => {
+      const date = dateFromKey(todayKey);
+      const offset = (weekday - date.getDay() + 7) % 7;
+      date.setDate(date.getDate() + offset);
+      return localDateKey(date);
+    };
+
+    const makeRoutineEvent = (
+      suffix: string,
+      date: string,
+      repeat: RepeatOption,
+      weekday?: number,
+      customEvery?: number,
+    ): CalendarEvent => {
+      const matchingExisting =
+        weekday === undefined
+          ? existingEvents.length === 1
+            ? existingEvents[0]
+            : undefined
+          : existingEvents.find(
+              (event) =>
+                event.healthRoutineWeekday === weekday,
+            );
+
+      return {
+        id:
+          matchingExisting?.id ??
+          `health-routine-event:${groupId}:${suffix}`,
+        date,
+        title,
+        time: routineTime,
+        allDay,
+        calendar: "Health",
+        color: "cyan",
+        reminder: allDay ? undefined : "10 minutes before",
+        repeat,
+        customRepeatEvery: customEvery,
+        customRepeatUnit:
+          repeat === "Custom" ? "days" : undefined,
+        excludedDates: [],
+        priority: "gentle",
+        sourceType: "health-routine",
+        healthRoutineGroupId: groupId,
+        healthRoutineCadence: healthRoutineDraft.cadence,
+        healthRoutineWeekday: weekday,
+        healthCompletedDates: [...completedDates],
+      };
+    };
+
+    let nextEvents: CalendarEvent[];
+
+    if (healthRoutineDraft.cadence === "alternate") {
+      nextEvents = [
+        makeRoutineEvent(
+          "alternate",
+          todayKey,
+          "Custom",
+          undefined,
+          2,
+        ),
+      ];
+    } else if (healthRoutineDraft.cadence === "weekdays") {
+      const weekdays = healthRoutineDraft.weekdays
+        .slice()
+        .sort((a, b) => a - b);
+
+      nextEvents = weekdays.map((weekday) =>
+        makeRoutineEvent(
+          `weekday-${weekday}`,
+          dateForWeekday(weekday),
+          "Weekly",
+          weekday,
+        ),
+      );
+    } else {
+      nextEvents = [
+        makeRoutineEvent("daily", todayKey, "Daily"),
+      ];
+    }
+
+    setCalendarEvents((current) => [
+      ...current.filter((event) => {
+        if (event.sourceType !== "health-routine") return true;
+        return (event.healthRoutineGroupId ?? event.id) !== groupId;
+      }),
+      ...nextEvents,
+    ]);
+
+    recordAction(
+      healthRoutineEditingGroupId
+        ? "Updated Health routine"
+        : "Added Health routine",
+    );
+
+    setHealthRoutineEditorOpen(false);
+    resetHealthRoutineDraft();
+  };
+
   const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
@@ -2180,6 +2690,10 @@ export default function Home() {
   >("contents");
   const [entityLinks, setEntityLinks] = useState<EntityLink[]>([]);
   const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
+  const trashItemsRef = useRef<TrashItem[]>(trashItems);
+  useLayoutEffect(() => {
+    trashItemsRef.current = trashItems;
+  }, [trashItems]);
   const [resetPreferences, setResetPreferences] = useState<ResetPreferences>(
     DEFAULT_RESET_PREFERENCES,
   );
@@ -2227,6 +2741,7 @@ export default function Home() {
     color: "lavender",
   });
   const [stateReady, setStateReady] = useState(false);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(false);
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
@@ -2291,6 +2806,42 @@ export default function Home() {
   const [classTimetable, setClassTimetable] = useState<ClassTimetable>(
     defaultClassTimetable,
   );
+  const [requestedTimetableClassId, setRequestedTimetableClassId] =
+    useState<string | null>(null);
+
+  // AEREA_FEATURE_011: timetable is the source of truth for class recurrences.
+  useEffect(() => {
+    if (!stateReady) return;
+
+    const generated = classTimetable.classes.flatMap((classItem) =>
+      classItem.meetings
+        .map((meeting) => timetableClassCalendarEvent(classTimetable, classItem, meeting))
+        .filter((event): event is CalendarEvent => Boolean(event)),
+    );
+
+    setCalendarEvents((current) => {
+      const manualEvents = current.filter(
+        (event) => event.sourceType !== "timetable",
+      );
+      const currentGenerated = current.filter(
+        (event) => event.sourceType === "timetable",
+      );
+
+      const unchanged =
+        currentGenerated.length === generated.length &&
+        generated.every((nextEvent) => {
+          const currentEvent = currentGenerated.find(
+            (event) => event.id === nextEvent.id,
+          );
+          return (
+            currentEvent !== undefined &&
+            JSON.stringify(currentEvent) === JSON.stringify(nextEvent)
+          );
+        });
+
+      return unchanged ? current : [...manualEvents, ...generated];
+    });
+  }, [classTimetable, stateReady]);
   const [selectedClass, setSelectedClass] = useState(
     starterClasses[0]?.name ?? "",
   );
@@ -2307,6 +2858,88 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingError, setRecordingError] = useState("");
+
+  // AEREA_FIX_015A: the semester timetable is also the source of truth for
+  // automatic Class Library shelves. Repeated weekdays with the same subject
+  // become one class here.
+  useEffect(() => {
+    if (!stateReady) return;
+
+    setClassItems((current) => {
+      const claimedExistingIds = new Set<string>();
+      const timetableShelves = classTimetable.classes.map((classItem) => {
+        const linkedExisting = current.find(
+          (item) =>
+            item.sourceType === "timetable" &&
+            item.timetableClassIds?.includes(classItem.id),
+        );
+        if (linkedExisting) claimedExistingIds.add(linkedExisting.id);
+        return {
+          id: linkedExisting?.id ?? `timetable-class:${classItem.id}`,
+          name: classItem.name.trim(),
+          icon: linkedExisting?.icon ?? "🎓",
+          color: classItem.color,
+          sourceType: "timetable" as const,
+          timetableClassIds: [classItem.id],
+        };
+      });
+
+      const manualShelves = current.filter(
+        (item) =>
+          item.sourceType !== "timetable" &&
+          !claimedExistingIds.has(item.id),
+      );
+      const next = [...manualShelves, ...timetableShelves];
+
+      return JSON.stringify(next) === JSON.stringify(current) ? current : next;
+    });
+  }, [classTimetable.classes, stateReady]);
+
+  // Give legacy recordings a stable class id once a shelf is known. This
+  // preserves them across timetable renames without creating duplicate audio.
+  useEffect(() => {
+    if (!stateReady || classItems.length === 0) return;
+
+    setRecordings((current) => {
+      let changed = false;
+      const next = current.map((recording) => {
+        const linkedClass = recording.classItemId
+          ? classItems.find((item) => item.id === recording.classItemId)
+          : classItems.find(
+              (item) =>
+                normalizedClassNameKey(item.name) ===
+                normalizedClassNameKey(recording.className),
+            );
+
+        if (!linkedClass) return recording;
+        if (
+          recording.classItemId === linkedClass.id &&
+          recording.className === linkedClass.name
+        ) {
+          return recording;
+        }
+
+        changed = true;
+        return {
+          ...recording,
+          classItemId: linkedClass.id,
+          className: linkedClass.name,
+        };
+      });
+      return changed ? next : current;
+    });
+  }, [classItems, stateReady]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    if (classItems.length === 0) {
+      if (selectedClass) setSelectedClass("");
+      return;
+    }
+    if (!classItems.some((item) => item.name === selectedClass)) {
+      setSelectedClass(classItems[0].name);
+    }
+  }, [classItems, selectedClass, stateReady]);
   const [editingRecordingId, setEditingRecordingId] = useState<number | null>(
     null,
   );
@@ -2392,6 +3025,7 @@ export default function Home() {
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
   const phoneCanvasRef = useRef<HTMLElement | null>(null);
+  const postItLayerRef = useRef<HTMLDivElement | null>(null);
   const postItDragRef = useRef<{
     id: string;
     pointerId: number;
@@ -2671,7 +3305,7 @@ export default function Home() {
         setClassTimetable({
           ...defaultClassTimetable,
           ...state.classTimetable,
-          classes: state.classTimetable.classes,
+          classes: normalizeClassTimetable(state.classTimetable).classes,
         });
       }
       if (Array.isArray(state.recordings)) {
@@ -2830,6 +3464,24 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady || !isNative()) return;
+
+    const migrationKey = "aerea-notification-defaults-v1";
+    if (window.localStorage.getItem(migrationKey) === "1") return;
+
+    setSportsSettings((current) => ({
+      ...current,
+      notifyBeforeMatches: true,
+      notificationLeadMinutes:
+        current.notificationLeadMinutes > 0
+          ? current.notificationLeadMinutes
+          : 60,
+    }));
+
+    window.localStorage.setItem(migrationKey, "1");
+  }, [stateReady]);
+
+  useEffect(() => {
+    if (!stateReady || !isNative()) return;
     const followedEvents = sportsEvents.filter(
       (event) =>
         !isBocaSportsEvent(event) &&
@@ -2838,7 +3490,7 @@ export default function Home() {
     const sync = async () => {
       if (sportsSettings.notifyBeforeMatches) {
         await AereaSportsNotifications.requestPermissions().catch((error) => {
-          setHistoryMessage(error instanceof Error ? error.message : "No se pudo comprobar el permiso de notificaciones deportivas.");
+          setHistoryMessage(error instanceof Error ? error.message : "Could not check sports notification permission.");
         });
       }
       const genericNotificationEvents = followedEvents.map((event) => {
@@ -2889,21 +3541,63 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady || !isNative()) return;
-    const reminderEvents = calendarEvents.filter((event) =>
+
+    const calendarReminderEvents = calendarEvents.filter((event) =>
       ["At start time", "10 minutes before", "30 minutes before", "1 hour before", "1 day before"].includes(event.reminder ?? ""),
     );
+
+    const hydrationReminderEvents: CalendarEvent[] = reminders.flatMap(
+      (reminder) =>
+        notificationTimesForReminder(reminder).map((time, index) => ({
+          id: `hydration:${reminder.id}:${index}`,
+          date: todayKey,
+          title: `${reminder.icon || "💧"} ${reminder.title}`,
+          time,
+          allDay: false,
+          calendar: "Habits",
+          color: "blue",
+          reminder: "At start time",
+          repeat: "Daily",
+          note: "Daily hydration reminder",
+        })),
+    );
+
+    const reminderEvents = [
+      ...calendarReminderEvents,
+      ...hydrationReminderEvents,
+    ];
+
     const sync = async () => {
       if (reminderEvents.length) {
         const status = await AereaEventNotifications.status();
-        const resolved = status.permission === "granted" ? status : await AereaEventNotifications.requestPermissions();
-        if (resolved.permission !== "granted" || resolved.channel === "blocked") {
-          setHistoryMessage("Las notificaciones están bloqueadas. Ábrelas en Ajustes para recibir recordatorios.");
+        const resolved =
+          status.permission === "granted"
+            ? status
+            : await AereaEventNotifications.requestPermissions();
+
+        if (
+          resolved.permission !== "granted" ||
+          resolved.channel === "blocked"
+        ) {
+          setHistoryMessage(
+            "Notifications are blocked. Open Settings to receive reminders.",
+          );
         }
       }
-      await AereaEventNotifications.sync({ eventsJson: JSON.stringify(reminderEvents) });
+
+      await AereaEventNotifications.sync({
+        eventsJson: JSON.stringify(reminderEvents),
+      });
     };
-    void sync().catch((error) => setHistoryMessage(error instanceof Error ? error.message : "No se pudieron programar los recordatorios."));
-  }, [calendarEvents, stateReady]);
+
+    void sync().catch((error) =>
+      setHistoryMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not schedule reminders.",
+      ),
+    );
+  }, [calendarEvents, reminders, stateReady, todayKey]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -2924,6 +3618,13 @@ export default function Home() {
         setSyncCodeSent(false);
         setSyncMessage(message);
         setAuthCallbackStatus({ kind: "success", message });
+        // AEREA_RECOVERY_FIX_004: the manual OTP flow already reloads here.
+        // Do the same after an Android email-link login so startup reconciliation
+        // immediately restores the newer private Supabase state after reinstall.
+        if (email) {
+          setSyncMessage("Private sync is on. Reloading your saved day…");
+          window.location.reload();
+        }
       } catch (error) {
         if (!active) return;
         const message =
@@ -3031,7 +3732,12 @@ export default function Home() {
             });
         if (!cancelled && Array.isArray(payload.files)) {
           setStudyFiles((current) =>
-            payload.files!.map((file) => {
+            payload.files!
+              .filter(
+                (file) =>
+                  !isStudyFileTrashed(file.id, trashItemsRef.current),
+              )
+              .map((file) => {
               const metadata = current.find((item) => item.id === file.id);
               return {
                 ...file,
@@ -3340,12 +4046,14 @@ export default function Home() {
     [entityLinks, taskLinkEditor],
   );
   const habitCompletions = habits.filter((habit) => habit.days[3]).length;
-  const classRecordings = recordings.filter(
-    (recording) => recording.className === selectedClass,
-  );
   const selectedClassItem = classItems.find(
     (item) => item.name === selectedClass,
   );
+  const classRecordings = selectedClassItem
+    ? recordings.filter((recording) =>
+        recordingBelongsToClass(recording, selectedClassItem),
+      )
+    : [];
   const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
     if (!sportsSettings.addAutomatically) return [];
     return sportsEvents
@@ -3462,7 +4170,7 @@ export default function Home() {
     0,
   ).getDate();
   const leadingDays =
-    (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
+    new Date(calendarYear, calendarMonth, 1).getDay();
   const extendedLeadingDays = new Date(
     calendarYear,
     calendarMonth,
@@ -3521,6 +4229,9 @@ export default function Home() {
     .filter((event) => eventOccursOn(event, selectedCalendarDate))
     .sort((a, b) => a.time.localeCompare(b.time));
   const eventDraftRangeIsValid = eventDraftHasValidRange(eventDraft);
+  const eventDraftIsTimetableClass =
+    eventDraft.sourceType === "timetable" &&
+    Boolean(eventDraft.timetableClassId);
   const eventTitleSuggestions = useMemo(() => {
     const query = normalizeCalendarSearch(eventDraft.title);
     if (editingEventId || eventTemplateSuggestionsDismissed || query.length < 2) {
@@ -3689,9 +4400,9 @@ export default function Home() {
           .map((event) => ({
             title: event.title,
             time: event.timePending
-              ? "Hora por confirmar"
+              ? "Time TBD"
               : event.allDay
-                ? "Todo el día"
+                ? "All day"
                 : event.time,
             color: eventDisplayColor(event, dateKey),
           }));
@@ -4542,10 +5253,11 @@ export default function Home() {
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
     const dataUrl = await blobAsDataUrl(file);
+    const mimeType = normalizedFileMimeType(file);
     const nativeFile = isNative()
       ? await AereaStorage.saveFile({
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
+          mimeType,
           dataUrl,
         })
       : null;
@@ -4555,7 +5267,7 @@ export default function Home() {
       id,
       name: file.name,
       kind: fileKind(file),
-      mimeType: file.type,
+      mimeType,
       size: file.size,
       dataUrl: nativeFile ? undefined : dataUrl,
       nativeFileId: nativeFile?.id,
@@ -4593,7 +5305,7 @@ export default function Home() {
       })),
       ...current,
     ]);
-    setHistoryMessage(`${picked.files.length} imagen${picked.files.length === 1 ? "" : "es"} guardada${picked.files.length === 1 ? "" : "s"} en aérea.`);
+    setHistoryMessage(`${picked.files.length} image${picked.files.length === 1 ? "" : "s"} saved to aérea.`);
   };
 
   const openLibraryItem = async (item: LibraryItem) => {
@@ -4965,19 +5677,19 @@ export default function Home() {
     const nextEvent = todayWidgetEvents[0];
     const widgetTheme = appTheme === "otter" ? "otter" : "storybook";
     void AereaWidget.sync({
-      date: dateFromKey(todayKey).toLocaleDateString("es", {
+      date: dateFromKey(todayKey).toLocaleDateString("en-US", {
         weekday: "long",
         day: "numeric",
         month: "long",
       }),
-      eventTitle: nextEvent?.title ?? "Sin eventos para hoy",
+      eventTitle: nextEvent?.title ?? "No events today",
       eventTime: nextEvent?.timePending
-        ? "Hora por confirmar"
+        ? "Time TBD"
         : nextEvent?.allDay
-          ? "Todo el día"
-          : nextEvent?.time || "Abre aérea para planear",
+          ? "All day"
+          : nextEvent?.time || "Open aérea to plan",
       temperature: activeTheme.icon,
-      progress: `${doneIds.length}/${reminders.length} recordatorios · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tareas`,
+      progress: `${doneIds.length}/${reminders.length} reminders · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tasks`,
       theme: widgetTheme,
       daysJson: widgetDaysJson,
     }).catch(() => {
@@ -5011,7 +5723,7 @@ export default function Home() {
 
   const saveAo3Epub = async (target: Ao3EpubDownloadTarget) => {
     if (!isNative()) {
-      throw new Error("Guardá este EPUB desde la app Android de aérea.");
+      throw new Error("Save this EPUB from the aérea Android app.");
     }
     const result = await AereaStorage.downloadAo3Epub({
       driveFileId: target.driveFileId,
@@ -5050,12 +5762,331 @@ export default function Home() {
     }
   }, [ao3LibraryOpen, brandOpensAo3]);
 
+  const sendQaNotification = async () => {
+    if (!isNative()) return;
+    try {
+      const current = await AereaEventNotifications.status();
+      const status =
+        current.permission === "granted"
+          ? current
+          : await AereaEventNotifications.requestPermissions();
+
+      if (
+        status.permission !== "granted" ||
+        status.channel === "blocked"
+      ) {
+        setHistoryMessage(
+          "Notifications are blocked. Open Settings to receive reminders.",
+        );
+        return;
+      }
+
+      const result = await AereaEventNotifications.scheduleQaNotification({
+        delaySeconds: 5,
+      });
+      setHistoryMessage(
+        `Test scheduled: it will arrive in ${result.firesInSeconds} seconds.`,
+      );
+    } catch (error) {
+      setHistoryMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not schedule the test notification.",
+      );
+    }
+  };
+
   const changeTab = (tab: Tab) => {
     if (tab !== activeTab) setTabHistory((current) => [...current, activeTab]);
     setActiveTab(tab);
     setSpace("menu");
     if (tab === "today") setSelectedHomeDate(todayKey);
+
+    // Every primary screen opens from its own top instead of inheriting
+    // the previous screen's vertical scroll position.
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
   };
+
+  const clearPrimarySwipeFrame = () => {
+    if (pageSwipeFrameRef.current !== null) {
+      window.cancelAnimationFrame(pageSwipeFrameRef.current);
+      pageSwipeFrameRef.current = null;
+    }
+  };
+
+  const resetPrimarySwipeSurface = (animate = false) => {
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
+
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    if (!animate) {
+      surface.style.transition = "";
+      surface.style.transform = "";
+      return;
+    }
+
+    surface.style.transition =
+      "transform 96ms cubic-bezier(.2,.86,.24,1)";
+    surface.style.transform = "translate3d(0,0,0)";
+
+    pageSwipeSettleRef.current = window.setTimeout(() => {
+      if (primarySwipeSurfaceRef.current !== surface) {
+        pageSwipeSettleRef.current = null;
+        return;
+      }
+
+      surface.style.transition = "";
+      surface.style.transform = "";
+      pageSwipeSettleRef.current = null;
+    }, 112);
+  };
+
+  const beginPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (
+      event.touches.length !== 1 ||
+      !primarySwipeTabs.includes(activeTab)
+    ) {
+      pageSwipeStartRef.current = null;
+      return;
+    }
+
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(false);
+
+    const touch = event.touches[0];
+    const target =
+      event.target instanceof Element ? event.target : null;
+
+    const blocked = Boolean(
+      (activeTab === "spaces" && space !== "menu") ||
+      target?.closest(
+        [
+          "input",
+          "textarea",
+          "select",
+          "button",
+          "a",
+          "[role='button']",
+          "[contenteditable='true']",
+          "canvas",
+          ".movable-post-it",
+          ".post-it-editor-modal",
+        ].join(","),
+      ),
+    );
+
+    const now = performance.now();
+
+    pageSwipeStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      startedAt: now,
+      lastX: touch.clientX,
+      lastAt: now,
+      velocityX: 0,
+      axis: "pending",
+      blocked,
+    };
+  };
+
+  const movePrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = pageSwipeStartRef.current;
+
+    if (
+      !start ||
+      start.blocked ||
+      event.touches.length !== 1
+    ) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    if (start.axis === "pending") {
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 7) {
+        return;
+      }
+
+      start.axis =
+        Math.abs(deltaX) > Math.abs(deltaY) * 1.08
+          ? "horizontal"
+          : "vertical";
+    }
+
+    if (start.axis !== "horizontal") return;
+
+    if (event.cancelable) event.preventDefault();
+
+    const now = performance.now();
+    const sampleDuration = Math.max(1, now - start.lastAt);
+
+    start.velocityX =
+      (touch.clientX - start.lastX) / sampleDuration;
+    start.lastX = touch.clientX;
+    start.lastAt = now;
+
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
+
+    const currentIndex = primarySwipeTabs.indexOf(activeTab);
+    const atFirstEdge = currentIndex === 0 && deltaX > 0;
+    const atLastEdge =
+      currentIndex === primarySwipeTabs.length - 1 &&
+      deltaX < 0;
+
+    // Keep the page attached to the finger, but only move it a little.
+    // Full-screen dragging made transitions feel floaty and caused
+    // accidental horizontal movement while vertically scrolling.
+    const dragResistance =
+      atFirstEdge || atLastEdge ? 0.08 : 0.22;
+    const displayedDelta = deltaX * dragResistance;
+    const clampedDelta = Math.max(
+      -44,
+      Math.min(44, displayedDelta),
+    );
+
+    clearPrimarySwipeFrame();
+
+    pageSwipeFrameRef.current = window.requestAnimationFrame(() => {
+      surface.style.transition = "none";
+      surface.style.transform =
+        `translate3d(${clampedDelta}px,0,0)`;
+      pageSwipeFrameRef.current = null;
+    });
+  };
+
+  const finishPrimarySwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = pageSwipeStartRef.current;
+    pageSwipeStartRef.current = null;
+
+    clearPrimarySwipeFrame();
+
+    if (
+      !start ||
+      start.blocked ||
+      start.axis !== "horizontal" ||
+      event.changedTouches.length !== 1 ||
+      !primarySwipeTabs.includes(activeTab)
+    ) {
+      resetPrimarySwipeSurface(true);
+      return;
+    }
+
+    const surface = primarySwipeSurfaceRef.current;
+    if (!surface) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const elapsed = Math.max(
+      1,
+      performance.now() - start.startedAt,
+    );
+
+    const averageVelocity = deltaX / elapsed;
+    const velocityX =
+      Math.abs(start.velocityX) > Math.abs(averageVelocity)
+        ? start.velocityX
+        : averageVelocity;
+
+    const direction = deltaX < 0 ? 1 : -1;
+    const currentIndex = primarySwipeTabs.indexOf(activeTab);
+    const nextIndex = currentIndex + direction;
+
+    const width = surface.clientWidth || window.innerWidth;
+    const distanceThreshold = Math.min(64, width * 0.18);
+
+    const canMove =
+      nextIndex >= 0 &&
+      nextIndex < primarySwipeTabs.length;
+
+    const shouldCommit =
+      canMove &&
+      (
+        Math.abs(deltaX) >= distanceThreshold ||
+        Math.abs(velocityX) >= 0.42
+      );
+
+    if (!shouldCommit) {
+      resetPrimarySwipeSurface(true);
+      return;
+    }
+
+    // Short, restrained transition. The previous implementation moved
+    // the whole interface one full screen out and then another full
+    // screen back in, which felt like a jump inside the Android WebView.
+    const outgoingTarget = direction > 0 ? -28 : 28;
+    const outgoingMs = 72;
+
+    surface.style.transition =
+      `transform ${outgoingMs}ms cubic-bezier(.2,.86,.24,1)`;
+    surface.style.transform =
+      `translate3d(${outgoingTarget}px,0,0)`;
+
+    pageSwipeSettleRef.current = window.setTimeout(() => {
+      changeTab(primarySwipeTabs[nextIndex]);
+
+      surface.style.transition = "none";
+      surface.style.transform =
+        `translate3d(${direction > 0 ? 18 : -18}px,0,0)`;
+
+      window.requestAnimationFrame(() => {
+        surface.style.transition =
+          "transform 120ms cubic-bezier(.2,.86,.24,1)";
+        surface.style.transform = "translate3d(0,0,0)";
+
+        pageSwipeSettleRef.current = window.setTimeout(() => {
+          surface.style.transition = "";
+          surface.style.transform = "";
+          pageSwipeSettleRef.current = null;
+        }, 130);
+      });
+    }, outgoingMs);
+  };
+
+  const cancelPrimarySwipe = () => {
+    pageSwipeStartRef.current = null;
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(true);
+  };
+
+  const returnToToday = () => {
+    if (pageSwipeSettleRef.current !== null) {
+      window.clearTimeout(pageSwipeSettleRef.current);
+      pageSwipeSettleRef.current = null;
+    }
+
+    clearPrimarySwipeFrame();
+    resetPrimarySwipeSurface(false);
+
+    setTabHistory([]);
+    setActiveTab("today");
+    setSpace("menu");
+    setSelectedHomeDate(todayKey);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  };
+
+  useEffect(() => {
+    return () => {
+      clearPrimarySwipeFrame();
+
+      if (pageSwipeSettleRef.current !== null) {
+        window.clearTimeout(pageSwipeSettleRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isNative()) return;
@@ -5091,7 +6122,11 @@ export default function Home() {
       const now = Date.now();
       if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
       lastExitBackRef.current = now;
-      setHistoryMessage("Presiona Atrás otra vez para salir de aérea");
+      const exitHint = "Press Back again to exit aérea";
+      setHistoryMessage(exitHint);
+      // AEREA_RECOVERY_FIX_003: use Android's native Toast so Samsung renders
+      // the compact system pill + app icon exactly like the approved reference.
+      void AereaNavigation.showExitHint({ message: exitHint });
     };
     window.addEventListener("aereaAndroidBack", onAndroidBack);
     return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
@@ -5519,9 +6554,9 @@ export default function Home() {
       return;
     }
     raisePostItOnTouch(postIt);
-    const canvas = phoneCanvasRef.current;
-    if (!canvas) return;
-    const bounds = canvas.getBoundingClientRect();
+    const layer = postItLayerRef.current;
+    if (!layer) return;
+    const bounds = layer.getBoundingClientRect();
     const centerX = bounds.left + (postIt.x / 100) * bounds.width;
     const centerY = bounds.top + (postIt.y / 100) * bounds.height;
     const groupPositions = postIt.groupId
@@ -5531,7 +6566,7 @@ export default function Home() {
       : [{ id: postIt.id, x: postIt.x, y: postIt.y }];
     const groupIds = new Set(groupPositions.map((item) => item.id));
     const previewElements = Array.from(
-      canvas.querySelectorAll<HTMLElement>("[data-post-it-id]"),
+      layer.querySelectorAll<HTMLElement>("[data-post-it-id]"),
     )
       .filter((element) => {
         const id = element.dataset.postItId;
@@ -5574,14 +6609,14 @@ export default function Home() {
 
   const movePostIt = (event: ReactPointerEvent<HTMLElement>) => {
     const drag = postItDragRef.current;
-    const canvas = phoneCanvasRef.current;
-    if (!drag || !canvas || drag.pointerId !== event.pointerId) return;
+    const layer = postItLayerRef.current;
+    if (!drag || !layer || drag.pointerId !== event.pointerId) return;
     if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 10) {
       if (postItLongPressRef.current) window.clearTimeout(postItLongPressRef.current);
       postItLongPressRef.current = null;
     }
     if (drag.locked) return;
-    const bounds = canvas.getBoundingClientRect();
+    const bounds = layer.getBoundingClientRect();
     const x = Math.max(
       9,
       Math.min(91, ((event.clientX - bounds.left - drag.offsetX) / bounds.width) * 100),
@@ -6158,15 +7193,17 @@ export default function Home() {
   const openEventDetail = (
     calendarEvent: CalendarEvent,
     returnDayPocket: string | null = null,
+    occurrenceDate = calendarEvent.date,
   ) => {
+    const detailEvent = calendarEventAtOccurrence(calendarEvent, occurrenceDate);
     setEventDetailReturnDayPocket(returnDayPocket);
-    if (isFootballVisualEvent(calendarEvent)) {
+    if (isFootballVisualEvent(detailEvent)) {
       setSelectedEventDetail(null);
-      setSelectedFootballMatch(calendarEvent);
+      setSelectedFootballMatch(detailEvent);
       return;
     }
     setSelectedFootballMatch(null);
-    setSelectedEventDetail(calendarEvent);
+    setSelectedEventDetail(detailEvent);
   };
 
   const closeEventDetail = () => {
@@ -6203,7 +7240,28 @@ export default function Home() {
     setDaySummaryDate(returnDate);
   };
 
+  const editTimetableClassFromCalendar = () => {
+    if (
+      eventDraft.sourceType !== "timetable" ||
+      !eventDraft.timetableClassId
+    ) {
+      return;
+    }
+    const classId = eventDraft.timetableClassId;
+    setEventEditorOpen(false);
+    setEditingEventId(null);
+    setCalendarExpanded(false);
+    setCalendarScheduleOpen(false);
+    setCalendarSearchOpen(false);
+    setMonthPickerOpen(false);
+    setCalendarOpen(false);
+    setDaySummaryDate(null);
+    setRequestedTimetableClassId(classId);
+    changeTab("today");
+  };
+
   const saveCalendarEvent = () => {
+    if (eventDraft.sourceType === "timetable") return;
     if (!eventDraft.title.trim() || !eventDraftHasValidRange(eventDraft)) return;
     const savedEvent: CalendarEvent = {
       ...eventDraft,
@@ -6305,6 +7363,10 @@ export default function Home() {
     if (!eventDeleteRequest) return;
     const deletedId = eventDeleteRequest.eventId;
     const event = calendarEvents.find((candidate) => candidate.id === deletedId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
     if (event) moveToTrash("event", event.title, event);
     setSelectedEventDetail((current) =>
       current?.id === deletedId ? null : current,
@@ -6314,8 +7376,13 @@ export default function Home() {
 
   const deleteOnlyOccurrence = () => {
     if (!eventDeleteRequest) return;
-    recordAction("Deleted event occurrence");
     const { eventId, occurrenceDate } = eventDeleteRequest;
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
+    recordAction("Deleted event occurrence");
     setCalendarEvents((current) =>
       current.map((event) => {
         if (event.id !== eventId) return event;
@@ -6332,8 +7399,13 @@ export default function Home() {
 
   const deleteThisAndFutureOccurrences = () => {
     if (!eventDeleteRequest) return;
-    recordAction("Deleted future event occurrences");
     const { eventId, occurrenceDate } = eventDeleteRequest;
+    const event = calendarEvents.find((candidate) => candidate.id === eventId);
+    if (event?.sourceType === "timetable") {
+      closeEventDelete();
+      return;
+    }
+    recordAction("Deleted future event occurrences");
     setCalendarEvents((current) =>
       current.flatMap((event) => {
         if (event.id !== eventId) return [event];
@@ -6353,7 +7425,13 @@ export default function Home() {
 
   const moveCalendarEvent = (eventId: string, destinationDate: string) => {
     const event = calendarEvents.find((candidate) => candidate.id === eventId);
-    if (!event || event.date === destinationDate) return;
+    if (
+      !event ||
+      event.sourceType === "timetable" ||
+      event.date === destinationDate
+    ) {
+      return;
+    }
     const endDayOffset =
       event.endDate && event.endDate !== event.date
         ? Math.max(
@@ -6386,7 +7464,12 @@ export default function Home() {
     event: ReactPointerEvent<HTMLElement>,
     calendarEvent: CalendarEvent,
   ) => {
-    if (calendarEvent.eventType === "sports_event") return;
+    if (
+      calendarEvent.eventType === "sports_event" ||
+      calendarEvent.sourceType === "timetable"
+    ) {
+      return;
+    }
     event.stopPropagation();
     cancelCalendarLongPress();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -6435,7 +7518,14 @@ export default function Home() {
     duration: number,
   ) => {
     const event = calendarEvents.find((candidate) => candidate.id === eventId);
-    if (!event || event.allDay || event.eventType === "sports_event") return;
+    if (
+      !event ||
+      event.allDay ||
+      event.eventType === "sports_event" ||
+      event.sourceType === "timetable"
+    ) {
+      return;
+    }
 
     const latestMinute = 23 * 60 + 45;
     const safeDuration = Math.max(15, Math.min(duration, latestMinute));
@@ -6466,7 +7556,12 @@ export default function Home() {
     start: number,
     end: number,
   ) => {
-    if (event.eventType === "sports_event") return;
+    if (
+      event.eventType === "sports_event" ||
+      event.sourceType === "timetable"
+    ) {
+      return;
+    }
     pointerEvent.stopPropagation();
     pointerEvent.currentTarget.setPointerCapture(pointerEvent.pointerId);
     const dayBounds = pointerEvent.currentTarget
@@ -6561,6 +7656,9 @@ export default function Home() {
           : candidate,
       ),
     );
+    setSelectedEventDetail((current) =>
+      current?.id === event.id ? toggleHealthCompletedOn(current, dateKey) : current,
+    );
   };
 
   const handleEventTodoClick = (
@@ -6630,6 +7728,31 @@ export default function Home() {
 
   const startRecording = async () => {
     setRecordingError("");
+
+    // AEREA_RECOVERY_FIX_002
+    if (isNative()) {
+      try {
+        const current = await AereaMicrophone.status();
+        const permission =
+          current.permission === "granted"
+            ? current
+            : await AereaMicrophone.requestPermissions();
+        if (permission.permission !== "granted") {
+          setRecordingError(
+            "Please allow microphone access to record a class.",
+          );
+          return;
+        }
+      } catch (error) {
+        setRecordingError(
+          error instanceof Error
+            ? error.message
+            : "Please allow microphone access to record a class.",
+        );
+        return;
+      }
+    }
+
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setRecordingError("Audio recording is not available in this browser.");
       return;
@@ -6652,6 +7775,7 @@ export default function Home() {
           {
             id: Date.now(),
             className: selectedClass,
+            classItemId: selectedClassItem?.id,
             name:
               recordingName.trim() ||
               `Class #${current.filter((item) => item.className === selectedClass).length + 1}`,
@@ -7664,7 +8788,11 @@ export default function Home() {
           return (await response.json()) as { files: StudyFileItem[] };
         });
     setStudyFiles((current) =>
-      (payload.files || []).map((file) => {
+      (payload.files || [])
+        .filter(
+          (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
+        )
+        .map((file) => {
         const metadata = current.find((item) => item.id === file.id);
         return {
           ...file,
@@ -7683,6 +8811,10 @@ export default function Home() {
       if (file.size === 0) continue;
       if (file.size > 40 * 1024 * 1024) {
         throw new Error(`${file.name} is larger than 40 MB.`);
+      }
+      if (fileKind(file) === "image") {
+        await importLibraryFile(file);
+        continue;
       }
       const lowerName = file.name.toLowerCase();
       const kind: StudyFileItem["kind"] =
@@ -7756,6 +8888,30 @@ export default function Home() {
       setActiveStudyFile(readableFile);
       return;
     }
+    const readableMimeType = normalizedFileMimeType({
+      name: readableFile.name,
+      type: readableFile.mediaType,
+    });
+    if (readableMimeType.startsWith("image/") && readableFile.dataUrl) {
+      setActiveStudyFile(null);
+      setActiveEpubBook(null);
+      setLibraryImageFailed(false);
+      setSelectedLibraryItem({
+        id: readableFile.id,
+        name: readableFile.name,
+        kind: "image",
+        mimeType: readableMimeType,
+        size: readableFile.size,
+        dataUrl: readableFile.dataUrl,
+        createdAt: readableFile.createdAt,
+        updatedAt: readableFile.updatedAt,
+        lastOpenedAt,
+        favorite: readableFile.favorite,
+        collectionIds: readableFile.collectionIds,
+      });
+      return;
+    }
+
     if (readableFile.kind === "epub") {
       setStudyReaderMessage("Opening your EPUB…");
       try {
@@ -8350,7 +9506,14 @@ export default function Home() {
           </div>
         </header>}
 
-        <div className="main-content">
+        <div
+          ref={primarySwipeSurfaceRef}
+          className="main-content primary-swipe-surface"
+          onTouchStart={beginPrimarySwipe}
+          onTouchMove={movePrimarySwipe}
+          onTouchEnd={finishPrimarySwipe}
+          onTouchCancel={cancelPrimarySwipe}
+        >
           {activeTab === "today" && (
             <TodayScreen
               themeId={appTheme}
@@ -8377,6 +9540,10 @@ export default function Home() {
               isNight={isNight}
               classTimetable={classTimetable}
               setClassTimetable={setClassTimetable}
+              requestedTimetableClassId={requestedTimetableClassId}
+              onTimetableRequestHandled={() =>
+                setRequestedTimetableClassId(null)
+              }
             />
           )}
 
@@ -8387,7 +9554,306 @@ export default function Home() {
                 title="Your habits"
                 copy="Consistency matters more than perfection. Tap today when a little promise is done."
                 sticker="🌿"
+                onStickerClick={openHealthRoutineNote}
               />
+
+              {healthRoutineOpen && (
+                <div
+                  className="health-routine-backdrop"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      setHealthRoutineOpen(false);
+                      setHealthRoutineEditorOpen(false);
+                    }
+                  }}
+                >
+                  <section
+                    className="health-routine-note"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="My daily rhythm"
+                  >
+                    <header className="health-routine-header">
+                      <div>
+                        <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
+                        <h3>My daily rhythm</h3>
+                        <p>
+                          Tiny things that quietly take care of you.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="health-routine-close"
+                        aria-label="Close daily rhythm"
+                        onClick={() => {
+                          setHealthRoutineOpen(false);
+                          setHealthRoutineEditorOpen(false);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </header>
+
+                    {!healthRoutineEditorOpen ? (
+                      <>
+                        <div className="health-routine-list">
+                          {healthRoutineGroups.length === 0 ? (
+                            <div className="health-routine-empty">
+                              <span aria-hidden="true">🌱</span>
+                              <strong>No little routines yet</strong>
+                              <p>
+                                Add skincare, hair wash days, vitamins,
+                                stretching, or anything that belongs to
+                                your health rhythm.
+                              </p>
+                            </div>
+                          ) : (
+                            healthRoutineGroups.map((routine) => {
+                              const first = routine.events[0];
+
+                              const todayOccurrence =
+                                routine.events.find((event) =>
+                                  eventOccursOn(event, todayKey),
+                                );
+
+                              const completedToday = todayOccurrence
+                                ? isHealthCompletedOn(
+                                    todayOccurrence,
+                                    todayKey,
+                                  )
+                                : false;
+
+                              const cadence =
+                                first.healthRoutineCadence ?? "daily";
+
+                              const cadenceLabel =
+                                cadence === "alternate"
+                                  ? "Every other day"
+                                  : cadence === "weekdays"
+                                    ? Array.from(
+                                        new Set(
+                                          routine.events.map(
+                                            (event) =>
+                                              event.healthRoutineWeekday ??
+                                              dateFromKey(
+                                                event.date,
+                                              ).getDay(),
+                                          ),
+                                        ),
+                                      )
+                                        .sort((a, b) => a - b)
+                                        .map(
+                                          (weekday) =>
+                                            HEALTH_ROUTINE_DAY_LABELS[
+                                              weekday
+                                            ],
+                                        )
+                                        .join(" · ")
+                                    : "Every day";
+
+                              return (
+                                <article
+                                  key={routine.id}
+                                  className={`health-routine-item ${
+                                    completedToday ? "complete" : ""
+                                  }`.trim()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="health-routine-check"
+                                    disabled={!todayOccurrence}
+                                    aria-pressed={completedToday}
+                                    aria-label={
+                                      todayOccurrence
+                                        ? `${
+                                            completedToday
+                                              ? "Mark incomplete"
+                                              : "Mark complete"
+                                          }: ${first.title}`
+                                        : `${first.title} is not scheduled today`
+                                    }
+                                    onClick={(clickEvent) => {
+                                      if (!todayOccurrence) return;
+                                      toggleHealthOccurrence(
+                                        clickEvent,
+                                        todayOccurrence,
+                                        todayKey,
+                                      );
+                                    }}
+                                  >
+                                    {completedToday ? "✓" : "○"}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="health-routine-body"
+                                    onClick={() =>
+                                      editHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    <strong>{first.title}</strong>
+                                    <span>
+                                      {cadenceLabel}
+                                      {!first.allDay
+                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
+                                        : ""}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="health-routine-delete"
+                                    aria-label={`Delete ${first.title}`}
+                                    onClick={() =>
+                                      deleteHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    ×
+                                  </button>
+                                </article>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="health-routine-add"
+                          onClick={startNewHealthRoutine}
+                        >
+                          <span aria-hidden="true">＋</span>
+                          Add a little routine
+                        </button>
+                      </>
+                    ) : (
+                      <div className="health-routine-editor">
+                        <label>
+                          <span>Little routine</span>
+                          <input
+                            value={healthRoutineDraft.title}
+                            placeholder="Skincare, wash my hair…"
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>Rhythm</span>
+                          <select
+                            value={healthRoutineDraft.cadence}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                cadence:
+                                  event.target
+                                    .value as HealthRoutineCadence,
+                              }))
+                            }
+                          >
+                            <option value="daily">Every day</option>
+                            <option value="alternate">
+                              Every other day
+                            </option>
+                            <option value="weekdays">
+                              Certain days
+                            </option>
+                          </select>
+                        </label>
+
+                        {healthRoutineDraft.cadence === "weekdays" && (
+                          <div className="health-routine-weekdays">
+                            {HEALTH_ROUTINE_DAY_LABELS.map(
+                              (label, weekday) => {
+                                const selected =
+                                  healthRoutineDraft.weekdays.includes(
+                                    weekday,
+                                  );
+
+                                return (
+                                  <button
+                                    type="button"
+                                    key={label}
+                                    className={
+                                      selected ? "selected" : ""
+                                    }
+                                    aria-pressed={selected}
+                                    onClick={() =>
+                                      setHealthRoutineDraft(
+                                        (current) => ({
+                                          ...current,
+                                          weekdays: selected
+                                            ? current.weekdays.filter(
+                                                (item) =>
+                                                  item !== weekday,
+                                              )
+                                            : [
+                                                ...current.weekdays,
+                                                weekday,
+                                              ].sort(
+                                                (a, b) => a - b,
+                                              ),
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    {label.slice(0, 1)}
+                                  </button>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
+
+                        <label>
+                          <span>Time · optional</span>
+                          <input
+                            type="time"
+                            value={healthRoutineDraft.time}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                time: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <div className="health-routine-editor-actions">
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => {
+                              setHealthRoutineEditorOpen(false);
+                              resetHealthRoutineDraft();
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="primary"
+                            disabled={
+                              !healthRoutineDraft.title.trim() ||
+                              (
+                                healthRoutineDraft.cadence === "weekdays" &&
+                                healthRoutineDraft.weekdays.length === 0
+                              )
+                            }
+                            onClick={saveHealthRoutine}
+                          >
+                            Save routine
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}
+
               <div className="habit-summary card">
                 <div className="habit-ring">
                   <strong>{habitCompletions}</strong>
@@ -8608,7 +10074,7 @@ export default function Home() {
                       title="Library"
                       subtitle="Notes, PDFs & books"
                       color="space-lilac"
-                      icon="▥"
+                      icon="📚"
                       note={`${studyNotes.length + studyFiles.length + libraryItems.length} saved items`}
                       onClick={() => setSpace("library")}
                     />
@@ -8624,7 +10090,7 @@ export default function Home() {
                       title="Calendar"
                       subtitle="Everything in one rhythm"
                       color="space-peach"
-                      icon="▦"
+                      icon="🗓️"
                       note="Android + aérea"
                       onClick={openCalendarAtToday}
                     />
@@ -8900,8 +10366,24 @@ export default function Home() {
                         >
                           <button
                             className="class-icon-edit"
-                            onClick={() => openClassEditor(item)}
-                            aria-label={`Edit ${item.name}`}
+                            onClick={() => {
+                              const timetableClassId =
+                                item.sourceType === "timetable"
+                                  ? item.timetableClassIds?.[0]
+                                  : null;
+                              if (timetableClassId) {
+                                setSpace("menu");
+                                setRequestedTimetableClassId(timetableClassId);
+                                changeTab("today");
+                                return;
+                              }
+                              openClassEditor(item);
+                            }}
+                            aria-label={
+                              item.sourceType === "timetable"
+                                ? `Edit ${item.name} in class schedule`
+                                : `Edit ${item.name}`
+                            }
                           >
                             {item.icon}
                           </button>
@@ -8917,9 +10399,8 @@ export default function Home() {
                               <strong>{item.name}</strong>
                               <small>
                                 {
-                                  recordings.filter(
-                                    (recording) =>
-                                      recording.className === item.name,
+                                  recordings.filter((recording) =>
+                                    recordingBelongsToClass(recording, item),
                                   ).length
                                 }{" "}
                                 saved audios
@@ -9669,7 +11150,7 @@ export default function Home() {
                             <strong>Place a neat text box</strong>
                           </div>
                           <textarea
-                            autoFocus
+
                             value={sketchTextEditor!.text}
                             onChange={(event) => setSketchTextEditor((current) => current ? { ...current, text: event.target.value } : current)}
                             placeholder="Type something for this spot…"
@@ -9854,6 +11335,7 @@ export default function Home() {
 
         {!sketchFullscreen && visiblePostIts.length > 0 && (
           <div
+            ref={postItLayerRef}
             className="post-it-layer"
             aria-label={`Your movable post-its on ${currentPostItPage}`}
           >
@@ -9907,37 +11389,45 @@ export default function Home() {
           </div>
         )}
 
-        {!sketchFullscreen && <nav className="bottom-nav" aria-label="Primary navigation">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={[
-                "nav-item",
-                activeTab === tab.id ? "active" : "",
-                tab.id === "add" ? "quick-capture-nav" : "",
-              ].filter(Boolean).join(" ")}
-              aria-label={tab.id === "add" ? "Open Quick Capture" : tab.label}
-              onClick={() => {
-                if (tab.id === "add") {
-                  setQuickCaptureOpen(true);
-                  return;
+        {!sketchFullscreen && (
+          <nav className="bottom-nav" aria-label="Primary navigation">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={[
+                  "nav-item",
+                  activeTab === tab.id ? "active" : "",
+                  tab.id === "add" ? "quick-capture-nav" : "",
+                ].filter(Boolean).join(" ")}
+                aria-label={
+                  tab.id === "add"
+                    ? "Open Quick Capture"
+                    : tab.label
                 }
-                changeTab(tab.id);
-              }}
-            >
-              <span>{tab.icon}</span>
-              {tab.id !== "add" && <small>{tab.label}</small>}
-            </button>
-          ))}
-        </nav>}
+                onClick={() => {
+                  if (tab.id === "add") {
+                    setQuickCaptureOpen(true);
+                    return;
+                  }
+                  changeTab(tab.id);
+                }}
+              >
+                <span>{tab.icon}</span>
+                {tab.id !== "add" && (
+                  <small>{tab.label}</small>
+                )}
+              </button>
+            ))}
+          </nav>
+        )}
       </section>
 
-     {ao3LibraryOpen && (
-  <>
-    <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
-    <GenericLibraryBridge />
-  </>
-)}
+      {ao3LibraryOpen && (
+        <>
+          <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+          <GenericLibraryBridge />
+        </>
+      )}
 
       {aereaHubOpen && (
         <div
@@ -10035,7 +11525,7 @@ export default function Home() {
               </button>
             </header>
             <textarea
-              autoFocus
+
               value={quickCaptureText}
               onChange={(event) => setQuickCaptureText(event.target.value)}
               onKeyDown={(event) => {
@@ -10294,7 +11784,7 @@ export default function Home() {
                 <label>
                   <span>Title</span>
                   <input
-                    autoFocus
+
                     value={taskEditorDraft.title}
                     onChange={(event) =>
                       setTaskEditorDraft((current) => ({
@@ -10496,26 +11986,24 @@ export default function Home() {
 
       {selectedLibraryItem && (
         <div className="modal-backdrop library-reader-backdrop" role="presentation">
-          <section className="library-reader" role="dialog" aria-modal="true">
-            <header>
+          <section
+            className={`library-reader-modal ${
+              selectedLibraryItem.kind === "image" ||
+              selectedLibraryItem.mimeType?.startsWith("image/")
+                ? "library-image-viewer"
+                : ""
+            }`}
+            role="dialog"
+            aria-modal="true"
+          >
+            <header className="library-reader-header">
               <div>
                 <p className="tiny-label">LIBRARY</p>
                 <h2>{selectedLibraryItem.name}</h2>
               </div>
               <button type="button" onClick={() => { setSelectedLibraryItem(null); setLibraryImageFailed(false); }} aria-label="Close file">×</button>
             </header>
-            <nav aria-label="Reader tools">
-              {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
-                <button
-                  type="button"
-                  key={panel}
-                  className={libraryPanel === panel ? "active" : ""}
-                  onClick={() => setLibraryPanel(panel)}
-                >
-                  {panel}
-                </button>
-              ))}
-            </nav>
+
             <div className="library-reader-layout">
               <div className="library-document-stage">
                 {(selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl) &&
@@ -10529,7 +12017,11 @@ export default function Home() {
                     </div>
                   ) : (
                     <img
-                      src={selectedLibraryItem.nativeContentUri || selectedLibraryItem.dataUrl}
+                      src={
+                        selectedLibraryItem.nativeContentUri
+                          ? Capacitor.convertFileSrc(selectedLibraryItem.nativeContentUri)
+                          : selectedLibraryItem.dataUrl
+                      }
                       alt={selectedLibraryItem.name}
                       onLoad={() => setLibraryImageFailed(false)}
                       onError={() => setLibraryImageFailed(true)}
@@ -10542,6 +12034,18 @@ export default function Home() {
                 )}
               </div>
               <aside className="library-reader-panel">
+                <nav aria-label="Reader tools">
+                  {(["contents", "pages", "bookmarks", "highlights", "notes"] as const).map((panel) => (
+                    <button
+                      type="button"
+                      key={panel}
+                      className={libraryPanel === panel ? "active" : ""}
+                      onClick={() => setLibraryPanel(panel)}
+                    >
+                      {panel}
+                    </button>
+                  ))}
+                </nav>
                 <p className="tiny-label">{libraryPanel.toUpperCase()}</p>
                 <p>Reader locations, bookmarks, highlights and notes stay attached to this original file.</p>
               </aside>
@@ -10774,31 +12278,83 @@ export default function Home() {
                   </button>
                   <div>
                     <p className="tiny-label">
-                      {editingEventId ? "EDIT YOUR PLAN" : "A NEW LITTLE PLAN"}
+                      {eventDraftIsTimetableClass
+                        ? "CLASS SCHEDULE"
+                        : editingEventId
+                          ? "EDIT YOUR PLAN"
+                          : "A NEW LITTLE PLAN"}
                     </p>
-                    <h2>{editingEventId ? "Edit event" : "New event"}</h2>
+                    <h2>
+                      {eventDraftIsTimetableClass
+                        ? eventDraft.title
+                        : editingEventId
+                          ? "Edit event"
+                          : "New event"}
+                    </h2>
                   </div>
-                  <button
-                    className="event-save-button"
-                    type="button"
-                    onClick={saveCalendarEvent}
-                    disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
-                  >
-                    Save
-                  </button>
+                  {eventDraftIsTimetableClass ? (
+                    <span className="event-linked-badge">Linked</span>
+                  ) : (
+                    <button
+                      className="event-save-button"
+                      type="button"
+                      onClick={saveCalendarEvent}
+                      disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
+                    >
+                      Save
+                    </button>
+                  )}
                 </div>
 
                 <form
-                  className="event-editor"
+                  className={`event-editor ${
+                    eventDraftIsTimetableClass ? "timetable-source-event" : ""
+                  }`}
                   onSubmit={(event) => {
                     event.preventDefault();
                     saveCalendarEvent();
                   }}
                 >
+                  {eventDraftIsTimetableClass && (
+                    <section
+                      className="timetable-linked-event-card"
+                      aria-label="Class event managed by semester timetable"
+                    >
+                      <span className="timetable-linked-event-icon" aria-hidden="true">
+                        🎓
+                      </span>
+                      <div>
+                        <small>
+                          Class · {eventDraft.title} ·{" "}
+                          {eventDraft.timetableTermName ?? classTimetable.termName}
+                        </small>
+                        <strong>{eventDraft.title}</strong>
+                        <p>
+                          This weekly class is managed by your semester timetable.
+                          Change its day, time, dates or delete the class there so
+                          the whole series stays together.
+                        </p>
+                        <span className="timetable-linked-range">
+                          {timetableTermDateLabel(classTimetable)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={editTimetableClassFromCalendar}
+                      >
+                        Edit class schedule
+                      </button>
+                    </section>
+                  )}
+
+                  <div
+                    className="event-editor-editable-fields"
+                    inert={eventDraftIsTimetableClass ? true : undefined}
+                  >
                   <label className="event-title-input">
                     <span>Title</span>
                     <input
-                      autoFocus
+
                       value={eventDraft.title}
                       onChange={(event) => {
                         setEventTemplateSuggestionsDismissed(false);
@@ -11338,6 +12894,7 @@ export default function Home() {
                   >
                     Save event
                   </button>
+                  </div>
                 </form>
               </>
             ) : (
@@ -11677,7 +13234,7 @@ export default function Home() {
                           }}
                         >
                           <span aria-hidden="true">{tab.icon}</span>
-                          {tab.id !== "add" && <small>{tab.label}</small>}
+                          <small>{tab.label}</small>
                         </button>
                       ))}
                     </nav>
@@ -11843,7 +13400,7 @@ export default function Home() {
                           aria-hidden="true"
                         />
                         <input
-                          autoFocus
+
                           type="search"
                           value={calendarSearchQuery}
                           onChange={(event) =>
@@ -12335,7 +13892,7 @@ export default function Home() {
                     onTouchEnd={finishCalendarSwipe}
                     aria-label="Calendar month. Swipe left or right to change month."
                   >
-                  {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
+                  {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
                     (day) => <strong key={day}>{day}</strong>,
                   )}
                   {Array.from({ length: leadingDays }, (_, index) => (
@@ -12598,7 +14155,8 @@ export default function Home() {
                                 : ""}
                             </small>
                           </button>
-                          {calendarEvent.eventType !== "sports_event" && (
+                          {calendarEvent.eventType !== "sports_event" &&
+                            calendarEvent.sourceType !== "timetable" && (
                             <button
                               type="button"
                               className="event-chip-delete"
@@ -13175,6 +14733,55 @@ export default function Home() {
                 </div>
 
                 <div className="event-detail-divider" aria-hidden="true" />
+
+                {isHealthCompletionEvent(selectedEventDetail) && (
+                  <div
+                    className={`event-detail-health-completion ${
+                      isHealthCompletedOn(
+                        selectedEventDetail,
+                        selectedEventDetail.date,
+                      )
+                        ? "complete"
+                        : ""
+                    }`.trim()}
+                  >
+                    <div>
+                      <strong>
+                        {isHealthCompletedOn(
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                          ? "Health completed"
+                          : "Complete this Health occurrence"}
+                      </strong>
+                      <small>{readableDate(selectedEventDetail.date)}</small>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(clickEvent) =>
+                        toggleHealthOccurrence(
+                          clickEvent,
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                      }
+                      aria-label={`${
+                        isHealthCompletedOn(
+                          selectedEventDetail,
+                          selectedEventDetail.date,
+                        )
+                          ? "Mark incomplete"
+                          : "Mark complete"
+                      }: ${selectedEventDetail.title}`}
+                      aria-pressed={isHealthCompletedOn(
+                        selectedEventDetail,
+                        selectedEventDetail.date,
+                      )}
+                    >
+                      ✓
+                    </button>
+                  </div>
+                )}
 
                 <div
                   className="event-detail-time"
@@ -13775,7 +15382,7 @@ export default function Home() {
             >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
-                autoFocus
+
                 value={postItDraft.text}
                 onChange={(event) =>
                   setPostItDraft((current) => ({
@@ -14072,6 +15679,40 @@ export default function Home() {
               </div>
             </section>
 
+            {isNative() && (
+              <section className="mode-card" aria-label="Notification test">
+                <div>
+                  <p className="tiny-label">NOTIFICATIONS</p>
+                  <h3>Test notifications</h3>
+                  <p>
+                    Send one temporary test. It does not create or save an event.
+                  </p>
+                </div>
+                <div className="mode-switch">
+                  <button
+                    type="button"
+                    onClick={() => void sendQaNotification()}
+                  >
+                    Send test in 5 seconds
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void AereaEventNotifications.openSettings()}
+                  >
+                    Android settings
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void AereaEventNotifications.openExactAlarmSettings()
+                    }
+                  >
+                    Precise timing
+                  </button>
+                </div>
+              </section>
+            )}
+
             <section className="theme-wardrobe" aria-label="Aérea themes">
               <div className="theme-wardrobe-heading">
                 <div>
@@ -14288,7 +15929,7 @@ export default function Home() {
                   }))
                 }
                 placeholder="Drink a glass of water"
-                autoFocus
+
               />
             </label>
 
@@ -14381,7 +16022,7 @@ export default function Home() {
                   }))
                 }
                 placeholder="For example: Network Security"
-                autoFocus
+
               />
             </label>
             <div className="class-editor-row">
@@ -14471,6 +16112,8 @@ function TodayScreen({
   isNight,
   classTimetable,
   setClassTimetable,
+  requestedTimetableClassId,
+  onTimetableRequestHandled,
 }: {
   themeId: AppTheme;
   pending: Reminder[];
@@ -14484,7 +16127,11 @@ function TodayScreen({
   selectedDate: string;
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
-  openEventDetail: (event: CalendarEvent) => void;
+  openEventDetail: (
+    event: CalendarEvent,
+    returnDayPocket?: string | null,
+    occurrenceDate?: string,
+  ) => void;
   now: Date;
   todayKey: string;
   weekDays: { key: string; day: string; date: string }[];
@@ -14496,6 +16143,8 @@ function TodayScreen({
   isNight: boolean;
   classTimetable: ClassTimetable;
   setClassTimetable: Dispatch<SetStateAction<ClassTimetable>>;
+  requestedTimetableClassId: string | null;
+  onTimetableRequestHandled: () => void;
 }) {
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
   const [timetableOpen, setTimetableOpen] = useState(false);
@@ -14519,7 +16168,10 @@ function TodayScreen({
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
   });
-  const timetableWindow = timetableGridWindow(classTimetable.classes);
+  const timetableMeetings = classTimetable.classes.flatMap((classItem) =>
+    classItem.meetings.map((meeting) => ({ ...meeting, classItem })),
+  );
+  const timetableWindow = timetableGridWindow(timetableMeetings);
   const timetableHourMarks = Array.from(
     { length: timetableWindow.hours + 1 },
     (_, index) => timetableWindow.start + index * 60,
@@ -14528,6 +16180,15 @@ function TodayScreen({
     520,
     Math.max(300, timetableWindow.hours * 52),
   );
+  const timetableDateRangeValid =
+    Boolean(timetableDraft.termStart) &&
+    Boolean(timetableDraft.termEnd) &&
+    timetableDraft.termEnd >= timetableDraft.termStart;
+  const timetableClassTimeValid = timetableClassDraft
+    ? timetableClassDraft.meetings.length > 0 && timetableClassDraft.meetings.every(
+        (meeting) => minutesFromTime(meeting.end) > minutesFromTime(meeting.start),
+      )
+    : true;
 
   const openClassTimetable = () => {
     setTimetableDraft({
@@ -14582,9 +16243,12 @@ function TodayScreen({
     setTimetableClassDraft({
       id: `timetable-${Date.now()}`,
       name: "",
-      day: "mon",
-      start: "08:00",
-      end: "09:30",
+      meetings: [{
+        id: `meeting-${Date.now()}`,
+        day: "mon",
+        start: "08:00",
+        end: "09:30",
+      }],
       color: timetableColors[timetableDraft.classes.length % timetableColors.length],
     });
   };
@@ -14595,8 +16259,37 @@ function TodayScreen({
       classes: classTimetable.classes.map((item) => ({ ...item })),
     });
     setTimetableEditing(true);
-    setTimetableClassDraft({ ...classItem });
+    setTimetableClassDraft({
+      ...classItem,
+      meetings: classItem.meetings.map((meeting) => ({ ...meeting })),
+    });
   };
+
+  useEffect(() => {
+    if (!requestedTimetableClassId) return;
+    const requestedClass = classTimetable.classes.find(
+      (classItem) => classItem.id === requestedTimetableClassId,
+    );
+    setTimetableDraft({
+      ...classTimetable,
+      classes: classTimetable.classes.map((classItem) => ({ ...classItem })),
+    });
+    setTimetableOpen(true);
+    setTimetableEditing(Boolean(requestedClass));
+    setTimetableClassDraft(
+      requestedClass
+        ? {
+            ...requestedClass,
+            meetings: requestedClass.meetings.map((meeting) => ({ ...meeting })),
+          }
+        : null,
+    );
+    onTimetableRequestHandled();
+  }, [
+    classTimetable,
+    onTimetableRequestHandled,
+    requestedTimetableClassId,
+  ]);
 
   const saveTimetableClass = () => {
     if (!timetableClassDraft?.name.trim()) return;
@@ -14607,12 +16300,20 @@ function TodayScreen({
       )
         ? current.classes.map((classItem) =>
             classItem.id === timetableClassDraft.id
-              ? { ...timetableClassDraft, name: timetableClassDraft.name.trim() }
+              ? {
+                  ...timetableClassDraft,
+                  name: timetableClassDraft.name.trim(),
+                  meetings: timetableClassDraft.meetings.map((meeting) => ({ ...meeting })),
+                }
               : classItem,
           )
         : [
             ...current.classes,
-            { ...timetableClassDraft, name: timetableClassDraft.name.trim() },
+            {
+              ...timetableClassDraft,
+              name: timetableClassDraft.name.trim(),
+              meetings: timetableClassDraft.meetings.map((meeting) => ({ ...meeting })),
+            },
           ],
     }));
     setTimetableClassDraft(null);
@@ -14627,10 +16328,18 @@ function TodayScreen({
   };
 
   const saveClassTimetable = () => {
-    const nextTimetable = {
-      ...timetableDraft,
+    if (timetableDraft.classes.length > 0 && !timetableDateRangeValid) return;
+
+    const normalized: ClassTimetable = {
+      ...normalizeClassTimetable(timetableDraft),
       termName: timetableDraft.termName.trim() || "Current semester",
+      termStart: timetableDraft.termStart.trim(),
+      termEnd: timetableDraft.termEnd.trim(),
       termDates: timetableDraft.termDates.trim() || "Set your term dates",
+    };
+    const nextTimetable = {
+      ...normalized,
+      termDates: timetableTermDateLabel(normalized),
     };
     setClassTimetable(nextTimetable);
     setTimetableDraft(nextTimetable);
@@ -14663,7 +16372,7 @@ function TodayScreen({
     scheduleLongPressTimerRef.current = window.setTimeout(() => {
       scheduleLongPressedRef.current = true;
       scheduleLongPressTimerRef.current = null;
-      openEventDetail(calendarEvent);
+      openEventDetail(calendarEvent, null, selectedDate);
     }, 520);
   };
 
@@ -14684,7 +16393,7 @@ function TodayScreen({
       scheduleLongPressedRef.current = false;
       return;
     }
-    openEventDetail(calendarEvent);
+    openEventDetail(calendarEvent, null, selectedDate);
   };
 
   useEffect(
@@ -15128,6 +16837,71 @@ function TodayScreen({
                 }
               />
             </label>
+
+            {isHydrationReminder(reminderDraft) && (
+              <>
+                <label>
+                  <small>Water notifications</small>
+                  <select
+                    value={
+                      reminderDraft.notificationsEnabled === false ? "off" : "on"
+                    }
+                    onChange={(event) =>
+                      setReminderDraft((current) => {
+                        if (!current) return current;
+                        const enabled = event.target.value === "on";
+                        return {
+                          ...current,
+                          notificationsEnabled: enabled,
+                          notificationTimes:
+                            enabled && !current.notificationTimes
+                              ? [...DEFAULT_HYDRATION_NOTIFICATION_TIMES]
+                              : current.notificationTimes,
+                        };
+                      })
+                    }
+                  >
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                  </select>
+                </label>
+
+                {reminderDraft.notificationsEnabled !== false && (
+                  <div className="class-editor-row">
+                    {["Morning", "Afternoon", "Evening"].map((label, index) => {
+                      const times = notificationTimesForReminder(reminderDraft);
+                      return (
+                        <label key={label}>
+                          <small>{label}</small>
+                          <input
+                            type="time"
+                            value={
+                              times[index] ??
+                              DEFAULT_HYDRATION_NOTIFICATION_TIMES[index]
+                            }
+                            onChange={(event) =>
+                              setReminderDraft((current) => {
+                                if (!current) return current;
+                                const nextTimes = current.notificationTimes
+                                  ? [...current.notificationTimes]
+                                  : [...DEFAULT_HYDRATION_NOTIFICATION_TIMES];
+                                nextTimes[index] = event.target.value;
+                                return {
+                                  ...current,
+                                  notificationsEnabled: true,
+                                  notificationTimes: nextTimes,
+                                };
+                              })
+                            }
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
             <footer>
               {reminders.some((item) => item.id === reminderDraft.id) && (
                 <button
@@ -15197,23 +16971,37 @@ function TodayScreen({
                       />
                     </label>
                     <label>
-                      <span>Dates</span>
+                      <span>Semester starts</span>
                       <input
-                        value={timetableDraft.termDates}
+                        type="date"
+                        value={timetableDraft.termStart}
                         onChange={(event) =>
                           setTimetableDraft((current) => ({
                             ...current,
-                            termDates: event.target.value,
+                            termStart: event.target.value,
                           }))
                         }
-                        placeholder="August — December 2026"
+                      />
+                    </label>
+                    <label>
+                      <span>Semester ends</span>
+                      <input
+                        type="date"
+                        value={timetableDraft.termEnd}
+                        min={timetableDraft.termStart || undefined}
+                        onChange={(event) =>
+                          setTimetableDraft((current) => ({
+                            ...current,
+                            termEnd: event.target.value,
+                          }))
+                        }
                       />
                     </label>
                   </div>
                 ) : (
                   <p className="timetable-term-meta">
                     <i aria-hidden="true" />
-                    {classTimetable.termName} · {classTimetable.termDates}
+                    {classTimetable.termName} · {timetableTermDateLabel(classTimetable)}
                   </p>
                 )}
               </div>
@@ -15291,29 +17079,29 @@ function TodayScreen({
                   })}
                 </div>
                 {timetableDays.map((day) => {
-                  const dayClasses = classTimetable.classes
-                    .filter((classItem) => classItem.day === day.id)
+                  const dayClasses = timetableMeetings
+                    .filter((entry) => entry.day === day.id)
                     .sort((first, second) => first.start.localeCompare(second.start));
                   return (
                     <div className="timetable-grid-day" role="gridcell" key={day.id}>
-                      {dayClasses.map((classItem) => (
+                      {dayClasses.map(({ classItem, ...meeting }) => (
                         <button
                           className="timetable-class-block"
                           type="button"
-                          key={classItem.id}
+                          key={`${classItem.id}-${meeting.id}`}
                           style={{
                             background: classItem.color,
                             ...timetableClassPosition(
-                              classItem,
+                              meeting,
                               timetableWindow.start,
                               timetableWindow.end,
                             ),
                           }}
                           onClick={() => beginEditTimetableClass(classItem)}
-                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${classItem.start} to ${classItem.end}`}
+                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${meeting.start} to ${meeting.end}`}
                         >
                           <strong>{classItem.name}</strong>
-                          <small>{formatTimeBlock(classItem.start).primary}</small>
+                          <small>{formatTimeBlock(meeting.start).primary}</small>
                         </button>
                       ))}
                     </div>
@@ -15345,11 +17133,7 @@ function TodayScreen({
                     </button>
                   ) : (
                     [...timetableDraft.classes]
-                      .sort((first, second) =>
-                        `${first.day}-${first.start}`.localeCompare(
-                          `${second.day}-${second.start}`,
-                        ),
-                      )
+                      .sort((first, second) => first.name.localeCompare(second.name))
                       .map((classItem) => (
                         <button
                           className="timetable-edit-row"
@@ -15361,8 +17145,7 @@ function TodayScreen({
                           <span>
                             <strong>{classItem.name}</strong>
                             <small>
-                              {timetableDays.find((day) => day.id === classItem.day)?.label}
-                              {' · '}{classItem.start} — {classItem.end}
+                              {classItem.meetings.length} weekly meeting{classItem.meetings.length === 1 ? "" : "s"}
                             </small>
                           </span>
                           <b aria-hidden="true">›</b>
@@ -15404,7 +17187,7 @@ function TodayScreen({
                     <label className="timetable-class-name">
                       <span>Class name</span>
                       <input
-                        autoFocus
+
                         value={timetableClassDraft.name}
                         onChange={(event) =>
                           setTimetableClassDraft((current) =>
@@ -15414,51 +17197,42 @@ function TodayScreen({
                         placeholder="For example: Applied Physics"
                       />
                     </label>
-                    <div className="timetable-class-form-grid">
-                      <label>
-                        <span>Day</span>
-                        <select
-                          value={timetableClassDraft.day}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    day: event.target.value as TimetableDay,
-                                  }
-                                : current,
-                            )
-                          }
-                        >
-                          {timetableDays.map((day) => (
-                            <option value={day.id} key={day.id}>{day.label}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>Starts</span>
-                        <input
-                          type="time"
-                          value={timetableClassDraft.start}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current ? { ...current, start: event.target.value } : current,
-                            )
-                          }
-                        />
-                      </label>
-                      <label>
-                        <span>Ends</span>
-                        <input
-                          type="time"
-                          value={timetableClassDraft.end}
-                          onChange={(event) =>
-                            setTimetableClassDraft((current) =>
-                              current ? { ...current, end: event.target.value } : current,
-                            )
-                          }
-                        />
-                      </label>
+                    <label className="timetable-class-name">
+                      <span>Professor</span>
+                      <input
+                        value={timetableClassDraft.professor ?? ""}
+                        onChange={(event) =>
+                          setTimetableClassDraft((current) =>
+                            current ? { ...current, professor: event.target.value } : current,
+                          )
+                        }
+                        placeholder="Optional"
+                      />
+                    </label>
+                    <div className="timetable-meeting-list">
+                      {timetableClassDraft.meetings.map((meeting, index) => (
+                        <div className="timetable-meeting-row" key={meeting.id}>
+                          <label>
+                            <span>Day</span>
+                            <select
+                              value={meeting.day}
+                              onChange={(event) =>
+                                setTimetableClassDraft((current) => current ? {
+                                  ...current,
+                                  meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, day: event.target.value as TimetableDay } : item),
+                                } : current)
+                              }
+                            >
+                              {timetableDays.map((day) => <option value={day.id} key={day.id}>{day.label}</option>)}
+                            </select>
+                          </label>
+                          <label><span>Starts</span><input type="time" value={meeting.start} onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, start: event.target.value } : item) } : current)} /></label>
+                          <label><span>Ends</span><input type="time" value={meeting.end} onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, end: event.target.value } : item) } : current)} /></label>
+                          <label><span>Room</span><input value={meeting.room ?? ""} placeholder="Optional" onChange={(event) => setTimetableClassDraft((current) => current ? { ...current, meetings: current.meetings.map((item) => item.id === meeting.id ? { ...item, room: event.target.value } : item) } : current)} /></label>
+                          <button type="button" onClick={() => setTimetableClassDraft((current) => current && current.meetings.length > 1 ? { ...current, meetings: current.meetings.filter((item) => item.id !== meeting.id) } : current)} disabled={timetableClassDraft.meetings.length === 1} aria-label={`Remove meeting ${index + 1}`}>×</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => setTimetableClassDraft((current) => current ? { ...current, meetings: [...current.meetings, { id: `meeting-${Date.now()}`, day: "mon", start: "08:00", end: "09:30" }] } : current)}>＋ Add weekly meeting</button>
                     </div>
                     <fieldset className="timetable-color-picker">
                       <legend>Color</legend>
@@ -15501,7 +17275,10 @@ function TodayScreen({
                       <button
                         className="timetable-save-class"
                         type="button"
-                        disabled={!timetableClassDraft.name.trim()}
+                        disabled={
+                          !timetableClassDraft.name.trim() ||
+                          !timetableClassTimeValid
+                        }
                         onClick={saveTimetableClass}
                       >
                         Save class
@@ -15526,7 +17303,14 @@ function TodayScreen({
                   >
                     Cancel
                   </button>
-                  <button type="button" onClick={saveClassTimetable}>
+                  <button
+                    type="button"
+                    onClick={saveClassTimetable}
+                    disabled={
+                      timetableDraft.classes.length > 0 &&
+                      !timetableDateRangeValid
+                    }
+                  >
                     Save semester
                   </button>
                 </footer>
@@ -15642,7 +17426,7 @@ function NoteDetailDialog({
             className="note-detail-editor"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            autoFocus
+
           />
         ) : (
           <p className="note-detail-text">{draft}</p>
@@ -15673,11 +17457,13 @@ function ScreenIntro({
   title,
   copy,
   sticker,
+  onStickerClick,
 }: {
   label: string;
   title: string;
   copy: string;
   sticker: string;
+  onStickerClick?: () => void;
 }) {
   return (
     <header className="screen-intro">
@@ -15686,7 +17472,24 @@ function ScreenIntro({
         <h2>{title}</h2>
         <p>{copy}</p>
       </div>
-      <span className="screen-sticker">{sticker}</span>
+      <span
+        className="screen-sticker"
+        role={onStickerClick ? "button" : undefined}
+        tabIndex={onStickerClick ? 0 : undefined}
+        aria-label={onStickerClick ? "Open daily health routine" : undefined}
+        onClick={onStickerClick}
+        onKeyDown={(event) => {
+          if (
+            onStickerClick &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            onStickerClick();
+          }
+        }}
+      >
+        {sticker}
+      </span>
     </header>
   );
 }
