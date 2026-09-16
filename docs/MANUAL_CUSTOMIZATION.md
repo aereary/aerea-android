@@ -42,7 +42,6 @@ Para producir un APK también ejecuta los pasos Android de `AGENTS.md`.
 No cambies estos archivos al ajustar colores, tamaños o tarjetas:
 
 - `app/supabase-sync.ts`
-- `app/chatgpt-auth.ts`
 - `app/ao3-library.tsx`
 - `app/generic-library-bridge.tsx`
 - `app/study-library.tsx`

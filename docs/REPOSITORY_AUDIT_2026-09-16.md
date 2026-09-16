@@ -3,11 +3,12 @@
 ## Verified baseline
 
 - Source branch: `fix/restore-just-calendar-baseline-20260915`
-- Baseline commit: `58f6b933001c163b62e6a3b93176255009fc6af1`
+- Maintenance merge: `88354b1178305dc51474e20604f31101d17d8b7a`
 - This commit is a descendant of the recent APK, Career, Health, timetable,
   post-it and calendar work. The default `main` branch is older and is not a
   safe source for maintenance work yet.
-- `npm ci`, web build, native build and all 161 regression tests pass.
+- `npm ci`, web build, native build, Android build and all 164 regression tests
+  passed before the repository-cleanup phase.
 
 ## Findings
 
@@ -31,10 +32,32 @@
 8. The release workflow both verifies and publishes an APK. A separate
    read-only PR workflow now verifies web, native and Android builds without
    creating a release.
+9. The root README still described a generic Vinext starter, while three old
+   Android/Codex handoff files repeated outdated instructions.
+10. Two unused D1 starter examples, three unused starter SVGs and an unused
+    ChatGPT-auth helper remained in the tracked source.
+11. The APK release workflow watched an older recovery branch instead of the
+    current stable line.
+12. The remote contained 39 branches: the stable line, 30 fully merged
+    historical branches, six old feature lines with unique prototype history,
+    stale `main`, and one recovery merge line.
+
+## Cleanup applied
+
+- Replaced the starter README with an aérea-specific project entry point.
+- Removed obsolete handoff documents, unused starter examples/assets and the
+  unreferenced authentication helper.
+- Pointed Release automation at the actual stable branch.
+- Added a Pull Request checklist, a read-only branch audit command and explicit
+  branch policy.
+- Ignored local patch/Codespaces helpers and Android build products that should
+  never enter a commit.
+- Added regression coverage for repository hygiene.
 
 ## Recommended sequence
 
-1. Promote the reviewed maintenance line to the long-lived stable branch.
+1. Archive unique historical branch tips, remove fully merged branches, and
+   promote the stable line to `main` only after device update verification.
 2. Extract `page.tsx` by feature boundary: Calendar, Today/Day Pocket, Health,
    Post-its, Settings, then navigation/modals.
 3. Split `globals.css` by the same feature boundaries while preserving CSS

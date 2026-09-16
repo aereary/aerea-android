@@ -43,3 +43,10 @@ next-env.d.ts
 /outputs/
 /work/
 /ci/*.keystore
+
+# local Android and Codespaces artifacts
+/android/.gradle/
+/android/**/build/
+/*.patch
+/add-codespaces-port-3000.sh
+/trigger-apk-build-from-recovery.sh
