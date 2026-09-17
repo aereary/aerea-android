@@ -31530,14 +31530,16 @@ html[data-native="true"] :where(
 */
 
 .phone-canvas:has(.timetable-backdrop) .primary-swipe-surface,
-.phone-canvas:has(.health-routine-backdrop) .primary-swipe-surface {
+.phone-canvas:has(.health-routine-backdrop) .primary-swipe-surface,
+.phone-canvas:has(.study-editor-backdrop) .primary-swipe-surface {
   transform: none !important;
   transition: none !important;
   will-change: auto !important;
 }
 
 .phone-canvas:has(.timetable-backdrop) > .bottom-nav,
-.phone-canvas:has(.health-routine-backdrop) > .bottom-nav {
+.phone-canvas:has(.health-routine-backdrop) > .bottom-nav,
+.phone-canvas:has(.study-editor-backdrop) > .bottom-nav {
   visibility: hidden !important;
   pointer-events: none !important;
 }

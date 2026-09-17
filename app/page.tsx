@@ -253,6 +253,7 @@ type AereaStoragePlugin = {
   }>;
   deleteFile(options: { id: string }): Promise<void>;
   pickLibraryImages(): Promise<{ files: Array<{ id: string; name: string; mimeType: string; extension: string; size: number; contentUri: string }> }>;
+  pickLibraryDocuments(): Promise<{ files: StudyFileItem[] }>;
 };
 
 const AereaStorage = registerPlugin<AereaStoragePlugin>("AereaStorage");
@@ -5313,6 +5314,15 @@ export default function Home() {
     setHistoryMessage(`${picked.files.length} image${picked.files.length === 1 ? "" : "s"} saved to aérea.`);
   };
 
+  const pickNativeLibraryDocuments = async () => {
+    if (!isNative()) return;
+    recordAction("Imported Library files");
+    const picked = await AereaStorage.pickLibraryDocuments();
+    if (!picked.files.length) return;
+    await refreshStudyFiles();
+    setHistoryMessage(`${picked.files.length} file${picked.files.length === 1 ? "" : "s"} saved to aérea.`);
+  };
+
   const openLibraryItem = async (item: LibraryItem) => {
     setLibraryImageFailed(false);
     const lastOpenedAt = new Date().toISOString();
@@ -10145,6 +10155,7 @@ export default function Home() {
                     }
                   }}
                   onImportFiles={importStudyFiles}
+                  onPickDocuments={isNative() ? pickNativeLibraryDocuments : undefined}
                   onPickImages={isNative() ? pickNativeLibraryImages : undefined}
                   collections={libraryCollections}
                   onCollectionsChange={(collections) => {
