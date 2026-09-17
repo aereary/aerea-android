@@ -23250,6 +23250,7 @@ body {
 .study-library-actions nav button { background:transparent; border-radius:10px; color:var(--muted); font-size:8px; font-weight:900; padding:9px 11px; text-transform:capitalize; }
 .study-library-actions nav button.active { background:var(--paper); box-shadow:0 3px 10px color-mix(in srgb,var(--ink) 8%,transparent); color:var(--ink); }
 .study-library-import { background:var(--leaf); border-radius:13px; color:#fff; font-size:9px; font-weight:900; min-height:42px; padding:9px 16px; }
+.study-library-add-image { grid-column:1/-1; width:100%; }
 
 .study-library-section { display:grid; gap:12px; }
 .study-library-section > header { align-items:end; display:flex; justify-content:space-between; padding:0 4px; }
