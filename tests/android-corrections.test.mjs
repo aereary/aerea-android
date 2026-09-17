@@ -206,6 +206,21 @@ test("importing a Library image does not hide recordings by forcing the Files fi
   assert.match(importBlock, /now in Library/);
 });
 
+test("native Library buttons open Gallery and the Documents directory separately", () => {
+  assert.match(storage, /new Intent\(Intent\.ACTION_PICK, MediaStore\.Images\.Media\.EXTERNAL_CONTENT_URI\)/);
+  assert.match(storage, /com\.sec\.android\.gallery3d/);
+  assert.match(storage, /pickLibraryDocuments/);
+  assert.match(storage, /DocumentsContract\.EXTRA_INITIAL_URI/);
+  assert.match(storage, /primary%3ADocuments/);
+  assert.match(studyLibrary, /onPickDocuments \? onPickDocuments\(\) : fileInputRef\.current\?\.click\(\)/);
+  assert.match(page, /onPickDocuments=\{isNative\(\) \? pickNativeLibraryDocuments : undefined\}/);
+});
+
+test("note editor owns the viewport without the Android bottom navigation", () => {
+  assert.match(globalsCss, /\.phone-canvas:has\(\.study-editor-backdrop\) \.primary-swipe-surface/);
+  assert.match(globalsCss, /\.phone-canvas:has\(\.study-editor-backdrop\) > \.bottom-nav/);
+});
+
 
 test("native Library toast clears the elevated Android bottom navigation", () => {
   assert.match(

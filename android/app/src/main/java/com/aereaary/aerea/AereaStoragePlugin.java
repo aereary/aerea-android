@@ -4,6 +4,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -79,12 +82,103 @@ public class AereaStoragePlugin extends Plugin {
 
     @PluginMethod
     public void pickLibraryImages(PluginCall call) {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setPackage("com.sec.android.gallery3d");
+        if (intent.resolveActivity(getContext().getPackageManager()) == null) intent.setPackage(null);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg","image/png","image/webp","image/gif","image/heic","image/heif","image/avif"});
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         startActivityForResult(call, intent, "pickedLibraryImages");
+    }
+
+    @PluginMethod
+    public void pickLibraryDocuments(PluginCall call) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                "application/pdf", "application/epub+zip", "text/plain",
+                "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.putExtra(
+                    DocumentsContract.EXTRA_INITIAL_URI,
+                    Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADocuments")
+            );
+        }
+        startActivityForResult(call, intent, "pickedLibraryDocuments");
+    }
+
+    @ActivityCallback
+    private void pickedLibraryDocuments(PluginCall call, androidx.activity.result.ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != android.app.Activity.RESULT_OK || result.getData() == null) {
+            call.resolve(new JSObject().put("files", new JSArray()));
+            return;
+        }
+        try {
+            JSArray files = new JSArray();
+            Intent data = result.getData();
+            if (data.getClipData() != null) {
+                for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                    files.put(copyPickedDocument(data.getClipData().getItemAt(i).getUri()));
+                }
+            } else if (data.getData() != null) {
+                files.put(copyPickedDocument(data.getData()));
+            }
+            call.resolve(new JSObject().put("files", files));
+        } catch (Exception error) {
+            call.reject("Could not copy the file into aérea", error);
+        }
+    }
+
+    private JSObject copyPickedDocument(Uri uri) throws Exception {
+        String name = "Imported file";
+        try (Cursor cursor = getContext().getContentResolver().query(
+                uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) name = cursor.getString(0);
+        }
+        String lowerName = name.toLowerCase();
+        String kind = lowerName.endsWith(".pdf") ? "pdf" : lowerName.endsWith(".epub") ? "epub" : "file";
+        String mediaType = getContext().getContentResolver().getType(uri);
+        if (mediaType == null || mediaType.isBlank()) {
+            mediaType = "pdf".equals(kind) ? "application/pdf"
+                    : "epub".equals(kind) ? "application/epub+zip"
+                    : "application/octet-stream";
+        }
+        String extension = extensionOf(name);
+        String id = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
+        File directory = new File(getContext().getFilesDir(), "study-files");
+        if (!directory.exists() && !directory.mkdirs()) throw new IllegalStateException("Could not create study file directory");
+        File stored = new File(directory, id + (extension.isEmpty() ? ".bin" : "." + extension));
+        long size = 0;
+        try (InputStream input = getContext().getContentResolver().openInputStream(uri);
+             FileOutputStream output = new FileOutputStream(stored)) {
+            if (input == null) throw new IllegalStateException("The system picker could not read the file");
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                size += read;
+                if (size > MAX_STUDY_FILE_BYTES) throw new IllegalArgumentException("The file is larger than 40 MB");
+                output.write(buffer, 0, read);
+            }
+        } catch (Exception error) {
+            stored.delete();
+            throw error;
+        }
+        ContentValues values = new ContentValues();
+        values.put("id", id); values.put("name", name); values.put("media_type", mediaType);
+        values.put("kind", kind); values.put("path", stored.getAbsolutePath()); values.put("size", size);
+        values.put("created_at", now); values.put("updated_at", now);
+        database.getWritableDatabase().insertOrThrow("study_files", null, values);
+        return new JSObject().put("id", id).put("name", name).put("mediaType", mediaType)
+                .put("kind", kind).put("size", size)
+                .put("createdAt", Instant.ofEpochMilli(now).toString())
+                .put("updatedAt", Instant.ofEpochMilli(now).toString());
     }
 
     @ActivityCallback

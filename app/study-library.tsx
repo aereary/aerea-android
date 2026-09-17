@@ -135,6 +135,7 @@ export function StudyLibrary({
   onOpenFile,
   onDeleteFile,
   onImportFiles,
+  onPickDocuments,
   onPickImages,
   collections,
   onCollectionsChange,
@@ -153,6 +154,7 @@ export function StudyLibrary({
   onOpenFile: (file: StudyFileItem) => void;
   onDeleteFile: (file: StudyFileItem) => void;
   onImportFiles: (files: File[]) => Promise<void>;
+  onPickDocuments?: () => Promise<void>;
   onPickImages?: () => Promise<void>;
   collections: StudyCollection[];
   onCollectionsChange: (collections: StudyCollection[]) => void;
@@ -456,7 +458,7 @@ export function StudyLibrary({
             </button>
           ))}
         </nav>
-        <button className="study-library-import" type="button" onClick={() => fileInputRef.current?.click()}>
+        <button className="study-library-import" type="button" onClick={() => void (onPickDocuments ? onPickDocuments() : fileInputRef.current?.click())}>
           ⇣ Import
         </button>
         {onPickImages && <button className="study-library-import study-library-add-image" type="button" onClick={() => void onPickImages()}>▧ Add image</button>}
