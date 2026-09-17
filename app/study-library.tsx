@@ -459,7 +459,7 @@ export function StudyLibrary({
         <button className="study-library-import" type="button" onClick={() => fileInputRef.current?.click()}>
           ⇣ Import
         </button>
-        {onPickImages && <button className="study-library-import" type="button" onClick={() => void onPickImages()}>▧ Add image</button>}
+        {onPickImages && <button className="study-library-import study-library-add-image" type="button" onClick={() => void onPickImages()}>▧ Add image</button>}
       </div>
 
       <section className="study-library-organize card">
