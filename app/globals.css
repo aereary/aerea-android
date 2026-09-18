@@ -3897,7 +3897,7 @@ p {
   font-weight: 900;
   line-height: 1.25;
   overflow: hidden;
-  white-space: nowrap;
+  white-space: pre-line;
 }
 
 .event-chip-main {
