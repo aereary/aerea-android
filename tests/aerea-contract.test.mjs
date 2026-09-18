@@ -472,7 +472,7 @@ test("keeps the original event cards without later styling layers", () => {
   assert.doesNotMatch(pageSource, /className="event-chip-time"/);
   assert.doesNotMatch(pageSource, /className="event-chip-line"/);
   assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
-  assert.match(cssSource, /\.event-chip > span \{[\s\S]*white-space: pre-line;/);
+  assert.match(cssSource, /\.event-chip > span \{[\s\S]*white-space: pre;/);
   assert.match(pageSource, /return `\$\{startLabel\}–\\n\$\{/);
   assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
   assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger/);
