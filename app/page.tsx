@@ -2062,7 +2062,11 @@ const moodScores: Record<string, number> = {
 function eventCompactTimeLabel(event: CalendarEvent) {
   if (event.timePending) return "Time TBD";
   if (event.allDay) return "All day";
-  return event.endTime ? `${event.time}–${event.endTime}` : event.time;
+  const start = formatTimeBlock(event.time);
+  const startLabel = `${start.primary} ${start.secondary}`.trim();
+  if (!event.endTime) return startLabel;
+  const end = formatTimeBlock(event.endTime);
+  return `${startLabel}–${`${end.primary} ${end.secondary}`.trim()}`;
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
@@ -13278,29 +13282,6 @@ export default function Home() {
                       </div>
                       <button onClick={() => shiftCalendarMonth(1)} aria-label="Next month">→</button>
                     </div>
-                    <div className="calendar-modal-actions">
-                      <button
-                        className="calendar-search-trigger calendar-search-trigger-header"
-                        type="button"
-                        onClick={() => {
-                          setMonthPickerOpen(false);
-                          setCalendarSearchOpen(true);
-                        }}
-                        aria-label="Search calendar events"
-                        title="Search events"
-                      >
-                        <span className="calendar-search-glyph" aria-hidden="true" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMonthPickerOpen(false);
-                          setCalendarOpen(false);
-                        }}
-                        aria-label="Close"
-                      >
-                        ×
-                      </button>
-                    </div>
                   </div>
                 )}
                 {monthPickerOpen && !calendarExpanded && !calendarScheduleOpen && (
@@ -13352,18 +13333,29 @@ export default function Home() {
                     <i className="source-aerea" /> aérea
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
+                  <span className="swipe-source">↔ swipe months</span>
                   <button
-                    className="swipe-source calendar-full-month-link"
+                    className="calendar-search-trigger"
                     type="button"
                     onClick={() => {
-                      setCalendarScheduleOpen(false);
                       setMonthPickerOpen(false);
-                      setCalendarExpanded(true);
+                      setCalendarSearchOpen(true);
                     }}
-                    aria-label="Open full monthly calendar"
+                    aria-label="Search calendar events"
+                    title="Search events"
                   >
-                    full month
+                    <span className="calendar-search-glyph" aria-hidden="true" />
                   </button>
+                  <button className="calendar-view-toggle" type="button" aria-pressed={false} aria-label="Open schedule" title="Open schedule" onClick={() => {
+                    const visibleDates = scheduleDatesFor(selectedCalendarDate, 7);
+                    if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) setSelectedCalendarDate(localDateKey(visibleDates[0]));
+                    setCalendarExpanded(false);
+                    setCalendarScheduleOpen(true);
+                  }}><span aria-hidden="true">☷</span></button>
+                  <button className="calendar-view-toggle calendar-month-view-toggle" type="button" aria-pressed={false} aria-label="Open extended monthly calendar" title="Extended calendar" onClick={() => {
+                    setCalendarScheduleOpen(false);
+                    setCalendarExpanded(true);
+                  }}><span aria-hidden="true">▦</span></button>
                 </div>
                 {calendarSearchOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <section

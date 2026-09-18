@@ -318,7 +318,7 @@ test("tints the event editor from the chosen event color", () => {
 
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /aria-label="Open full monthly calendar"/);
+  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
@@ -350,7 +350,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /flushOverlapGroup/);
   assert.match(pageSource, /duration \/ SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /is-short/);
-  assert.doesNotMatch(pageSource, /title="Open schedule"/);
+  assert.match(pageSource, /title="Open schedule"/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
@@ -413,13 +413,13 @@ test("searches every event from the compact calendar", () => {
 });
 
 test("keeps calendar tools quiet and uses faithful weekend and event colors", () => {
-  assert.match(pageSource, /className="calendar-search-trigger calendar-search-trigger-header"/);
+  assert.match(pageSource, /className="calendar-search-trigger"/);
   assert.match(pageSource, /date\.getDay\(\) === 6 \? "saturday"/);
   assert.match(
     cssSource,
     /\.week-strip \.day:nth-child\(1\)[\s\S]*\.week-strip \.day:nth-child\(7\)/,
   );
-  assert.match(cssSource, /\.extended-event-pill\.emerald \{ --extended-event-fill:#d9edc7/);
+  assert.match(cssSource, /\.extended-event-pill\.emerald \{ --extended-event-fill:#cce8b8/);
   assert.match(cssSource, /\.extended-event-pill\.pink \{ --extended-event-fill:var\(--pink\)/);
   assert.match(
     cssSource,
@@ -473,12 +473,12 @@ test("keeps the original event cards without later styling layers", () => {
   assert.doesNotMatch(pageSource, /className="event-chip-line"/);
   assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
   assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
-  assert.match(cssSource, /\.calendar-modal-actions \.calendar-search-trigger-header/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger/);
   assert.match(cssSource, /background:transparent;[\s\S]*border-radius:50%/);
-  assert.match(pageSource, /className="calendar-modal-actions"/);
+  assert.match(pageSource, /className="swipe-source">↔ swipe months/);
   assert.match(pageSource, /title="Search events"/);
-  assert.doesNotMatch(pageSource, /title="Open schedule"/);
-  assert.doesNotMatch(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
+  assert.match(pageSource, /title="Open schedule"/);
+  assert.match(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
   assert.doesNotMatch(pageSource, />\s*Search\s*<\/button>/);
   assert.doesNotMatch(pageSource, />\s*Cronograma\s*<\/button>/);
 });
@@ -1545,7 +1545,7 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(pageSource, /calendarScheduleOpen/);
   assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
   assert.match(pageSource, /setCalendarExpanded\(true\)/);
-  assert.doesNotMatch(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /calendar-extended-month/);
   assert.doesNotMatch(pageSource, /onClick=\{openMetrics\}/);
   assert.match(pageSource, /false && metricsOpen/);
@@ -1648,4 +1648,14 @@ test("offers a persisted Little aérea simplified calendar-only screen", () => {
   assert.match(cssSource, /\.simplified-calendar-cell\.selected \.simplified-calendar-date/);
   assert.match(cssSource, /\.simplified-event-strip/);
   assert.doesNotMatch(cssSource, /data-simplified-calendar="true"\] \.calendar-modal\.calendar-extended-month/);
+});
+test("compact editors, restored calendar tools and 12-hour labels keep the mobile contract", () => {
+  assert.match(pageSource, /const start = formatTimeBlock\(event\.time\)/);
+  assert.doesNotMatch(pageSource, /return event\.endTime \? `\$\{event\.time\}/);
+  assert.match(pageSource, /<span className="swipe-source">↔ swipe months<\/span>[\s\S]{0,500}aria-label="Search calendar events"/);
+  assert.match(pageSource, /aria-label="Open schedule"/);
+  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.doesNotMatch(pageSource, /className="calendar-modal-actions"/);
+  assert.match(cssSource, /\.habit-editor-modal \{[^}]*max-height:calc\(100dvh - 24px\)/);
+  assert.match(cssSource, /\.reminder-editor-note \.class-editor-row input\[type="time"\][\s\S]{0,180}min-width:0/);
 });
