@@ -221,6 +221,14 @@ test("note editor owns the viewport without the Android bottom navigation", () =
   assert.match(globalsCss, /\.phone-canvas:has\(\.study-editor-backdrop\) > \.bottom-nav/);
 });
 
+test("unused custom theme builder is hidden and reminder editors stay compact", () => {
+  assert.doesNotMatch(page, /Create your own little world/);
+  assert.doesNotMatch(page, /Choose a tiny character/);
+  assert.match(globalsCss, /\.reminder-editor-note[\s\S]{0,900}max-height:\s*calc\(100dvh - 24px\)/);
+  assert.match(globalsCss, /\.reminder-editor-note \.class-editor-row[\s\S]{0,180}grid-template-columns:\s*repeat\(3,/);
+  assert.match(globalsCss, /\.phone-canvas:has\(\.reminder-editor-backdrop\) > \.bottom-nav/);
+});
+
 
 test("native Library toast clears the elevated Android bottom navigation", () => {
   assert.match(
