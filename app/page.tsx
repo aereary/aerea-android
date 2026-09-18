@@ -13346,16 +13346,6 @@ export default function Home() {
                   >
                     <span className="calendar-search-glyph" aria-hidden="true" />
                   </button>
-                  <button className="calendar-view-toggle" type="button" aria-pressed={false} aria-label="Open schedule" title="Open schedule" onClick={() => {
-                    const visibleDates = scheduleDatesFor(selectedCalendarDate, 7);
-                    if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) setSelectedCalendarDate(localDateKey(visibleDates[0]));
-                    setCalendarExpanded(false);
-                    setCalendarScheduleOpen(true);
-                  }}><span aria-hidden="true">☷</span></button>
-                  <button className="calendar-view-toggle calendar-month-view-toggle" type="button" aria-pressed={false} aria-label="Open extended monthly calendar" title="Extended calendar" onClick={() => {
-                    setCalendarScheduleOpen(false);
-                    setCalendarExpanded(true);
-                  }}><span aria-hidden="true">▦</span></button>
                 </div>
                 {calendarSearchOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <section
