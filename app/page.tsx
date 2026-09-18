@@ -2066,7 +2066,7 @@ function eventCompactTimeLabel(event: CalendarEvent) {
   const startLabel = `${start.primary} ${start.secondary}`.trim();
   if (!event.endTime) return startLabel;
   const end = formatTimeBlock(event.endTime);
-  return `${startLabel}–${`${end.primary} ${end.secondary}`.trim()}`;
+  return `${startLabel}–\n${`${end.primary} ${end.secondary}`.trim()}`;
 }
 
 function eventStartTimeLabel(event: CalendarEvent) {
