@@ -9290,6 +9290,7 @@ export default function Home() {
                     "simplified-calendar-cell",
                     currentMonth ? "" : "outside-month",
                     date.getDay() === 0 ? "sunday" : "",
+                    date.getDay() === 6 ? "saturday" : "",
                     selectedCalendarDate === dayKey ? "selected" : "",
                     dayKey === todayKey ? "today" : "",
                   ]
@@ -13277,15 +13278,29 @@ export default function Home() {
                       </div>
                       <button onClick={() => shiftCalendarMonth(1)} aria-label="Next month">→</button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setMonthPickerOpen(false);
-                        setCalendarOpen(false);
-                      }}
-                      aria-label="Close"
-                    >
-                      ×
-                    </button>
+                    <div className="calendar-modal-actions">
+                      <button
+                        className="calendar-search-trigger calendar-search-trigger-header"
+                        type="button"
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          setCalendarSearchOpen(true);
+                        }}
+                        aria-label="Search calendar events"
+                        title="Search events"
+                      >
+                        <span className="calendar-search-glyph" aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMonthPickerOpen(false);
+                          setCalendarOpen(false);
+                        }}
+                        aria-label="Close"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
                 )}
                 {monthPickerOpen && !calendarExpanded && !calendarScheduleOpen && (
@@ -13337,55 +13352,18 @@ export default function Home() {
                     <i className="source-aerea" /> aérea
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
-                  <span className="swipe-source">↔ swipe months</span>
-                  {!calendarExpanded && !calendarScheduleOpen && (
-                    <button
-                      className="calendar-search-trigger"
-                      type="button"
-                      onClick={() => {
-                        setMonthPickerOpen(false);
-                        setCalendarSearchOpen(true);
-                      }}
-                      aria-label="Search calendar events"
-                      title="Search events"
-                    >
-                      <span className="calendar-search-glyph" aria-hidden="true" />
-                    </button>
-                  )}
-                  {!calendarExpanded && !calendarScheduleOpen && (
-                    <button
-                      className="calendar-view-toggle"
-                      type="button"
-                      aria-pressed={false}
-                      aria-label="Open schedule"
-                      title="Open schedule"
-                      onClick={() => {
-                        const visibleDates = scheduleDatesFor(selectedCalendarDate, 7);
-                        if (!visibleDates.some((date) => localDateKey(date) === selectedCalendarDate)) {
-                          setSelectedCalendarDate(localDateKey(visibleDates[0]));
-                        }
-                        setCalendarExpanded(false);
-                        setCalendarScheduleOpen(true);
-                      }}
-                    >
-                      <span aria-hidden="true">☷</span>
-                    </button>
-                  )}
-                  {!calendarExpanded && !calendarScheduleOpen && (
-                    <button
-                      className="calendar-view-toggle calendar-month-view-toggle"
-                      type="button"
-                      aria-pressed={false}
-                      aria-label="Open extended monthly calendar"
-                      title="Extended calendar"
-                      onClick={() => {
-                        setCalendarScheduleOpen(false);
-                        setCalendarExpanded(true);
-                      }}
-                    >
-                      <span aria-hidden="true">▦</span>
-                    </button>
-                  )}
+                  <button
+                    className="swipe-source calendar-full-month-link"
+                    type="button"
+                    onClick={() => {
+                      setCalendarScheduleOpen(false);
+                      setMonthPickerOpen(false);
+                      setCalendarExpanded(true);
+                    }}
+                    aria-label="Open full monthly calendar"
+                  >
+                    full month
+                  </button>
                 </div>
                 {calendarSearchOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <section

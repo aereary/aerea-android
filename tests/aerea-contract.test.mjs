@@ -318,7 +318,7 @@ test("tints the event editor from the chosen event color", () => {
 
 test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /aria-label="Open schedule"/);
+  assert.match(pageSource, /aria-label="Open full monthly calendar"/);
   assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
@@ -350,7 +350,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /flushOverlapGroup/);
   assert.match(pageSource, /duration \/ SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /is-short/);
-  assert.match(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /title="Open schedule"/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
@@ -412,6 +412,21 @@ test("searches every event from the compact calendar", () => {
   assert.match(cssSource, /\.calendar-modal:has\(\.calendar-search-screen\)/);
 });
 
+test("keeps calendar tools quiet and uses faithful weekend and event colors", () => {
+  assert.match(pageSource, /className="calendar-search-trigger calendar-search-trigger-header"/);
+  assert.match(pageSource, /date\.getDay\(\) === 6 \? "saturday"/);
+  assert.match(
+    cssSource,
+    /\.week-strip \.day:nth-child\(1\)[\s\S]*\.week-strip \.day:nth-child\(7\)/,
+  );
+  assert.match(cssSource, /\.extended-event-pill\.emerald \{ --extended-event-fill:#d9edc7/);
+  assert.match(cssSource, /\.extended-event-pill\.pink \{ --extended-event-fill:var\(--pink\)/);
+  assert.match(
+    cssSource,
+    /\.extended-event-pill\.canonical-boca-match,[\s\S]*background:#0b2f78!important/,
+  );
+});
+
 test("removes the secret area and all of its entry points", () => {
   assert.doesNotMatch(pageSource, /SafePlace/);
   assert.doesNotMatch(pageSource, /safePlace/);
@@ -458,11 +473,12 @@ test("keeps the original event cards without later styling layers", () => {
   assert.doesNotMatch(pageSource, /className="event-chip-line"/);
   assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
   assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
-  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger,[\s\S]*flex:0 0 30px/);
+  assert.match(cssSource, /\.calendar-modal-actions \.calendar-search-trigger-header/);
   assert.match(cssSource, /background:transparent;[\s\S]*border-radius:50%/);
-  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger \{ margin-left:auto; \}/);
+  assert.match(pageSource, /className="calendar-modal-actions"/);
   assert.match(pageSource, /title="Search events"/);
-  assert.match(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
   assert.doesNotMatch(pageSource, />\s*Search\s*<\/button>/);
   assert.doesNotMatch(pageSource, />\s*Cronograma\s*<\/button>/);
 });
@@ -1529,7 +1545,7 @@ test("keeps the schedule separate, restyles the extended month, and removes stat
   assert.match(pageSource, /calendarScheduleOpen/);
   assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
   assert.match(pageSource, /setCalendarExpanded\(true\)/);
-  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.doesNotMatch(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /calendar-extended-month/);
   assert.doesNotMatch(pageSource, /onClick=\{openMetrics\}/);
   assert.match(pageSource, /false && metricsOpen/);
