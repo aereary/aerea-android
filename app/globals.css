@@ -11475,6 +11475,64 @@ body {
   .calendar-expanded .calendar-cell-event > small { font-size:clamp(6px,1.6vw,8px); }
 }
 
+/* Compact editors and restored calendar controls 20260918. */
+.habit-editor-backdrop { align-items:center; padding:12px; }
+.habit-editor-modal { max-height:calc(100dvh - 24px); max-width:430px; overflow:auto; padding:18px; }
+.habit-editor-modal > header { margin-bottom:4px; }
+.habit-editor-modal > header h2 { font-size:clamp(26px,7vw,36px); }
+.habit-editor-modal > label { gap:6px; margin-top:8px; }
+.habit-editor-modal :is(input,select) { min-height:46px; }
+.habit-editor-modal .class-editor-row { margin-top:8px; }
+.habit-editor-modal footer { margin-top:14px; }
+
+.reminder-editor-note .class-editor-row > label { min-width:0; }
+.reminder-editor-note .class-editor-row input[type="time"] {
+  box-sizing:border-box;
+  font-size:11px;
+  min-width:0;
+  padding-inline:5px;
+  width:100%;
+}
+
+.calendar-sources { align-items:center; column-gap:9px; row-gap:8px; }
+.calendar-sources .swipe-source { margin-right:0; }
+.calendar-sources .calendar-search-trigger { margin-left:-3px; }
+
+/* Richer paper-and-sticker color balance for the full month. */
+.calendar-modal.calendar-extended-month > .extended-calendar-view {
+  background:
+    radial-gradient(circle at 92% 3%,color-mix(in srgb,var(--blue) 72%,transparent),transparent 270px),
+    radial-gradient(circle at 3% 42%,color-mix(in srgb,var(--pink) 42%,transparent),transparent 250px),
+    linear-gradient(155deg,color-mix(in srgb,var(--cream) 88%,#fff7df),color-mix(in srgb,var(--paper) 88%,#eef8f2));
+}
+.calendar-modal.calendar-extended-month .extended-month-grid {
+  background:color-mix(in srgb,var(--paper) 94%,#fff8e8);
+  border-color:color-mix(in srgb,var(--leaf) 20%,var(--line));
+}
+.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
+.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday { background:color-mix(in srgb,var(--pink) 30%,var(--paper)); }
+.calendar-modal.calendar-extended-month .extended-calendar-cell.selected,
+.calendar-modal.calendar-extended-month .extended-calendar-cell.selected.weekend {
+  background:color-mix(in srgb,var(--lilac) 58%,var(--paper));
+  border-color:color-mix(in srgb,var(--lilac) 65%,var(--leaf))!important;
+}
+.calendar-modal.calendar-extended-month .extended-event-pill.emerald { --extended-event-fill:#cce8b8; }
+.calendar-modal.calendar-extended-month .extended-event-pill.cyan { --extended-event-fill:#c7edf0; }
+.calendar-modal.calendar-extended-month .extended-event-pill.blue { --extended-event-fill:#c8dcf4; }
+.calendar-modal.calendar-extended-month .extended-event-pill.brown { --extended-event-fill:#e5cfbd; }
+.calendar-modal.calendar-extended-month .extended-event-pill.red { --extended-event-fill:#efb8b3; }
+.calendar-modal.calendar-extended-month .extended-event-pill.rose { --extended-event-fill:#f0bfd4; }
+.calendar-modal.calendar-extended-month .extended-event-pill.orange { --extended-event-fill:#f7cc7b; }
+.calendar-modal.calendar-extended-month .extended-event-pill.lilac { --extended-event-fill:#d5c5ef; }
+.calendar-modal.calendar-extended-month .extended-event-pill.yellow { --extended-event-fill:#f7e49a; }
+.calendar-modal.calendar-extended-month .extended-event-pill.pink { --extended-event-fill:#f3c4d5; }
+
+@media (max-width:480px) {
+  .habit-editor-modal { border-radius:24px; padding:16px; }
+  .reminder-editor-note .class-editor-row { gap:5px; }
+  .reminder-editor-note .class-editor-row input[type="time"] { font-size:10px; padding-inline:3px; }
+}
+
 /* Clean extended calendar: dedicated phone/tablet layouts, not a stretched card. */
 .calendar-modal.calendar-expanded {
   background:var(--paper);
