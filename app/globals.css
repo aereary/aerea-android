@@ -31738,3 +31738,187 @@ html[data-native="true"] :where(
 }
 
 /* END AEREA_JUST_CALENDAR_WHITE_BASELINE_20260915 */
+
+/* Calendar polish 20260918: one calm tool, faithful event colors, Sunday-first weekends. */
+.calendar-modal:not(.calendar-extended-month) .modal-top {
+  align-items:center;
+  gap:10px;
+}
+
+.calendar-modal-actions {
+  align-items:center;
+  display:flex;
+  flex:0 0 auto;
+  gap:8px;
+}
+
+.calendar-modal-actions .calendar-search-trigger-header {
+  background:color-mix(in srgb,var(--paper) 86%,transparent);
+  border:1px solid color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:50%;
+  box-shadow:0 6px 15px color-mix(in srgb,var(--ink) 7%,transparent);
+  color:var(--ink-soft);
+  display:inline-flex;
+  height:42px;
+  justify-content:center;
+  margin:0;
+  min-height:42px;
+  padding:0;
+  width:42px;
+}
+
+.calendar-modal-actions .calendar-search-trigger-header:hover,
+.calendar-modal-actions .calendar-search-trigger-header:focus-visible {
+  background:color-mix(in srgb,var(--blue) 35%,var(--paper));
+  color:var(--ink);
+  outline:0;
+}
+
+.calendar-sources {
+  padding-right:0;
+}
+
+.calendar-sources .calendar-full-month-link {
+  border:0;
+  cursor:pointer;
+  font:inherit;
+}
+
+.calendar-sources .calendar-full-month-link:hover,
+.calendar-sources .calendar-full-month-link:focus-visible {
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--leaf) 22%,transparent);
+  outline:0;
+}
+
+/* All Sunday-first calendars tint only the first and seventh columns. */
+.app-shell[data-color-mode] .week-strip .day:nth-child(1) > span,
+.app-shell[data-color-mode] .week-strip .day:nth-child(7) > span,
+.app-shell[data-color-mode] .agenda-v2-days button:nth-child(1) > small,
+.app-shell[data-color-mode] .agenda-v2-days button:nth-child(7) > small,
+.app-shell[data-color-mode] .month-grid > strong:nth-child(1),
+.app-shell[data-color-mode] .month-grid > strong:nth-child(7),
+.simplified-month-grid > strong:first-child,
+.simplified-month-grid > strong:last-of-type {
+  color:var(--weekend-accent)!important;
+}
+
+.app-shell[data-color-mode] .week-strip .day:nth-child(6) > span,
+.app-shell[data-color-mode] .agenda-v2-days button:nth-child(6) > small,
+.app-shell[data-color-mode] .month-grid > strong:nth-child(6) {
+  color:inherit!important;
+}
+
+.simplified-calendar-cell.sunday .simplified-calendar-date,
+.simplified-calendar-cell.saturday .simplified-calendar-date,
+.month-grid > button.weekend .calendar-day-number {
+  color:var(--weekend-accent);
+}
+
+/* The extended month reads as soft stationery instead of a plain spreadsheet. */
+.calendar-modal.calendar-extended-month > .extended-calendar-view {
+  background:
+    radial-gradient(circle at 92% 2%,color-mix(in srgb,var(--blue) 52%,transparent),transparent 250px),
+    radial-gradient(circle at 5% 32%,color-mix(in srgb,var(--pink) 25%,transparent),transparent 230px),
+    color-mix(in srgb,var(--cream) 97%,white);
+  gap:9px;
+}
+
+.calendar-modal.calendar-extended-month .extended-month-grid {
+  background:color-mix(in srgb,var(--paper) 84%,transparent);
+  border-color:color-mix(in srgb,var(--line) 74%,transparent);
+  box-shadow:0 14px 34px color-mix(in srgb,var(--ink) 7%,transparent);
+  column-gap:4px;
+  padding:5px;
+  row-gap:4px;
+}
+
+.calendar-modal.calendar-extended-month .extended-month-grid > strong {
+  background:transparent;
+  border:0;
+}
+
+.calendar-modal.calendar-extended-month .extended-calendar-cell,
+.calendar-modal.calendar-extended-month .extended-calendar-cell:not(:nth-child(7n + 1)),
+.calendar-modal.calendar-extended-month .extended-calendar-cell:nth-child(7n + 1) {
+  background:color-mix(in srgb,var(--paper) 92%,var(--cream));
+  border:1px solid color-mix(in srgb,var(--line) 46%,transparent)!important;
+  border-radius:11px;
+  box-shadow:0 3px 9px color-mix(in srgb,var(--ink) 4%,transparent);
+  padding:6px 4px 4px;
+}
+
+.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
+.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday {
+  background:color-mix(in srgb,var(--pink) 19%,var(--paper));
+}
+
+.calendar-modal.calendar-extended-month .extended-calendar-cell.outside-month {
+  background:color-mix(in srgb,var(--blue) 17%,var(--paper));
+  opacity:.58;
+}
+
+.calendar-modal.calendar-extended-month .extended-calendar-cell.selected,
+.calendar-modal.calendar-extended-month .extended-calendar-cell.selected.weekend {
+  background:color-mix(in srgb,var(--lilac) 38%,var(--paper));
+  border-color:color-mix(in srgb,var(--leaf) 38%,var(--line))!important;
+  box-shadow:0 6px 14px color-mix(in srgb,var(--leaf) 11%,transparent);
+}
+
+/* These are the same fills used by the original event cards. */
+.calendar-modal.calendar-extended-month .extended-event-pill {
+  --extended-event-fill:var(--lilac);
+  --extended-event-ink:var(--ink);
+  background:var(--extended-event-fill);
+  color:var(--extended-event-ink);
+  padding-left:5px;
+}
+
+.calendar-modal.calendar-extended-month .extended-event-pill::before { display:none; }
+.calendar-modal.calendar-extended-month .extended-event-pill.emerald { --extended-event-fill:#d9edc7; --extended-event-ink:#345e38; }
+.calendar-modal.calendar-extended-month .extended-event-pill.cyan { --extended-event-fill:var(--blue); --extended-event-ink:#315f68; }
+.calendar-modal.calendar-extended-month .extended-event-pill.blue { --extended-event-fill:#d7e4f3; --extended-event-ink:#3c5f84; }
+.calendar-modal.calendar-extended-month .extended-event-pill.brown { --extended-event-fill:#eadccf; --extended-event-ink:#6b5143; }
+.calendar-modal.calendar-extended-month .extended-event-pill.black { --extended-event-fill:#d9dad4; --extended-event-ink:#45464a; }
+.calendar-modal.calendar-extended-month .extended-event-pill.red { --extended-event-fill:#f2c8c3; --extended-event-ink:#813f3f; }
+.calendar-modal.calendar-extended-month .extended-event-pill.rose { --extended-event-fill:#f4d1df; --extended-event-ink:#874964; }
+.calendar-modal.calendar-extended-month .extended-event-pill.coral { --extended-event-fill:var(--orange-soft); --extended-event-ink:#814b50; }
+.calendar-modal.calendar-extended-month .extended-event-pill.orange { --extended-event-fill:#f8d79c; --extended-event-ink:#78571c; }
+.calendar-modal.calendar-extended-month .extended-event-pill.lilac { --extended-event-fill:var(--lilac); --extended-event-ink:#554681; }
+.calendar-modal.calendar-extended-month .extended-event-pill.yellow { --extended-event-fill:var(--yellow-soft); --extended-event-ink:#735f21; }
+.calendar-modal.calendar-extended-month .extended-event-pill.pink { --extended-event-fill:var(--pink); --extended-event-ink:#7f4d61; }
+
+/* Boca fixtures are one solid team color in every calendar surface. */
+.canonical-boca-match,
+.event-chip.canonical-boca-match,
+.agenda-v2-all-day-event.canonical-boca-match,
+.simplified-event-strip.canonical-boca-match,
+.extended-event-pill.canonical-boca-match,
+.calendar-cell-event.canonical-boca-match {
+  background:#0b2f78!important;
+  border-color:#0b2f78!important;
+  color:#fff!important;
+}
+
+.extended-event-pill.canonical-boca-match::before { display:none!important; }
+
+@media (max-width:720px) {
+  .calendar-modal-actions { gap:6px; }
+  .calendar-modal-actions .calendar-search-trigger-header {
+    height:38px;
+    min-height:38px;
+    width:38px;
+  }
+
+  .calendar-modal.calendar-extended-month .extended-month-grid {
+    column-gap:3px;
+    padding:4px;
+    row-gap:3px;
+  }
+
+  .calendar-modal.calendar-extended-month .extended-calendar-cell,
+  .calendar-modal.calendar-extended-month .extended-calendar-cell:not(:nth-child(7n + 1)),
+  .calendar-modal.calendar-extended-month .extended-calendar-cell:nth-child(7n + 1) {
+    border-radius:8px;
+    padding:4px 2px 3px;
+  }
+}
