@@ -3897,7 +3897,7 @@ p {
   font-weight: 900;
   line-height: 1.25;
   overflow: hidden;
-  white-space: pre-line;
+  white-space: pre;
 }
 
 .event-chip-main {
@@ -5241,6 +5241,10 @@ p {
 
   .event-chip {
     grid-template-columns: 45px minmax(0, 1fr) 27px;
+  }
+
+  .event-chip > span {
+    font-size: 10px;
   }
 
   .sketch-zoom-controls {
