@@ -316,9 +316,9 @@ test("tints the event editor from the chosen event color", () => {
   assert.match(cssSource, /\.mobile-event-save[\s\S]*var\(--event-editor-control\)/);
 });
 
-test("keeps compact calendar and offers an interactive daily schedule", () => {
+test("keeps the compact calendar without duplicate calendar launchers", () => {
   assert.match(pageSource, /calendarExpanded/);
-  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.doesNotMatch(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /agenda-v2/);
   assert.match(pageSource, /layoutScheduleEvents/);
   assert.match(pageSource, /openNewEventAtMinute/);
@@ -350,7 +350,7 @@ test("keeps compact calendar and offers an interactive daily schedule", () => {
   assert.match(pageSource, /flushOverlapGroup/);
   assert.match(pageSource, /duration \/ SCHEDULE_TOTAL_MINUTES/);
   assert.match(pageSource, /is-short/);
-  assert.match(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /title="Open schedule"/);
   assert.match(pageSource, /agenda-v3-scene/);
   assert.match(pageSource, /agenda-v2-now/);
   assert.match(pageSource, /topbar agenda-v2-homebar/);
@@ -468,17 +468,18 @@ test("keeps the original event cards without later styling layers", () => {
   assert.match(cssSource, /\.time-block \{[\s\S]*border-radius: 17px;[\s\S]*height: 64px;/);
   assert.match(cssSource, /\.schedule-line \{[\s\S]*background: var\(--orange\);/);
   assert.match(cssSource, /\.text-button \{[\s\S]*background: var\(--blue\);/);
-  assert.match(cssSource, /\.event-chip \{[\s\S]*background: var\(--chip-color, var\(--yellow-soft\)\);[\s\S]*grid-template-columns: 64px minmax\(0, 1fr\) 32px;/);
+  assert.match(cssSource, /\.event-chip \{[\s\S]*background: var\(--chip-color, var\(--yellow-soft\)\);[\s\S]*grid-template-columns: 112px minmax\(0, 1fr\) 32px;/);
   assert.doesNotMatch(pageSource, /className="event-chip-time"/);
   assert.doesNotMatch(pageSource, /className="event-chip-line"/);
   assert.match(pageSource, /eventCompactTimeLabel\(calendarEvent\)/);
+  assert.match(cssSource, /\.event-chip > span \{[\s\S]*white-space: nowrap;/);
   assert.match(cssSource, /Icon-only calendar tools: no filled pills and no visible labels/);
   assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger/);
   assert.match(cssSource, /background:transparent;[\s\S]*border-radius:50%/);
   assert.match(pageSource, /className="swipe-source">↔ swipe months/);
   assert.match(pageSource, /title="Search events"/);
-  assert.match(pageSource, /title="Open schedule"/);
-  assert.match(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
+  assert.doesNotMatch(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
   assert.doesNotMatch(pageSource, />\s*Search\s*<\/button>/);
   assert.doesNotMatch(pageSource, />\s*Cronograma\s*<\/button>/);
 });
@@ -1541,11 +1542,11 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(cssSource, /\.category-editor-backdrop \{[\s\S]*z-index:520/);
 });
 
-test("keeps the schedule separate, restyles the extended month, and removes statistics", () => {
+test("keeps legacy calendar surfaces unreachable and removes statistics", () => {
   assert.match(pageSource, /calendarScheduleOpen/);
   assert.match(pageSource, /setCalendarScheduleOpen\(true\)/);
-  assert.match(pageSource, /setCalendarExpanded\(true\)/);
-  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.doesNotMatch(pageSource, /setCalendarExpanded\(true\)/);
+  assert.doesNotMatch(pageSource, /aria-label="Open extended monthly calendar"/);
   assert.match(pageSource, /calendar-extended-month/);
   assert.doesNotMatch(pageSource, /onClick=\{openMetrics\}/);
   assert.match(pageSource, /false && metricsOpen/);
@@ -1653,8 +1654,10 @@ test("compact editors, restored calendar tools and 12-hour labels keep the mobil
   assert.match(pageSource, /const start = formatTimeBlock\(event\.time\)/);
   assert.doesNotMatch(pageSource, /return event\.endTime \? `\$\{event\.time\}/);
   assert.match(pageSource, /<span className="swipe-source">↔ swipe months<\/span>[\s\S]{0,500}aria-label="Search calendar events"/);
-  assert.match(pageSource, /aria-label="Open schedule"/);
-  assert.match(pageSource, /aria-label="Open extended monthly calendar"/);
+  assert.doesNotMatch(pageSource, /title="Open schedule"/);
+  assert.doesNotMatch(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
+  assert.match(pageSource, /className="simplified-calendar-screen"/);
+  assert.match(pageSource, /--simplified-event-color/);
   assert.doesNotMatch(pageSource, /className="calendar-modal-actions"/);
   assert.match(cssSource, /\.habit-editor-modal \{[^}]*max-height:calc\(100dvh - 24px\)/);
   assert.match(cssSource, /\.reminder-editor-note \.class-editor-row input\[type="time"\][\s\S]{0,180}min-width:0/);
