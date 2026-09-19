@@ -7397,6 +7397,10 @@ export default function Home() {
 
   const closeEventDelete = () => setEventDeleteRequest(null);
 
+  const closeDeletedEventEditor = (eventId: string) => {
+    if (editingEventId === eventId) closeCalendarEventEditor();
+  };
+
   const deleteWholeEvent = () => {
     if (!eventDeleteRequest) return;
     const deletedId = eventDeleteRequest.eventId;
@@ -7410,6 +7414,7 @@ export default function Home() {
       current?.id === deletedId ? null : current,
     );
     closeEventDelete();
+    closeDeletedEventEditor(deletedId);
   };
 
   const deleteOnlyOccurrence = () => {
@@ -7433,6 +7438,7 @@ export default function Home() {
       }),
     );
     closeEventDelete();
+    closeDeletedEventEditor(eventId);
   };
 
   const deleteThisAndFutureOccurrences = () => {
@@ -7452,6 +7458,7 @@ export default function Home() {
       }),
     );
     closeEventDelete();
+    closeDeletedEventEditor(eventId);
   };
 
   const updateEventDraft = <Key extends keyof EventDraft>(
@@ -12936,13 +12943,31 @@ export default function Home() {
                     )}
                   </section>
 
-                  <button
-                    className="mobile-event-save"
-                    type="submit"
-                    disabled={!eventDraft.title.trim()}
-                  >
-                    Save event
-                  </button>
+                  {!eventDraftIsTimetableClass && (
+                    <div className="mobile-event-actions">
+                      <button
+                        className="mobile-event-save"
+                        type="submit"
+                        disabled={!eventDraft.title.trim() || !eventDraftRangeIsValid}
+                      >
+                        Save event
+                      </button>
+                      {editingEventId && (
+                        <button
+                          className="mobile-event-delete"
+                          type="button"
+                          onClick={() =>
+                            setEventDeleteRequest({
+                              eventId: editingEventId,
+                              occurrenceDate: selectedCalendarDate,
+                            })
+                          }
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
                   </div>
                 </form>
               </>

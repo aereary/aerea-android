@@ -316,6 +316,25 @@ test("tints the event editor from the chosen event color", () => {
   assert.match(cssSource, /\.mobile-event-save[\s\S]*var\(--event-editor-control\)/);
 });
 
+test("keeps the mobile event actions compact and offers safe deletion while editing", () => {
+  assert.match(pageSource, /className="mobile-event-actions"/);
+  assert.match(
+    pageSource,
+    /editingEventId && \([\s\S]{0,500}className="mobile-event-delete"[\s\S]{0,500}setEventDeleteRequest\(\{[\s\S]{0,200}eventId: editingEventId,[\s\S]{0,200}occurrenceDate: selectedCalendarDate/,
+  );
+  assert.match(pageSource, /closeDeletedEventEditor\(deletedId\)/);
+  assert.match(pageSource, /closeDeletedEventEditor\(eventId\)/);
+  assert.match(
+    cssSource,
+    /\.mobile-event-actions \{[\s\S]{0,100}display: none;/,
+  );
+  assert.match(
+    cssSource,
+    /\.mobile-event-actions \{[\s\S]{0,300}grid-template-columns: minmax\(0, 1\.7fr\) minmax\(112px, \.8fr\)/,
+  );
+  assert.match(cssSource, /\.mobile-event-delete \{[\s\S]{0,100}background: #f2c8c3;[\s\S]{0,100}color: #813f3f;/);
+});
+
 test("keeps the compact calendar without duplicate calendar launchers", () => {
   assert.match(pageSource, /calendarExpanded/);
   assert.doesNotMatch(pageSource, /aria-label="Open extended monthly calendar"/);
