@@ -619,6 +619,7 @@ test("offers an exclusive swipeable day sticker panel without moving calendar ma
   assert.match(pageSource, /onSelect\(dayStickerValue\(sticker\.label\)\)/);
   assert.match(pageSource, /className={`calendar-mood-sticker \$\{dayMarker\.color\}`}/);
   assert.match(cssSource, /\.day-marker-picker-track\.show-stickers/);
+  assert.match(cssSource, /\.day-marker-picker \{ border-radius:20px;/);
   assert.match(cssSource, /\.calendar-mood-sticker \{[\s\S]*right: 7px;[\s\S]*top: 7px;/);
 });
 
