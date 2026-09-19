@@ -1549,7 +1549,6 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /openCalendarCategoryEditor/);
   assert.match(pageSource, /className="category-editor-modal"/);
   assert.match(pageSource, /className="extended-filter-list"/);
-  assert.match(pageSource, /source-color-\$\{sourceColor\}/);
   assert.match(pageSource, /className=\{`extended-event-pill/);
   assert.doesNotMatch(pageSource, /date: null/);
   assert.match(pageSource, /extendedLeadingDays/);
@@ -1559,14 +1558,6 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /date\.getDay\(\) === 0 \? "sunday"/);
   assert.match(cssSource, /Event-type editing must sit over every calendar surface/);
   assert.match(cssSource, /\.category-editor-backdrop \{[\s\S]*z-index:520/);
-});
-
-test("keeps Just a Calendar colors faithful without changing the compact calendar", () => {
-  assert.match(cssSource, /Just a Calendar polish 20260919/);
-  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.extended-event-pill\.emerald \{ --extended-event-fill:#d9edc7; --extended-event-accent:#6fb69c/);
-  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.source-color-lilac/);
-  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.extended-calendar-cell\.sunday \.extended-calendar-date/);
-  assert.doesNotMatch(cssSource, /\.calendar-modal:not\(\.calendar-extended-month\)[^{]*\.extended-event-pill/);
 });
 
 test("keeps legacy calendar surfaces unreachable and removes statistics", () => {
@@ -1676,6 +1667,17 @@ test("offers a persisted Little aérea simplified calendar-only screen", () => {
   assert.match(cssSource, /\.simplified-calendar-cell\.selected \.simplified-calendar-date/);
   assert.match(cssSource, /\.simplified-event-strip/);
   assert.doesNotMatch(cssSource, /data-simplified-calendar="true"\] \.calendar-modal\.calendar-extended-month/);
+});
+
+test("polishes only Settings Just calendar and preserves the Full aérea today marker", () => {
+  assert.match(pageSource, /className=\{`source-color-\$\{sourceColor\}/);
+  assert.match(pageSource, /className=\{`simplified-event-strip \$\{eventColor\}/);
+  assert.match(cssSource, /Just calendar 20260919: the Settings calendar-only screen, and only it/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-event-strip\.emerald \{ --simplified-event-fill:#d9edc7/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-cell\.selected \{[\s\S]{0,240}background:color-mix\(in srgb,var\(--blue\) 28%,var\(--paper\)\)/);
+  assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today \{[\s\S]{0,120}background:#e1f5ff/);
+  assert.match(cssSource, /\.calendar-sticker-picker > div:first-child \{[\s\S]{0,60}min-height:66px/);
+  assert.doesNotMatch(cssSource, /\.calendar-mood-picker:not\(\.calendar-sticker-picker\)[^{]*min-height:66px/);
 });
 test("compact editors, restored calendar tools and 12-hour labels keep the mobile contract", () => {
   assert.match(pageSource, /const start = formatTimeBlock\(event\.time\)/);

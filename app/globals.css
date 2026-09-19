@@ -11495,111 +11495,6 @@ body {
   .calendar-expanded .calendar-cell-event > small { font-size:clamp(6px,1.6vw,8px); }
 }
 
-/* Just a Calendar polish 20260919: faithful colors and aérea stationery. */
-.calendar-modal.calendar-extended-month > .extended-calendar-view {
-  background:
-    radial-gradient(circle at 90% 0,color-mix(in srgb,var(--blue) 42%,transparent),transparent 230px),
-    radial-gradient(circle at 2% 40%,color-mix(in srgb,var(--pink) 18%,transparent),transparent 210px),
-    color-mix(in srgb,var(--cream) 98%,white);
-}
-
-.calendar-modal.calendar-extended-month .extended-calendar-header,
-.calendar-modal.calendar-extended-month .extended-calendar-filters {
-  background:color-mix(in srgb,var(--paper) 94%,transparent);
-  border:1px solid color-mix(in srgb,var(--line) 68%,transparent);
-  box-shadow:0 8px 20px color-mix(in srgb,var(--ink) 6%,transparent);
-}
-
-.calendar-modal.calendar-extended-month .extended-month-grid {
-  background:transparent;
-  border:0;
-  box-shadow:none;
-  column-gap:5px;
-  padding:2px;
-  row-gap:5px;
-}
-
-.calendar-modal.calendar-extended-month .extended-calendar-cell,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday {
-  background:color-mix(in srgb,var(--paper) 96%,var(--cream));
-  border:1px solid color-mix(in srgb,var(--line) 54%,transparent)!important;
-  border-radius:13px;
-  box-shadow:0 4px 10px color-mix(in srgb,var(--ink) 5%,transparent);
-}
-
-.calendar-modal.calendar-extended-month .extended-calendar-cell.outside-month {
-  background:color-mix(in srgb,var(--cream-deep) 72%,var(--paper));
-  opacity:.58;
-}
-
-.calendar-modal.calendar-extended-month .extended-calendar-cell.selected,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.selected.weekend {
-  background:color-mix(in srgb,var(--paper) 96%,var(--cream));
-  border-color:color-mix(in srgb,var(--leaf) 58%,var(--line))!important;
-  box-shadow:0 5px 12px color-mix(in srgb,var(--leaf) 12%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--leaf) 20%,transparent);
-}
-
-.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday .extended-calendar-date,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday .extended-calendar-date {
-  color:var(--weekend-accent);
-}
-
-.calendar-modal.calendar-extended-month .extended-event-pill {
-  border:0;
-  border-left:3px solid var(--extended-event-accent,var(--ink-soft));
-  border-radius:7px;
-  box-shadow:0 2px 5px color-mix(in srgb,var(--extended-event-accent,var(--ink)) 9%,transparent);
-  color:var(--extended-event-ink);
-  padding:4px 4px 4px 5px;
-  text-align:left;
-}
-
-.calendar-modal.calendar-extended-month .extended-event-pill.emerald { --extended-event-fill:#d9edc7; --extended-event-accent:#6fb69c; --extended-event-ink:#345e38; }
-.calendar-modal.calendar-extended-month .extended-event-pill.cyan { --extended-event-fill:var(--blue); --extended-event-accent:#77cdd3; --extended-event-ink:#315f68; }
-.calendar-modal.calendar-extended-month .extended-event-pill.blue { --extended-event-fill:#d7e4f3; --extended-event-accent:#7eb9e8; --extended-event-ink:#3c5f84; }
-.calendar-modal.calendar-extended-month .extended-event-pill.brown { --extended-event-fill:#eadccf; --extended-event-accent:#b99f92; --extended-event-ink:#6b5143; }
-.calendar-modal.calendar-extended-month .extended-event-pill.black { --extended-event-fill:#d9dad4; --extended-event-accent:#6f6b72; --extended-event-ink:#45464a; }
-.calendar-modal.calendar-extended-month .extended-event-pill.red { --extended-event-fill:#f2c8c3; --extended-event-accent:#e97878; --extended-event-ink:#813f3f; }
-.calendar-modal.calendar-extended-month .extended-event-pill.rose { --extended-event-fill:#f4d1df; --extended-event-accent:#e690b1; --extended-event-ink:#874964; }
-.calendar-modal.calendar-extended-month .extended-event-pill.coral { --extended-event-fill:var(--orange-soft); --extended-event-accent:#f3a4a0; --extended-event-ink:#814b50; }
-.calendar-modal.calendar-extended-month .extended-event-pill.orange { --extended-event-fill:#f8d79c; --extended-event-accent:#efbc65; --extended-event-ink:#78571c; }
-.calendar-modal.calendar-extended-month .extended-event-pill.lilac { --extended-event-fill:var(--lilac); --extended-event-accent:#ae96d8; --extended-event-ink:#554681; }
-.calendar-modal.calendar-extended-month .extended-event-pill.yellow { --extended-event-fill:var(--yellow-soft); --extended-event-accent:#e8c86f; --extended-event-ink:#735f21; }
-.calendar-modal.calendar-extended-month .extended-event-pill.pink { --extended-event-fill:var(--pink); --extended-event-accent:#eab7c9; --extended-event-ink:#7f4d61; }
-
-.calendar-modal.calendar-extended-month .extended-filter-list > button {
-  --source-fill:var(--pink);
-  --source-accent:#eab7c9;
-  background:color-mix(in srgb,var(--source-fill) 76%,var(--paper))!important;
-  border-color:color-mix(in srgb,var(--source-accent) 38%,var(--line))!important;
-}
-.calendar-modal.calendar-extended-month .extended-filter-list > button > span { background:var(--source-fill)!important; }
-.calendar-modal.calendar-extended-month .source-color-emerald { --source-fill:#d9edc7; --source-accent:#6fb69c; }
-.calendar-modal.calendar-extended-month .source-color-cyan { --source-fill:var(--blue); --source-accent:#77cdd3; }
-.calendar-modal.calendar-extended-month .source-color-blue { --source-fill:#d7e4f3; --source-accent:#7eb9e8; }
-.calendar-modal.calendar-extended-month .source-color-brown { --source-fill:#eadccf; --source-accent:#b99f92; }
-.calendar-modal.calendar-extended-month .source-color-black { --source-fill:#d9dad4; --source-accent:#6f6b72; }
-.calendar-modal.calendar-extended-month .source-color-red { --source-fill:#f2c8c3; --source-accent:#e97878; }
-.calendar-modal.calendar-extended-month .source-color-rose { --source-fill:#f4d1df; --source-accent:#e690b1; }
-.calendar-modal.calendar-extended-month .source-color-coral { --source-fill:var(--orange-soft); --source-accent:#f3a4a0; }
-.calendar-modal.calendar-extended-month .source-color-orange { --source-fill:#f8d79c; --source-accent:#efbc65; }
-.calendar-modal.calendar-extended-month .source-color-lilac { --source-fill:var(--lilac); --source-accent:#ae96d8; }
-.calendar-modal.calendar-extended-month .source-color-yellow { --source-fill:var(--yellow-soft); --source-accent:#e8c86f; }
-.calendar-modal.calendar-extended-month .source-color-pink { --source-fill:var(--pink); --source-accent:#eab7c9; }
-
-.calendar-modal.calendar-extended-month .extended-event-pill.canonical-boca-match {
-  border-left-color:#f4d32f!important;
-}
-
-@media (max-width:720px) {
-  .calendar-modal.calendar-extended-month .extended-month-grid { column-gap:4px; row-gap:4px; }
-  .calendar-modal.calendar-extended-month .extended-calendar-cell,
-  .calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
-  .calendar-modal.calendar-extended-month .extended-calendar-cell.saturday { border-radius:10px; }
-  .calendar-modal.calendar-extended-month .extended-event-pill { border-left-width:2px; padding:3px 2px 3px 3px; }
-}
-
 /* Compact editors and restored calendar controls 20260918. */
 .habit-editor-backdrop { align-items:center; padding:12px; }
 .habit-editor-modal { max-height:calc(100dvh - 24px); max-width:430px; overflow:auto; padding:18px; }
@@ -32106,91 +32001,130 @@ html[data-native="true"] :where(
   }
 }
 
-/* Final Just a Calendar surface: keep this after the legacy calendar layers. */
-.calendar-modal.calendar-extended-month > .extended-calendar-view {
-  background:radial-gradient(circle at 90% 0,color-mix(in srgb,var(--blue) 42%,transparent),transparent 230px),radial-gradient(circle at 2% 40%,color-mix(in srgb,var(--pink) 18%,transparent),transparent 210px),color-mix(in srgb,var(--cream) 98%,white);
+/* Just calendar 20260919: the Settings calendar-only screen, and only it. */
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+  --simplified-card:color-mix(in srgb,var(--paper) 96%,var(--cream));
+  --simplified-surface:
+    radial-gradient(circle at 94% 3%,color-mix(in srgb,var(--blue) 48%,transparent),transparent 245px),
+    radial-gradient(circle at 3% 48%,color-mix(in srgb,var(--pink) 22%,transparent),transparent 230px),
+    color-mix(in srgb,var(--cream) 97%,white);
+  background:var(--simplified-surface)!important;
 }
-.calendar-modal.calendar-extended-month .extended-calendar-header,
-.calendar-modal.calendar-extended-month .extended-calendar-filters {
-  background:color-mix(in srgb,var(--paper) 94%,transparent);
-  border:1px solid color-mix(in srgb,var(--line) 68%,transparent);
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-header,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-filters {
+  background:color-mix(in srgb,var(--paper) 95%,transparent);
+  border-color:color-mix(in srgb,var(--line) 62%,transparent);
   box-shadow:0 8px 20px color-mix(in srgb,var(--ink) 6%,transparent);
 }
-.calendar-modal.calendar-extended-month .extended-month-grid {
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-filters > div > button {
+  --simplified-source-fill:var(--pink);
+  --simplified-source-ink:#7f4d61;
+  background:var(--simplified-source-fill);
+  color:var(--simplified-source-ink);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--simplified-source-color) 22%,transparent);
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-filters > div > button > span {
+  background:color-mix(in srgb,var(--simplified-source-color) 44%,var(--paper));
+  color:var(--simplified-source-ink);
+}
+
+.app-shell[data-simplified-calendar="true"] .source-color-emerald { --simplified-source-fill:#d9edc7; --simplified-source-ink:#345e38; }
+.app-shell[data-simplified-calendar="true"] .source-color-cyan { --simplified-source-fill:var(--blue); --simplified-source-ink:#315f68; }
+.app-shell[data-simplified-calendar="true"] .source-color-blue { --simplified-source-fill:#d7e4f3; --simplified-source-ink:#3c5f84; }
+.app-shell[data-simplified-calendar="true"] .source-color-brown { --simplified-source-fill:#eadccf; --simplified-source-ink:#6b5143; }
+.app-shell[data-simplified-calendar="true"] .source-color-black { --simplified-source-fill:#d9dad4; --simplified-source-ink:#45464a; }
+.app-shell[data-simplified-calendar="true"] .source-color-red { --simplified-source-fill:#f2c8c3; --simplified-source-ink:#813f3f; }
+.app-shell[data-simplified-calendar="true"] .source-color-rose { --simplified-source-fill:#f4d1df; --simplified-source-ink:#874964; }
+.app-shell[data-simplified-calendar="true"] .source-color-coral { --simplified-source-fill:var(--orange-soft); --simplified-source-ink:#814b50; }
+.app-shell[data-simplified-calendar="true"] .source-color-orange { --simplified-source-fill:#f8d79c; --simplified-source-ink:#78571c; }
+.app-shell[data-simplified-calendar="true"] .source-color-lilac { --simplified-source-fill:var(--lilac); --simplified-source-ink:#554681; }
+.app-shell[data-simplified-calendar="true"] .source-color-yellow { --simplified-source-fill:var(--yellow-soft); --simplified-source-ink:#735f21; }
+.app-shell[data-simplified-calendar="true"] .source-color-pink { --simplified-source-fill:var(--pink); --simplified-source-ink:#7f4d61; }
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid {
   background:transparent;
   border:0;
+  border-radius:0;
   box-shadow:none;
   column-gap:5px;
-  padding:2px;
+  overflow:visible;
   row-gap:5px;
 }
-.calendar-modal.calendar-extended-month .extended-calendar-cell,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday {
-  background:color-mix(in srgb,var(--paper) 96%,var(--cream));
-  border:1px solid color-mix(in srgb,var(--line) 54%,transparent)!important;
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid > strong {
+  background:transparent;
+  border:0;
+  font-weight:800;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell {
+  background:color-mix(in srgb,var(--paper) 97%,var(--cream));
+  border:1px solid color-mix(in srgb,var(--line) 52%,transparent);
   border-radius:13px;
   box-shadow:0 4px 10px color-mix(in srgb,var(--ink) 5%,transparent);
 }
-.calendar-modal.calendar-extended-month .extended-calendar-cell.outside-month {
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.outside-month {
   background:color-mix(in srgb,var(--cream-deep) 72%,var(--paper));
-  opacity:.58;
+  opacity:.52;
 }
-.calendar-modal.calendar-extended-month .extended-calendar-cell.selected,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.selected.weekend {
-  background:color-mix(in srgb,var(--paper) 96%,var(--cream));
-  border-color:color-mix(in srgb,var(--leaf) 58%,var(--line))!important;
-  box-shadow:0 5px 12px color-mix(in srgb,var(--leaf) 12%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--leaf) 20%,transparent);
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.selected {
+  background:color-mix(in srgb,var(--blue) 28%,var(--paper));
+  border-color:color-mix(in srgb,#66bce5 72%,var(--line));
+  box-shadow:0 5px 12px color-mix(in srgb,#66bce5 14%,transparent),inset 0 0 0 1px color-mix(in srgb,#66bce5 22%,transparent);
 }
-.calendar-modal.calendar-extended-month .extended-calendar-cell.sunday .extended-calendar-date,
-.calendar-modal.calendar-extended-month .extended-calendar-cell.saturday .extended-calendar-date { color:var(--weekend-accent); }
-.calendar-modal.calendar-extended-month .extended-event-pill {
-  background:var(--extended-event-fill);
-  border:0;
-  border-left:3px solid var(--extended-event-accent,var(--ink-soft));
-  border-radius:7px;
-  box-shadow:0 2px 5px color-mix(in srgb,var(--extended-event-accent,var(--ink)) 9%,transparent);
-  color:var(--extended-event-ink);
-  padding:4px 4px 4px 5px;
+
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip {
+  --simplified-event-fill:var(--lilac);
+  --simplified-event-ink:#554681;
+  background:var(--simplified-event-fill);
+  border-left:2px solid var(--simplified-event-color);
+  color:var(--simplified-event-ink);
   text-align:left;
 }
-.calendar-modal.calendar-extended-month .extended-event-pill.emerald { --extended-event-fill:#d9edc7; --extended-event-accent:#6fb69c; --extended-event-ink:#345e38; }
-.calendar-modal.calendar-extended-month .extended-event-pill.cyan { --extended-event-fill:var(--blue); --extended-event-accent:#77cdd3; --extended-event-ink:#315f68; }
-.calendar-modal.calendar-extended-month .extended-event-pill.blue { --extended-event-fill:#d7e4f3; --extended-event-accent:#7eb9e8; --extended-event-ink:#3c5f84; }
-.calendar-modal.calendar-extended-month .extended-event-pill.brown { --extended-event-fill:#eadccf; --extended-event-accent:#b99f92; --extended-event-ink:#6b5143; }
-.calendar-modal.calendar-extended-month .extended-event-pill.black { --extended-event-fill:#d9dad4; --extended-event-accent:#6f6b72; --extended-event-ink:#45464a; }
-.calendar-modal.calendar-extended-month .extended-event-pill.red { --extended-event-fill:#f2c8c3; --extended-event-accent:#e97878; --extended-event-ink:#813f3f; }
-.calendar-modal.calendar-extended-month .extended-event-pill.rose { --extended-event-fill:#f4d1df; --extended-event-accent:#e690b1; --extended-event-ink:#874964; }
-.calendar-modal.calendar-extended-month .extended-event-pill.coral { --extended-event-fill:var(--orange-soft); --extended-event-accent:#f3a4a0; --extended-event-ink:#814b50; }
-.calendar-modal.calendar-extended-month .extended-event-pill.orange { --extended-event-fill:#f8d79c; --extended-event-accent:#efbc65; --extended-event-ink:#78571c; }
-.calendar-modal.calendar-extended-month .extended-event-pill.lilac { --extended-event-fill:var(--lilac); --extended-event-accent:#ae96d8; --extended-event-ink:#554681; }
-.calendar-modal.calendar-extended-month .extended-event-pill.yellow { --extended-event-fill:var(--yellow-soft); --extended-event-accent:#e8c86f; --extended-event-ink:#735f21; }
-.calendar-modal.calendar-extended-month .extended-event-pill.pink { --extended-event-fill:var(--pink); --extended-event-accent:#eab7c9; --extended-event-ink:#7f4d61; }
-.calendar-modal.calendar-extended-month .extended-filter-list > button {
-  --source-fill:var(--pink);
-  --source-accent:#eab7c9;
-  background:color-mix(in srgb,var(--source-fill) 76%,var(--paper))!important;
-  border-color:color-mix(in srgb,var(--source-accent) 38%,var(--line))!important;
-}
-.calendar-modal.calendar-extended-month .extended-filter-list > button > span { background:var(--source-fill)!important; }
-.calendar-modal.calendar-extended-month .source-color-emerald { --source-fill:#d9edc7; --source-accent:#6fb69c; }
-.calendar-modal.calendar-extended-month .source-color-cyan { --source-fill:var(--blue); --source-accent:#77cdd3; }
-.calendar-modal.calendar-extended-month .source-color-blue { --source-fill:#d7e4f3; --source-accent:#7eb9e8; }
-.calendar-modal.calendar-extended-month .source-color-brown { --source-fill:#eadccf; --source-accent:#b99f92; }
-.calendar-modal.calendar-extended-month .source-color-black { --source-fill:#d9dad4; --source-accent:#6f6b72; }
-.calendar-modal.calendar-extended-month .source-color-red { --source-fill:#f2c8c3; --source-accent:#e97878; }
-.calendar-modal.calendar-extended-month .source-color-rose { --source-fill:#f4d1df; --source-accent:#e690b1; }
-.calendar-modal.calendar-extended-month .source-color-coral { --source-fill:var(--orange-soft); --source-accent:#f3a4a0; }
-.calendar-modal.calendar-extended-month .source-color-orange { --source-fill:#f8d79c; --source-accent:#efbc65; }
-.calendar-modal.calendar-extended-month .source-color-lilac { --source-fill:var(--lilac); --source-accent:#ae96d8; }
-.calendar-modal.calendar-extended-month .source-color-yellow { --source-fill:var(--yellow-soft); --source-accent:#e8c86f; }
-.calendar-modal.calendar-extended-month .source-color-pink { --source-fill:var(--pink); --source-accent:#eab7c9; }
-.calendar-modal.calendar-extended-month .extended-event-pill.canonical-boca-match { border-left-color:#f4d32f!important; }
 
-@media (max-width:720px) {
-  .calendar-modal.calendar-extended-month .extended-month-grid { column-gap:4px; row-gap:4px; }
-  .calendar-modal.calendar-extended-month .extended-calendar-cell,
-  .calendar-modal.calendar-extended-month .extended-calendar-cell.sunday,
-  .calendar-modal.calendar-extended-month .extended-calendar-cell.saturday { border-radius:10px; }
-  .calendar-modal.calendar-extended-month .extended-event-pill { border-left-width:2px; padding:3px 2px 3px 3px; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.emerald { --simplified-event-fill:#d9edc7; --simplified-event-ink:#345e38; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.cyan { --simplified-event-fill:var(--blue); --simplified-event-ink:#315f68; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.blue { --simplified-event-fill:#d7e4f3; --simplified-event-ink:#3c5f84; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.brown { --simplified-event-fill:#eadccf; --simplified-event-ink:#6b5143; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.black { --simplified-event-fill:#d9dad4; --simplified-event-ink:#45464a; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.red { --simplified-event-fill:#f2c8c3; --simplified-event-ink:#813f3f; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.rose { --simplified-event-fill:#f4d1df; --simplified-event-ink:#874964; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.coral { --simplified-event-fill:var(--orange-soft); --simplified-event-ink:#814b50; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.orange { --simplified-event-fill:#f8d79c; --simplified-event-ink:#78571c; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.lilac { --simplified-event-fill:var(--lilac); --simplified-event-ink:#554681; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.yellow { --simplified-event-fill:var(--yellow-soft); --simplified-event-ink:#735f21; }
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.pink { --simplified-event-fill:var(--pink); --simplified-event-ink:#7f4d61; }
+
+/* Full aérea keeps the approved current-day treatment. */
+.app-shell:not([data-simplified-calendar="true"]) .month-grid > button.today {
+  background:#e1f5ff;
+  border:2px solid #66bce5;
+  box-shadow:0 4px 0 rgba(65,137,173,.08);
+}
+
+.app-shell:not([data-simplified-calendar="true"]) .month-grid > button.today .calendar-day-number {
+  background:var(--orange);
+  border-radius:50%;
+  color:#fff;
+}
+
+/* The mood page is untouched; only align the shorter sticker heading. */
+.calendar-sticker-picker > div:first-child {
+  min-height:66px;
+}
+
+@media (max-width:430px) {
+  .app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+    column-gap:4px;
+    row-gap:4px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-cell {
+    border-radius:10px;
+  }
 }
