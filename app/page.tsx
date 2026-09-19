@@ -13117,11 +13117,17 @@ export default function Home() {
                       <div className="extended-filter-list">
                         {extendedCalendarSources.map((source, index) => {
                           const hidden = hiddenCalendarSources.includes(source);
+                          const sourceColor =
+                            calendarCategories.find((category) => category.name === source)?.color ??
+                            allCalendarEvents.find(
+                              (calendarEvent) => (calendarEvent.calendar || "Personal") === source,
+                            )?.color ??
+                            "pink";
                           return (
                             <button
                               type="button"
                               key={source}
-                              className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
+                              className={`source-${index % 4} source-color-${sourceColor} ${hidden ? "muted" : "active"}`}
                               onClick={() =>
                                 setHiddenCalendarSources((current) =>
                                   current.includes(source)
