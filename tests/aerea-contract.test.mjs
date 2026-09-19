@@ -1688,12 +1688,22 @@ test("offers a persisted Little aérea simplified calendar-only screen", () => {
   assert.doesNotMatch(cssSource, /data-simplified-calendar="true"\] \.calendar-modal\.calendar-extended-month/);
 });
 
-test("polishes only Settings Just calendar and preserves the Full aérea today marker", () => {
+test("matches the clean five-row Just calendar reference without changing Full aérea", () => {
   assert.match(pageSource, /className=\{`source-color-\$\{sourceColor\}/);
   assert.match(pageSource, /className=\{`simplified-event-strip \$\{eventColor\}/);
-  assert.match(cssSource, /Just calendar 20260919: the Settings calendar-only screen, and only it/);
+  assert.match(pageSource, /const simplifiedCalendarWeekCount = Math\.max\([\s\S]{0,80}5,/);
+  assert.match(pageSource, /extendedCalendarDays\.slice\(0, simplifiedCalendarWeekCount \* 7\)/);
+  assert.match(pageSource, /className="simplified-calendar-eyebrow">MONTH VIEW<\/span>/);
+  assert.match(pageSource, /className="simplified-theme-shortcut"[\s\S]{0,400}<svg[\s\S]{0,300}pearl/);
+  assert.match(pageSource, /"--simplified-calendar-weeks": simplifiedCalendarWeekCount/);
+  assert.match(pageSource, /\{simplifiedCalendarDays\.map\(\(calendarDay\) =>/);
+  assert.match(cssSource, /Exact Just calendar reference 20260919/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-filters \{[\s\S]{0,40}display:none/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-month-grid \{[\s\S]{0,400}repeat\(var\(--simplified-calendar-weeks,5\),minmax\(0,1fr\)\)/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-cell:nth-of-type\(n \+ 8\) \{[\s\S]{0,100}border-top:1px solid/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-cell\.outside-month \.simplified-calendar-events \{[\s\S]{0,50}display:none/);
+  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-event-strip\.canonical-boca-match \{[\s\S]{0,100}background:#f0d6c7!important/);
   assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-event-strip\.emerald \{ --simplified-event-fill:#d9edc7/);
-  assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-cell\.selected \{[\s\S]{0,240}background:color-mix\(in srgb,var\(--blue\) 28%,var\(--paper\)\)/);
   assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today \{[\s\S]{0,120}background:#e1f5ff/);
   assert.match(cssSource, /\.calendar-sticker-picker > div:first-child \{[\s\S]{0,60}min-height:66px/);
   assert.doesNotMatch(cssSource, /\.calendar-mood-picker:not\(\.calendar-sticker-picker\)[^{]*min-height:66px/);

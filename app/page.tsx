@@ -4231,6 +4231,14 @@ export default function Home() {
       };
     });
   }, [calendarMonth, calendarYear, extendedCalendarWeekCount, extendedLeadingDays]);
+  const simplifiedCalendarWeekCount = Math.max(
+    5,
+    Math.ceil((extendedLeadingDays + daysInViewMonth) / 7),
+  );
+  const simplifiedCalendarDays = useMemo(
+    () => extendedCalendarDays.slice(0, simplifiedCalendarWeekCount * 7),
+    [extendedCalendarDays, simplifiedCalendarWeekCount],
+  );
   const extendedCalendarSources = useMemo(() => {
     const sources = new Set<string>(
       calendarCategories.map((category) => category.name),
@@ -9130,43 +9138,33 @@ export default function Home() {
           aria-label="Little aérea simplified monthly calendar"
         >
           <header className="simplified-calendar-header">
+            <div className="simplified-calendar-heading">
+              <span className="simplified-calendar-eyebrow">MONTH VIEW</span>
+              <button
+                className="simplified-calendar-title"
+                type="button"
+                onClick={() => setMonthPickerOpen((open) => !open)}
+                aria-expanded={monthPickerOpen}
+                aria-label="Choose month and year"
+              >
+                {viewMonth.toLocaleDateString("en", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </button>
+            </div>
             <button
-              className="simplified-calendar-title"
+              className="simplified-theme-shortcut"
               type="button"
-              onClick={() => setMonthPickerOpen((open) => !open)}
-              aria-expanded={monthPickerOpen}
-              aria-label="Choose month and year"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Open settings"
+              title="Settings"
             >
-              {viewMonth.toLocaleDateString("en", {
-                month: "long",
-                year: "numeric",
-              })}
-              <span aria-hidden="true" />
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7.2 18h9.5a4.3 4.3 0 0 0 .45-8.58A5.85 5.85 0 0 0 6.08 10.8 3.65 3.65 0 0 0 7.2 18Z" />
+              </svg>
+              pearl
             </button>
-
-            <nav aria-label="Calendar shortcuts">
-              <button
-                type="button"
-                onClick={returnSimplifiedCalendarToToday}
-                aria-label="Return to today"
-                title="Today"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m12 7.4 1.35 2.73 3.02.44-2.18 2.13.51 3-2.7-1.42-2.7 1.42.51-3-2.18-2.13 3.02-.44L12 7.4Z" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                aria-label="Open settings"
-                title="Settings"
-              >
-                <span className="simplified-controls-glyph" aria-hidden="true">
-                  <i />
-                  <i />
-                </span>
-              </button>
-            </nav>
           </header>
 
           {monthPickerOpen && (
@@ -9293,7 +9291,7 @@ export default function Home() {
               .join(" ")}
             style={
               {
-                "--simplified-calendar-weeks": extendedCalendarWeekCount,
+                "--simplified-calendar-weeks": simplifiedCalendarWeekCount,
               } as CSSProperties
             }
             onAnimationEnd={() => setCalendarSlideDirection(null)}
@@ -9309,7 +9307,7 @@ export default function Home() {
                 </strong>
               ),
             )}
-            {extendedCalendarDays.map((calendarDay) => {
+            {simplifiedCalendarDays.map((calendarDay) => {
               const { date, currentMonth } = calendarDay;
               const dayKey = localDateKey(date);
               const dayEvents = allCalendarEvents
