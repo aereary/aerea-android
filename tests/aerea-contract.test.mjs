@@ -1549,6 +1549,7 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /openCalendarCategoryEditor/);
   assert.match(pageSource, /className="category-editor-modal"/);
   assert.match(pageSource, /className="extended-filter-list"/);
+  assert.match(pageSource, /source-color-\$\{sourceColor\}/);
   assert.match(pageSource, /className=\{`extended-event-pill/);
   assert.doesNotMatch(pageSource, /date: null/);
   assert.match(pageSource, /extendedLeadingDays/);
@@ -1558,6 +1559,14 @@ test("keeps editable event types above the redesigned extended calendar", () => 
   assert.match(pageSource, /date\.getDay\(\) === 0 \? "sunday"/);
   assert.match(cssSource, /Event-type editing must sit over every calendar surface/);
   assert.match(cssSource, /\.category-editor-backdrop \{[\s\S]*z-index:520/);
+});
+
+test("keeps Just a Calendar colors faithful without changing the compact calendar", () => {
+  assert.match(cssSource, /Just a Calendar polish 20260919/);
+  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.extended-event-pill\.emerald \{ --extended-event-fill:#d9edc7; --extended-event-accent:#6fb69c/);
+  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.source-color-lilac/);
+  assert.match(cssSource, /\.calendar-modal\.calendar-extended-month \.extended-calendar-cell\.sunday \.extended-calendar-date/);
+  assert.doesNotMatch(cssSource, /\.calendar-modal:not\(\.calendar-extended-month\)[^{]*\.extended-event-pill/);
 });
 
 test("keeps legacy calendar surfaces unreachable and removes statistics", () => {
