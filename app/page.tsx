@@ -9227,16 +9227,24 @@ export default function Home() {
                 const category = calendarCategories.find(
                   (item) => item.name.toLowerCase() === source.toLowerCase(),
                 );
-                const sourceColor = eventColors.find(
-                  (color) => color.value === category?.color,
+                const sourceColor =
+                  category?.color ??
+                  allCalendarEvents.find(
+                    (event) =>
+                      (event.calendar || "Personal").toLowerCase() ===
+                      source.toLowerCase(),
+                  )?.color ??
+                  "lilac";
+                const sourceAccent = eventColors.find(
+                  (color) => color.value === sourceColor,
                 )?.hex ?? "#ae96d8";
                 return (
                   <button
                     type="button"
                     key={source}
-                    className={hidden ? "muted" : "active"}
+                    className={`source-color-${sourceColor} ${hidden ? "muted" : "active"}`}
                     style={
-                      { "--simplified-source-color": sourceColor } as CSSProperties
+                      { "--simplified-source-color": sourceAccent } as CSSProperties
                     }
                     onClick={() =>
                       setHiddenCalendarSources((current) =>
@@ -9346,20 +9354,21 @@ export default function Home() {
                   </span>
                   <div className="simplified-calendar-events">
                     {dayEvents.slice(0, 3).map((calendarEvent) => {
-                      const eventColor = eventColors.find(
+                      const eventColor = eventDisplayColor(calendarEvent, dayKey);
+                      const eventAccent = eventColors.find(
                         (color) =>
-                          color.value === eventDisplayColor(calendarEvent, dayKey),
+                          color.value === eventColor,
                       )?.hex ?? "#ae96d8";
                       return (
                         <button
                           type="button"
-                          className={`simplified-event-strip ${
+                          className={`simplified-event-strip ${eventColor} ${
                             isFootballVisualEvent(calendarEvent)
                               ? "canonical-boca-match"
                               : ""
                           }`}
                           style={
-                            { "--simplified-event-color": eventColor } as CSSProperties
+                            { "--simplified-event-color": eventAccent } as CSSProperties
                           }
                           key={`${calendarEvent.id}-${dayKey}`}
                           onClick={(event) => {
@@ -13117,17 +13126,11 @@ export default function Home() {
                       <div className="extended-filter-list">
                         {extendedCalendarSources.map((source, index) => {
                           const hidden = hiddenCalendarSources.includes(source);
-                          const sourceColor =
-                            calendarCategories.find((category) => category.name === source)?.color ??
-                            allCalendarEvents.find(
-                              (calendarEvent) => (calendarEvent.calendar || "Personal") === source,
-                            )?.color ??
-                            "pink";
                           return (
                             <button
                               type="button"
                               key={source}
-                              className={`source-${index % 4} source-color-${sourceColor} ${hidden ? "muted" : "active"}`}
+                              className={`source-${index % 4} ${hidden ? "muted" : "active"}`}
                               onClick={() =>
                                 setHiddenCalendarSources((current) =>
                                   current.includes(source)
