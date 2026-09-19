@@ -4378,14 +4378,31 @@ p {
   overflow-wrap: anywhere;
 }
 
-.mobile-event-save {
-  background: var(--event-editor-control);
+.mobile-event-actions {
+  display: none;
+}
+
+.mobile-event-save,
+.mobile-event-delete {
+  align-items: center;
   border: 0;
   border-radius: 999px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 44px;
+  padding: 9px 20px;
+  width: 100%;
+}
+
+.mobile-event-save {
+  background: var(--event-editor-control);
   color: var(--event-editor-control-ink);
   display: none;
-  font-weight: 900;
-  min-height: 50px;
+}
+
+.mobile-event-delete {
+  background: #f2c8c3;
+  color: #813f3f;
 }
 
 .calendar-event-mode .event-editor-top .tiny-label,
@@ -5162,9 +5179,16 @@ p {
     border-right: 0;
   }
 
-  .mobile-event-save {
-    display: block;
-    margin-top: 2px;
+  .mobile-event-actions {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(112px, .8fr);
+    margin-top: 8px;
+  }
+
+  .mobile-event-actions .mobile-event-save,
+  .mobile-event-actions .mobile-event-delete {
+    display: flex;
   }
 
   .bottom-nav {
