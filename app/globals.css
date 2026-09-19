@@ -3700,7 +3700,7 @@ p {
 .day-marker-picker { border-radius:20px; margin-top:16px; overflow:hidden; touch-action:pan-y; }
 .day-marker-picker-track { display:flex; transition:transform .28s cubic-bezier(.2,.75,.25,1); width:200%; }
 .day-marker-picker-track.show-stickers { transform:translateX(-50%); }
-.day-marker-picker .calendar-mood-picker { flex:0 0 50%; margin-top:0; }
+.day-marker-picker .calendar-mood-picker { background:transparent; flex:0 0 50%; margin-top:0; }
 
 .calendar-mood-picker > div:first-child {
   align-items: center;
