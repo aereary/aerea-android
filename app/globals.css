@@ -3697,6 +3697,13 @@ p {
   padding: 15px;
 }
 
+.day-marker-picker { margin-top:16px; overflow:hidden; touch-action:pan-y; }
+.day-marker-picker-track { display:flex; transition:transform .28s cubic-bezier(.2,.75,.25,1); width:200%; }
+.day-marker-picker-track.show-stickers { transform:translateX(-50%); }
+.day-marker-picker .calendar-mood-picker { flex:0 0 50%; margin-top:0; }
+.marker-page-hint { background:transparent; border:0; color:var(--muted); display:block; font-size:9px; font-weight:800; letter-spacing:.08em; margin:8px 0 -5px auto; padding:3px; text-transform:uppercase; }
+.marker-page-hint.back { margin-left:0; margin-right:auto; }
+
 .calendar-mood-picker > div:first-child {
   align-items: center;
   display: grid;
@@ -3802,6 +3809,14 @@ p {
 .mood-coral span,
 .calendar-mood-sticker.mood-coral,
 .selected-mood-sticker.mood-coral { background: #ec9c91; }
+.sticker-peach span,.calendar-mood-sticker.sticker-peach,.selected-mood-sticker.sticker-peach { background:#f7c9a8; }
+.sticker-blue span,.calendar-mood-sticker.sticker-blue,.selected-mood-sticker.sticker-blue { background:#a8ccef; }
+.sticker-coral span,.calendar-mood-sticker.sticker-coral,.selected-mood-sticker.sticker-coral { background:#ec9c91; }
+.sticker-mint span,.calendar-mood-sticker.sticker-mint,.selected-mood-sticker.sticker-mint { background:#bfe2c4; }
+.sticker-yellow span,.calendar-mood-sticker.sticker-yellow,.selected-mood-sticker.sticker-yellow { background:#ffe174; }
+.sticker-pink span,.calendar-mood-sticker.sticker-pink,.selected-mood-sticker.sticker-pink { background:#f6b9b9; }
+.sticker-lilac span,.calendar-mood-sticker.sticker-lilac,.selected-mood-sticker.sticker-lilac { background:#d2bde9; }
+.sticker-sky span,.calendar-mood-sticker.sticker-sky,.selected-mood-sticker.sticker-sky { background:#c5e4e8; }
 
 .day-completion-control {
   align-items: center;
