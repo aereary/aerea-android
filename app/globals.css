@@ -32152,3 +32152,254 @@ html[data-native="true"] :where(
     border-radius:10px;
   }
 }
+
+/* Exact Just calendar reference 20260919. This block is deliberately scoped
+   to Settings > Just calendar so no normal calendar surface inherits it. */
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+  --simplified-reference-line:#edf0f1;
+  background:#fff!important;
+  color:#314b52;
+  gap:0!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  padding:
+    calc(18px + var(--aerea-safe-area-top))
+    calc(28px + var(--aerea-safe-area-right))
+    calc(18px + var(--aerea-safe-area-bottom))
+    calc(28px + var(--aerea-safe-area-left))!important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-header {
+  align-items:flex-start;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  min-height:102px;
+  padding:0;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-heading {
+  min-width:0;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-eyebrow {
+  color:#6c7d80;
+  display:block;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:.19em;
+  line-height:1;
+  margin-bottom:9px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-title {
+  color:#28464e;
+  font-size:clamp(34px,5.2vw,54px);
+  font-weight:950;
+  letter-spacing:-.055em;
+  line-height:.96;
+  padding:0;
+  white-space:nowrap;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-title > span {
+  display:none;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-theme-shortcut {
+  align-items:center;
+  background:#f5f7f7;
+  border:0;
+  border-radius:999px;
+  color:#687d80;
+  display:flex;
+  font-size:14px;
+  font-weight:850;
+  gap:5px;
+  justify-content:center;
+  min-height:44px;
+  padding:0 16px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-theme-shortcut > svg {
+  fill:none;
+  height:15px;
+  stroke:currentColor;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:2;
+  width:15px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-filters {
+  display:none;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-picker {
+  left:28px;
+  top:calc(var(--aerea-safe-area-top) + 98px);
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  column-gap:0!important;
+  grid-template-rows:40px repeat(var(--simplified-calendar-weeks,5),minmax(0,1fr));
+  height:100%;
+  min-height:0;
+  overflow:visible;
+  row-gap:0!important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-month-grid > strong {
+  align-items:flex-start;
+  background:transparent;
+  border:0;
+  color:#7a8d91;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  padding-top:2px;
+  text-transform:uppercase;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell {
+  background:transparent!important;
+  border:0;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible;
+  padding:12px 5px 8px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell:nth-of-type(n + 8) {
+  border-top:1px solid var(--simplified-reference-line);
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-date {
+  color:#314b52;
+  font-size:14px;
+  font-weight:900;
+  height:31px;
+  justify-content:flex-start;
+  margin:0 0 8px;
+  padding-left:3px;
+  width:31px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.sunday .simplified-calendar-date,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.saturday .simplified-calendar-date {
+  color:#c8818e;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.outside-month {
+  opacity:1;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.outside-month .simplified-calendar-date {
+  color:#cbd1d1;
+  opacity:1;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.outside-month .simplified-calendar-events {
+  display:none;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.selected .simplified-calendar-date,
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-cell.today .simplified-calendar-date {
+  background:#dff2f6;
+  box-shadow:none;
+  color:#60767a;
+  justify-content:center;
+  padding-left:0;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-calendar-events {
+  gap:5px;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip,
+.app-shell[data-simplified-calendar="true"] .simplified-more-events {
+  border:0!important;
+  border-radius:8px;
+  font-size:10px;
+  font-weight:850;
+  height:23px;
+  line-height:23px;
+  padding:0 7px;
+  text-align:left;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-event-strip.canonical-boca-match {
+  background:#f0d6c7!important;
+  color:#865c4b!important;
+}
+
+.app-shell[data-simplified-calendar="true"] .simplified-more-events {
+  background:#f3f5f5;
+  color:#819093;
+  text-align:center;
+}
+
+@media (max-width:430px) {
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-screen {
+    padding:
+      calc(14px + var(--aerea-safe-area-top))
+      calc(15px + var(--aerea-safe-area-right))
+      calc(14px + var(--aerea-safe-area-bottom))
+      calc(15px + var(--aerea-safe-area-left))!important;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-header {
+    min-height:91px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-eyebrow {
+    font-size:10.5px;
+    margin-bottom:7px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-title {
+    font-size:31px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-theme-shortcut {
+    font-size:12px;
+    min-height:38px;
+    padding:0 12px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-month-grid {
+    grid-template-rows:34px repeat(var(--simplified-calendar-weeks,5),minmax(0,1fr));
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-month-grid > strong {
+    font-size:10px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-cell {
+    padding:10px 3px 6px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-date {
+    font-size:11.5px;
+    height:27px;
+    margin-bottom:6px;
+    width:27px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-calendar-events {
+    gap:4px;
+  }
+
+  .app-shell[data-simplified-calendar="true"] .simplified-event-strip,
+  .app-shell[data-simplified-calendar="true"] .simplified-more-events {
+    border-radius:7px;
+    font-size:8.5px;
+    height:20px;
+    line-height:20px;
+    padding-inline:5px;
+  }
+}
