@@ -1397,6 +1397,21 @@ const moods = [
   { face: "•O•", label: "surprised", color: "mood-coral" },
 ];
 
+const dayStickers = [
+  { icon: "🍔", label: "ate out", color: "sticker-peach" },
+  { icon: "📚", label: "studied", color: "sticker-blue" },
+  { icon: "🩸", label: "period", color: "sticker-coral" },
+  { icon: "🏃", label: "moved", color: "sticker-mint" },
+  { icon: "🧹", label: "cleaned", color: "sticker-yellow" },
+  { icon: "🫧", label: "self-care", color: "sticker-pink" },
+  { icon: "🥂", label: "social", color: "sticker-lilac" },
+  { icon: "🌙", label: "rested", color: "sticker-sky" },
+];
+
+const dayStickerValue = (label: string) => `sticker:${label}`;
+const dayStickerFromValue = (value: string | undefined) =>
+  dayStickers.find((sticker) => dayStickerValue(sticker.label) === value);
+
 type PostItColorOption = {
   value: PostItColor;
   label: string;
@@ -4374,6 +4389,9 @@ export default function Home() {
   const selectedDateMood = moods.find(
     (mood) => mood.label === moodHistory[selectedCalendarDate],
   );
+  const selectedDateSticker = dayStickerFromValue(
+    moodHistory[selectedCalendarDate],
+  );
   const selectedScheduleDateObject = dateFromKey(selectedCalendarDate);
   const selectedScheduleIsToday = selectedCalendarDate === todayKey;
   const selectedScheduleWeekday = selectedScheduleDateObject.toLocaleDateString("en", {
@@ -4403,6 +4421,7 @@ export default function Home() {
         const mood = moods.find(
           (item) => item.label === moodHistory[dateKey],
         );
+        const sticker = dayStickerFromValue(moodHistory[dateKey]);
         const events = allCalendarEvents
           .filter((event) => eventOccursOn(event, dateKey))
           .sort((a, b) => a.time.localeCompare(b.time))
@@ -4419,7 +4438,7 @@ export default function Home() {
 
         return {
           date: dateKey,
-          mood: mood?.face ?? "",
+          mood: mood?.face ?? sticker?.icon ?? "",
           complete: completedDays[dateKey] === true,
           events,
         };
@@ -13887,6 +13906,10 @@ export default function Home() {
                     const dayMood = moods.find(
                       (mood) => mood.label === moodHistory[dayKey],
                     );
+                    const daySticker = dayStickerFromValue(moodHistory[dayKey]);
+                    const dayMarker = dayMood
+                      ? { icon: dayMood.face, label: dayMood.label, color: dayMood.color }
+                      : daySticker;
                     const dayComplete = completedDays[dayKey] === true;
                     return (
                       <button
@@ -13896,7 +13919,7 @@ export default function Home() {
                           currentMonth ? "" : "outside-month",
                           selectedCalendarDate === dayKey ? "selected" : "",
                           dayEvents.length > 0 ? "has-event" : "",
-                          dayMood ? "has-mood" : "",
+                          dayMarker ? "has-mood" : "",
                           dayComplete ? "day-complete" : "",
                           date.getDay() === 0 || date.getDay() === 6 ? "weekend" : "",
                           dayKey === todayKey ? "today" : "",
@@ -13914,12 +13937,12 @@ export default function Home() {
                         }}
                       >
                         <span className="calendar-day-number">{day}</span>
-                        {dayMood && (
+                        {dayMarker && (
                           <i
-                            className={`calendar-mood-sticker ${dayMood.color}`}
-                            title={dayMood.label}
+                            className={`calendar-mood-sticker ${dayMarker.color}`}
+                            title={dayMarker.label}
                           >
-                            {dayMood.face}
+                            {dayMarker.icon}
                           </i>
                         )}
                         {dayComplete && (
@@ -13986,45 +14009,18 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="calendar-mood-picker">
-                    <div>
-                      <span
-                        className={
-                          selectedDateMood
-                            ? `selected-mood-sticker ${selectedDateMood.color}`
-                            : "selected-mood-sticker empty"
-                        }
-                      >
-                        {selectedDateMood?.face ?? "♡"}
-                      </span>
-                      <span>
-                        <strong>How did this day feel?</strong>
-                        <small>
-                          Your answer becomes this day&apos;s sticker.
-                        </small>
-                      </span>
-                      {selectedDateMood && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setMoodHistory((current) => {
-                              const next = { ...current };
-                              delete next[selectedCalendarDate];
-                              return next;
-                            })
-                          }
-                        >
-                          clear
-                        </button>
-                      )}
-                    </div>
-                    <MoodBubbles
-                      selectedMood={selectedDateMood?.label ?? ""}
-                      onSelect={(mood) =>
-                        chooseMood(selectedCalendarDate, mood)
-                      }
-                    />
-                  </div>
+                  <DayMarkerPicker
+                    selectedMood={selectedDateMood?.label ?? ""}
+                    selectedSticker={selectedDateSticker?.label ?? ""}
+                    onSelect={(value) => chooseMood(selectedCalendarDate, value)}
+                    onClear={() =>
+                      setMoodHistory((current) => {
+                        const next = { ...current };
+                        delete next[selectedCalendarDate];
+                        return next;
+                      })
+                    }
+                  />
 
                   <div
                     className={[
@@ -17256,6 +17252,90 @@ function MoodBubbles({
           <span>{mood.face}</span><small>{mood.label}</small>
         </button>
       ))}
+    </div>
+  );
+}
+
+function DayMarkerPicker({
+  selectedMood,
+  selectedSticker,
+  onSelect,
+  onClear,
+}: {
+  selectedMood: string;
+  selectedSticker: string;
+  onSelect: (value: string) => void;
+  onClear: () => void;
+}) {
+  const [page, setPage] = useState<"moods" | "stickers">("moods");
+  const swipeStartX = useRef<number | null>(null);
+  const selectedMoodOption = moods.find((mood) => mood.label === selectedMood);
+  const selectedStickerOption = dayStickers.find(
+    (sticker) => sticker.label === selectedSticker,
+  );
+
+  const finishSwipe = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (swipeStartX.current === null) return;
+    const distance = event.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (distance < -36) setPage("stickers");
+    if (distance > 36) setPage("moods");
+  };
+
+  return (
+    <div
+      className="day-marker-picker"
+      onTouchStart={(event) => {
+        swipeStartX.current = event.touches[0].clientX;
+      }}
+      onTouchEnd={finishSwipe}
+      aria-label="Daily marker picker. Swipe left for stickers or right for moods."
+    >
+      <div className={`day-marker-picker-track ${page === "stickers" ? "show-stickers" : ""}`}>
+        <div className="calendar-mood-picker">
+          <div>
+            <span className={selectedMoodOption ? `selected-mood-sticker ${selectedMoodOption.color}` : "selected-mood-sticker empty"}>
+              {selectedMoodOption?.face ?? "♡"}
+            </span>
+            <span>
+              <strong>How did this day feel?</strong>
+              <small>Your answer becomes this day&apos;s marker.</small>
+            </span>
+            {(selectedMoodOption || selectedStickerOption) && <button type="button" onClick={onClear}>clear</button>}
+          </div>
+          <MoodBubbles selectedMood={selectedMood} onSelect={onSelect} />
+          <button className="marker-page-hint" type="button" onClick={() => setPage("stickers")}>
+            stickers <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <div className="calendar-mood-picker calendar-sticker-picker">
+          <div>
+            <span className={selectedStickerOption ? `selected-mood-sticker ${selectedStickerOption.color}` : "selected-mood-sticker empty"}>
+              {selectedStickerOption?.icon ?? "✦"}
+            </span>
+            <span>
+              <strong>What happened today?</strong>
+              <small>Pick one little sign of your day.</small>
+            </span>
+            {(selectedMoodOption || selectedStickerOption) && <button type="button" onClick={onClear}>clear</button>}
+          </div>
+          <div className="mood-bubbles">
+            {dayStickers.map((sticker) => (
+              <button
+                key={sticker.label}
+                className={["mood-bubble", sticker.color, selectedSticker === sticker.label ? "active" : ""].filter(Boolean).join(" ")}
+                onClick={() => onSelect(dayStickerValue(sticker.label))}
+              >
+                <span>{sticker.icon}</span><small>{sticker.label}</small>
+              </button>
+            ))}
+          </div>
+          <button className="marker-page-hint back" type="button" onClick={() => setPage("moods")}>
+            <span aria-hidden="true">←</span> moods
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

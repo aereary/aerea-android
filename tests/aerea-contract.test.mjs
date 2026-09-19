@@ -610,6 +610,18 @@ test("toggles selected moods and keeps reminders editable", () => {
   assert.doesNotMatch(pageSource, /Day not marked complete/);
 });
 
+test("offers an exclusive swipeable day sticker panel without moving calendar markers", () => {
+  assert.match(pageSource, /const dayStickers = \[/);
+  assert.equal((pageSource.match(/label: "(?:ate out|studied|period|moved|cleaned|self-care|social|rested)"/g) ?? []).length, 8);
+  assert.match(pageSource, /dayStickerValue = \(label: string\) => `sticker:\$\{label\}`/);
+  assert.match(pageSource, /distance < -36/);
+  assert.match(pageSource, /distance > 36/);
+  assert.match(pageSource, /onSelect\(dayStickerValue\(sticker\.label\)\)/);
+  assert.match(pageSource, /className={`calendar-mood-sticker \$\{dayMarker\.color\}`}/);
+  assert.match(cssSource, /\.day-marker-picker-track\.show-stickers/);
+  assert.match(cssSource, /\.calendar-mood-sticker \{[\s\S]*right: 7px;[\s\S]*top: 7px;/);
+});
+
 test("returns an event note to the same Day Pocket", () => {
   assert.match(pageSource, /eventDetailReturnDayPocket/);
   assert.match(pageSource, /const returnToDayPocket = \(\) =>/);
