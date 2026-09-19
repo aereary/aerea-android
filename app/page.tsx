@@ -17304,9 +17304,6 @@ function DayMarkerPicker({
             {(selectedMoodOption || selectedStickerOption) && <button type="button" onClick={onClear}>clear</button>}
           </div>
           <MoodBubbles selectedMood={selectedMood} onSelect={onSelect} />
-          <button className="marker-page-hint" type="button" onClick={() => setPage("stickers")}>
-            stickers <span aria-hidden="true">→</span>
-          </button>
         </div>
 
         <div className="calendar-mood-picker calendar-sticker-picker">
@@ -17331,9 +17328,6 @@ function DayMarkerPicker({
               </button>
             ))}
           </div>
-          <button className="marker-page-hint back" type="button" onClick={() => setPage("moods")}>
-            <span aria-hidden="true">←</span> moods
-          </button>
         </div>
       </div>
     </div>
