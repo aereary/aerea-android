@@ -3701,8 +3701,6 @@ p {
 .day-marker-picker-track { display:flex; transition:transform .28s cubic-bezier(.2,.75,.25,1); width:200%; }
 .day-marker-picker-track.show-stickers { transform:translateX(-50%); }
 .day-marker-picker .calendar-mood-picker { flex:0 0 50%; margin-top:0; }
-.marker-page-hint { background:transparent; border:0; color:var(--muted); display:block; font-size:9px; font-weight:800; letter-spacing:.08em; margin:8px 0 -5px auto; padding:3px; text-transform:uppercase; }
-.marker-page-hint.back { margin-left:0; margin-right:auto; }
 
 .calendar-mood-picker > div:first-child {
   align-items: center;
@@ -4496,7 +4494,7 @@ p {
 .app-shell[data-color-mode="dark"] :is(
   .week-strip,
   .calendar-mood-note,
-  .calendar-mood-picker,
+  .day-marker-picker,
   .day-completion-control,
   .event-editor-card
 ) {
@@ -5540,7 +5538,7 @@ body {
   .audio-item,
   .class-list,
   .selected-day-panel,
-  .calendar-mood-picker,
+  .day-marker-picker,
   .day-completion-control,
   .event-editor-card,
   .mode-card,
@@ -13230,7 +13228,7 @@ body {
 .app-shell[data-theme="neonheart"] :is(
   .card,.welcome-row,.week-strip,.schedule-card,.reminder-card,.habit-row,
   .timer-card,.focus-side,.journal-compose,.space-card,.record-card,.audio-item,
-  .class-list,.selected-day-panel,.calendar-mood-picker,.day-completion-control,
+  .class-list,.selected-day-panel,.day-marker-picker,.day-completion-control,
   .event-editor-card,.event-options-card,.mode-card,.install-card,.profile-card,
   .sync-card,.custom-theme-card,.theme-wardrobe,.screen-intro,.event-detail-note,
   .day-summary-card,.planner-card
@@ -15515,7 +15513,7 @@ body {
 .app-shell[data-theme="dreambear"] :is(
   .card,.welcome-row,.week-strip,.schedule-card,.reminder-card,.habit-row,
   .timer-card,.focus-side,.journal-compose,.space-card,.record-card,.audio-item,
-  .class-list,.selected-day-panel,.calendar-mood-picker,.day-completion-control,
+  .class-list,.selected-day-panel,.day-marker-picker,.day-completion-control,
   .event-editor-card,.event-options-card,.mode-card,.install-card,.profile-card,
   .sync-card,.custom-theme-card,.theme-wardrobe,.screen-intro,.event-detail-note,
   .day-summary-card,.planner-card
