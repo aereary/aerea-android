@@ -48,9 +48,13 @@ test("keeps the normal Library mounted and does not add AO3 as a Spaces card", (
 test("reads the private automatic AO3 catalog from Supabase without joining private state", () => {
   assert.match(ao3Source, /\.from\("ao3_works"\)/);
   assert.match(ao3Source, /\.from\("ao3_epub_versions"\)/);
-  assert.match(ao3Source, /\.limit\(1000\)/);
-  assert.match(ao3Source, /validAo3Works\(worksResult\.data \|\| \[\]\)/);
-  assert.match(ao3Source, /validEpubVersions\(epubsResult\.data \|\| \[\]\)/);
+  assert.match(ao3Source, /const PAGE_SIZE = 500/);
+  assert.match(ao3Source, /\.range\(from, from \+ PAGE_SIZE - 1\)/);
+  assert.match(ao3Source, /await supabase\.auth\.getSession\(\)/);
+  assert.match(ao3Source, /email !== AEREA_ACCOUNT/);
+  assert.doesNotMatch(ao3Source, /\.limit\(1000\)/);
+  assert.match(ao3Source, /validAo3Works\(workRows\)/);
+  assert.match(ao3Source, /validEpubVersions\(epubRows\)/);
   assert.match(ao3Source, /aerea-ao3-library-cache-v1/);
   assert.doesNotMatch(ao3Source, /aerea_sync|service_role|sb_secret_/);
   assert.match(syncSource, /SUPABASE_PUBLISHABLE_KEY/);
@@ -60,6 +64,9 @@ test("keeps a valid offline cache and refreshes automatically", () => {
   assert.match(ao3Source, /const cached = readCache\(\)/);
   assert.match(ao3Source, /setWorks\(cached\.works\)/);
   assert.match(ao3Source, /writeCache\(result\.works, result\.epubs\)/);
+  assert.match(ao3Source, /keeping the last safe copy/);
+  assert.match(ao3Source, /refreshPromiseRef\.current/);
+  assert.match(ao3Source, /refreshQueuedRef\.current/);
   assert.match(ao3Source, /window\.addEventListener\("online", refreshIfAvailable\)/);
   assert.match(ao3Source, /document\.addEventListener\("visibilitychange", refreshWhenVisible\)/);
   assert.match(ao3Source, /table: "ao3_works"/);
@@ -103,6 +110,10 @@ test("saves Drive EPUBs into Android study_files and refreshes Your Library imme
   assert.match(nativeStorageSource, /drive\.usercontent\.google\.com\/download\?id=/);
   assert.match(nativeStorageSource, /values\.put\("kind", "epub"\)/);
   assert.match(nativeStorageSource, /insertOrThrow\("study_files"/);
+  assert.match(nativeStorageSource, /beginTransaction\(\)/);
+  assert.match(nativeStorageSource, /setTransactionSuccessful\(\)/);
+  assert.match(nativeStorageSource, /id \+ "\.epub\.previous"/);
+  assert.match(nativeStorageSource, /moveReplacing\(previous, stored\)/);
   assert.match(nativeStorageSource, /source_drive_file_id=\? OR source_work_id=\?/);
   assert.match(nativeStorageSource, /study_files_ao3_drive_idx/);
   assert.match(nativeStorageSource, /study_files_ao3_work_idx/);
@@ -141,4 +152,6 @@ test("retains the standalone AO3 visual language on phone, tablet and dark mode"
   assert.match(ao3Source, /@media \(max-width: 390px\)/);
   assert.match(ao3Source, /data-color-mode="dark"/);
   assert.match(ao3Source, /content-visibility: auto/);
+  assert.match(ao3Source, /function SeriesPart/);
+  assert.match(ao3Source, /\{expanded && \(/);
 });

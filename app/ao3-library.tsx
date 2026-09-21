@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
-import { supabase } from "./supabase-sync";
+import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
 import type { StudyFileItem } from "./study-library";
 
 type SeriesMembership = {
@@ -83,6 +83,8 @@ type Ao3LibraryProps = {
 };
 
 const CACHE_KEY = "aerea-ao3-library-cache-v1";
+const PAGE_SIZE = 500;
+const MAX_LIBRARY_ROWS = 20_000;
 
 function compactUnique(values: Array<string | null | undefined>) {
   return Array.from(
@@ -271,25 +273,53 @@ function writeCache(works: Ao3Work[], epubs: EpubVersion[]) {
 }
 
 async function fetchLibrary() {
-  const [worksResult, epubsResult] = await Promise.all([
-    supabase
-      .from("ao3_works")
-      .select(
-        "work_id,title,author,summary,fandoms,warnings,characters,relationships,tags,words,rating,chapters,complete,series,updated_on,bookmarked_on,source_url,archived,categories,bookmarker_tags",
-      )
-      .order("updated_on", { ascending: false, nullsFirst: false })
-      .limit(1000),
-    supabase
-      .from("ao3_epub_versions")
-      .select("work_id,drive_file_id,filename,label,is_primary")
-      .limit(1000),
-  ]);
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const email = sessionData.session?.user.email?.toLowerCase();
+  if (email !== AEREA_ACCOUNT) {
+    throw new Error("Sign in to refresh your private AO3 Library.");
+  }
 
-  if (worksResult.error) throw worksResult.error;
-  if (epubsResult.error) throw epubsResult.error;
+  const fetchWorks = async () => {
+    const rows: unknown[] = [];
+    for (let from = 0; from < MAX_LIBRARY_ROWS; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("ao3_works")
+        .select(
+          "work_id,title,author,summary,fandoms,warnings,characters,relationships,tags,words,rating,chapters,complete,series,updated_on,bookmarked_on,source_url,archived,categories,bookmarker_tags",
+        )
+        .order("updated_on", { ascending: false, nullsFirst: false })
+        .order("work_id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) return rows;
+    }
+    throw new Error("AO3 Library exceeds the safe pagination limit.");
+  };
 
-  const works = validAo3Works(worksResult.data || []);
-  const epubs = validEpubVersions(epubsResult.data || []);
+  const fetchEpubs = async () => {
+    const rows: unknown[] = [];
+    for (let from = 0; from < MAX_LIBRARY_ROWS; from += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("ao3_epub_versions")
+        .select("work_id,drive_file_id,filename,label,is_primary")
+        .order("work_id", { ascending: true })
+        .order("drive_file_id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) return rows;
+    }
+    throw new Error("AO3 EPUB versions exceed the safe pagination limit.");
+  };
+
+  const [workRows, epubRows] = await Promise.all([fetchWorks(), fetchEpubs()]);
+  const works = validAo3Works(workRows);
+  const epubs = validEpubVersions(epubRows);
   if (!works || !epubs) {
     throw new Error("Supabase returned an invalid AO3 Library response.");
   }
@@ -712,6 +742,52 @@ function FicCard({
   );
 }
 
+function SeriesPart({
+  work,
+  versions,
+  onDownload,
+  query,
+  activeTag,
+  onTagSearch,
+}: {
+  work: Ao3Work;
+  versions: EpubVersion[];
+  onDownload: (target: Ao3EpubDownloadTarget) => void;
+  query: string;
+  activeTag: string | null;
+  onTagSearch: (tag: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <details
+      className="ao3-part"
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
+      <summary>
+        <strong>
+          <HighlightText text={work.title} query={query} />
+        </strong>
+        <small>
+          {work.series?.[0]?.part ? `Part ${work.series[0].part} · ` : ""}
+          {work.chapters || "? chapters"} · {formatNumber(work.words)}
+          {" words"}
+        </small>
+      </summary>
+      {expanded && (
+        <WorkDetails
+          work={work}
+          versions={versions}
+          onDownload={onDownload}
+          query={query}
+          activeTag={activeTag}
+          onTagSearch={onTagSearch}
+        />
+      )}
+    </details>
+  );
+}
+
 function SeriesCard({
   entry,
   versionsByWork,
@@ -810,28 +886,14 @@ function SeriesCard({
         <ol>
           {entry.works.map((work) => (
             <li key={work.work_id}>
-              <details className="ao3-part">
-                <summary>
-                  <strong>
-                    <HighlightText text={work.title} query={query} />
-                  </strong>
-                  <small>
-                    {work.series?.[0]?.part
-                      ? `Part ${work.series[0].part} · `
-                      : ""}
-                    {work.chapters || "? chapters"} · {formatNumber(work.words)}
-                    {" words"}
-                  </small>
-                </summary>
-                <WorkDetails
-                  work={work}
-                  versions={versionsByWork.get(work.work_id) || []}
-                  onDownload={onDownload}
-                  query={query}
-                  activeTag={activeTag}
-                  onTagSearch={onTagSearch}
-                />
-              </details>
+              <SeriesPart
+                work={work}
+                versions={versionsByWork.get(work.work_id) || []}
+                onDownload={onDownload}
+                query={query}
+                activeTag={activeTag}
+                onTagSearch={onTagSearch}
+              />
             </li>
           ))}
         </ol>
@@ -898,6 +960,9 @@ function Ao3SearchInput({
 export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const libraryLayerRef = useRef<HTMLElement | null>(null);
   const lastScrollTopRef = useRef(0);
+  const knownWorkCountRef = useRef(0);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
+  const refreshQueuedRef = useRef(false);
   const [works, setWorks] = useState<Ao3Work[]>([]);
   const [epubs, setEpubs] = useState<EpubVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -916,26 +981,51 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
 
-  const refresh = useCallback(async (showSpinner = true) => {
+  const refresh = useCallback((showSpinner = true) => {
     if (showSpinner) setRefreshing(true);
-    setError(null);
-    try {
-      const result = await fetchLibrary();
-      setWorks(result.works);
-      setEpubs(result.epubs);
-      writeCache(result.works, result.epubs);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not load AO3 Library.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    if (refreshPromiseRef.current) {
+      refreshQueuedRef.current = true;
+      return refreshPromiseRef.current;
     }
+
+    const task = (async () => {
+      do {
+        refreshQueuedRef.current = false;
+        setError(null);
+        try {
+          const result = await fetchLibrary();
+          if (result.works.length === 0 && knownWorkCountRef.current > 0) {
+            throw new Error(
+              "Supabase returned an empty AO3 Library; keeping the last safe copy.",
+            );
+          }
+          knownWorkCountRef.current = result.works.length;
+          setWorks(result.works);
+          setEpubs(result.epubs);
+          writeCache(result.works, result.epubs);
+        } catch (reason) {
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Could not load AO3 Library.",
+          );
+        }
+      } while (refreshQueuedRef.current);
+    })().finally(() => {
+        refreshPromiseRef.current = null;
+        setLoading(false);
+        setRefreshing(false);
+      });
+
+    refreshPromiseRef.current = task;
+    return task;
   }, []);
 
   useEffect(() => {
     const hydrate = window.setTimeout(() => {
       const cached = readCache();
       if (cached) {
+        knownWorkCountRef.current = cached.works.length;
         setWorks(cached.works);
         setEpubs(cached.epubs);
         setLoading(false);
@@ -971,9 +1061,18 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       )
       .subscribe();
 
+    const {
+      data: { subscription: authSubscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        window.setTimeout(refreshIfAvailable, 0);
+      }
+    });
+
     return () => {
       window.removeEventListener("online", refreshIfAvailable);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
+      authSubscription.unsubscribe();
       void supabase.removeChannel(channel);
     };
   }, [refresh]);

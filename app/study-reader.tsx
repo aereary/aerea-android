@@ -1310,11 +1310,19 @@ export function EpubStudyReader({
   const chapterIndex = Math.min(book.chapters.length - 1, Math.max(0, readingState.chapter));
   const chapter = book.chapters[chapterIndex];
   const paragraphs = useMemo(() => chapter.text.split(/\n{2,}/).filter(Boolean), [chapter.text]);
+  const epubSearchIndex = useMemo(
+    () =>
+      book.chapters.map((item, index) => ({
+        index,
+        item,
+        searchable: normalizeReaderSearch(`${item.title} ${item.text}`),
+      })),
+    [book.chapters],
+  );
   const results = useMemo(() => {
     const query = normalizeReaderSearch(search);
     if (!query) return [];
-    return book.chapters.flatMap((item, index) => {
-      const searchable = normalizeReaderSearch(`${item.title} ${item.text}`);
+    return epubSearchIndex.flatMap(({ item, index, searchable }) => {
       if (!searchable.includes(query)) return [];
       let matches = 0;
       let cursor = 0;
@@ -1329,7 +1337,7 @@ export function EpubStudyReader({
         preview: readerSearchSnippet(item.text || item.title, search),
       }];
     }).slice(0, 40);
-  }, [book.chapters, search]);
+  }, [epubSearchIndex, search]);
 
   const update = (
     patch: Partial<EpubReadingState>,

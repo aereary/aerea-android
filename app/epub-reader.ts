@@ -14,10 +14,14 @@ type ZipEntry = {
   name: string;
   method: number;
   compressedSize: number;
+  uncompressedSize: number;
   localOffset: number;
 };
 
 const textDecoder = new TextDecoder("utf-8");
+const MAX_EPUB_BYTES = 50 * 1024 * 1024;
+const MAX_EPUB_ENTRY_BYTES = 12 * 1024 * 1024;
+const MAX_EPUB_ENTRIES = 20_000;
 
 function normalizeZipPath(path: string) {
   const pieces: string[] = [];
@@ -50,6 +54,9 @@ function readZipEntries(buffer: ArrayBuffer) {
   if (end < 0) throw new Error("This EPUB does not contain a readable ZIP index.");
 
   const totalEntries = view.getUint16(end + 10, true);
+  if (totalEntries > MAX_EPUB_ENTRIES) {
+    throw new Error("This EPUB contains too many files to open safely.");
+  }
   let offset = view.getUint32(end + 16, true);
   const entries = new Map<string, ZipEntry>();
 
@@ -57,6 +64,7 @@ function readZipEntries(buffer: ArrayBuffer) {
     if (view.getUint32(offset, true) !== 0x02014b50) break;
     const method = view.getUint16(offset + 10, true);
     const compressedSize = view.getUint32(offset + 20, true);
+    const uncompressedSize = view.getUint32(offset + 24, true);
     const nameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
@@ -64,7 +72,13 @@ function readZipEntries(buffer: ArrayBuffer) {
     const name = normalizeZipPath(
       textDecoder.decode(bytes.slice(offset + 46, offset + 46 + nameLength)),
     );
-    entries.set(name, { name, method, compressedSize, localOffset });
+    entries.set(name, {
+      name,
+      method,
+      compressedSize,
+      uncompressedSize,
+      localOffset,
+    });
     offset += 46 + nameLength + extraLength + commentLength;
   }
 
@@ -76,6 +90,9 @@ async function inflateEntry(
   entry: ZipEntry,
 ) {
   const { bytes, view } = archive;
+  if (entry.uncompressedSize > MAX_EPUB_ENTRY_BYTES) {
+    throw new Error(`The EPUB entry ${entry.name} is too large to open safely.`);
+  }
   if (view.getUint32(entry.localOffset, true) !== 0x04034b50) {
     throw new Error(`The EPUB entry ${entry.name} is damaged.`);
   }
@@ -83,14 +100,39 @@ async function inflateEntry(
   const extraLength = view.getUint16(entry.localOffset + 28, true);
   const dataStart = entry.localOffset + 30 + nameLength + extraLength;
   const compressed = bytes.slice(dataStart, dataStart + entry.compressedSize);
-  if (entry.method === 0) return compressed;
+  if (entry.method === 0) {
+    if (compressed.byteLength > MAX_EPUB_ENTRY_BYTES) {
+      throw new Error(`The EPUB entry ${entry.name} is too large to open safely.`);
+    }
+    return compressed;
+  }
   if (entry.method !== 8 || typeof DecompressionStream === "undefined") {
     throw new Error("This EPUB uses a compression format this device cannot open.");
   }
   const stream = new Blob([compressed]).stream().pipeThrough(
     new DecompressionStream("deflate-raw"),
   );
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_EPUB_ENTRY_BYTES) {
+      await reader.cancel();
+      throw new Error(`The EPUB entry ${entry.name} is too large to open safely.`);
+    }
+    chunks.push(value);
+  }
+
+  const inflated = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    inflated.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return inflated;
 }
 
 async function entryText(
@@ -136,6 +178,9 @@ function chapterText(markup: string) {
 }
 
 export async function readEpub(file: Blob): Promise<EpubBook> {
+  if (file.size > MAX_EPUB_BYTES) {
+    throw new Error("This EPUB is larger than 50 MB.");
+  }
   const archive = readZipEntries(await file.arrayBuffer());
   const container = xml(await entryText(archive, "META-INF/container.xml"));
   const packagePath = xmlElements(container, "rootfile")[0]?.getAttribute("full-path");
