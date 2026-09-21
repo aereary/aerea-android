@@ -30,5 +30,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions/_shared",
+    "supabase/functions/ao3-sync-apply",
+    "supabase/functions/ao3-sync-preview",
+    "supabase/functions/drive-library-sync",
+    "supabase/functions/library-content-publish",
+    "supabase/functions/library-sync-apply",
+    "supabase/functions/library-sync-preview"
+  ]
 }

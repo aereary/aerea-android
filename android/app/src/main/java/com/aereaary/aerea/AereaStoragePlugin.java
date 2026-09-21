@@ -122,6 +122,19 @@ public class AereaStoragePlugin extends Plugin {
         }
     }
 
+    private void moveReplacing(File source, File target) throws Exception {
+        try {
+            Files.move(
+                    source.toPath(), target.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (Exception atomicMoveError) {
+            Files.move(
+                    source.toPath(), target.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     @PluginMethod
     public void pickLibraryImages(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
@@ -540,6 +553,8 @@ public class AereaStoragePlugin extends Plugin {
             File directory = new File(getContext().getFilesDir(), "study-files");
             File stored = existingFile == null ? new File(directory, id + ".epub") : existingFile;
             File pending = new File(directory, id + ".epub.download");
+            File previous = new File(directory, id + ".epub.previous");
+            boolean installed = false;
             HttpURLConnection connection = null;
             try {
                 if (!directory.exists() && !directory.mkdirs()) {
@@ -583,16 +598,12 @@ public class AereaStoragePlugin extends Plugin {
                     throw new IllegalStateException("Google Drive did not return a valid EPUB file");
                 }
 
-                try {
-                    Files.move(
-                            pending.toPath(), stored.toPath(),
-                            StandardCopyOption.REPLACE_EXISTING,
-                            StandardCopyOption.ATOMIC_MOVE);
-                } catch (Exception atomicMoveError) {
-                    Files.move(
-                            pending.toPath(), stored.toPath(),
-                            StandardCopyOption.REPLACE_EXISTING);
+                previous.delete();
+                if (stored.isFile()) {
+                    moveReplacing(stored, previous);
                 }
+                moveReplacing(pending, stored);
+                installed = true;
 
                 ContentValues values = new ContentValues();
                 values.put("name", fileName);
@@ -603,14 +614,26 @@ public class AereaStoragePlugin extends Plugin {
                 values.put("updated_at", now);
                 values.put("source_drive_file_id", driveFileId);
                 values.put("source_work_id", workId);
-                if (existingId == null) {
-                    values.put("id", id);
-                    values.put("created_at", createdAt);
-                    database.getWritableDatabase().insertOrThrow("study_files", null, values);
-                } else {
-                    database.getWritableDatabase().update(
-                            "study_files", values, "id=?", new String[]{id});
+                SQLiteDatabase writable = database.getWritableDatabase();
+                writable.beginTransaction();
+                try {
+                    if (existingId == null) {
+                        values.put("id", id);
+                        values.put("created_at", createdAt);
+                        writable.insertOrThrow("study_files", null, values);
+                    } else {
+                        int updated = writable.update(
+                                "study_files", values, "id=?", new String[]{id});
+                        if (updated != 1) {
+                            throw new IllegalStateException(
+                                    "Could not update the stored EPUB metadata");
+                        }
+                    }
+                    writable.setTransactionSuccessful();
+                } finally {
+                    writable.endTransaction();
                 }
+                previous.delete();
 
                 JSObject result = new JSObject();
                 result.put("file", studyFileJson(id, fileName, size, createdAt, now));
@@ -619,6 +642,16 @@ public class AereaStoragePlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 pending.delete();
+                try {
+                    if (previous.isFile()) {
+                        stored.delete();
+                        moveReplacing(previous, stored);
+                    } else if (installed) {
+                        stored.delete();
+                    }
+                } catch (Exception restoreError) {
+                    error.addSuppressed(restoreError);
+                }
                 call.reject("Could not save this EPUB from Google Drive", error);
             } finally {
                 if (connection != null) connection.disconnect();

@@ -25,6 +25,15 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "warn",
     },
   },
+  {
+    files: ["supabase/functions/**/*.ts"],
+    // Edge Functions run under Deno and mirror the deployed API payloads,
+    // whose database/RPC responses are intentionally dynamic at the boundary.
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "prefer-const": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
