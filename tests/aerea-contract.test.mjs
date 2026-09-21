@@ -43,6 +43,14 @@ const androidBuildSource = await readFile(
   new URL("../android/app/build.gradle", import.meta.url),
   "utf8",
 );
+const androidStylesSource = await readFile(
+  new URL("../android/app/src/main/res/values/styles.xml", import.meta.url),
+  "utf8",
+);
+const androidColorsSource = await readFile(
+  new URL("../android/app/src/main/res/values/colors.xml", import.meta.url),
+  "utf8",
+);
 const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
@@ -857,6 +865,66 @@ test("reveals a cache miss only with the complete local state committed", () => 
   assert.match(
     pageSource,
     /persistedStateCommitResolverRef\.current = null;[\s\S]{0,80}resolvePersistedStateCommit\(\)/,
+  );
+});
+
+test("keeps native startup covered until the complete local day is committed", () => {
+  const localApplyIndex = startupLoadStateSource.indexOf(
+    "applyPersistedState(localState)",
+  );
+  const commitWaitIndex = startupLoadStateSource.indexOf(
+    "setPersistedStateCommitVersion",
+  );
+  const revealIndex = startupLoadStateSource.indexOf(
+    "setStartupHydrated(true)",
+  );
+
+  assert.match(nativeHtmlSource, /<html lang="en" class="startup-pending">/);
+  assert.match(
+    nativeHtmlSource,
+    /html\.startup-pending #root\{visibility:hidden\}/,
+  );
+  assert.match(
+    pageSource,
+    /const \[startupHydrated, setStartupHydrated\] = useState\(\(\) => !isNative\(\)\)/,
+  );
+  assert.ok(localApplyIndex >= 0);
+  assert.ok(localApplyIndex < commitWaitIndex);
+  assert.ok(commitWaitIndex < revealIndex);
+  assert.match(
+    pageSource,
+    /useLayoutEffect\(\(\) => \{[\s\S]{0,180}classList\.remove\("startup-pending"\)/,
+  );
+  assert.match(
+    startupLoadStateSource,
+    /catch \{[\s\S]{0,260}setStartupHydrated\(true\)/,
+  );
+});
+
+test("uses the saved theme color instead of a black or transparent Android launch frame", () => {
+  assert.match(
+    nativeStorageSource,
+    /public void setLaunchAppearance\(PluginCall call\)/,
+  );
+  assert.match(nativeStorageSource, /putString\(LAUNCH_THEME_COLOR, themeColor\)/);
+  assert.match(mainActivitySource, /AereaStoragePlugin\.launchThemeColor\(this\)/);
+  assert.match(
+    mainActivitySource,
+    /getWebView\(\)\.setBackgroundColor\(launchThemeColor\)/,
+  );
+  assert.doesNotMatch(
+    mainActivitySource,
+    /getWebView\(\)\.setBackgroundColor\(Color\.TRANSPARENT\)/,
+  );
+  assert.match(
+    androidStylesSource,
+    /android:windowBackground">@color\/aerea_launch_background/,
+  );
+  assert.match(androidColorsSource, /aerea_launch_background">#FFF9ED/);
+  assert.match(capacitorSource, /backgroundColor: "#fff9ed"/);
+  assert.match(
+    pageSource,
+    /AereaStorage\.setLaunchAppearance\(\{ themeColor \}\)/,
   );
 });
 

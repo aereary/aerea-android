@@ -3,6 +3,8 @@ package com.aereaary.aerea;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.DocumentsContract;
@@ -39,9 +41,28 @@ import java.io.InputStream;
 
 @CapacitorPlugin(name = "AereaStorage")
 public class AereaStoragePlugin extends Plugin {
+    public static final String LAUNCH_APPEARANCE_PREFERENCES = "aerea-launch-appearance";
+    public static final String LAUNCH_THEME_COLOR = "theme-color";
+    public static final String DEFAULT_LAUNCH_THEME_COLOR = "#FFF9ED";
     private static final long MAX_STUDY_FILE_BYTES = 40L * 1024L * 1024L;
     private static final Pattern DRIVE_FILE_ID = Pattern.compile("^[A-Za-z0-9_-]{8,200}$");
     private AereaDatabase database;
+
+    public static int launchThemeColor(Context context) {
+        SharedPreferences preferences = context.getSharedPreferences(
+                LAUNCH_APPEARANCE_PREFERENCES,
+                Context.MODE_PRIVATE
+        );
+        String storedColor = preferences.getString(
+                LAUNCH_THEME_COLOR,
+                DEFAULT_LAUNCH_THEME_COLOR
+        );
+        try {
+            return Color.parseColor(storedColor);
+        } catch (IllegalArgumentException ignored) {
+            return Color.parseColor(DEFAULT_LAUNCH_THEME_COLOR);
+        }
+    }
 
     @Override
     public void load() {
@@ -58,6 +79,27 @@ public class AereaStoragePlugin extends Plugin {
         file.put("createdAt", Instant.ofEpochMilli(createdAt).toString());
         file.put("updatedAt", Instant.ofEpochMilli(updatedAt).toString());
         return file;
+    }
+
+    @PluginMethod
+    public void setLaunchAppearance(PluginCall call) {
+        String themeColor = call.getString("themeColor");
+        if (themeColor == null) {
+            call.reject("A launch theme color is required.");
+            return;
+        }
+        try {
+            Color.parseColor(themeColor);
+        } catch (IllegalArgumentException error) {
+            call.reject("The launch theme color is invalid.");
+            return;
+        }
+        getContext()
+                .getSharedPreferences(LAUNCH_APPEARANCE_PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .putString(LAUNCH_THEME_COLOR, themeColor)
+                .apply();
+        call.resolve();
     }
 
     private String safeEpubName(String requestedName, int workId) {
