@@ -3,6 +3,7 @@ package com.aereaary.aerea;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -16,6 +17,8 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        int launchThemeColor = AereaStoragePlugin.launchThemeColor(this);
+        getWindow().setBackgroundDrawable(new ColorDrawable(launchThemeColor));
         Intent initialIntent = getIntent();
         if (initialIntent != null && initialIntent.getDataString() != null) {
             AereaAuthPlugin.storePendingLink(this, initialIntent.getDataString());
@@ -41,7 +44,7 @@ public class MainActivity extends BridgeActivity {
         configureEdgeToEdge();
 
         if (getBridge() != null && getBridge().getWebView() != null) {
-            getBridge().getWebView().setBackgroundColor(Color.TRANSPARENT);
+            getBridge().getWebView().setBackgroundColor(launchThemeColor);
             getBridge().getWebView().setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
     }

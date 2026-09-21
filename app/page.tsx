@@ -215,6 +215,7 @@ const AereaMicrophone = registerPlugin<AereaMicrophonePlugin>("AereaMicrophone")
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
+  setLaunchAppearance(options: { themeColor: string }): Promise<void>;
   clearPersonalContent(): Promise<void>;
   listSketches(): Promise<{ pages: SketchPage[] }>;
   saveSketch(options: {
@@ -2792,6 +2793,7 @@ export default function Home() {
   const [appearanceHydrated, setAppearanceHydrated] = useState(
     () => !isNative() || cachedNativeAppearance !== null,
   );
+  const [startupHydrated, setStartupHydrated] = useState(() => !isNative());
   const appearanceHydratedRef = useRef(appearanceHydrated);
   const persistedStateCommitResolverRef = useRef<(() => void) | null>(null);
   const [persistedStateCommitVersion, setPersistedStateCommitVersion] =
@@ -3125,6 +3127,7 @@ export default function Home() {
       background,
       themeColor,
     });
+    void AereaStorage.setLaunchAppearance({ themeColor }).catch(() => undefined);
     document.documentElement.style.background = background;
     document.body.style.background = background;
     document
@@ -3132,6 +3135,11 @@ export default function Home() {
       ?.setAttribute("content", themeColor);
     document.documentElement.classList.remove("appearance-pending");
   }, [appearanceHydrated, appTheme, colorMode, customTheme]);
+
+  useLayoutEffect(() => {
+    if (!startupHydrated) return;
+    document.documentElement.classList.remove("startup-pending");
+  }, [startupHydrated]);
 
   useLayoutEffect(() => {
     const resolvePersistedStateCommit =
@@ -3694,6 +3702,7 @@ export default function Home() {
           }
           setPersistedStateCommitVersion((current) => current + 1);
         });
+        setStartupHydrated(true);
         if (cancelled) return;
         const reconciledPayload =
           (await reconcileCloudState(payload)) || payload;
@@ -3729,6 +3738,7 @@ export default function Home() {
           appearanceHydratedRef.current = true;
           setAppearanceHydrated(true);
         }
+        setStartupHydrated(true);
       } finally {
         if (!cancelled) setStateReady(true);
       }
