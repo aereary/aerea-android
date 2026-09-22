@@ -11,6 +11,9 @@ const genericDrive = await read(
   "automation/apps-script/aerea/GenericLibrary.gs",
 );
 const autoSync = await read("automation/apps-script/aerea/AutoSync.gs");
+const drivePushSync = await read(
+  "automation/apps-script/aerea/DrivePushSync.gs",
+);
 const manifest = await read("automation/apps-script/aerea/appsscript.json");
 const googleAuth = await read(
   "supabase/functions/_shared/google-auth.ts",
@@ -20,17 +23,58 @@ const studyReader = await read("app/study-reader.tsx");
 const migration = await read(
   "supabase/migrations/20260921153000_harden_ao3_library.sql",
 );
+const driveSignalMigration = await read(
+  "supabase/migrations/20260922153000_drive_change_signal.sql",
+);
+const driveSignalFunction = await read(
+  "supabase/functions/drive-change-signal/index.ts",
+);
 
 test("keeps the Apps Script project parseable and free of environment IDs", () => {
-  for (const source of [config, ao3Drive, genericDrive, autoSync]) {
+  for (const source of [
+    config,
+    ao3Drive,
+    genericDrive,
+    autoSync,
+    drivePushSync,
+  ]) {
     assert.doesNotThrow(() => new Function(source));
   }
   assert.doesNotThrow(() => JSON.parse(manifest));
-  const combined = [config, ao3Drive, genericDrive, autoSync].join("\n");
+  const combined = [
+    config,
+    ao3Drive,
+    genericDrive,
+    autoSync,
+    drivePushSync,
+  ].join("\n");
   assert.doesNotMatch(combined, /script\.google\.com\/d\//);
   assert.doesNotMatch(combined, /https:\/\/[a-z]+\.supabase\.co/);
   assert.match(config, /AEREA_SUPABASE_FUNCTIONS_BASE_URL/);
   assert.match(ao3Drive, /aereaRequiredProperty_\("AEREA_DOWNLOADS_FOLDER_ID"\)/);
+});
+
+test("uses authenticated Drive notifications without modifying Drive content", () => {
+  assert.match(drivePushSync, /drive\/v3\/changes\/watch/);
+  assert.match(drivePushSync, /aereaRelevantDriveChanges_/);
+  assert.match(drivePushSync, /everyMinutes\(AEREA_DRIVE_PUSH\.CHECK_EVERY_MINUTES\)/);
+  assert.match(drivePushSync, /aereaAutoSyncAll\(\)/);
+  assert.match(drivePushSync, /aereaAutoSyncStatus\(\)/);
+  assert.doesNotMatch(
+    drivePushSync,
+    /setName\(|moveTo\(|setTrashed\(|Drive\.Files\.remove|Drive\.Files\.delete/,
+  );
+
+  assert.match(driveSignalFunction, /x-goog-channel-token/);
+  assert.match(driveSignalFunction, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(driveSignalFunction, /aerea_library_owner_exists/);
+  assert.match(driveSignalFunction, /aerea_mark_drive_sync_pending/);
+  assert.match(driveSignalMigration, /enable row level security/);
+  assert.match(
+    driveSignalMigration,
+    /revoke all privileges on table public\.aerea_drive_sync_signal from authenticated/,
+  );
+  assert.match(driveSignalMigration, /generation = generation \+ 1/);
 });
 
 test("inventories Drive once and opens file blobs only when needed", () => {
