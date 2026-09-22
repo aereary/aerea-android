@@ -11,12 +11,29 @@ test("generic books hydrate and refresh without waiting for AO3 grid", () => {
   assert.match(bridge, /writeGenericLibraryCache\(nextItems, nextVersions\)/);
   assert.match(
     bridge,
-    /const cached = readGenericLibraryCache\(\);[\s\S]{0,260}void refreshGenericLibrary\(\);/,
+    /useState<GenericLibraryCache \| null>\([\s\S]{0,80}readGenericLibraryCache/,
   );
   assert.doesNotMatch(
     bridge,
     /if \(!target\) return;[\s\S]{0,100}void refreshGenericLibrary\(\)/,
   );
+});
+
+test("cached Library content mounts before paint without the visible card jump", () => {
+  assert.match(ao3, /useState<LibraryCache \| null>\(readCache\)/);
+  assert.match(ao3, /useState<Ao3Work\[]>\([\s\S]{0,100}initialCache\?\.works/);
+  assert.doesNotMatch(ao3, /const hydrate = window\.setTimeout/);
+  assert.match(bridge, /useLayoutEffect\(\(\) => \{[\s\S]{0,320}syncTarget\(\)/);
+  assert.match(bridge, /initialCache\?\.items/);
+});
+
+test("normal books have their own Library category and stable result count", () => {
+  assert.match(ao3, /type LibraryTypeFilter = "all" \| "fic" \| "series" \| "book"/);
+  assert.match(ao3, /<option value="book">Books<\/option>/);
+  assert.match(ao3, /disabled=\{typeFilter === "book"\}/);
+  assert.match(bridge, /filterMode === "books"/);
+  assert.match(bridge, /aereaGenericCount/);
+  assert.match(bridge, /aerea-generic-result-count/);
 });
 
 test("generic bridge does not observe every body mutation", () => {

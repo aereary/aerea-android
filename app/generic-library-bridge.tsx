@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./supabase-sync";
 
@@ -40,6 +46,8 @@ type GenericLibraryCache = {
   versions: GenericLibraryVersion[];
   savedAt: number;
 };
+
+type GenericFilterMode = "all" | "books" | "hidden";
 
 const GENERIC_LIBRARY_CACHE_KEY = "aerea-generic-library-cache-v1";
 
@@ -292,12 +300,19 @@ function GenericLibraryCard({
 
 export default function GenericLibraryBridge() {
   const [target, setTarget] = useState<HTMLElement | null>(null);
-  const [items, setItems] = useState<GenericLibraryItem[]>([]);
-  const [versions, setVersions] = useState<GenericLibraryVersion[]>([]);
+  const [initialCache] = useState<GenericLibraryCache | null>(
+    readGenericLibraryCache,
+  );
+  const [items, setItems] = useState<GenericLibraryItem[]>(
+    () => initialCache?.items || [],
+  );
+  const [versions, setVersions] = useState<GenericLibraryVersion[]>(
+    () => initialCache?.versions || [],
+  );
   const [query, setQuery] = useState("");
-  const [filtersNeutral, setFiltersNeutral] = useState(true);
+  const [filterMode, setFilterMode] = useState<GenericFilterMode>("all");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const syncTarget = () => {
       const next = document.querySelector<HTMLElement>(
         ".ao3-library-layer .ao3-grid",
@@ -352,12 +367,6 @@ export default function GenericLibraryBridge() {
   }, []);
 
   useEffect(() => {
-    const cached = readGenericLibraryCache();
-    if (cached) {
-      setItems(cached.items);
-      setVersions(cached.versions);
-    }
-
     // Refresh immediately, not after AO3 finishes creating its grid.
     void refreshGenericLibrary();
 
@@ -385,21 +394,31 @@ export default function GenericLibraryBridge() {
 
     if (!layer) {
       setQuery("");
-      setFiltersNeutral(true);
+      setFilterMode("all");
       return;
     }
 
     const syncFilters = () => {
       const search = layer.querySelector<HTMLInputElement>(".ao3-search");
       const selects = layer.querySelectorAll(".ao3-filter-row select");
+      const typeFilter = selects.item(0);
 
       setQuery(search?.value || "");
-      setFiltersNeutral(
-        Array.from(selects).every(
-          (select) =>
-            select instanceof HTMLSelectElement && select.value === "all",
-        ),
-      );
+      if (
+        typeFilter instanceof HTMLSelectElement &&
+        typeFilter.value === "book"
+      ) {
+        setFilterMode("books");
+      } else {
+        setFilterMode(
+          Array.from(selects).every(
+            (select) =>
+              select instanceof HTMLSelectElement && select.value === "all",
+          )
+            ? "all"
+            : "hidden",
+        );
+      }
     };
 
     let inputTimer: number | null = null;
@@ -439,7 +458,7 @@ export default function GenericLibraryBridge() {
      * AO3-specific filters (Fics / Series, WIP / Complete, fandom)
      * intentionally hide generic books. This keeps AO3 filter behavior intact.
      */
-    if (!filtersNeutral) return [];
+    if (filterMode === "hidden") return [];
 
     const needle = normalizeSearch(query.trim());
     if (!needle) return items;
@@ -451,9 +470,26 @@ export default function GenericLibraryBridge() {
           .join(" "),
       ).includes(needle),
     );
-  }, [filtersNeutral, items, query]);
+  }, [filterMode, items, query]);
 
-  useEffect(() => {
+  const countTarget = target
+    ?.closest<HTMLElement>(".ao3-library-layer")
+    ?.querySelector<HTMLElement>(".ao3-result-count") || null;
+  const ao3Total = Number(countTarget?.dataset.ao3Total || 0);
+  const ao3Visible = Number(countTarget?.dataset.ao3Visible || 0);
+  const overridesCount =
+    filterMode === "books" || (filterMode === "all" && items.length > 0);
+  const resultLabel = useMemo(() => {
+    if (filterMode === "books") {
+      return `${filtered.length} ${filtered.length === 1 ? "book" : "books"}`;
+    }
+
+    const total = ao3Total + items.length;
+    const visible = ao3Visible + filtered.length;
+    return visible === total ? `${total} cards` : `${visible} of ${total} cards`;
+  }, [ao3Total, ao3Visible, filterMode, filtered.length, items.length]);
+
+  useLayoutEffect(() => {
     const layer = target?.closest<HTMLElement>(".ao3-library-layer");
     if (!layer) return;
 
@@ -462,11 +498,17 @@ export default function GenericLibraryBridge() {
     } else {
       delete layer.dataset.aereaGenericVisible;
     }
+    if (overridesCount) {
+      layer.dataset.aereaGenericCount = "true";
+    } else {
+      delete layer.dataset.aereaGenericCount;
+    }
 
     return () => {
       delete layer.dataset.aereaGenericVisible;
+      delete layer.dataset.aereaGenericCount;
     };
-  }, [filtered.length, target]);
+  }, [filtered.length, overridesCount, target]);
 
   return (
     <>
@@ -486,6 +528,13 @@ export default function GenericLibraryBridge() {
             target,
           )
         : null}
+
+      {countTarget && overridesCount
+        ? createPortal(
+            <span className="aerea-generic-result-count">{resultLabel}</span>,
+            countTarget,
+          )
+        : null}
     </>
   );
 }
@@ -498,6 +547,9 @@ const GENERIC_LIBRARY_CSS = String.raw`
   grid-template-columns: minmax(0, 1fr);
 }
 .ao3-library-layer[data-aerea-generic-visible="true"] .ao3-empty {
+  display: none;
+}
+.ao3-library-layer[data-aerea-generic-count="true"] .ao3-native-result-count {
   display: none;
 }
 `;
