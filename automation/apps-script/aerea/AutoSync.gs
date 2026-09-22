@@ -11,7 +11,8 @@
  *   1) AO3
  *   2) Biblioteca genérica
  *
- * Un único trigger cada 10 minutos.
+ * Un trigger de respaldo cada 10 minutos. DrivePushSync.gs puede añadir una
+ * ruta rápida basada en avisos sin eliminar este respaldo.
  */
 
 const AEREA_AUTO_SYNC = {

@@ -35,6 +35,7 @@
     "supabase/functions/_shared",
     "supabase/functions/ao3-sync-apply",
     "supabase/functions/ao3-sync-preview",
+    "supabase/functions/drive-change-signal",
     "supabase/functions/drive-library-sync",
     "supabase/functions/library-content-publish",
     "supabase/functions/library-sync-apply",
