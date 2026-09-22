@@ -28,12 +28,15 @@ test("restores generic Drive books inside the AO3 Library without replacing AO3"
   assert.match(bridge, /↗ Open in Drive/);
   assert.match(bridge, /Previous version/);
   assert.match(bridge, /\.ao3-library-layer \.ao3-grid/);
-  assert.match(bridge, /if \(!filtersNeutral\) return \[\]/);
+  assert.match(bridge, /if \(filterMode === "hidden"\) return \[\]/);
+  assert.match(bridge, /typeFilter\.value === "book"/);
+  assert.match(bridge, /setFilterMode\("books"\)/);
 
   assert.match(ao3, /className=\{`ao3-library-layer/);
   assert.match(ao3, /className="ao3-grid"/);
   assert.match(ao3, /\.from\("ao3_works"\)/);
   assert.match(ao3, /\.from\("ao3_epub_versions"\)/);
+  assert.match(ao3, /<option value="book">Books<\/option>/);
 });
 
 test("generic books remain visually distinct but use the AO3 card language", () => {

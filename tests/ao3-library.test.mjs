@@ -61,8 +61,9 @@ test("reads the private automatic AO3 catalog from Supabase without joining priv
 });
 
 test("keeps a valid offline cache and refreshes automatically", () => {
-  assert.match(ao3Source, /const cached = readCache\(\)/);
-  assert.match(ao3Source, /setWorks\(cached\.works\)/);
+  assert.match(ao3Source, /useState<LibraryCache \| null>\(readCache\)/);
+  assert.match(ao3Source, /initialCache\?\.works/);
+  assert.match(ao3Source, /initialCache\?\.epubs/);
   assert.match(ao3Source, /writeCache\(result\.works, result\.epubs\)/);
   assert.match(ao3Source, /keeping the last safe copy/);
   assert.match(ao3Source, /refreshPromiseRef\.current/);

@@ -66,6 +66,8 @@ type SingleEntry = {
 
 type LibraryEntry = SeriesGroup | SingleEntry;
 
+type LibraryTypeFilter = "all" | "fic" | "series" | "book";
+
 export type Ao3EpubDownloadTarget = {
   title: string;
   driveFileId: string;
@@ -960,18 +962,23 @@ function Ao3SearchInput({
 export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const libraryLayerRef = useRef<HTMLElement | null>(null);
   const lastScrollTopRef = useRef(0);
-  const knownWorkCountRef = useRef(0);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
   const refreshQueuedRef = useRef(false);
-  const [works, setWorks] = useState<Ao3Work[]>([]);
-  const [epubs, setEpubs] = useState<EpubVersion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialCache] = useState<LibraryCache | null>(readCache);
+  const knownWorkCountRef = useRef(initialCache?.works.length || 0);
+  const [works, setWorks] = useState<Ao3Work[]>(
+    () => initialCache?.works || [],
+  );
+  const [epubs, setEpubs] = useState<EpubVersion[]>(
+    () => initialCache?.epubs || [],
+  );
+  const [loading, setLoading] = useState(() => !initialCache);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchToolsHidden, setSearchToolsHidden] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<"all" | "fic" | "series">("all");
+  const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "complete" | "wip">(
     "all",
   );
@@ -1022,17 +1029,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   }, []);
 
   useEffect(() => {
-    const hydrate = window.setTimeout(() => {
-      const cached = readCache();
-      if (cached) {
-        knownWorkCountRef.current = cached.works.length;
-        setWorks(cached.works);
-        setEpubs(cached.epubs);
-        setLoading(false);
-      }
-      void refresh(false);
-    }, 0);
-    return () => window.clearTimeout(hydrate);
+    const refreshTimer = window.setTimeout(() => void refresh(false), 0);
+    return () => window.clearTimeout(refreshTimer);
   }, [refresh]);
 
   useEffect(() => {
@@ -1118,6 +1116,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   }, [entries]);
 
   const filtered = useMemo(() => {
+    if (typeFilter === "book") return [];
+
     const needle = normalized(query.trim());
     return entries.filter((entry) => {
       if (typeFilter !== "all" && entry.kind !== typeFilter) return false;
@@ -1280,16 +1280,24 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         <div className="ao3-filter-row">
           <select
             value={typeFilter}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-              setTypeFilter(event.target.value as "all" | "fic" | "series")
-            }
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+              const nextFilter = event.target.value as LibraryTypeFilter;
+              setTypeFilter(nextFilter);
+              setActiveTag(null);
+              if (nextFilter === "book") {
+                setStatusFilter("all");
+                setFandomFilter("all");
+              }
+            }}
           >
             <option value="all">All</option>
             <option value="fic">Fics</option>
             <option value="series">Series</option>
+            <option value="book">Books</option>
           </select>
           <select
             value={statusFilter}
+            disabled={typeFilter === "book"}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setStatusFilter(event.target.value as "all" | "complete" | "wip")
             }
@@ -1300,6 +1308,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           </select>
           <select
             value={fandomFilter}
+            disabled={typeFilter === "book"}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => setFandomFilter(event.target.value)}
           >
             <option value="all">All fandoms</option>
@@ -1311,10 +1320,16 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           </select>
         </div>
 
-        <p className="ao3-result-count">
-          {filtered.length === entries.length
-            ? `${entries.length} cards`
-            : `${filtered.length} of ${entries.length} cards`}
+        <p
+          className="ao3-result-count"
+          data-ao3-total={entries.length}
+          data-ao3-visible={filtered.length}
+        >
+          <span className="ao3-native-result-count">
+            {filtered.length === entries.length
+              ? `${entries.length} cards`
+              : `${filtered.length} of ${entries.length} cards`}
+          </span>
         </p>
 
         {error && (
@@ -1528,6 +1543,7 @@ html[data-native="true"] .ao3-library-tools {
 }
 .ao3-filter-row { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 8px; }
 .ao3-filter-row select { min-width: 0; min-height: 44px; border-radius: 12px; padding: 0 10px; }
+.ao3-filter-row select:disabled { opacity: .58; }
 .ao3-filter-row select:last-child { grid-column: 1 / -1; }
 .ao3-result-count { margin: 8px 2px 0; color: var(--ao3-muted); font-size: .84rem; }
 .ao3-error { margin-top: 9px; padding: 10px 12px; display: grid; gap: 2px; border: 1px solid #e8caca; border-radius: 12px; background: #fff3f3; font-size: .85rem; }
