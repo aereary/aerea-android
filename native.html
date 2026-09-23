@@ -52,6 +52,20 @@
         }
       })();
     </script>
+    <script>
+      (() => {
+        try {
+          const cached = JSON.parse(
+            localStorage.getItem("aerea-native-launch-state-v1") || "null",
+          );
+          if (cached?.version === 1 && cached.state && typeof cached.state === "object") {
+            document.documentElement.classList.remove("startup-pending");
+          }
+        } catch {
+          // The first launch stays covered until SQLite restores the saved day.
+        }
+      })();
+    </script>
     <script type="module" src="/app/native-entry.tsx"></script>
   </body>
 </html>
