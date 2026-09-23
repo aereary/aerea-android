@@ -149,6 +149,7 @@ type AppTheme =
   | "velvetrest"
   | "lovelyevening"
   | "rosegrid"
+  | "littlesheets"
   | "noirrest"
   | "ao3night"
   | "peachparlor"
@@ -1286,6 +1287,22 @@ const themeOptions: {
     charm: "you may rest",
     featured: true,
     interfaceIdea: "editorial grid",
+  },
+  {
+    id: "littlesheets",
+    name: "Little Sheets Lab",
+    description: "The experimental card system: airy surfaces and animated sheets that rise from below.",
+    colors: ["#b6dfef", "#fffdf8", "#ff8d62"],
+    icon: "▱",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "little sheets",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "animated sheets",
   },
   {
     id: "peachparlor",
