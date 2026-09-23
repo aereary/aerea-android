@@ -2,6 +2,7 @@
 
 import {
   Ao3Library,
+  Ao3LibraryOpening,
   type Ao3EpubDownloadTarget,
 } from "./ao3-library";
 import GenericLibraryBridge from "./generic-library-bridge";
@@ -2378,6 +2379,8 @@ export default function Home() {
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
+  const [ao3LibraryLaunching, setAo3LibraryLaunching] = useState(false);
+  const ao3LaunchFrameRef = useRef<number | null>(null);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
   >({});
@@ -5763,19 +5766,35 @@ export default function Home() {
     widgetDaysJson,
   ]);
 
-  useEffect(() => {
-    const closeAo3FromHistory = () => setAo3LibraryOpen(false);
-    window.addEventListener("popstate", closeAo3FromHistory);
-    return () => window.removeEventListener("popstate", closeAo3FromHistory);
+  const cancelAo3LibraryLaunch = useCallback(() => {
+    if (ao3LaunchFrameRef.current !== null) {
+      window.cancelAnimationFrame(ao3LaunchFrameRef.current);
+      ao3LaunchFrameRef.current = null;
+    }
   }, []);
+
+  useEffect(() => {
+    const closeAo3FromHistory = () => {
+      cancelAo3LibraryLaunch();
+      setAo3LibraryLaunching(false);
+      setAo3LibraryOpen(false);
+    };
+    window.addEventListener("popstate", closeAo3FromHistory);
+    return () => {
+      cancelAo3LibraryLaunch();
+      window.removeEventListener("popstate", closeAo3FromHistory);
+    };
+  }, [cancelAo3LibraryLaunch]);
 
   const closeAo3Library = useCallback(() => {
     if (window.history.state?.[AO3_HISTORY_MARKER]) {
       window.history.back();
       return;
     }
+    cancelAo3LibraryLaunch();
+    setAo3LibraryLaunching(false);
     setAo3LibraryOpen(false);
-  }, []);
+  }, [cancelAo3LibraryLaunch]);
 
   const saveAo3Epub = async (target: Ao3EpubDownloadTarget) => {
     if (!isNative()) {
@@ -5809,14 +5828,25 @@ export default function Home() {
       setAereaHubOpen(true);
       return;
     }
-    if (!ao3LibraryOpen) {
+    if (!ao3LibraryOpen && !ao3LibraryLaunching) {
       window.history.pushState(
         { ...window.history.state, [AO3_HISTORY_MARKER]: true },
         "",
       );
-      setAo3LibraryOpen(true);
+      setAo3LibraryLaunching(true);
+
+      // Let the lightweight AO3 screen paint before cached books are parsed,
+      // grouped and rendered. Two frames guarantee one complete paint between
+      // the tap and the expensive Library mount on Android WebView.
+      ao3LaunchFrameRef.current = window.requestAnimationFrame(() => {
+        ao3LaunchFrameRef.current = window.requestAnimationFrame(() => {
+          ao3LaunchFrameRef.current = null;
+          setAo3LibraryOpen(true);
+          setAo3LibraryLaunching(false);
+        });
+      });
     }
-  }, [ao3LibraryOpen, brandOpensAo3]);
+  }, [ao3LibraryLaunching, ao3LibraryOpen, brandOpensAo3]);
 
   const sendQaNotification = async () => {
     if (!isNative()) return;
@@ -6147,7 +6177,7 @@ export default function Home() {
   useEffect(() => {
     if (!isNative()) return;
     const onAndroidBack = () => {
-      const consumesNavigation = Boolean(eventDeleteRequest || eventEditorOpen || selectedEventDetail || selectedFootballMatch || daySummaryDate || activeStudyFile || selectedLibraryItem || quickCaptureOpen || postItEditorOpen || habitEditorOpen || classEditorOpen || taskLinkEditorId || categoryEditorOpen || monthPickerOpen || calendarSearchOpen || settingsOpen || metricsOpen || ao3LibraryOpen || aereaHubOpen || sketchFullscreen || calendarExpanded || calendarScheduleOpen || calendarOpen || space !== "menu" || tabHistory.length || activeTab !== "today");
+      const consumesNavigation = Boolean(eventDeleteRequest || eventEditorOpen || selectedEventDetail || selectedFootballMatch || daySummaryDate || activeStudyFile || selectedLibraryItem || quickCaptureOpen || postItEditorOpen || habitEditorOpen || classEditorOpen || taskLinkEditorId || categoryEditorOpen || monthPickerOpen || calendarSearchOpen || settingsOpen || metricsOpen || ao3LibraryLaunching || ao3LibraryOpen || aereaHubOpen || sketchFullscreen || calendarExpanded || calendarScheduleOpen || calendarOpen || space !== "menu" || tabHistory.length || activeTab !== "today");
       if (consumesNavigation) lastExitBackRef.current = 0;
       if (eventDeleteRequest) return setEventDeleteRequest(null);
       if (eventEditorOpen) { setEventEditorOpen(false); setEditingEventId(null); return; }
@@ -6165,7 +6195,7 @@ export default function Home() {
       if (calendarSearchOpen) return setCalendarSearchOpen(false);
       if (settingsOpen) return setSettingsOpen(false);
       if (metricsOpen) return setMetricsOpen(false);
-      if (ao3LibraryOpen) { window.history.back(); return; }
+      if (ao3LibraryLaunching || ao3LibraryOpen) { window.history.back(); return; }
       if (aereaHubOpen) return setAereaHubOpen(false);
       if (sketchFullscreen) return setSketchFullscreen(false);
       if (calendarExpanded) return setCalendarExpanded(false);
@@ -6186,7 +6216,7 @@ export default function Home() {
     };
     window.addEventListener("aereaAndroidBack", onAndroidBack);
     return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
-  }, [activeStudyFile, selectedLibraryItem, eventDeleteRequest, eventEditorOpen, selectedEventDetail, selectedFootballMatch, daySummaryDate, quickCaptureOpen, postItEditorOpen, habitEditorOpen, classEditorOpen, taskLinkEditorId, categoryEditorOpen, monthPickerOpen, calendarSearchOpen, settingsOpen, metricsOpen, ao3LibraryOpen, aereaHubOpen, sketchFullscreen, calendarExpanded, calendarScheduleOpen, calendarOpen, space, activeTab, tabHistory]);
+  }, [activeStudyFile, selectedLibraryItem, eventDeleteRequest, eventEditorOpen, selectedEventDetail, selectedFootballMatch, daySummaryDate, quickCaptureOpen, postItEditorOpen, habitEditorOpen, classEditorOpen, taskLinkEditorId, categoryEditorOpen, monthPickerOpen, calendarSearchOpen, settingsOpen, metricsOpen, ao3LibraryLaunching, ao3LibraryOpen, aereaHubOpen, sketchFullscreen, calendarExpanded, calendarScheduleOpen, calendarOpen, space, activeTab, tabHistory]);
 
   const openMetrics = () => {
     setMetricsAnchorDate(new Date());
@@ -9482,8 +9512,8 @@ export default function Home() {
       <div className="paper-grain" aria-hidden="true" />
       <section
         ref={phoneCanvasRef}
-        aria-hidden={ao3LibraryOpen ? true : undefined}
-        inert={ao3LibraryOpen ? true : undefined}
+        aria-hidden={ao3LibraryLaunching || ao3LibraryOpen ? true : undefined}
+        inert={ao3LibraryLaunching || ao3LibraryOpen ? true : undefined}
         className={
           sketchFullscreen
             ? "phone-canvas sketchbook-fullscreen-active"
@@ -11485,6 +11515,10 @@ export default function Home() {
           </nav>
         )}
       </section>
+
+      {ao3LibraryLaunching && !ao3LibraryOpen && (
+        <Ao3LibraryOpening onBack={closeAo3Library} />
+      )}
 
       {ao3LibraryOpen && (
         <>
