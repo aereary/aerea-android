@@ -1067,6 +1067,54 @@ type PersistedPayload = {
   state?: PersistedState | null;
 };
 
+const NATIVE_LAUNCH_STATE_KEY = "aerea-native-launch-state-v1";
+
+type NativeLaunchStateCache = {
+  version: 1;
+  state: PersistedState;
+};
+
+function readNativeLaunchState() {
+  if (typeof window === "undefined") return null;
+  try {
+    const cached = JSON.parse(
+      window.localStorage.getItem(NATIVE_LAUNCH_STATE_KEY) || "null",
+    ) as NativeLaunchStateCache | null;
+    return cached?.version === 1 && cached.state && typeof cached.state === "object"
+      ? cached.state
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeNativeLaunchState(state: PersistedState) {
+  if (typeof window === "undefined") return;
+  const launchState: PersistedState = {
+    reminderHistory: state.reminderHistory,
+    reminders: state.reminders,
+    habits: state.habits,
+    moodHistory: state.moodHistory,
+    completedDays: state.completedDays,
+    calendarEvents: state.calendarEvents,
+    tasks: state.tasks,
+    postIts: state.postIts,
+    postItGroups: state.postItGroups,
+    sportsEvents: state.sportsEvents,
+    calendarCategories: state.calendarCategories,
+    focusSessions: state.focusSessions,
+    simplifiedCalendarMode: state.simplifiedCalendarMode,
+  };
+  try {
+    window.localStorage.setItem(
+      NATIVE_LAUNCH_STATE_KEY,
+      JSON.stringify({ version: 1, state: launchState }),
+    );
+  } catch {
+    // SQLite remains authoritative if the small launch cache is unavailable.
+  }
+}
+
 const themeOptions: {
   id: Exclude<AppTheme, "custom">;
   name: string;
@@ -2395,6 +2443,9 @@ function eventRepeatLabel(event: CalendarEvent) {
 
 export default function Home() {
   const todayKey = localDateKey();
+  const [cachedNativeState] = useState<PersistedState | null>(() =>
+    isNative() ? readNativeLaunchState() : null,
+  );
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [tabHistory, setTabHistory] = useState<Tab[]>([]);
   const primarySwipeSurfaceRef = useRef<HTMLDivElement | null>(null);
@@ -2417,12 +2468,18 @@ export default function Home() {
   const ao3LaunchFrameRef = useRef<number | null>(null);
   const [reminderHistory, setReminderHistory] = useState<
     Record<string, number[]>
-  >({});
-  const [reminders, setReminders] = useState<Reminder[]>(starterReminders);
-  const [habits, setHabits] = useState<Habit[]>(starterHabits);
-  const [moodHistory, setMoodHistory] = useState<Record<string, string>>({});
+  >(cachedNativeState?.reminderHistory ?? {});
+  const [reminders, setReminders] = useState<Reminder[]>(
+    cachedNativeState?.reminders ?? starterReminders,
+  );
+  const [habits, setHabits] = useState<Habit[]>(
+    cachedNativeState?.habits ?? starterHabits,
+  );
+  const [moodHistory, setMoodHistory] = useState<Record<string, string>>(
+    cachedNativeState?.moodHistory ?? {},
+  );
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
-    {},
+    cachedNativeState?.completedDays ?? {},
   );
   const [journalText, setJournalText] = useState("");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -2431,7 +2488,9 @@ export default function Home() {
   const [focusSeconds, setFocusSeconds] = useState(25 * 60);
   const [focusLength, setFocusLength] = useState(25);
   const [timerRunning, setTimerRunning] = useState(false);
-  const [focusSessions, setFocusSessions] = useState(0);
+  const [focusSessions, setFocusSessions] = useState(
+    cachedNativeState?.focusSessions ?? 0,
+  );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [calendarScheduleOpen, setCalendarScheduleOpen] = useState(false);
@@ -2439,7 +2498,9 @@ export default function Home() {
   const [calendarSearchQuery, setCalendarSearchQuery] = useState("");
   const [hiddenCalendarSources, setHiddenCalendarSources] = useState<string[]>([]);
   const [calendarCategories, setCalendarCategories] = useState<CalendarCategory[]>(
-    starterCalendarCategories,
+    cachedNativeState?.calendarCategories?.length
+      ? cachedNativeState.calendarCategories
+      : starterCalendarCategories,
   );
   const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -2483,7 +2544,9 @@ export default function Home() {
     makeEventDraft(todayKey),
   );
   const [todoDraft, setTodoDraft] = useState("");
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(
+    cachedNativeState?.calendarEvents ?? [],
+  );
 
   const [healthRoutineOpen, setHealthRoutineOpen] = useState(false);
   const [healthRoutineEditorOpen, setHealthRoutineEditorOpen] = useState(false);
@@ -2726,7 +2789,7 @@ export default function Home() {
   };
 
   const [footballMatches, setFootballMatches] = useState<FootballMatch[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>(cachedNativeState?.tasks ?? []);
   const [taskLinkEditorId, setTaskLinkEditorId] = useState<string | null>(null);
   const [taskEditorDraft, setTaskEditorDraft] = useState({
     title: "",
@@ -2738,8 +2801,12 @@ export default function Home() {
   const [quickCaptureText, setQuickCaptureText] = useState("");
   const [quickCaptureFile, setQuickCaptureFile] = useState<File | null>(null);
   const [quickCaptureSaving, setQuickCaptureSaving] = useState(false);
-  const [postIts, setPostIts] = useState<PostItNote[]>([]);
-  const [postItGroups, setPostItGroups] = useState<PostItGroup[]>([]);
+  const [postIts, setPostIts] = useState<PostItNote[]>(
+    cachedNativeState?.postIts ?? [],
+  );
+  const [postItGroups, setPostItGroups] = useState<PostItGroup[]>(
+    cachedNativeState?.postItGroups ?? [],
+  );
   const [selectedPostItIds, setSelectedPostItIds] = useState<string[]>([]);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [libraryCollections, setLibraryCollections] = useState<
@@ -2769,7 +2836,9 @@ export default function Home() {
   const [sportsSettings, setSportsSettings] = useState<SportsSettings>(
     DEFAULT_SPORTS_SETTINGS,
   );
-  const [sportsEvents, setSportsEvents] = useState<SportsEvent[]>([]);
+  const [sportsEvents, setSportsEvents] = useState<SportsEvent[]>(
+    cachedNativeState?.sportsEvents ?? [],
+  );
   const [draggingCalendarEventId, setDraggingCalendarEventId] = useState<
     string | null
   >(null);
@@ -2808,7 +2877,9 @@ export default function Home() {
   const [stateReady, setStateReady] = useState(false);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(false);
+  const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(
+    cachedNativeState?.simplifiedCalendarMode ?? false,
+  );
   const [syncEmail, setSyncEmail] = useState<string | null>(null);
   const [syncCode, setSyncCode] = useState("");
   const [syncMessage, setSyncMessage] = useState("Checking your private sync…");
@@ -2832,7 +2903,9 @@ export default function Home() {
   const [appearanceHydrated, setAppearanceHydrated] = useState(
     () => !isNative() || cachedNativeAppearance !== null,
   );
-  const [startupHydrated, setStartupHydrated] = useState(() => !isNative());
+  const [startupHydrated, setStartupHydrated] = useState(
+    () => !isNative() || cachedNativeState !== null,
+  );
   const appearanceHydratedRef = useRef(appearanceHydrated);
   const persistedStateCommitResolverRef = useRef<(() => void) | null>(null);
   const [persistedStateCommitVersion, setPersistedStateCommitVersion] =
@@ -4015,6 +4088,7 @@ export default function Home() {
               habitRestoreVersion: BUILTIN_HABITS_RESTORE_VERSION,
             };
         if (isNative()) {
+          writeNativeLaunchState(state);
           await AereaStorage.putState({ state: JSON.stringify({ state }) });
         } else {
           writeBrowserState({ state });
@@ -9347,7 +9421,7 @@ export default function Home() {
       <span className="visually-hidden" aria-live="polite">
         {historyMessage}
       </span>
-      {simplifiedCalendarMode && stateReady && (
+      {simplifiedCalendarMode && (stateReady || cachedNativeState !== null) && (
         <section
           className="simplified-calendar-screen"
           aria-label="Little aérea simplified monthly calendar"

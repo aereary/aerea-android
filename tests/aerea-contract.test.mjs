@@ -868,7 +868,7 @@ test("reveals a cache miss only with the complete local state committed", () => 
   );
 });
 
-test("keeps native startup covered until the complete local day is committed", () => {
+test("keeps the first native startup covered until the complete local day is committed", () => {
   const localApplyIndex = startupLoadStateSource.indexOf(
     "applyPersistedState(localState)",
   );
@@ -886,7 +886,7 @@ test("keeps native startup covered until the complete local day is committed", (
   );
   assert.match(
     pageSource,
-    /const \[startupHydrated, setStartupHydrated\] = useState\(\(\) => !isNative\(\)\)/,
+    /const \[startupHydrated, setStartupHydrated\] = useState\([\s\S]{0,120}!isNative\(\) \|\| cachedNativeState !== null/,
   );
   assert.ok(localApplyIndex >= 0);
   assert.ok(localApplyIndex < commitWaitIndex);
