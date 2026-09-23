@@ -84,6 +84,10 @@ type Ao3LibraryProps = {
   }>;
 };
 
+type Ao3LibraryOpeningProps = {
+  onBack: () => void;
+};
+
 const CACHE_KEY = "aerea-ao3-library-cache-v1";
 const PAGE_SIZE = 500;
 const MAX_LIBRARY_ROWS = 20_000;
@@ -956,6 +960,30 @@ function Ao3SearchInput({
       placeholder="Search title, author, ship, tag…"
       type="search"
     />
+  );
+}
+
+export function Ao3LibraryOpening({ onBack }: Ao3LibraryOpeningProps) {
+  return (
+    <section
+      className="ao3-library-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="My AO3 Library"
+      aria-busy="true"
+    >
+      <style>{AO3_LIBRARY_CSS}</style>
+      <header className="ao3-screen-header">
+        <button type="button" onClick={onBack}>
+          ← Library
+        </button>
+      </header>
+      <div className="ao3-library ao3-library-state">
+        <div className="ao3-loader" />
+        <strong>Preparing your AO3 Library…</strong>
+        <span>Your saved shelf is opening.</span>
+      </div>
+    </section>
   );
 }
 
