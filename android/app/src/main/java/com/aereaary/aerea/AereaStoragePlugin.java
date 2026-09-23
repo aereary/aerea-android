@@ -445,7 +445,17 @@ public class AereaStoragePlugin extends Plugin {
             call.reject("A file data URL is required");
             return;
         }
-        String id = UUID.randomUUID().toString();
+        String id = call.getString("id");
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        } else {
+            try {
+                UUID.fromString(id);
+            } catch (IllegalArgumentException error) {
+                call.reject("The restored file id is invalid");
+                return;
+            }
+        }
         String name = call.getString("name", "Imported file");
         String mediaType = call.getString("mediaType", "application/octet-stream");
         String kind = call.getString("kind", "file");
@@ -474,7 +484,12 @@ public class AereaStoragePlugin extends Plugin {
             values.put("size", bytes.length);
             values.put("created_at", now);
             values.put("updated_at", now);
-            database.getWritableDatabase().insertOrThrow("study_files", null, values);
+            SQLiteDatabase writable = database.getWritableDatabase();
+            int updated = writable.update(
+                    "study_files", values, "id=?", new String[]{id});
+            if (updated == 0) {
+                writable.insertOrThrow("study_files", null, values);
+            }
 
             JSObject file = new JSObject();
             file.put("id", id);

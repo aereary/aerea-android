@@ -77,6 +77,7 @@ export type StudyFileItem = {
   size: number;
   createdAt: string;
   updatedAt: string;
+  cloudPath?: string;
   dataUrl?: string;
   favorite?: boolean;
   collectionIds?: string[];
