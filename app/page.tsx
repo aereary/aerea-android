@@ -227,6 +227,7 @@ type AereaStoragePlugin = {
   deleteSketch(options: { id: string }): Promise<void>;
   listDocuments(): Promise<{ files: StudyFileItem[] }>;
   saveDocument(options: {
+    id?: string;
     name: string;
     mediaType: string;
     kind: StudyFileItem["kind"];
@@ -289,6 +290,35 @@ function isStudyFileTrashed(fileId: string, items: TrashItem[]) {
   });
 }
 
+function mergeStudyFileInventory(
+  current: StudyFileItem[],
+  inventory: StudyFileItem[],
+  trash: TrashItem[],
+) {
+  const available = inventory.filter(
+    (file) => !isStudyFileTrashed(file.id, trash),
+  );
+  const localIds = new Set(available.map((file) => file.id));
+  const localFiles = available.map((file) => {
+    const metadata = current.find((item) => item.id === file.id);
+    return {
+      ...file,
+      cloudPath: metadata?.cloudPath ?? file.cloudPath,
+      favorite: metadata?.favorite,
+      collectionIds: metadata?.collectionIds,
+      lastOpenedAt: metadata?.lastOpenedAt,
+      readerLocation: metadata?.readerLocation,
+    };
+  });
+  const cloudOnlyFiles = current.filter(
+    (file) =>
+      Boolean(file.cloudPath) &&
+      !localIds.has(file.id) &&
+      !isStudyFileTrashed(file.id, trash),
+  );
+  return [...localFiles, ...cloudOnlyFiles];
+}
+
 async function purgeExpiredTrashFiles(items: TrashItem[]) {
   await Promise.allSettled(
     items.flatMap((trashItem) => {
@@ -302,7 +332,7 @@ async function purgeExpiredTrashFiles(items: TrashItem[]) {
 
       const file = trashItem.payload as LibraryItem | StudyFileItem;
       if ("mediaType" in file) {
-        return [
+        const deletions: Promise<unknown>[] = [
           isNative()
             ? AereaStorage.deleteDocument({ id: file.id })
             : fetch(`/api/files/${file.id}`, { method: "DELETE" }).then(
@@ -313,6 +343,10 @@ async function purgeExpiredTrashFiles(items: TrashItem[]) {
                 },
               ),
         ];
+        if (file.cloudPath) {
+          deletions.push(deleteAereaLibraryFile(file.cloudPath));
+        }
+        return deletions;
       }
 
       const deletions: Promise<unknown>[] = [];
@@ -2752,6 +2786,8 @@ export default function Home() {
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [calendarMemos, setCalendarMemos] = useState<CalendarMemo[]>([]);
   const [studyFiles, setStudyFiles] = useState<StudyFileItem[]>([]);
+  const cloudFileUploadsRef = useRef(new Set<string>());
+  const [cloudFileRetry, setCloudFileRetry] = useState(0);
   const [pdfAnnotations, setPdfAnnotations] = useState<Record<string, PdfInkStroke[]>>({});
   const [pdfPageNotes, setPdfPageNotes] = useState<
     Record<string, Record<string, string>>
@@ -3769,22 +3805,15 @@ export default function Home() {
               return (await response.json()) as { files?: StudyFileItem[] };
             });
         if (!cancelled && Array.isArray(payload.files)) {
+          const availableFiles = payload.files.filter(
+            (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
+          );
           setStudyFiles((current) =>
-            payload.files!
-              .filter(
-                (file) =>
-                  !isStudyFileTrashed(file.id, trashItemsRef.current),
-              )
-              .map((file) => {
-              const metadata = current.find((item) => item.id === file.id);
-              return {
-                ...file,
-                favorite: metadata?.favorite,
-                collectionIds: metadata?.collectionIds,
-                lastOpenedAt: metadata?.lastOpenedAt,
-                readerLocation: metadata?.readerLocation,
-              };
-            }),
+            mergeStudyFileInventory(
+              current,
+              availableFiles,
+              trashItemsRef.current,
+            ),
           );
         }
       } catch {
@@ -3860,6 +3889,87 @@ export default function Home() {
       data.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const retryCloudFiles = () => setCloudFileRetry((current) => current + 1);
+    window.addEventListener("online", retryCloudFiles);
+    return () => window.removeEventListener("online", retryCloudFiles);
+  }, []);
+
+  useEffect(() => {
+    if (!stateReady || !syncEmail || !isNative()) return;
+
+    const uploadLibraryItem = async (item: LibraryItem) => {
+      const key = `library:${item.id}`;
+      if (cloudFileUploadsRef.current.has(key)) return;
+      cloudFileUploadsRef.current.add(key);
+      try {
+        if (!item.nativeFileId || item.cloudPath) return;
+        const stored = await AereaStorage.readFile({ id: item.nativeFileId });
+        const response = await fetch(Capacitor.convertFileSrc(stored.contentUri));
+        if (!response.ok) {
+          throw new Error("Could not read the private image copy.");
+        }
+        const sourceBlob = await response.blob();
+        const blob =
+          sourceBlob.type || !item.mimeType
+            ? sourceBlob
+            : new Blob([sourceBlob], { type: item.mimeType });
+        const cloudPath = await uploadAereaLibraryFile(item.id, blob);
+        if (!cloudPath) return;
+        setLibraryItems((current) =>
+          current.map((candidate) =>
+            candidate.id === item.id && !candidate.cloudPath
+              ? { ...candidate, cloudPath }
+              : candidate,
+          ),
+        );
+      } catch {
+        // The private local copy remains authoritative and retries when online.
+      } finally {
+        cloudFileUploadsRef.current.delete(key);
+      }
+    };
+
+    const uploadStudyFile = async (file: StudyFileItem) => {
+      const key = `study:${file.id}`;
+      if (cloudFileUploadsRef.current.has(key)) return;
+      cloudFileUploadsRef.current.add(key);
+      try {
+        if (file.cloudPath) return;
+        const payload = await AereaStorage.getDocument({ id: file.id });
+        const response = await fetch(payload.dataUrl);
+        if (!response.ok) {
+          throw new Error("Could not read the private document copy.");
+        }
+        const sourceBlob = await response.blob();
+        const blob =
+          sourceBlob.type || !file.mediaType
+            ? sourceBlob
+            : new Blob([sourceBlob], { type: file.mediaType });
+        const cloudPath = await uploadAereaLibraryFile(file.id, blob);
+        if (!cloudPath) return;
+        setStudyFiles((current) =>
+          current.map((candidate) =>
+            candidate.id === file.id && !candidate.cloudPath
+              ? { ...candidate, cloudPath }
+              : candidate,
+          ),
+        );
+      } catch {
+        // Another device may own this descriptor; its cloud copy will win later.
+      } finally {
+        cloudFileUploadsRef.current.delete(key);
+      }
+    };
+
+    libraryItems
+      .filter((item) => item.nativeFileId && !item.cloudPath)
+      .forEach((item) => void uploadLibraryItem(item));
+    studyFiles
+      .filter((file) => !file.cloudPath)
+      .forEach((file) => void uploadStudyFile(file));
+  }, [cloudFileRetry, libraryItems, stateReady, studyFiles, syncEmail]);
 
   useEffect(() => {
     if (!stateReady) return;
@@ -5372,6 +5482,7 @@ export default function Home() {
     const lastOpenedAt = new Date().toISOString();
     let dataUrl = item.dataUrl;
     let nativeContentUri = item.nativeContentUri;
+    let nativeFileId = item.nativeFileId;
     let mimeType = item.mimeType;
     if (item.nativeFileId && isNative()) {
       try {
@@ -5379,19 +5490,39 @@ export default function Home() {
         nativeContentUri = stored.contentUri;
         mimeType ||= stored.mimeType;
       } catch {
-        // A cloud-backed copy may still be available below.
+        // This id belongs to another device; restore its private cloud copy.
+        nativeFileId = undefined;
+        nativeContentUri = undefined;
       }
     }
-    if (!dataUrl && item.cloudPath) {
+    if (!dataUrl && !nativeContentUri && item.cloudPath) {
       try {
         const downloaded = await downloadAereaLibraryFile(item.cloudPath);
-        dataUrl = await blobAsDataUrl(downloaded);
         mimeType ||= downloaded.type;
+        if (isNative()) {
+          const stored = await AereaStorage.saveFile({
+            name: item.name,
+            mimeType: mimeType || "application/octet-stream",
+            dataUrl: await blobAsDataUrl(downloaded),
+          });
+          const local = await AereaStorage.readFile({ id: stored.id });
+          nativeFileId = stored.id;
+          nativeContentUri = local.contentUri;
+        } else {
+          dataUrl = await blobAsDataUrl(downloaded);
+        }
       } catch {
         setHistoryMessage("This file is temporarily unavailable offline.");
       }
     }
-    const opened = { ...item, dataUrl, nativeContentUri, mimeType, lastOpenedAt };
+    const opened = {
+      ...item,
+      dataUrl,
+      nativeFileId,
+      nativeContentUri,
+      mimeType,
+      lastOpenedAt,
+    };
     setLibraryItems((current) =>
       current.map((candidate) =>
         candidate.id === item.id ? opened : candidate,
@@ -5507,6 +5638,9 @@ export default function Home() {
         await fetch(`/api/files/${file.id}`, { method: "DELETE" }).catch(
           () => undefined,
         );
+      }
+      if (file.cloudPath) {
+        await deleteAereaLibraryFile(file.cloudPath).catch(() => undefined);
       }
     } else if (file) {
       if (file.nativeFileId && isNative()) {
@@ -8880,21 +9014,15 @@ export default function Home() {
           if (!response.ok) throw new Error("Could not refresh your study files.");
           return (await response.json()) as { files: StudyFileItem[] };
         });
+    const availableFiles = (payload.files || []).filter(
+      (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
+    );
     setStudyFiles((current) =>
-      (payload.files || [])
-        .filter(
-          (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
-        )
-        .map((file) => {
-        const metadata = current.find((item) => item.id === file.id);
-        return {
-          ...file,
-          favorite: metadata?.favorite,
-          collectionIds: metadata?.collectionIds,
-          lastOpenedAt: metadata?.lastOpenedAt,
-          readerLocation: metadata?.readerLocation,
-        };
-      }),
+      mergeStudyFileInventory(
+        current,
+        availableFiles,
+        trashItemsRef.current,
+      ),
     );
   };
 
@@ -8954,6 +9082,41 @@ export default function Home() {
   const studyFileSource = (file: StudyFileItem) =>
     file.dataUrl || `/api/files/${file.id}`;
 
+  const restoreNativeStudyFile = async (
+    file: StudyFileItem,
+    lastOpenedAt: string,
+  ) => {
+    if (!file.cloudPath) {
+      throw new Error("This file has no synchronized private copy yet.");
+    }
+    setStudyReaderMessage("Restoring your private file on this device…");
+    const downloaded = await downloadAereaLibraryFile(file.cloudPath);
+    const dataUrl = await blobAsDataUrl(downloaded);
+    const restored = await AereaStorage.saveDocument({
+      id: file.id,
+      name: file.name,
+      mediaType: file.mediaType,
+      kind: file.kind,
+      dataUrl,
+    });
+    const restoredMetadata = {
+      ...file,
+      ...restored.file,
+      cloudPath: file.cloudPath,
+      favorite: file.favorite,
+      collectionIds: file.collectionIds,
+      lastOpenedAt,
+      readerLocation: file.readerLocation,
+    };
+    setStudyFiles((current) =>
+      current.map((candidate) =>
+        candidate.id === file.id ? restoredMetadata : candidate,
+      ),
+    );
+    setStudyReaderMessage("");
+    return { ...restoredMetadata, dataUrl };
+  };
+
   const openStudyFile = async (file: StudyFileItem) => {
     const lastOpenedAt = new Date().toISOString();
     setStudyFiles((current) =>
@@ -8971,10 +9134,22 @@ export default function Home() {
         readableFile = { ...file, dataUrl: payload.dataUrl, lastOpenedAt };
         setStudyReaderMessage("");
       } catch (error) {
-        setStudyReaderMessage(
-          error instanceof Error ? error.message : "This file could not be opened.",
-        );
-        return;
+        if (!file.cloudPath) {
+          setStudyReaderMessage(
+            error instanceof Error ? error.message : "This file could not be opened.",
+          );
+          return;
+        }
+        try {
+          readableFile = await restoreNativeStudyFile(file, lastOpenedAt);
+        } catch (restoreError) {
+          setStudyReaderMessage(
+            restoreError instanceof Error
+              ? restoreError.message
+              : "This file could not be restored on this device.",
+          );
+          return;
+        }
       }
     }
     if (readableFile.kind === "pdf") {
