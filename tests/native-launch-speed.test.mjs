@@ -23,6 +23,31 @@ test("a warm native launch paints the last complete day on its first React frame
   );
 });
 
+test("native geometry and the correct greeting exist before the first paint", () => {
+  assert.match(nativeHtml, /<html[^>]+data-native="true"/);
+  assert.match(
+    nativeEntry,
+    /document\.documentElement\.dataset\.native = "true";[\s\S]{0,180}createRoot/,
+  );
+  assert.match(
+    page,
+    /const \[isNight, setIsNight\] = useState\(\(\) => \{[\s\S]{0,160}new Date\(\)\.getHours\(\)/,
+  );
+  assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
+});
+
+test("every offered theme can reuse its cached native background", () => {
+  for (const theme of [
+    "dreambear",
+    "lovelyevening",
+    "littlesheets",
+    "noirrest",
+    "ao3night",
+  ]) {
+    assert.match(nativeHtml, new RegExp(`"${theme}"`));
+  }
+});
+
 test("the native launch cache is refreshed before the authoritative SQLite save", () => {
   assert.match(page, /function writeNativeLaunchState/);
   assert.match(
@@ -36,6 +61,10 @@ test("the native launch cache is refreshed before the authoritative SQLite save"
     ),
     /libraryItems|studyFiles|pdfAnnotations|profilePhoto/,
   );
+  assert.match(
+    page,
+    /if \(isNative\(\) && localState\) \{[\s\S]{0,220}writeNativeLaunchState\(localState\);[\s\S]{0,120}\}\s*applyPersistedState\(localState\)/,
+  );
 });
 
 test("secondary native bridges no longer block the first app frame", () => {
@@ -44,4 +73,31 @@ test("secondary native bridges no longer block the first app frame", () => {
   assert.match(nativeEntry, /<Suspense fallback=\{null\}>/);
   assert.doesNotMatch(nativeEntry, /import CareerPlanBridge from/);
   assert.doesNotMatch(nativeEntry, /import TimetableAgendaBridge from/);
+});
+
+test("document readers stay out of the native startup bundle", () => {
+  assert.match(
+    page,
+    /const StudyLibrary = lazy\([\s\S]{0,180}import\("\.\/study-library"\)/,
+  );
+  assert.match(
+    page,
+    /const GenericLibraryBridge = lazy\(\(\) => import\("\.\/generic-library-bridge"\)\)/,
+  );
+  assert.match(page, /const loadStudyReaderModule = \(\) => import\("\.\/study-reader"\)/);
+  assert.match(
+    page,
+    /const PdfStudyReader = lazy\([\s\S]{0,180}module\.PdfStudyReader/,
+  );
+  assert.match(
+    page,
+    /const EpubStudyReader = lazy\([\s\S]{0,180}module\.EpubStudyReader/,
+  );
+  assert.match(
+    page,
+    /const \{ readEpub \} = await import\("\.\/epub-reader"\)/,
+  );
+  assert.doesNotMatch(page, /import \{ EpubBook, readEpub \} from "\.\/epub-reader"/);
+  assert.match(page, /<Suspense fallback=\{null\}>\s*<PdfStudyReader/);
+  assert.match(page, /<Suspense fallback=\{null\}>\s*<EpubStudyReader/);
 });

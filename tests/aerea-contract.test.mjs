@@ -879,7 +879,10 @@ test("keeps the first native startup covered until the complete local day is com
     "setStartupHydrated(true)",
   );
 
-  assert.match(nativeHtmlSource, /<html lang="en" class="startup-pending">/);
+  assert.match(
+    nativeHtmlSource,
+    /<html lang="en" class="startup-pending" data-native="true">/,
+  );
   assert.match(
     nativeHtmlSource,
     /html\.startup-pending #root\{visibility:hidden\}/,
