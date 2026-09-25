@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useState,
+  useTransition,
 } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./supabase-sync";
@@ -311,6 +312,7 @@ export default function GenericLibraryBridge() {
   );
   const [query, setQuery] = useState("");
   const [filterMode, setFilterMode] = useState<GenericFilterMode>("all");
+  const [, startFilterTransition] = useTransition();
 
   useLayoutEffect(() => {
     const syncTarget = () => {
@@ -426,8 +428,8 @@ export default function GenericLibraryBridge() {
       if (inputTimer !== null) window.clearTimeout(inputTimer);
       inputTimer = window.setTimeout(() => {
         inputTimer = null;
-        syncFilters();
-      }, 180);
+        startFilterTransition(syncFilters);
+      }, 450);
     };
 
     syncFilters();
@@ -439,7 +441,7 @@ export default function GenericLibraryBridge() {
       layer.removeEventListener("input", syncFiltersSoon, true);
       layer.removeEventListener("change", syncFilters, true);
     };
-  }, [target]);
+  }, [startFilterTransition, target]);
 
   const versionsByItem = useMemo(() => {
     const map = new Map<string, GenericLibraryVersion[]>();
@@ -453,6 +455,21 @@ export default function GenericLibraryBridge() {
     return map;
   }, [versions]);
 
+  const itemSearchIndex = useMemo(() => {
+    const index = new Map<string, string>();
+    items.forEach((item) => {
+      index.set(
+        item.id,
+        normalizeSearch(
+          [item.title, item.author, item.filename, item.kind, item.extension]
+            .filter(Boolean)
+            .join(" "),
+        ),
+      );
+    });
+    return index;
+  }, [items]);
+
   const filtered = useMemo(() => {
     /*
      * AO3-specific filters (Fics / Series, WIP / Complete, fandom)
@@ -464,13 +481,9 @@ export default function GenericLibraryBridge() {
     if (!needle) return items;
 
     return items.filter((item) =>
-      normalizeSearch(
-        [item.title, item.author, item.filename, item.kind, item.extension]
-          .filter(Boolean)
-          .join(" "),
-      ).includes(needle),
+      (itemSearchIndex.get(item.id) || "").includes(needle),
     );
-  }, [filterMode, items, query]);
+  }, [filterMode, itemSearchIndex, items, query]);
 
   const countTarget = target
     ?.closest<HTMLElement>(".ao3-library-layer")

@@ -67,6 +67,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react";
 import {
   hasNativeProfilePhotoCache,
@@ -2269,6 +2270,68 @@ function normalizeCalendarSearch(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase()
     .trim();
+}
+
+function CalendarSearchField({
+  value,
+  onValueChange,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [, startSearchTransition] = useTransition();
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current !== null) {
+        window.clearTimeout(debounceRef.current);
+      }
+    },
+    [],
+  );
+
+  const commit = (nextValue: string) => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      startSearchTransition(() => onValueChange(nextValue));
+    }, 450);
+  };
+
+  const clear = () => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    setDraft("");
+    startSearchTransition(() => onValueChange(""));
+  };
+
+  return (
+    <div className="calendar-search-field">
+      <span className="calendar-search-glyph" aria-hidden="true" />
+      <input
+        type="search"
+        value={draft}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setDraft(nextValue);
+          commit(nextValue);
+        }}
+        placeholder="Search events"
+        aria-label="Search by event, class, place, or note"
+      />
+      {draft && (
+        <button type="button" onClick={clear} aria-label="Clear search">
+          ×
+        </button>
+      )}
+    </div>
+  );
 }
 
 function calendarEventSearchText(event: CalendarEvent) {
@@ -4563,6 +4626,14 @@ export default function Home() {
     eventDraft.title,
     eventTemplateSuggestionsDismissed,
   ]);
+  const calendarSearchIndex = useMemo(
+    () =>
+      calendarEvents.map((event) => ({
+        event,
+        searchText: calendarEventSearchText(event),
+      })),
+    [calendarEvents],
+  );
   const calendarSearchResults = useMemo<CalendarSearchOccurrence[]>(() => {
     const query = normalizeCalendarSearch(calendarSearchQuery);
     if (!query) return [];
@@ -4575,9 +4646,9 @@ export default function Home() {
     const todayTime = today.getTime();
     const results: CalendarSearchOccurrence[] = [];
 
-    calendarEvents
-      .filter((event) => calendarEventSearchText(event).includes(query))
-      .forEach((event) => {
+    calendarSearchIndex
+      .filter(({ searchText }) => searchText.includes(query))
+      .forEach(({ event }) => {
         if ((event.repeat ?? "Never") === "Never") {
           results.push({ event, date: event.date });
           return;
@@ -4617,7 +4688,7 @@ export default function Home() {
           first.event.time.localeCompare(second.event.time),
       )
       .slice(0, 240);
-  }, [calendarEvents, calendarSearchQuery, todayKey]);
+  }, [calendarSearchIndex, calendarSearchQuery, todayKey]);
   const calendarSearchGroups = useMemo(() => {
     const groups: Array<{
       date: string;
@@ -13803,31 +13874,10 @@ export default function Home() {
                       >
                         ←
                       </button>
-                      <div className="calendar-search-field">
-                        <span
-                          className="calendar-search-glyph"
-                          aria-hidden="true"
-                        />
-                        <input
-
-                          type="search"
-                          value={calendarSearchQuery}
-                          onChange={(event) =>
-                            setCalendarSearchQuery(event.target.value)
-                          }
-                          placeholder="Search events"
-                          aria-label="Search by event, class, place, or note"
-                        />
-                        {calendarSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => setCalendarSearchQuery("")}
-                            aria-label="Clear search"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
+                      <CalendarSearchField
+                        value={calendarSearchQuery}
+                        onValueChange={setCalendarSearchQuery}
+                      />
                     </header>
 
                     <div className="calendar-search-summary" aria-live="polite">
