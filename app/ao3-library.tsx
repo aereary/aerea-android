@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
 import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
 import type { StudyFileItem } from "./study-library";
@@ -918,6 +925,7 @@ function Ao3SearchInput({
   onFocus: () => void;
 }) {
   const [draft, setDraft] = useState(value);
+  const [, startSearchTransition] = useTransition();
   const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -943,8 +951,8 @@ function Ao3SearchInput({
     }
     debounceRef.current = window.setTimeout(() => {
       debounceRef.current = null;
-      onValueChange(nextValue);
-    }, 180);
+      startSearchTransition(() => onValueChange(nextValue));
+    }, 450);
   };
 
   return (
@@ -1129,6 +1137,24 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
   const entries = useMemo(() => buildEntries(works), [works]);
 
+  const entrySearchIndex = useMemo(() => {
+    const index = new Map<LibraryEntry, string>();
+    entries.forEach((entry) => {
+      index.set(
+        entry,
+        entry.kind === "fic"
+          ? workSearchText(entry.work)
+          : normalized(
+              [
+                entry.name,
+                ...entry.works.map((work) => workSearchText(work)),
+              ].join(" "),
+            ),
+      );
+    });
+    return index;
+  }, [entries]);
+
   const fandoms = useMemo(() => {
     const counts = new Map<string, number>();
     for (const entry of entries) {
@@ -1170,12 +1196,17 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       }
 
       if (!needle) return true;
-      if (entry.kind === "fic") return workSearchText(entry.work).includes(needle);
-      return normalized(
-        [entry.name, ...entry.works.map((work) => workSearchText(work))].join(" "),
-      ).includes(needle);
+      return (entrySearchIndex.get(entry) || "").includes(needle);
     });
-  }, [activeTag, entries, fandomFilter, query, statusFilter, typeFilter]);
+  }, [
+    activeTag,
+    entries,
+    entrySearchIndex,
+    fandomFilter,
+    query,
+    statusFilter,
+    typeFilter,
+  ]);
 
   const archivedCount = useMemo(
     () => works.filter((work) => work.archived).length,

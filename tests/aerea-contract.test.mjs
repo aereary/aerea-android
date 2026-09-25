@@ -424,6 +424,13 @@ test("searches every event from the compact calendar", () => {
   assert.match(pageSource, /normalizeCalendarSearch/);
   assert.match(pageSource, /calendarEventSearchText/);
   assert.match(pageSource, /calendarSearchGroups/);
+  assert.match(pageSource, /function CalendarSearchField\(/);
+  assert.match(
+    pageSource,
+    /startSearchTransition\(\(\) => onValueChange\(nextValue\)\)[\s\S]{0,80}450/,
+  );
+  assert.match(pageSource, /const calendarSearchIndex = useMemo\(/);
+  assert.match(pageSource, /searchText: calendarEventSearchText\(event\)/);
   assert.match(pageSource, /calendarEventAtOccurrence/);
   assert.match(pageSource, /aria-label="Search calendar events"/);
   assert.match(pageSource, /placeholder="Search events"/);

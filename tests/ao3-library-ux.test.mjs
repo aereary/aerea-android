@@ -62,8 +62,13 @@ test("Library back/header scrolls away while search tools own the sticky top", (
 test("AO3 search keeps keystrokes local and debounces the heavy list filter", () => {
   assert.match(ao3, /function Ao3SearchInput\(/);
   assert.match(ao3, /const \[draft, setDraft\] = useState\(value\)/);
-  assert.match(ao3, /window\.setTimeout\([\s\S]{0,180}onValueChange\(nextValue\)[\s\S]{0,80}180\)/);
+  assert.match(
+    ao3,
+    /window\.setTimeout\([\s\S]{0,220}startSearchTransition\(\(\) => onValueChange\(nextValue\)\)[\s\S]{0,80}450\)/,
+  );
   assert.match(ao3, /<Ao3SearchInput[\s\S]{0,240}setQuery\(nextQuery\)/);
+  assert.match(ao3, /const entrySearchIndex = useMemo\(/);
+  assert.match(ao3, /entrySearchIndex\.get\(entry\)/);
   assert.doesNotMatch(
     ao3,
     /className="ao3-search"[\s\S]{0,180}setQuery\(event\.target\.value\)/,
@@ -80,6 +85,10 @@ test("native AO3 search tools avoid expensive blur during keyboard resize", () =
 
 test("generic bridge mirrors search input on the same debounce", () => {
   assert.match(bridge, /const syncFiltersSoon = \(\) =>/);
-  assert.match(bridge, /window\.setTimeout\([\s\S]{0,140}syncFilters\(\)[\s\S]{0,60}180\)/);
+  assert.match(
+    bridge,
+    /window\.setTimeout\([\s\S]{0,180}startFilterTransition\(syncFilters\)[\s\S]{0,60}450\)/,
+  );
+  assert.match(bridge, /const itemSearchIndex = useMemo\(/);
   assert.match(bridge, /addEventListener\("input", syncFiltersSoon, true\)/);
 });
