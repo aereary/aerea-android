@@ -5,7 +5,6 @@ import {
   Ao3LibraryOpening,
   type Ao3EpubDownloadTarget,
 } from "./ao3-library";
-import GenericLibraryBridge from "./generic-library-bridge";
 import {
   Capacitor,
   registerPlugin,
@@ -64,6 +63,8 @@ import {
   PointerEvent as ReactPointerEvent,
   SetStateAction,
   TouchEvent as ReactTouchEvent,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -75,21 +76,18 @@ import {
   readNativeAppearance,
   writeNativeAppearance,
 } from "./native-appearance";
-import {
+import type {
   CalendarMemo,
   StudyFileItem,
-  StudyLibrary,
   StudyNotebook,
   StudyNote,
   StudyRecordingItem,
   StudyTask,
 } from "./study-library";
-import { EpubBook, readEpub } from "./epub-reader";
-import {
+import type { EpubBook } from "./epub-reader";
+import type {
   EpubReadingState,
-  EpubStudyReader,
   PdfInkStroke,
-  PdfStudyReader,
 } from "./study-reader";
 import {
   decodeSketchPaper,
@@ -121,6 +119,23 @@ import {
   ScreenIntro,
   SpaceCard,
 } from "./components/screen-shell";
+
+const loadStudyReaderModule = () => import("./study-reader");
+const StudyLibrary = lazy(() =>
+  import("./study-library").then((module) => ({ default: module.StudyLibrary })),
+);
+const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
+const PdfStudyReader = lazy(() =>
+  loadStudyReaderModule().then((module) => ({ default: module.PdfStudyReader })),
+);
+const EpubStudyReader = lazy(() =>
+  loadStudyReaderModule().then((module) => ({ default: module.EpubStudyReader })),
+);
+
+async function loadEpub(source: Blob) {
+  const { readEpub } = await import("./epub-reader");
+  return readEpub(source);
+}
 
 type Tab = "today" | "habits" | "focus" | "journal" | "spaces";
 const AO3_HISTORY_MARKER = "aereaAo3LibraryOpen";
@@ -2905,7 +2920,10 @@ export default function Home() {
     kind: "working" | "success" | "error";
     message: string;
   } | null>(null);
-  const [isNight, setIsNight] = useState(false);
+  const [isNight, setIsNight] = useState(() => {
+    const hour = new Date().getHours();
+    return hour >= 18 || hour < 5;
+  });
   const [scheduleNow, setScheduleNow] = useState(() => new Date());
   const [cachedNativeAppearance] = useState(() => {
     if (!isNative()) return null;
@@ -3822,6 +3840,11 @@ export default function Home() {
         const localState = payload.state;
 
         if (cancelled) return;
+        if (isNative() && localState) {
+          // Seed the next first frame immediately. Do not wait for the later
+          // debounced SQLite save, which can be cancelled when Android closes.
+          writeNativeLaunchState(localState);
+        }
         applyPersistedState(localState);
         await new Promise<void>((resolve) => {
           persistedStateCommitResolverRef.current = resolve;
@@ -5628,7 +5651,7 @@ export default function Home() {
     if (opened.kind === "epub" && opened.dataUrl) {
       try {
         const blob = await fetch(opened.dataUrl).then((response) => response.blob());
-        const book = await readEpub(
+        const book = await loadEpub(
           new File([blob], opened.name, {
             type: opened.mimeType || "application/epub+zip",
           }),
@@ -9276,7 +9299,7 @@ export default function Home() {
       try {
         const response = await fetch(studyFileSource(readableFile));
         if (!response.ok) throw new Error("This EPUB could not be read.");
-        const book = await readEpub(await response.blob());
+        const book = await loadEpub(await response.blob());
         setActiveStudyFile(readableFile);
         setActiveEpubBook(book);
         setStudyReaderMessage("");
@@ -10458,6 +10481,7 @@ export default function Home() {
               )}
 
               {space === "library" && (
+                <Suspense fallback={null}>
                 <StudyLibrary
                   notes={studyNotes}
                   files={[
@@ -10548,6 +10572,7 @@ export default function Home() {
                   onRequestedNoteOpened={() => setRequestedStudyNoteId(null)}
                   onBack={() => setSpace("menu")}
                 />
+                </Suspense>
               )}
 
               {space === "inbox" && (
@@ -11789,7 +11814,9 @@ export default function Home() {
       {ao3LibraryOpen && (
         <>
           <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
-          <GenericLibraryBridge />
+          <Suspense fallback={null}>
+            <GenericLibraryBridge />
+          </Suspense>
         </>
       )}
 
@@ -12427,6 +12454,7 @@ export default function Home() {
       )}
 
       {activeStudyFile?.kind === "pdf" && (
+        <Suspense fallback={null}>
         <PdfStudyReader
           fileId={activeStudyFile.id}
           fileName={activeStudyFile.name}
@@ -12508,9 +12536,11 @@ export default function Home() {
           }}
           onClose={() => setActiveStudyFile(null)}
         />
+        </Suspense>
       )}
 
       {activeStudyFile?.kind === "epub" && activeEpubBook && (
+        <Suspense fallback={null}>
         <EpubStudyReader
           fileName={activeStudyFile.name}
           book={activeEpubBook}
@@ -12580,6 +12610,7 @@ export default function Home() {
             setActiveEpubBook(null);
           }}
         />
+        </Suspense>
       )}
 
       {studyReaderMessage && (

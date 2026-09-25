@@ -16,10 +16,13 @@ const ao3 = await readFile(
 );
 
 test("restores generic Drive books inside the AO3 Library without replacing AO3", () => {
-  assert.match(page, /import GenericLibraryBridge from "\.\/generic-library-bridge"/);
   assert.match(
     page,
-    /<Ao3Library onBack=\{closeAo3Library\} onSaveEpub=\{saveAo3Epub\} \/>[\s\S]{0,100}<GenericLibraryBridge \/>/,
+    /const GenericLibraryBridge = lazy\(\(\) => import\("\.\/generic-library-bridge"\)\)/,
+  );
+  assert.match(
+    page,
+    /<Ao3Library onBack=\{closeAo3Library\} onSaveEpub=\{saveAo3Epub\} \/>[\s\S]{0,180}<GenericLibraryBridge \/>/,
   );
 
   assert.match(bridge, /\.from\("library_items"\)/);

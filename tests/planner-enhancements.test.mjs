@@ -102,7 +102,7 @@ test("Library images use img with a decode fallback while PDF and EPUB keep read
   assert.match(viewer, /This image could not be displayed/);
   assert.match(viewer, /selectedLibraryItem\.dataUrl \? \([\s\S]*<iframe/);
   assert.match(pageSource, /opened\.kind === "pdf"[\s\S]*setActiveStudyFile/);
-  assert.match(pageSource, /opened\.kind === "epub"[\s\S]*readEpub/);
+  assert.match(pageSource, /opened\.kind === "epub"[\s\S]*loadEpub/);
 });
 
 test("timetable keeps MON through SAT and positions classes in a temporal grid", () => {
