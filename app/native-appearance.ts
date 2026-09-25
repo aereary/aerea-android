@@ -1,4 +1,6 @@
 export const NATIVE_APPEARANCE_KEY = "aerea-native-appearance-v1";
+export const NATIVE_PROFILE_PHOTO_KEY = "aerea-native-profile-photo-v1";
+const NATIVE_PROFILE_PHOTO_NONE = "none";
 
 export type NativeCustomTheme = {
   accent: string;
@@ -74,5 +76,43 @@ export function writeNativeAppearance(appearance: NativeAppearance): void {
     );
   } catch {
     // The authoritative AereaStorage state remains available if WebView storage fails.
+  }
+}
+
+export function readNativeProfilePhoto(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(NATIVE_PROFILE_PHOTO_KEY);
+    return value?.startsWith("data:image/") ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function hasNativeProfilePhotoCache(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const value = window.localStorage.getItem(NATIVE_PROFILE_PHOTO_KEY);
+    return value === NATIVE_PROFILE_PHOTO_NONE || Boolean(value?.startsWith("data:image/"));
+  } catch {
+    return false;
+  }
+}
+
+export function writeNativeProfilePhoto(photo: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (photo?.startsWith("data:image/")) {
+      window.localStorage.setItem(NATIVE_PROFILE_PHOTO_KEY, photo);
+    } else {
+      // A sentinel distinguishes a known empty profile from an old install
+      // whose thumbnail has not been primed yet.
+      window.localStorage.setItem(
+        NATIVE_PROFILE_PHOTO_KEY,
+        NATIVE_PROFILE_PHOTO_NONE,
+      );
+    }
+  } catch {
+    // SQLite remains authoritative if WebView storage is unavailable.
   }
 }
