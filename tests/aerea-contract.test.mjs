@@ -889,7 +889,7 @@ test("keeps the first native startup covered until the complete local day is com
   );
   assert.match(
     pageSource,
-    /const \[startupHydrated, setStartupHydrated\] = useState\([\s\S]{0,120}!isNative\(\) \|\| cachedNativeState !== null/,
+    /const \[startupHydrated, setStartupHydrated\] = useState\([\s\S]{0,180}!isNative\(\) \|\|[\s\S]{0,100}cachedNativeState !== null && hasNativeProfilePhotoCache\(\)/,
   );
   assert.ok(localApplyIndex >= 0);
   assert.ok(localApplyIndex < commitWaitIndex);

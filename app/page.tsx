@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Ao3Library,
-  Ao3LibraryOpening,
-  type Ao3EpubDownloadTarget,
-} from "./ao3-library";
+import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import {
   Capacitor,
   registerPlugin,
@@ -73,8 +69,11 @@ import {
   useState,
 } from "react";
 import {
+  hasNativeProfilePhotoCache,
   readNativeAppearance,
+  readNativeProfilePhoto,
   writeNativeAppearance,
+  writeNativeProfilePhoto,
 } from "./native-appearance";
 import type {
   CalendarMemo,
@@ -121,6 +120,15 @@ import {
 } from "./components/screen-shell";
 
 const loadStudyReaderModule = () => import("./study-reader");
+const loadAo3LibraryModule = () => import("./ao3-library");
+const Ao3Library = lazy(() =>
+  loadAo3LibraryModule().then((module) => ({ default: module.Ao3Library })),
+);
+const Ao3LibraryOpening = lazy(() =>
+  loadAo3LibraryModule().then((module) => ({
+    default: module.Ao3LibraryOpening,
+  })),
+);
 const StudyLibrary = lazy(() =>
   import("./study-library").then((module) => ({ default: module.StudyLibrary })),
 );
@@ -2939,7 +2947,9 @@ export default function Home() {
     () => !isNative() || cachedNativeAppearance !== null,
   );
   const [startupHydrated, setStartupHydrated] = useState(
-    () => !isNative() || cachedNativeState !== null,
+    () =>
+      !isNative() ||
+      (cachedNativeState !== null && hasNativeProfilePhotoCache()),
   );
   const appearanceHydratedRef = useRef(appearanceHydrated);
   const persistedStateCommitResolverRef = useRef<(() => void) | null>(null);
@@ -2956,7 +2966,9 @@ export default function Home() {
   const [colorMode, setColorMode] = useState<ColorMode>(
     () => cachedNativeAppearance?.colorMode ?? "light",
   );
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(() =>
+    isNative() ? readNativeProfilePhoto() : null,
+  );
   const [customTheme, setCustomTheme] = useState<CustomTheme>(() => {
     const savedCustomTheme =
       cachedNativeAppearance?.appTheme === "custom"
@@ -3286,6 +3298,9 @@ export default function Home() {
   useLayoutEffect(() => {
     if (!startupHydrated) return;
     document.documentElement.classList.remove("startup-pending");
+    const launchCover = document.getElementById("native-launch-cover");
+    if (!launchCover) return;
+    window.requestAnimationFrame(() => launchCover.remove());
   }, [startupHydrated]);
 
   useLayoutEffect(() => {
@@ -3470,6 +3485,7 @@ export default function Home() {
         state.profilePhoto === null
       ) {
         setProfilePhoto(state.profilePhoto);
+        if (isNative()) writeNativeProfilePhoto(state.profilePhoto);
       }
       if (Array.isArray(state.classes)) {
         setClassItems(state.classes);
@@ -3508,6 +3524,25 @@ export default function Home() {
     updateClock();
     const interval = window.setInterval(updateClock, 30_000);
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // AO3 stays instant when the brand is tapped, but its large card renderer
+    // no longer delays the first app frame on a cold Android launch.
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (idleWindow.requestIdleCallback) {
+      const handle = idleWindow.requestIdleCallback(() => {
+        void loadAo3LibraryModule();
+      });
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+    const timeout = window.setTimeout(() => {
+      void loadAo3LibraryModule();
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -7199,7 +7234,9 @@ export default function Home() {
           width,
           height,
         );
-        setProfilePhoto(canvas.toDataURL("image/jpeg", 0.86));
+        const photo = canvas.toDataURL("image/jpeg", 0.86);
+        setProfilePhoto(photo);
+        if (isNative()) writeNativeProfilePhoto(photo);
       };
       image.src = String(reader.result);
     };
@@ -11808,12 +11845,16 @@ export default function Home() {
       </section>
 
       {ao3LibraryLaunching && !ao3LibraryOpen && (
-        <Ao3LibraryOpening onBack={closeAo3Library} />
+        <Suspense fallback={null}>
+          <Ao3LibraryOpening onBack={closeAo3Library} />
+        </Suspense>
       )}
 
       {ao3LibraryOpen && (
         <>
-          <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+          <Suspense fallback={null}>
+            <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
+          </Suspense>
           <Suspense fallback={null}>
             <GenericLibraryBridge />
           </Suspense>
@@ -15876,7 +15917,12 @@ export default function Home() {
                   />
                 </label>
                 {profilePhoto && (
-                  <button onClick={() => setProfilePhoto(null)}>
+                  <button
+                    onClick={() => {
+                      setProfilePhoto(null);
+                      if (isNative()) writeNativeProfilePhoto(null);
+                    }}
+                  >
                     Remove
                   </button>
                 )}

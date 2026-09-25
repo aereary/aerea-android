@@ -10,9 +10,18 @@
       html.appearance-pending,html.appearance-pending body{background:#fff9ed!important}
       html.appearance-pending #root{visibility:hidden}
       html.startup-pending #root{visibility:hidden}
+      #native-launch-cover{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#fff9ed;pointer-events:none;contain:strict}
+      .native-launch-mark{position:relative;width:58px;height:58px;transform:rotate(-45deg);filter:drop-shadow(0 4px 10px rgba(68,166,229,.14))}
+      .native-launch-mark i{position:absolute;top:3px;width:13px;height:52px;border-radius:2px;background:#58b8f8}
+      .native-launch-mark i:first-child{left:13px}
+      .native-launch-mark i:last-child{right:13px}
+      .native-launch-mark i::after{content:"";position:absolute;left:-7px;top:19px;width:27px;height:13px;border-radius:2px;background:inherit}
     </style>
   </head>
   <body>
+    <div id="native-launch-cover" aria-hidden="true">
+      <span class="native-launch-mark"><i></i><i></i></span>
+    </div>
     <div id="root"></div>
     <script>
       (() => {
@@ -45,6 +54,8 @@
           ) return pending();
           document.documentElement.style.background = appearance.background;
           document.body.style.background = appearance.background;
+          const launchCover = document.getElementById("native-launch-cover");
+          if (launchCover) launchCover.style.background = appearance.background;
           if (typeof appearance.themeColor === "string" && appearance.themeColor.trim()) {
             document.querySelector('meta[name="theme-color"]')
               ?.setAttribute("content", appearance.themeColor);

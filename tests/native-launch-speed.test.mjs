@@ -5,6 +5,7 @@ import test from "node:test";
 const page = readFileSync("app/page.tsx", "utf8");
 const nativeEntry = readFileSync("app/native-entry.tsx", "utf8");
 const nativeHtml = readFileSync("native.html", "utf8");
+const nativeAppearance = readFileSync("app/native-appearance.ts", "utf8");
 
 test("a warm native launch paints the last complete day on its first React frame", () => {
   assert.match(page, /NATIVE_LAUNCH_STATE_KEY = "aerea-native-launch-state-v1"/);
@@ -34,6 +35,43 @@ test("native geometry and the correct greeting exist before the first paint", ()
     /const \[isNight, setIsNight\] = useState\(\(\) => \{[\s\S]{0,160}new Date\(\)\.getHours\(\)/,
   );
   assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
+});
+
+test("the launch mark covers the WebView until the complete React frame is ready", () => {
+  assert.match(nativeHtml, /id="native-launch-cover"[\s\S]{0,160}native-launch-mark/);
+  assert.match(
+    nativeHtml,
+    /#native-launch-cover\{[^}]*position:fixed[^}]*inset:0[^}]*z-index:2147483647/,
+  );
+  assert.match(
+    nativeHtml,
+    /launchCover\.style\.background = appearance\.background/,
+  );
+  assert.match(
+    page,
+    /classList\.remove\("startup-pending"\);[\s\S]{0,240}requestAnimationFrame\(\(\) => launchCover\.remove\(\)\)/,
+  );
+});
+
+test("the profile photo is present in the first native header frame", () => {
+  assert.match(nativeAppearance, /NATIVE_PROFILE_PHOTO_KEY/);
+  assert.match(nativeAppearance, /export function readNativeProfilePhoto/);
+  assert.match(nativeAppearance, /export function hasNativeProfilePhotoCache/);
+  assert.match(nativeAppearance, /export function writeNativeProfilePhoto/);
+  assert.match(
+    page,
+    /const \[profilePhoto, setProfilePhoto\] = useState<string \| null>\(\(\) =>[\s\S]{0,100}readNativeProfilePhoto\(\)/,
+  );
+  assert.match(
+    page,
+    /setProfilePhoto\(state\.profilePhoto\);[\s\S]{0,100}writeNativeProfilePhoto\(state\.profilePhoto\)/,
+  );
+  assert.match(page, /writeNativeProfilePhoto\(null\)/);
+  assert.match(
+    page,
+    /cachedNativeState !== null && hasNativeProfilePhotoCache\(\)/,
+  );
+  assert.match(nativeAppearance, /NATIVE_PROFILE_PHOTO_NONE/);
 });
 
 test("every offered theme can reuse its cached native background", () => {
@@ -73,6 +111,16 @@ test("secondary native bridges no longer block the first app frame", () => {
   assert.match(nativeEntry, /<Suspense fallback=\{null\}>/);
   assert.doesNotMatch(nativeEntry, /import CareerPlanBridge from/);
   assert.doesNotMatch(nativeEntry, /import TimetableAgendaBridge from/);
+});
+
+test("AO3 is loaded just after first paint instead of blocking cold start", () => {
+  assert.match(page, /const loadAo3LibraryModule = \(\) => import\("\.\/ao3-library"\)/);
+  assert.match(page, /const Ao3Library = lazy\([\s\S]{0,180}module\.Ao3Library/);
+  assert.match(
+    page,
+    /requestIdleCallback\(\(\) => \{[\s\S]{0,100}loadAo3LibraryModule\(\)/,
+  );
+  assert.doesNotMatch(page, /import \{[\s\S]{0,120}Ao3Library[\s\S]{0,120}\} from "\.\/ao3-library"/);
 });
 
 test("document readers stay out of the native startup bundle", () => {
