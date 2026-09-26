@@ -174,6 +174,16 @@ type AppTheme =
   | "lovelyevening"
   | "rosegrid"
   | "littlesheets"
+  | "porcelainday"
+  | "bluebellpaper"
+  | "apricotpocket"
+  | "mintledger"
+  | "lilacorbit"
+  | "cloudglass"
+  | "ticketgarden"
+  | "linenstudio"
+  | "midnightindex"
+  | "cherrynoir"
   | "noirrest"
   | "ao3night"
   | "peachparlor"
@@ -1327,6 +1337,166 @@ const themeOptions: {
     showCharm: false,
     featured: true,
     interfaceIdea: "animated sheets",
+  },
+  {
+    id: "porcelainday",
+    name: "Porcelain day",
+    description: "Almost-white space, pencil-fine rules, and calm editorial cards.",
+    colors: ["#ffffff", "#f7f7f3", "#beded8"],
+    icon: "○",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "clear little day",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "bare line dock",
+  },
+  {
+    id: "bluebellpaper",
+    name: "Bluebell stationery",
+    description: "Powder-blue paper stacks, clipped tabs, and delicate violet ink.",
+    colors: ["#cfe7f5", "#fffdf9", "#a9a1dc"],
+    icon: "▤",
+    art: "/assets/openmoji/love-letter.svg",
+    accents: [
+      "/assets/openmoji/cloud.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "a note for today",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "stacked paper tabs",
+  },
+  {
+    id: "apricotpocket",
+    name: "Apricot pocket",
+    description: "Warm cream pockets, coral labels, and small rounded action cards.",
+    colors: ["#f3b69d", "#fff8ef", "#f3d48d"],
+    icon: "⌒",
+    art: "/assets/openmoji/strawberry.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/star.svg",
+    ],
+    charm: "kept close",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "pocket card dock",
+  },
+  {
+    id: "mintledger",
+    name: "Mint day ledger",
+    description: "Quiet mint bookkeeping, time rails, ruled cards, and tidy tabs.",
+    colors: ["#b9dccb", "#fbfdf7", "#e4c86b"],
+    icon: "≡",
+    art: "/assets/openmoji/notebook.svg",
+    accents: [
+      "/assets/openmoji/tulip.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "one line at a time",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "time rail ledger",
+  },
+  {
+    id: "lilacorbit",
+    name: "Lilac orbit",
+    description: "Floating lilac islands, orbiting actions, and soft circular cues.",
+    colors: ["#d8cff2", "#fbf9ff", "#f2b7c7"],
+    icon: "◎",
+    art: "/assets/openmoji/star.svg",
+    accents: [
+      "/assets/openmoji/moon.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "in your orbit",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "orbit action dock",
+  },
+  {
+    id: "cloudglass",
+    name: "Cloud glass",
+    description: "Frosted sky panels, translucent cards, and a weightless glass dock.",
+    colors: ["#c6e7f1", "#f7fcfd", "#c8d5ee"],
+    icon: "◇",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/moon.svg",
+    ],
+    charm: "light as air",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "floating glass rail",
+  },
+  {
+    id: "ticketgarden",
+    name: "Ticket garden",
+    description: "Pastel ticket stubs, tiny perforations, and cheerful garden labels.",
+    colors: ["#f5c9d3", "#fffaf1", "#b9d8ad"],
+    icon: "✂",
+    art: "/assets/openmoji/tulip.svg",
+    accents: [
+      "/assets/openmoji/blossom.svg",
+      "/assets/openmoji/strawberry.svg",
+    ],
+    charm: "admit one soft day",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "ticket tear cards",
+  },
+  {
+    id: "linenstudio",
+    name: "Linen studio",
+    description: "Natural linen, charcoal type, file tabs, and composed studio notes.",
+    colors: ["#ded7c9", "#fcfaf5", "#9eb6ad"],
+    icon: "⌑",
+    art: "/assets/openmoji/notebook.svg",
+    accents: [
+      "/assets/openmoji/love-letter.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "made with care",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "file tab studio",
+  },
+  {
+    id: "midnightindex",
+    name: "Midnight index",
+    description: "Ink-blue modules, luminous index tabs, and a compact night rail.",
+    colors: ["#243452", "#101522", "#8ba8d9"],
+    icon: "◫",
+    art: "/assets/openmoji/moon.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "quietly indexed",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "luminous index rail",
+  },
+  {
+    id: "cherrynoir",
+    name: "Cherry noir",
+    description: "Black cherry panels, slim red actions, and cinematic modular cards.",
+    colors: ["#8f4055", "#171317", "#e7a0ad"],
+    icon: "◆",
+    art: "/assets/openmoji/star.svg",
+    accents: [
+      "/assets/openmoji/moon.svg",
+      "/assets/openmoji/blossom.svg",
+    ],
+    charm: "after midnight",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "cinema action dock",
   },
   {
     id: "peachparlor",
@@ -3624,6 +3794,8 @@ export default function Home() {
       "noirrest",
       "blueberrynight",
       "moonquilt",
+      "midnightindex",
+      "cherrynoir",
     ].includes(appTheme);
     const defaultStyle =
       colorMode === "dark" || themeNeedsLightSystemBarContent
