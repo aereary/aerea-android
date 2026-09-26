@@ -6,10 +6,11 @@
     <meta name="theme-color" content="transparent" />
     <title>aérea</title>
     <style>
-      html,body{background:#fff9ed}
-      html.appearance-pending,html.appearance-pending body{background:#fff9ed!important}
-      html.appearance-pending #root{visibility:hidden}
-      html.startup-pending,html.startup-pending body{background:#fff9ed!important}
+      :root{--native-launch-background:#f5f6f8;color-scheme:light dark}
+      @media (prefers-color-scheme:dark){:root{--native-launch-background:#0e1418}}
+      html,body{background:var(--native-launch-background)}
+      html.appearance-pending,html.appearance-pending body{background:var(--native-launch-background)!important}
+      html.startup-pending,html.startup-pending body{background:var(--native-launch-background)!important}
       html.startup-pending #root{visibility:hidden}
     </style>
   </head>

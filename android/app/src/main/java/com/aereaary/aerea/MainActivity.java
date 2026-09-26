@@ -11,6 +11,7 @@ import android.os.Looper;
 import android.view.View;
 
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
@@ -18,7 +19,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-    private static final long MAX_SPLASH_HOLD_MS = 7000L;
+    private static final long MAX_SPLASH_HOLD_MS = 2000L;
     private volatile boolean launchReady = false;
 
     @Override
@@ -29,7 +30,7 @@ public class MainActivity extends BridgeActivity {
                 this::finishLaunch,
                 MAX_SPLASH_HOLD_MS
         );
-        int launchThemeColor = AereaStoragePlugin.launchThemeColor(this);
+        int launchThemeColor = ContextCompat.getColor(this, R.color.aerea_launch_background);
         getWindow().setBackgroundDrawable(new ColorDrawable(launchThemeColor));
         Intent initialIntent = getIntent();
         if (initialIntent != null && initialIntent.getDataString() != null) {
