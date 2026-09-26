@@ -142,8 +142,8 @@ test("keeps the approved worlds and removes every rejected theme", () => {
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    13,
-    "the two full-scene themes, Little Sheets Lab and ten isolated experiments should hide the welcome charm",
+    3,
+    "the two full-scene themes and Little Sheets Lab should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
@@ -1290,7 +1290,11 @@ test("draws edge-to-edge and handles the Android auth callback in every lifecycl
   assert.match(pageSource, /SystemBarsStyle\.Dark/);
   assert.match(pageSource, /SystemBars\.setStyle/);
   assert.match(capacitorSource, /insetsHandling: "css"/);
-  assert.match(manifestSource, /android:theme="@style\/AppTheme\.NoActionBar"/);
+  assert.match(manifestSource, /android:theme="@style\/AppTheme\.Starting"/);
+  assert.match(
+    androidStylesSource,
+    /name="AppTheme\.Starting"[\s\S]{0,320}postSplashScreenTheme">@style\/AppTheme\.NoActionBar/,
+  );
   assert.doesNotMatch(manifestSource, /AppTheme\.NoActionBarLaunch/);
   assert.match(manifestSource, /android:scheme="aerea"/);
   assert.match(manifestSource, /android:host="auth"/);

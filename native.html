@@ -31,17 +31,29 @@
           "bunnybakery", "mooncat", "whalesong", "ribbonpromise",
           "gentlekitten", "softguidance", "velvetrest", "lovelyevening",
           "rosegrid", "littlesheets", "noirrest", "ao3night",
+          "peachparlor", "mintletter", "blueberrynight", "duckmail",
+          "moonquilt", "custom",
+        ];
+        const retiredThemes = [
           "porcelainday", "bluebellpaper", "apricotpocket", "mintledger",
           "lilacorbit", "cloudglass", "ticketgarden", "linenstudio",
           "midnightindex", "cherrynoir",
-          "peachparlor", "mintletter", "blueberrynight", "duckmail",
-          "moonquilt", "custom",
         ];
         const pending = () => document.documentElement.classList.add("appearance-pending");
         try {
           const raw = localStorage.getItem(key);
           if (!raw) return pending();
           const appearance = JSON.parse(raw);
+          if (
+            appearance &&
+            typeof appearance.appTheme === "string" &&
+            retiredThemes.includes(appearance.appTheme)
+          ) {
+            // Removed experiments fall back to the established default without
+            // delaying this launch while SQLite catches up.
+            localStorage.removeItem(key);
+            return;
+          }
           if (
             !appearance ||
             typeof appearance.appTheme !== "string" ||
