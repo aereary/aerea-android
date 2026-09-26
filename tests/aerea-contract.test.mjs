@@ -578,6 +578,25 @@ test("opens the normal event editor only from its title and controls", () => {
   assert.match(pageSource, /closeCalendarEventEditor\(\);/);
 });
 
+test("Today adds an event directly to the selected home day", () => {
+  assert.match(
+    pageSource,
+    /const openNewEventForSelectedHomeDay = \(\) => \{\s*const dateKey = selectedHomeDate;[\s\S]{0,500}setCalendarOpen\(true\);\s*openNewEvent\(dateKey\);\s*setEventEditorReturnHome\(true\)/,
+  );
+  assert.match(
+    pageSource,
+    /<TodayScreen[\s\S]{0,700}openEventComposer=\{openNewEventForSelectedHomeDay\}/,
+  );
+  assert.match(
+    pageSource,
+    /className="add-event-button" onClick=\{openEventComposer\}/,
+  );
+  assert.match(
+    pageSource,
+    /const returnHome = editingEventId !== null \|\| eventEditorReturnHome;[\s\S]{0,500}setCalendarOpen\(false\)/,
+  );
+});
+
 test("matches the clean event-note language in Day Pocket", () => {
   assert.doesNotMatch(pageSource, /className="day-summary-orbs"/);
   assert.doesNotMatch(pageSource, /className="day-summary-doodle"/);
