@@ -7,6 +7,8 @@ const nativeEntry = readFileSync("app/native-entry.tsx", "utf8");
 const layout = readFileSync("app/layout.tsx", "utf8");
 const nativeHtml = readFileSync("native.html", "utf8");
 const nativeAppearance = readFileSync("app/native-appearance.ts", "utf8");
+const supabaseSync = readFileSync("app/supabase-sync.ts", "utf8");
+const supabaseClient = readFileSync("app/supabase-client.ts", "utf8");
 const mainActivity = readFileSync(
   "android/app/src/main/java/com/aereaary/aerea/MainActivity.java",
   "utf8",
@@ -66,11 +68,13 @@ test("Android hands off its compact neutral splash after the first React frame",
     mainActivity,
     /setKeepOnScreenCondition\(\(\) -> !launchReady\)/,
   );
-  assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 2000L/);
+  assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 5000L/);
+  assert.match(mainActivity, /postVisualStateCallback\(/);
+  assert.match(mainActivity, /postOnAnimation\(this::forceFinishLaunch\)/);
   assert.match(nativeStorage, /public void finishLaunch\(PluginCall call\)/);
   assert.match(
     page,
-    /if \(!isNative\(\)\) return;[\s\S]{0,260}AereaStorage\.finishLaunch\(\)/,
+    /document\.fonts\.ready[\s\S]{0,500}requestAnimationFrame[\s\S]{0,300}AereaStorage\.finishLaunch\(\)/,
   );
   assert.match(androidManifest, /android:theme="@style\/AppTheme\.Starting"/);
   assert.match(
@@ -86,6 +90,14 @@ test("Android hands off its compact neutral splash after the first React frame",
       `compact splash icon should exist for ${density}`,
     );
   }
+});
+
+test("Supabase waits for browser idle instead of blocking the native first frame", () => {
+  assert.doesNotMatch(supabaseSync, /import\s*\{\s*createClient/);
+  assert.match(supabaseSync, /requestIdleCallback\(resolve, \{ timeout: 800 \}\)/);
+  assert.match(supabaseSync, /import\("\.\/supabase-client"\)/);
+  assert.match(supabaseClient, /createClient\(/);
+  assert.match(page, /getSupabase\(\)\.then\(\(supabase\) =>/);
 });
 
 test("native startup ships only the Latin Gaegu face used by the interface", () => {
