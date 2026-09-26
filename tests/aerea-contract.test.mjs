@@ -1805,14 +1805,14 @@ test("matches the clean five-row Just calendar reference without changing Full a
   assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-calendar-cell\.outside-month \.simplified-calendar-events \{[\s\S]{0,50}display:none/);
   assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-event-strip\.canonical-boca-match \{[\s\S]{0,100}background:#f0d6c7!important/);
   assert.match(cssSource, /data-simplified-calendar="true"\] \.simplified-event-strip\.emerald \{ --simplified-event-fill:#d9edc7/);
-  assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today \{[\s\S]{0,120}background:#e1f5ff/);
+  assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today\.selected \{[\s\S]{0,120}background:#e1f5ff/);
   assert.match(cssSource, /\.calendar-sticker-picker > div:first-child \{[\s\S]{0,60}min-height:66px/);
   assert.doesNotMatch(cssSource, /\.calendar-mood-picker:not\(\.calendar-sticker-picker\)[^{]*min-height:66px/);
 });
 test("compact editors, restored calendar tools and 12-hour labels keep the mobile contract", () => {
   assert.match(pageSource, /const start = formatTimeBlock\(event\.time\)/);
   assert.doesNotMatch(pageSource, /return event\.endTime \? `\$\{event\.time\}/);
-  assert.match(pageSource, /<span className="swipe-source">↔ swipe months<\/span>[\s\S]{0,500}aria-label="Search calendar events"/);
+  assert.match(pageSource, /<span className="swipe-source">↔ swipe months<\/span>[\s\S]{0,900}aria-label="Search calendar events"/);
   assert.doesNotMatch(pageSource, /title="Open schedule"/);
   assert.doesNotMatch(pageSource, /className="calendar-view-toggle calendar-month-view-toggle"/);
   assert.match(pageSource, /className="simplified-calendar-screen"/);
@@ -1820,4 +1820,15 @@ test("compact editors, restored calendar tools and 12-hour labels keep the mobil
   assert.doesNotMatch(pageSource, /className="calendar-modal-actions"/);
   assert.match(cssSource, /\.habit-editor-modal \{[^}]*max-height:calc\(100dvh - 24px\)/);
   assert.match(cssSource, /\.reminder-editor-note \.class-editor-row input\[type="time"\][\s\S]{0,180}min-width:0/);
+});
+
+test("compact calendar separates today from the selected date without shifting its tools", () => {
+  assert.match(pageSource, /<span className="swipe-source">↔ swipe months<\/span>\s*\{!calendarScheduleOpen && selectedCalendarDate !== todayKey && \(\s*<button\s*className="calendar-today-shortcut"[\s\S]{0,220}goToCalendarDate\(todayKey\)[\s\S]{0,100}Today/);
+  assert.match(pageSource, /className="calendar-today-shortcut"[\s\S]{0,350}className="calendar-search-trigger"/);
+  assert.doesNotMatch(pageSource, /className="calendar-power-tools"/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-today-shortcut \{[\s\S]{0,300}flex:0 0 auto/);
+  assert.match(cssSource, /\.calendar-sources \.calendar-search-trigger \{ margin-left:auto; \}/);
+  assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today\.selected \{[\s\S]{0,150}background:#e1f5ff/);
+  assert.doesNotMatch(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today \{/);
+  assert.match(cssSource, /not\(\[data-simplified-calendar="true"\]\) \.month-grid > button\.today \.calendar-day-number \{[\s\S]{0,120}background:var\(--orange\)/);
 });

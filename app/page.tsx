@@ -13826,16 +13826,6 @@ export default function Home() {
                     <button className="calendar-date-menu-done" onClick={() => setMonthPickerOpen(false)}>Done</button>
                   </div>
                 )}
-                {!calendarScheduleOpen && selectedCalendarDate !== todayKey && (
-                  <div className="calendar-power-tools" aria-label="Calendar power tools">
-                    <button
-                      type="button"
-                      onClick={() => goToCalendarDate(todayKey)}
-                    >
-                      Today
-                    </button>
-                  </div>
-                )}
                 <div className="calendar-sources">
                   <span>
                     <i className="source-android" /> Android calendar
@@ -13845,6 +13835,15 @@ export default function Home() {
                   </span>
                   <span className="mood-source">◡‿◡ mood stickers</span>
                   <span className="swipe-source">↔ swipe months</span>
+                  {!calendarScheduleOpen && selectedCalendarDate !== todayKey && (
+                    <button
+                      className="calendar-today-shortcut"
+                      type="button"
+                      onClick={() => goToCalendarDate(todayKey)}
+                    >
+                      Today
+                    </button>
+                  )}
                   <button
                     className="calendar-search-trigger"
                     type="button"
