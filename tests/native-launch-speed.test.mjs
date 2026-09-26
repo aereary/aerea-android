@@ -70,7 +70,10 @@ test("Android hands off its compact neutral splash after the first React frame",
   );
   assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 5000L/);
   assert.match(mainActivity, /postVisualStateCallback\(/);
-  assert.match(mainActivity, /postOnAnimation\(this::forceFinishLaunch\)/);
+  assert.match(
+    mainActivity,
+    /new WebView\.VisualStateCallback\(\)[\s\S]{0,240}postOnAnimation\(MainActivity\.this::forceFinishLaunch\)/,
+  );
   assert.match(nativeStorage, /public void finishLaunch\(PluginCall call\)/);
   assert.match(
     page,

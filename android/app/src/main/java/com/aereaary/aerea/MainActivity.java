@@ -74,7 +74,12 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             webView.postVisualStateCallback(
                     System.nanoTime(),
-                    requestId -> webView.postOnAnimation(this::forceFinishLaunch)
+                    new WebView.VisualStateCallback() {
+                        @Override
+                        public void onComplete(long requestId) {
+                            webView.postOnAnimation(MainActivity.this::forceFinishLaunch);
+                        }
+                    }
             );
             return;
         }

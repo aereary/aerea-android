@@ -933,7 +933,10 @@ test("hands off the native startup at the first React frame while local state re
     /document\.fonts\.ready[\s\S]{0,500}requestAnimationFrame[\s\S]{0,300}AereaStorage\.finishLaunch\(\)/,
   );
   assert.match(mainActivitySource, /postVisualStateCallback\(/);
-  assert.match(mainActivitySource, /postOnAnimation\(this::forceFinishLaunch\)/);
+  assert.match(
+    mainActivitySource,
+    /new WebView\.VisualStateCallback\(\)[\s\S]{0,240}postOnAnimation\(MainActivity\.this::forceFinishLaunch\)/,
+  );
 });
 
 test("uses one quiet light-or-dark neutral Android launch frame", () => {
