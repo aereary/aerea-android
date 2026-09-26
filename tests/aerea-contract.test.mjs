@@ -51,6 +51,10 @@ const androidColorsSource = await readFile(
   new URL("../android/app/src/main/res/values/colors.xml", import.meta.url),
   "utf8",
 );
+const androidNightColorsSource = await readFile(
+  new URL("../android/app/src/main/res/values-night/colors.xml", import.meta.url),
+  "utf8",
+);
 const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
@@ -858,7 +862,7 @@ test("runs the native appearance bootstrap before loading the React bundle", () 
   assert.match(nativeHtmlSource, /meta\[name="theme-color"\]/);
 });
 
-test("reveals a cache miss only with the complete local state committed", () => {
+test("hydrates an appearance cache miss without hiding the first app frame", () => {
   const localApplyIndex = startupLoadStateSource.indexOf(
     "applyPersistedState(localState)",
   );
@@ -872,9 +876,10 @@ test("reveals a cache miss only with the complete local state committed", () => 
     "await reconcileCloudState(payload)",
   );
 
+  assert.doesNotMatch(nativeHtmlSource, /html\.appearance-pending #root\{visibility:hidden\}/);
   assert.match(
     nativeHtmlSource,
-    /html\.appearance-pending #root\{visibility:hidden\}/,
+    /html\.appearance-pending,html\.appearance-pending body\{background:var\(--native-launch-background\)!important\}/,
   );
   assert.match(nativeHtmlSource, /if \(!raw\) return pending\(\)/);
   assert.ok(localApplyIndex >= 0, "the full local state should be applied");
@@ -894,15 +899,12 @@ test("reveals a cache miss only with the complete local state committed", () => 
   );
 });
 
-test("keeps the first native startup covered until the complete local day is committed", () => {
+test("hands off the native startup at the first React frame while local state refreshes", () => {
   const localApplyIndex = startupLoadStateSource.indexOf(
     "applyPersistedState(localState)",
   );
   const commitWaitIndex = startupLoadStateSource.indexOf(
     "setPersistedStateCommitVersion",
-  );
-  const revealIndex = startupLoadStateSource.indexOf(
-    "setStartupHydrated(true)",
   );
 
   assert.match(
@@ -913,30 +915,22 @@ test("keeps the first native startup covered until the complete local day is com
     nativeHtmlSource,
     /html\.startup-pending #root\{visibility:hidden\}/,
   );
-  assert.match(
-    pageSource,
-    /const \[startupHydrated, setStartupHydrated\] = useState\([\s\S]{0,180}!isNative\(\) \|\|[\s\S]{0,100}cachedNativeState !== null && hasNativeProfilePhotoCache\(\)/,
-  );
+  assert.doesNotMatch(pageSource, /startupHydrated|setStartupHydrated/);
   assert.ok(localApplyIndex >= 0);
   assert.ok(localApplyIndex < commitWaitIndex);
-  assert.ok(commitWaitIndex < revealIndex);
   assert.match(
     pageSource,
-    /useLayoutEffect\(\(\) => \{[\s\S]{0,180}classList\.remove\("startup-pending"\)/,
+    /useLayoutEffect\(\(\) => \{[\s\S]{0,260}classList\.remove\("startup-pending"\);\s*\}, \[\]\)/,
   );
   assert.match(
-    startupLoadStateSource,
-    /catch \{[\s\S]{0,260}setStartupHydrated\(true\)/,
+    pageSource,
+    /if \(!isNative\(\)\) return;[\s\S]{0,260}AereaStorage\.finishLaunch\(\)/,
   );
 });
 
-test("uses the saved theme color instead of a black or transparent Android launch frame", () => {
-  assert.match(
-    nativeStorageSource,
-    /public void setLaunchAppearance\(PluginCall call\)/,
-  );
-  assert.match(nativeStorageSource, /putString\(LAUNCH_THEME_COLOR, themeColor\)/);
-  assert.match(mainActivitySource, /AereaStoragePlugin\.launchThemeColor\(this\)/);
+test("uses one quiet light-or-dark neutral Android launch frame", () => {
+  assert.doesNotMatch(nativeStorageSource, /setLaunchAppearance|LAUNCH_THEME_COLOR/);
+  assert.match(mainActivitySource, /ContextCompat\.getColor\(this, R\.color\.aerea_launch_background\)/);
   assert.match(
     mainActivitySource,
     /getWebView\(\)\.setBackgroundColor\(launchThemeColor\)/,
@@ -949,12 +943,10 @@ test("uses the saved theme color instead of a black or transparent Android launc
     androidStylesSource,
     /android:windowBackground">@color\/aerea_launch_background/,
   );
-  assert.match(androidColorsSource, /aerea_launch_background">#FFF9ED/);
-  assert.match(capacitorSource, /backgroundColor: "#fff9ed"/);
-  assert.match(
-    pageSource,
-    /AereaStorage\.setLaunchAppearance\(\{ themeColor \}\)/,
-  );
+  assert.match(androidColorsSource, /aerea_launch_background">#F5F6F8/);
+  assert.match(androidNightColorsSource, /aerea_launch_background">#0E1418/);
+  assert.match(capacitorSource, /backgroundColor: "#f5f6f8"/);
+  assert.doesNotMatch(pageSource, /AereaStorage\.setLaunchAppearance/);
 });
 
 test("filters expired Trash immediately and purges its files in the background", () => {

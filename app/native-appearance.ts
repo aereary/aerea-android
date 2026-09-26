@@ -89,16 +89,6 @@ export function readNativeProfilePhoto(): string | null {
   }
 }
 
-export function hasNativeProfilePhotoCache(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const value = window.localStorage.getItem(NATIVE_PROFILE_PHOTO_KEY);
-    return value === NATIVE_PROFILE_PHOTO_NONE || Boolean(value?.startsWith("data:image/"));
-  } catch {
-    return false;
-  }
-}
-
 export function writeNativeProfilePhoto(photo: string | null): void {
   if (typeof window === "undefined") return;
   try {

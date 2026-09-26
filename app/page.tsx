@@ -70,7 +70,6 @@ import {
   useTransition,
 } from "react";
 import {
-  hasNativeProfilePhotoCache,
   readNativeAppearance,
   readNativeProfilePhoto,
   writeNativeAppearance,
@@ -239,7 +238,6 @@ const AereaMicrophone = registerPlugin<AereaMicrophonePlugin>("AereaMicrophone")
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
-  setLaunchAppearance(options: { themeColor: string }): Promise<void>;
   finishLaunch(): Promise<void>;
   clearPersonalContent(): Promise<void>;
   listSketches(): Promise<{ pages: SketchPage[] }>;
@@ -3009,11 +3007,6 @@ export default function Home() {
   const [appearanceHydrated, setAppearanceHydrated] = useState(
     () => !isNative() || cachedNativeAppearance !== null,
   );
-  const [startupHydrated, setStartupHydrated] = useState(
-    () =>
-      !isNative() ||
-      (cachedNativeState !== null && hasNativeProfilePhotoCache()),
-  );
   const appearanceHydratedRef = useRef(appearanceHydrated);
   const persistedStateCommitResolverRef = useRef<(() => void) | null>(null);
   const [persistedStateCommitVersion, setPersistedStateCommitVersion] =
@@ -3349,7 +3342,6 @@ export default function Home() {
       background,
       themeColor,
     });
-    void AereaStorage.setLaunchAppearance({ themeColor }).catch(() => undefined);
     document.documentElement.style.background = background;
     document.body.style.background = background;
     document
@@ -3359,16 +3351,17 @@ export default function Home() {
   }, [appearanceHydrated, appTheme, colorMode, customTheme]);
 
   useLayoutEffect(() => {
-    if (!startupHydrated) return;
+    // The launch cache already seeds the first render. Reveal that frame
+    // immediately instead of waiting for the full SQLite payload to commit.
     document.documentElement.classList.remove("startup-pending");
-  }, [startupHydrated]);
+  }, []);
 
   useEffect(() => {
-    if (!startupHydrated || !isNative()) return;
-    // Release Android's one native splash only after React has painted the
-    // complete first screen. This prevents blank and themed in-between frames.
+    if (!isNative()) return;
+    // Effects run after React's first paint, so Android can hand off directly
+    // to the usable cached/default home while SQLite refreshes in background.
     void AereaStorage.finishLaunch().catch(() => undefined);
-  }, [startupHydrated]);
+  }, []);
 
   useLayoutEffect(() => {
     const resolvePersistedStateCommit =
@@ -3956,7 +3949,6 @@ export default function Home() {
           }
           setPersistedStateCommitVersion((current) => current + 1);
         });
-        setStartupHydrated(true);
         if (cancelled) return;
         const reconciledPayload =
           (await reconcileCloudState(payload)) || payload;
@@ -3992,7 +3984,6 @@ export default function Home() {
           appearanceHydratedRef.current = true;
           setAppearanceHydrated(true);
         }
-        setStartupHydrated(true);
       } finally {
         if (!cancelled) setStateReady(true);
       }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync("app/page.tsx", "utf8");
@@ -17,6 +17,8 @@ const nativeStorage = readFileSync(
 );
 const androidManifest = readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
 const androidStyles = readFileSync("android/app/src/main/res/values/styles.xml", "utf8");
+const androidColors = readFileSync("android/app/src/main/res/values/colors.xml", "utf8");
+const androidNightColors = readFileSync("android/app/src/main/res/values-night/colors.xml", "utf8");
 
 test("a warm native launch has the last complete day ready for its first React frame", () => {
   assert.match(page, /NATIVE_LAUNCH_STATE_KEY = "aerea-native-launch-state-v1"/);
@@ -45,34 +47,45 @@ test("native geometry and the correct greeting exist before the first paint", ()
   assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
 });
 
-test("Android keeps one neutral native splash until the complete React frame is painted", () => {
+test("Android hands off its compact neutral splash after the first React frame", () => {
   assert.doesNotMatch(nativeHtml, /native-launch-cover|native-launch-mark/);
   assert.match(
     nativeHtml,
-    /html\.startup-pending,html\.startup-pending body\{background:#fff9ed!important\}/,
+    /--native-launch-background:#f5f6f8/,
   );
+  assert.match(nativeHtml, /prefers-color-scheme:dark[\s\S]{0,100}#0e1418/);
   assert.match(nativeHtml, /html\.startup-pending #root\{visibility:hidden\}/);
   assert.match(
     page,
-    /if \(!startupHydrated\) return;\s*document\.documentElement\.classList\.remove\("startup-pending"\)/,
+    /useLayoutEffect\(\(\) => \{[\s\S]{0,260}classList\.remove\("startup-pending"\);\s*\}, \[\]\)/,
   );
+  assert.doesNotMatch(page, /startupHydrated|setStartupHydrated/);
   assert.doesNotMatch(page, /launchCover\.remove\(\)/);
   assert.match(mainActivity, /SplashScreen\.installSplashScreen\(this\)/);
   assert.match(
     mainActivity,
     /setKeepOnScreenCondition\(\(\) -> !launchReady\)/,
   );
-  assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 7000L/);
+  assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 2000L/);
   assert.match(nativeStorage, /public void finishLaunch\(PluginCall call\)/);
   assert.match(
     page,
-    /if \(!startupHydrated \|\| !isNative\(\)\) return;[\s\S]{0,220}AereaStorage\.finishLaunch\(\)/,
+    /if \(!isNative\(\)\) return;[\s\S]{0,260}AereaStorage\.finishLaunch\(\)/,
   );
   assert.match(androidManifest, /android:theme="@style\/AppTheme\.Starting"/);
   assert.match(
     androidStyles,
     /style name="AppTheme\.Starting" parent="Theme\.SplashScreen"[\s\S]{0,400}windowSplashScreenBackground">@color\/aerea_launch_background[\s\S]{0,400}postSplashScreenTheme">@style\/AppTheme\.NoActionBar/,
   );
+  assert.match(androidStyles, /windowSplashScreenAnimatedIcon">@mipmap\/aerea_splash_icon/);
+  assert.match(androidColors, /aerea_launch_background">#F5F6F8/);
+  assert.match(androidNightColors, /aerea_launch_background">#0E1418/);
+  for (const density of ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]) {
+    assert.ok(
+      existsSync(`android/app/src/main/res/mipmap-${density}/aerea_splash_icon.png`),
+      `compact splash icon should exist for ${density}`,
+    );
+  }
 });
 
 test("native startup ships only the Latin Gaegu face used by the interface", () => {
@@ -85,7 +98,6 @@ test("native startup ships only the Latin Gaegu face used by the interface", () 
 test("the profile photo is present in the first native header frame", () => {
   assert.match(nativeAppearance, /NATIVE_PROFILE_PHOTO_KEY/);
   assert.match(nativeAppearance, /export function readNativeProfilePhoto/);
-  assert.match(nativeAppearance, /export function hasNativeProfilePhotoCache/);
   assert.match(nativeAppearance, /export function writeNativeProfilePhoto/);
   assert.match(
     page,
@@ -96,10 +108,7 @@ test("the profile photo is present in the first native header frame", () => {
     /setProfilePhoto\(state\.profilePhoto\);[\s\S]{0,100}writeNativeProfilePhoto\(state\.profilePhoto\)/,
   );
   assert.match(page, /writeNativeProfilePhoto\(null\)/);
-  assert.match(
-    page,
-    /cachedNativeState !== null && hasNativeProfilePhotoCache\(\)/,
-  );
+  assert.doesNotMatch(page, /hasNativeProfilePhotoCache\(\)/);
   assert.match(nativeAppearance, /NATIVE_PROFILE_PHOTO_NONE/);
 });
 
