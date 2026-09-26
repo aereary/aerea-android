@@ -15,6 +15,10 @@ const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
 );
+const supabaseClientSource = await readFile(
+  new URL("../app/supabase-client.ts", import.meta.url),
+  "utf8",
+);
 const nativeStorageSource = await readFile(
   new URL(
     "../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java",
@@ -72,7 +76,7 @@ test("reads the private automatic AO3 catalog from Supabase without joining priv
   assert.match(ao3Source, /validEpubVersions\(epubRows\)/);
   assert.match(ao3Source, /aerea-ao3-library-cache-v1/);
   assert.doesNotMatch(ao3Source, /aerea_sync|service_role|sb_secret_/);
-  assert.match(syncSource, /SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(supabaseClientSource, /SUPABASE_PUBLISHABLE_KEY/);
 });
 
 test("keeps a valid offline cache and refreshes automatically", () => {

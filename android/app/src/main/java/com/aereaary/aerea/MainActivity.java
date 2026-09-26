@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.webkit.WebView;
 
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.content.ContextCompat;
@@ -19,7 +20,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-    private static final long MAX_SPLASH_HOLD_MS = 2000L;
+    private static final long MAX_SPLASH_HOLD_MS = 5000L;
     private volatile boolean launchReady = false;
 
     @Override
@@ -27,7 +28,7 @@ public class MainActivity extends BridgeActivity {
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         splashScreen.setKeepOnScreenCondition(() -> !launchReady);
         new Handler(Looper.getMainLooper()).postDelayed(
-                this::finishLaunch,
+                this::forceFinishLaunch,
                 MAX_SPLASH_HOLD_MS
         );
         int launchThemeColor = ContextCompat.getColor(this, R.color.aerea_launch_background);
@@ -63,6 +64,29 @@ public class MainActivity extends BridgeActivity {
     }
 
     public void finishLaunch() {
+        if (launchReady) return;
+        if (getBridge() == null || getBridge().getWebView() == null) {
+            forceFinishLaunch();
+            return;
+        }
+
+        WebView webView = getBridge().getWebView();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.postVisualStateCallback(
+                    System.nanoTime(),
+                    new WebView.VisualStateCallback() {
+                        @Override
+                        public void onComplete(long requestId) {
+                            webView.postOnAnimation(MainActivity.this::forceFinishLaunch);
+                        }
+                    }
+            );
+            return;
+        }
+        webView.postDelayed(this::forceFinishLaunch, 32L);
+    }
+
+    private void forceFinishLaunch() {
         launchReady = true;
     }
 

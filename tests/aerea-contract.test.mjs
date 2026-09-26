@@ -59,6 +59,10 @@ const syncSource = await readFile(
   new URL("../app/supabase-sync.ts", import.meta.url),
   "utf8",
 );
+const supabaseClientSource = await readFile(
+  new URL("../app/supabase-client.ts", import.meta.url),
+  "utf8",
+);
 const librarySource = await readFile(
   new URL("../app/study-library.tsx", import.meta.url),
   "utf8",
@@ -731,7 +735,9 @@ test("packages the application and declares contextual Android capabilities", ()
 
 test("keeps cross-device sync private and local-first", () => {
   assert.match(syncSource, /aereaary@gmail\.com/);
-  assert.match(syncSource, /persistSession: true/);
+  assert.match(supabaseClientSource, /persistSession: true/);
+  assert.match(syncSource, /import\("\.\/supabase-client"\)/);
+  assert.match(syncSource, /requestIdleCallback\(resolve, \{ timeout: 800 \}\)/);
   assert.match(syncSource, /reconcileCloudState/);
   assert.match(syncSource, /aerea-private-state-v1/);
   assert.doesNotMatch(syncSource, /service_role/i);
@@ -924,7 +930,12 @@ test("hands off the native startup at the first React frame while local state re
   );
   assert.match(
     pageSource,
-    /if \(!isNative\(\)\) return;[\s\S]{0,260}AereaStorage\.finishLaunch\(\)/,
+    /document\.fonts\.ready[\s\S]{0,500}requestAnimationFrame[\s\S]{0,300}AereaStorage\.finishLaunch\(\)/,
+  );
+  assert.match(mainActivitySource, /postVisualStateCallback\(/);
+  assert.match(
+    mainActivitySource,
+    /new WebView\.VisualStateCallback\(\)[\s\S]{0,240}postOnAnimation\(MainActivity\.this::forceFinishLaunch\)/,
   );
 });
 

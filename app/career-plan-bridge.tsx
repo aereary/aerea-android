@@ -15,7 +15,7 @@ import {
   type CareerProfessor,
   type ProfessorRating,
 } from "./career-plan-data";
-import { supabase } from "./supabase-sync";
+import { supabase } from "./supabase-client";
 import styles from "./career-plan.module.css";
 
 const LOCAL_KEY = "aerea-academic-profile-v1";

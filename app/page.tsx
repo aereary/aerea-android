@@ -14,6 +14,7 @@ import {
   downloadAereaLibraryFile,
   fetchFootballMatches,
   fetchSportsFixtures,
+  getSupabase,
   handleAereaAuthCallback,
   pushCloudState,
   readCachedFootballMatches,
@@ -21,7 +22,6 @@ import {
   readBrowserState,
   reconcileCloudState,
   requestAereaCode,
-  supabase,
   syncFollowedSportsTeams,
   uploadAereaLibraryFile,
   verifyAereaCode,
@@ -3358,9 +3358,27 @@ export default function Home() {
 
   useEffect(() => {
     if (!isNative()) return;
-    // Effects run after React's first paint, so Android can hand off directly
-    // to the usable cached/default home while SQLite refreshes in background.
-    void AereaStorage.finishLaunch().catch(() => undefined);
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    // Wait for fonts, layout and two compositor passes. Android then confirms
+    // the WebView visual state before removing the splash, so no half-painted
+    // Home can leak through during the handoff.
+    void document.fonts.ready.then(() => {
+      if (cancelled) return;
+      void document.documentElement.offsetHeight;
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          if (cancelled) return;
+          void AereaStorage.finishLaunch().catch(() => undefined);
+        });
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
   }, []);
 
   useLayoutEffect(() => {
@@ -3675,6 +3693,7 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     let refreshRunning = false;
+    let removeRealtimeChannel: (() => void) | null = null;
     const cachedMatches = readCachedFootballMatches();
     const cachedTimer = window.setTimeout(() => {
       if (!cancelled && cachedMatches.length > 0) {
@@ -3695,20 +3714,26 @@ export default function Home() {
       }
     };
 
-    void refreshFootballMatches();
-    const channel = supabase
-      .channel("aerea-boca-football-matches")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "football_matches",
-          filter: "team_key=eq.boca_juniors",
-        },
-        () => void refreshFootballMatches(),
-      )
-      .subscribe();
+    void getSupabase().then((supabase) => {
+      if (cancelled) return;
+      void refreshFootballMatches();
+      const channel = supabase
+        .channel("aerea-boca-football-matches")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "football_matches",
+            filter: "team_key=eq.boca_juniors",
+          },
+          () => void refreshFootballMatches(),
+        )
+        .subscribe();
+      removeRealtimeChannel = () => {
+        void supabase.removeChannel(channel);
+      };
+    });
     const refreshWhenOnline = () => void refreshFootballMatches();
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") {
@@ -3725,7 +3750,7 @@ export default function Home() {
       window.clearInterval(interval);
       window.removeEventListener("online", refreshWhenOnline);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
-      void supabase.removeChannel(channel);
+      removeRealtimeChannel?.();
     };
   }, []);
 
@@ -4078,21 +4103,26 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
-    void currentAereaEmail().then((email) => {
+    let unsubscribeAuth: (() => void) | null = null;
+    void getSupabase().then((supabase) => {
       if (!mounted) return;
-      setSyncEmail(email);
-      setSyncMessage(
-        email ? "Private sync is on." : "Sign in to use aérea on every device.",
-      );
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      const email = session?.user.email?.toLowerCase() || null;
-      setSyncEmail(email === AEREA_ACCOUNT ? email : null);
+      void currentAereaEmail().then((email) => {
+        if (!mounted) return;
+        setSyncEmail(email);
+        setSyncMessage(
+          email ? "Private sync is on." : "Sign in to use aérea on every device.",
+        );
+      });
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return;
+        const email = session?.user.email?.toLowerCase() || null;
+        setSyncEmail(email === AEREA_ACCOUNT ? email : null);
+      });
+      unsubscribeAuth = () => data.subscription.unsubscribe();
     });
     return () => {
       mounted = false;
-      data.subscription.unsubscribe();
+      unsubscribeAuth?.();
     };
   }, []);
 
@@ -9536,6 +9566,7 @@ export default function Home() {
   };
 
   const signOutOfSync = async () => {
+    const supabase = await getSupabase();
     await supabase.auth.signOut();
     setSyncEmail(null);
     setSyncCodeSent(false);
