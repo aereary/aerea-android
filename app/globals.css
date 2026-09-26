@@ -32509,6 +32509,27 @@ html[data-native="true"] :where(
   padding-right:0;
 }
 
+.calendar-sources .calendar-today-shortcut {
+  background:var(--paper);
+  border:1px solid color-mix(in srgb,var(--line) 82%,transparent);
+  border-radius:999px;
+  color:var(--ink);
+  cursor:pointer;
+  flex:0 0 auto;
+  font:inherit;
+  font-weight:850;
+  min-height:29px;
+  padding:5px 11px;
+  white-space:nowrap;
+}
+
+.calendar-sources .calendar-today-shortcut:hover,
+.calendar-sources .calendar-today-shortcut:focus-visible {
+  background:color-mix(in srgb,var(--blue) 20%,var(--paper));
+  border-color:color-mix(in srgb,var(--blue) 52%,var(--line));
+  outline:0;
+}
+
 .calendar-sources .calendar-full-month-link {
   border:0;
   cursor:pointer;
@@ -32753,8 +32774,8 @@ html[data-native="true"] :where(
 .app-shell[data-simplified-calendar="true"] .simplified-event-strip.yellow { --simplified-event-fill:var(--yellow-soft); --simplified-event-ink:#735f21; }
 .app-shell[data-simplified-calendar="true"] .simplified-event-strip.pink { --simplified-event-fill:var(--pink); --simplified-event-ink:#7f4d61; }
 
-/* Full aérea keeps the approved current-day treatment. */
-.app-shell:not([data-simplified-calendar="true"]) .month-grid > button.today {
+/* Full aérea gives the blue treatment only to the selected date. */
+.app-shell:not([data-simplified-calendar="true"]) .month-grid > button.today.selected {
   background:#e1f5ff;
   border:2px solid #66bce5;
   box-shadow:0 4px 0 rgba(65,137,173,.08);
