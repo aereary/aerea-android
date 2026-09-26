@@ -9,6 +9,7 @@
       html,body{background:#fff9ed}
       html.appearance-pending,html.appearance-pending body{background:#fff9ed!important}
       html.appearance-pending #root{visibility:hidden}
+      html.startup-pending,html.startup-pending body{background:#fff9ed!important}
       html.startup-pending #root{visibility:hidden}
     </style>
   </head>
@@ -51,20 +52,6 @@
           }
         } catch {
           pending();
-        }
-      })();
-    </script>
-    <script>
-      (() => {
-        try {
-          const cached = JSON.parse(
-            localStorage.getItem("aerea-native-launch-state-v1") || "null",
-          );
-          if (cached?.version === 1 && cached.state && typeof cached.state === "object") {
-            document.documentElement.classList.remove("startup-pending");
-          }
-        } catch {
-          // The first launch stays covered until SQLite restores the saved day.
         }
       })();
     </script>

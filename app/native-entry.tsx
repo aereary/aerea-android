@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import Aerea from "./page";
-import "@fontsource/gaegu/700.css";
+import "@fontsource/gaegu/latin-700.css";
 import "./globals.css";
 import "./timetable-agenda.css";
 

@@ -6,8 +6,11 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 
+import androidx.core.splashscreen.SplashScreen;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
@@ -15,8 +18,17 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private static final long MAX_SPLASH_HOLD_MS = 7000L;
+    private volatile boolean launchReady = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
+        splashScreen.setKeepOnScreenCondition(() -> !launchReady);
+        new Handler(Looper.getMainLooper()).postDelayed(
+                this::finishLaunch,
+                MAX_SPLASH_HOLD_MS
+        );
         int launchThemeColor = AereaStoragePlugin.launchThemeColor(this);
         getWindow().setBackgroundDrawable(new ColorDrawable(launchThemeColor));
         Intent initialIntent = getIntent();
@@ -47,6 +59,10 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().setBackgroundColor(launchThemeColor);
             getBridge().getWebView().setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
+    }
+
+    public void finishLaunch() {
+        launchReady = true;
     }
 
     @Override

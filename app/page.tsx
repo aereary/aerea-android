@@ -76,13 +76,14 @@ import {
   writeNativeAppearance,
   writeNativeProfilePhoto,
 } from "./native-appearance";
-import type {
-  CalendarMemo,
-  StudyFileItem,
-  StudyNotebook,
-  StudyNote,
-  StudyRecordingItem,
-  StudyTask,
+import {
+  StudyLibrary,
+  type CalendarMemo,
+  type StudyFileItem,
+  type StudyNotebook,
+  type StudyNote,
+  type StudyRecordingItem,
+  type StudyTask,
 } from "./study-library";
 import type { EpubBook } from "./epub-reader";
 import type {
@@ -122,7 +123,6 @@ import {
 
 const loadStudyReaderModule = () => import("./study-reader");
 const loadAo3LibraryModule = () => import("./ao3-library");
-const loadStudyLibraryModule = () => import("./study-library");
 const Ao3Library = lazy(() =>
   loadAo3LibraryModule().then((module) => ({ default: module.Ao3Library })),
 );
@@ -130,9 +130,6 @@ const Ao3LibraryOpening = lazy(() =>
   loadAo3LibraryModule().then((module) => ({
     default: module.Ao3LibraryOpening,
   })),
-);
-const StudyLibrary = lazy(() =>
-  loadStudyLibraryModule().then((module) => ({ default: module.StudyLibrary })),
 );
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
 const PdfStudyReader = lazy(() =>
@@ -243,6 +240,7 @@ type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
   putState(options: { state: string }): Promise<void>;
   setLaunchAppearance(options: { themeColor: string }): Promise<void>;
+  finishLaunch(): Promise<void>;
   clearPersonalContent(): Promise<void>;
   listSketches(): Promise<{ pages: SketchPage[] }>;
   saveSketch(options: {
@@ -3364,6 +3362,13 @@ export default function Home() {
     document.documentElement.classList.remove("startup-pending");
   }, [startupHydrated]);
 
+  useEffect(() => {
+    if (!startupHydrated || !isNative()) return;
+    // Release Android's one native splash only after React has painted the
+    // complete first screen. This prevents blank and themed in-between frames.
+    void AereaStorage.finishLaunch().catch(() => undefined);
+  }, [startupHydrated]);
+
   useLayoutEffect(() => {
     const resolvePersistedStateCommit =
       persistedStateCommitResolverRef.current;
@@ -3588,32 +3593,22 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Paint Today first, then warm the normal Library immediately so opening
-    // Spaces never waits on a chunk. AO3 remains an idle follow-up because its
-    // renderer is much larger and is opened from the Library brand.
+    // AO3 stays instant when the brand is tapped, but its large card renderer
+    // no longer delays the first app frame on a cold Android launch.
     const idleWindow = window as Window & {
       requestIdleCallback?: (callback: () => void) => number;
       cancelIdleCallback?: (handle: number) => void;
     };
-    let idleHandle: number | null = null;
-    let idleTimeout: number | null = null;
-    const frame = window.requestAnimationFrame(() => {
-      void loadStudyLibraryModule();
-      if (idleWindow.requestIdleCallback) {
-        idleHandle = idleWindow.requestIdleCallback(() => {
-          void loadAo3LibraryModule();
-        });
-      } else {
-        idleTimeout = window.setTimeout(() => {
-          void loadAo3LibraryModule();
-        }, 0);
-      }
-    });
-    return () => {
-      window.cancelAnimationFrame(frame);
-      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle);
-      if (idleTimeout !== null) window.clearTimeout(idleTimeout);
-    };
+    if (idleWindow.requestIdleCallback) {
+      const handle = idleWindow.requestIdleCallback(() => {
+        void loadAo3LibraryModule();
+      });
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+    const timeout = window.setTimeout(() => {
+      void loadAo3LibraryModule();
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -10597,35 +10592,6 @@ export default function Home() {
               )}
 
               {space === "library" && (
-                <Suspense
-                  fallback={
-                    <section
-                      className="study-library-screen"
-                      aria-label="Library"
-                      aria-busy="true"
-                    >
-                      <header className="study-library-hero">
-                        <div>
-                          <button
-                            className="study-library-back"
-                            type="button"
-                            onClick={() => setSpace("menu")}
-                          >
-                            <span aria-hidden="true">←</span> Spaces
-                          </button>
-                          <p className="tiny-label">NOTES · READING · FILES</p>
-                          <h1>Your Library</h1>
-                          <p>Quick notes, PDFs, EPUB books, and private files—kept together inside Spaces.</p>
-                        </div>
-                        <div className="study-library-stats" aria-label="Library totals">
-                          <span><strong>{studyNotes.length}</strong><small>notes</small></span>
-                          <span><strong>{studyFiles.length + libraryItems.length}</strong><small>files</small></span>
-                          <span><strong>{recordings.length}</strong><small>recordings</small></span>
-                        </div>
-                      </header>
-                    </section>
-                  }
-                >
                 <StudyLibrary
                   notes={studyNotes}
                   files={[
@@ -10716,7 +10682,6 @@ export default function Home() {
                   onRequestedNoteOpened={() => setRequestedStudyNoteId(null)}
                   onBack={() => setSpace("menu")}
                 />
-                </Suspense>
               )}
 
               {space === "inbox" && (
