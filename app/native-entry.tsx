@@ -4,7 +4,6 @@ import Aerea from "./page";
 import "@fontsource/gaegu/700.css";
 import "./globals.css";
 import "./timetable-agenda.css";
-import "./styles/experimental-theme-lab.css";
 
 const CareerPlanBridge = lazy(() => import("./career-plan-bridge"));
 const TimetableAgendaBridge = lazy(() => import("./timetable-agenda-bridge"));
