@@ -4130,9 +4130,48 @@ p {
 
 .switch-row input[type="checkbox"],
 .day-counter-option input[type="checkbox"] {
-  accent-color: var(--event-editor-accent);
-  height: 23px;
-  width: 41px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: color-mix(in srgb, var(--event-editor-accent) 16%, var(--paper));
+  border: 2px solid color-mix(in srgb, var(--event-editor-accent) 42%, var(--paper));
+  border-radius: 999px;
+  cursor: pointer;
+  height: 24px;
+  margin: 0;
+  padding: 2px;
+  position: relative;
+  transition: background 150ms ease, border-color 150ms ease;
+  width: 42px;
+}
+
+.switch-row input[type="checkbox"]::after,
+.day-counter-option input[type="checkbox"]::after {
+  background: var(--paper);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--event-editor-deep) 24%, transparent);
+  content: "";
+  display: block;
+  height: 16px;
+  transform: translateX(0);
+  transition: transform 150ms ease;
+  width: 16px;
+}
+
+.switch-row input[type="checkbox"]:checked,
+.day-counter-option input[type="checkbox"]:checked {
+  background: var(--event-editor-accent);
+  border-color: var(--event-editor-accent);
+}
+
+.switch-row input[type="checkbox"]:checked::after,
+.day-counter-option input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+.switch-row input[type="checkbox"]:focus-visible,
+.day-counter-option input[type="checkbox"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--event-editor-accent) 34%, transparent);
+  outline-offset: 2px;
 }
 
 .event-dates {
@@ -27334,6 +27373,45 @@ html[data-native="true"] .simplified-calendar-screen {
   gap: 7px;
   max-width: 100%;
   padding: 8px 10px;
+}
+
+.event-existing-attachments input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: color-mix(in srgb, var(--event-editor-accent) 8%, var(--paper));
+  border: 2px solid color-mix(in srgb, var(--event-editor-accent) 48%, var(--line));
+  border-radius: 5px;
+  display: grid;
+  flex: 0 0 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  place-content: center;
+  width: 18px;
+}
+
+.event-existing-attachments input[type="checkbox"]::after {
+  border-bottom: 2px solid white;
+  border-right: 2px solid white;
+  content: "";
+  height: 8px;
+  transform: rotate(45deg) scale(0);
+  transition: transform 120ms ease;
+  width: 4px;
+}
+
+.event-existing-attachments input[type="checkbox"]:checked {
+  background: var(--event-editor-accent);
+  border-color: var(--event-editor-accent);
+}
+
+.event-existing-attachments input[type="checkbox"]:checked::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.event-existing-attachments input[type="checkbox"]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--event-editor-accent) 32%, transparent);
+  outline-offset: 2px;
 }
 
 .event-existing-attachments strong {

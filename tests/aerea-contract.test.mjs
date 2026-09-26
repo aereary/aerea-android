@@ -330,6 +330,14 @@ test("tints the event editor from the chosen event color", () => {
   assert.match(cssSource, /\.event-dates > label[\s\S]*var\(--event-editor-wash\)/);
   assert.match(cssSource, /\.event-todo-field > div button[\s\S]*var\(--event-editor-control\)/);
   assert.match(cssSource, /\.mobile-event-save[\s\S]*var\(--event-editor-control\)/);
+  assert.match(
+    cssSource,
+    /\.switch-row input\[type="checkbox"\][\s\S]{0,520}appearance: none;[\s\S]{0,520}border-radius: 999px;/,
+  );
+  assert.match(
+    cssSource,
+    /\.event-existing-attachments input\[type="checkbox"\][\s\S]{0,520}appearance: none;[\s\S]{0,520}border-radius: 5px;/,
+  );
 });
 
 test("keeps the mobile event actions compact and offers safe deletion while editing", () => {
