@@ -37,20 +37,14 @@ test("native geometry and the correct greeting exist before the first paint", ()
   assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
 });
 
-test("the launch mark covers the WebView until the complete React frame is ready", () => {
-  assert.match(nativeHtml, /id="native-launch-cover"[\s\S]{0,160}native-launch-mark/);
-  assert.match(
-    nativeHtml,
-    /#native-launch-cover\{[^}]*position:fixed[^}]*inset:0[^}]*z-index:2147483647/,
-  );
-  assert.match(
-    nativeHtml,
-    /launchCover\.style\.background = appearance\.background/,
-  );
+test("Android hands off directly to the cached app without a duplicate web splash", () => {
+  assert.doesNotMatch(nativeHtml, /native-launch-cover|native-launch-mark/);
+  assert.match(nativeHtml, /html\.startup-pending #root\{visibility:hidden\}/);
   assert.match(
     page,
-    /classList\.remove\("startup-pending"\);[\s\S]{0,240}requestAnimationFrame\(\(\) => launchCover\.remove\(\)\)/,
+    /if \(!startupHydrated\) return;\s*document\.documentElement\.classList\.remove\("startup-pending"\)/,
   );
+  assert.doesNotMatch(page, /launchCover\.remove\(\)/);
 });
 
 test("the profile photo is present in the first native header frame", () => {
@@ -123,10 +117,22 @@ test("AO3 is loaded just after first paint instead of blocking cold start", () =
   assert.doesNotMatch(page, /import \{[\s\S]{0,120}Ao3Library[\s\S]{0,120}\} from "\.\/ao3-library"/);
 });
 
-test("document readers stay out of the native startup bundle", () => {
+test("the normal Library is warmed after first paint without bundling its readers", () => {
   assert.match(
     page,
-    /const StudyLibrary = lazy\([\s\S]{0,180}import\("\.\/study-library"\)/,
+    /const loadStudyLibraryModule = \(\) => import\("\.\/study-library"\)/,
+  );
+  assert.match(
+    page,
+    /const StudyLibrary = lazy\([\s\S]{0,180}loadStudyLibraryModule\(\)/,
+  );
+  assert.match(
+    page,
+    /requestAnimationFrame\(\(\) => \{[\s\S]{0,100}loadStudyLibraryModule\(\)/,
+  );
+  assert.match(
+    page,
+    /space === "library"[\s\S]{0,220}<Suspense[\s\S]{0,500}className="study-library-screen"[\s\S]{0,120}aria-busy="true"/,
   );
   assert.match(
     page,

@@ -122,6 +122,7 @@ import {
 
 const loadStudyReaderModule = () => import("./study-reader");
 const loadAo3LibraryModule = () => import("./ao3-library");
+const loadStudyLibraryModule = () => import("./study-library");
 const Ao3Library = lazy(() =>
   loadAo3LibraryModule().then((module) => ({ default: module.Ao3Library })),
 );
@@ -131,7 +132,7 @@ const Ao3LibraryOpening = lazy(() =>
   })),
 );
 const StudyLibrary = lazy(() =>
-  import("./study-library").then((module) => ({ default: module.StudyLibrary })),
+  loadStudyLibraryModule().then((module) => ({ default: module.StudyLibrary })),
 );
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
 const PdfStudyReader = lazy(() =>
@@ -3361,9 +3362,6 @@ export default function Home() {
   useLayoutEffect(() => {
     if (!startupHydrated) return;
     document.documentElement.classList.remove("startup-pending");
-    const launchCover = document.getElementById("native-launch-cover");
-    if (!launchCover) return;
-    window.requestAnimationFrame(() => launchCover.remove());
   }, [startupHydrated]);
 
   useLayoutEffect(() => {
@@ -3590,22 +3588,32 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // AO3 stays instant when the brand is tapped, but its large card renderer
-    // no longer delays the first app frame on a cold Android launch.
+    // Paint Today first, then warm the normal Library immediately so opening
+    // Spaces never waits on a chunk. AO3 remains an idle follow-up because its
+    // renderer is much larger and is opened from the Library brand.
     const idleWindow = window as Window & {
       requestIdleCallback?: (callback: () => void) => number;
       cancelIdleCallback?: (handle: number) => void;
     };
-    if (idleWindow.requestIdleCallback) {
-      const handle = idleWindow.requestIdleCallback(() => {
-        void loadAo3LibraryModule();
-      });
-      return () => idleWindow.cancelIdleCallback?.(handle);
-    }
-    const timeout = window.setTimeout(() => {
-      void loadAo3LibraryModule();
-    }, 0);
-    return () => window.clearTimeout(timeout);
+    let idleHandle: number | null = null;
+    let idleTimeout: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      void loadStudyLibraryModule();
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(() => {
+          void loadAo3LibraryModule();
+        });
+      } else {
+        idleTimeout = window.setTimeout(() => {
+          void loadAo3LibraryModule();
+        }, 0);
+      }
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (idleTimeout !== null) window.clearTimeout(idleTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -10589,7 +10597,35 @@ export default function Home() {
               )}
 
               {space === "library" && (
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <section
+                      className="study-library-screen"
+                      aria-label="Library"
+                      aria-busy="true"
+                    >
+                      <header className="study-library-hero">
+                        <div>
+                          <button
+                            className="study-library-back"
+                            type="button"
+                            onClick={() => setSpace("menu")}
+                          >
+                            <span aria-hidden="true">←</span> Spaces
+                          </button>
+                          <p className="tiny-label">NOTES · READING · FILES</p>
+                          <h1>Your Library</h1>
+                          <p>Quick notes, PDFs, EPUB books, and private files—kept together inside Spaces.</p>
+                        </div>
+                        <div className="study-library-stats" aria-label="Library totals">
+                          <span><strong>{studyNotes.length}</strong><small>notes</small></span>
+                          <span><strong>{studyFiles.length + libraryItems.length}</strong><small>files</small></span>
+                          <span><strong>{recordings.length}</strong><small>recordings</small></span>
+                        </div>
+                      </header>
+                    </section>
+                  }
+                >
                 <StudyLibrary
                   notes={studyNotes}
                   files={[
