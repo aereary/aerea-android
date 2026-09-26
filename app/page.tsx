@@ -2628,6 +2628,7 @@ export default function Home() {
   >(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayKey);
   const [eventEditorOpen, setEventEditorOpen] = useState(false);
+  const [eventEditorReturnHome, setEventEditorReturnHome] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
@@ -7551,6 +7552,7 @@ export default function Home() {
   const openNewEvent = (dateKey = selectedCalendarDate) => {
     const defaultCategory = calendarCategories[0] ?? starterCalendarCategories[0];
     setCalendarSearchOpen(false);
+    setEventEditorReturnHome(false);
     setEditingEventId(null);
     setEventTemplateSuggestionsDismissed(false);
     setEventDraft({
@@ -7579,8 +7581,8 @@ export default function Home() {
     openNewEvent(selectedCalendarDate);
   };
 
-  const openNewEventFromNavigation = () => {
-    const dateKey = activeTab === "today" ? selectedHomeDate : todayKey;
+  const openNewEventForSelectedHomeDay = () => {
+    const dateKey = selectedHomeDate;
     const date = dateFromKey(dateKey);
     setSelectedCalendarDate(dateKey);
     setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1));
@@ -7590,6 +7592,7 @@ export default function Home() {
     setMonthPickerOpen(false);
     setCalendarOpen(true);
     openNewEvent(dateKey);
+    setEventEditorReturnHome(true);
   };
 
   const openNewEventAtMinute = (dateKey: string, minute: number) => {
@@ -7611,6 +7614,7 @@ export default function Home() {
 
   const openEventEditor = (calendarEvent: CalendarEvent) => {
     setCalendarSearchOpen(false);
+    setEventEditorReturnHome(false);
     setEditingEventId(calendarEvent.id);
     setEventTemplateSuggestionsDismissed(true);
     setEventDraft({
@@ -7622,8 +7626,9 @@ export default function Home() {
   };
 
   const closeCalendarEventEditor = () => {
-    const returnHome = editingEventId !== null;
+    const returnHome = editingEventId !== null || eventEditorReturnHome;
     setEventEditorOpen(false);
+    setEventEditorReturnHome(false);
     setEditingEventId(null);
     if (!returnHome) return;
     setCalendarExpanded(false);
@@ -10018,6 +10023,7 @@ export default function Home() {
               completeReminder={completeReminderItem}
               restoreReminder={restoreReminderItem}
               openCalendar={openCalendarAtToday}
+              openEventComposer={openNewEventForSelectedHomeDay}
               yesterdayDoneCount={yesterdayDoneCount}
               selectedDate={selectedHomeDate}
               selectDate={setSelectedHomeDate}
@@ -16441,6 +16447,7 @@ function TodayScreen({
   completeReminder,
   restoreReminder,
   openCalendar,
+  openEventComposer,
   selectedDate,
   selectDate,
   selectedDateEvents,
@@ -16468,6 +16475,7 @@ function TodayScreen({
   completeReminder: (id: number) => void;
   restoreReminder: (id: number) => void;
   openCalendar: () => void;
+  openEventComposer: () => void;
   selectedDate: string;
   selectDate: (dateKey: string) => void;
   selectedDateEvents: CalendarEvent[];
@@ -17032,7 +17040,7 @@ function TodayScreen({
               </button>
             ))
           )}
-          <button className="add-event-button" onClick={openCalendar}>
+          <button className="add-event-button" onClick={openEventComposer}>
             <span>＋</span> Add something to your day
           </button>
         </div>
