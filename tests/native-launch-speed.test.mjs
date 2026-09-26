@@ -6,6 +6,16 @@ const page = readFileSync("app/page.tsx", "utf8");
 const nativeEntry = readFileSync("app/native-entry.tsx", "utf8");
 const nativeHtml = readFileSync("native.html", "utf8");
 const nativeAppearance = readFileSync("app/native-appearance.ts", "utf8");
+const mainActivity = readFileSync(
+  "android/app/src/main/java/com/aereaary/aerea/MainActivity.java",
+  "utf8",
+);
+const nativeStorage = readFileSync(
+  "android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java",
+  "utf8",
+);
+const androidManifest = readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
+const androidStyles = readFileSync("android/app/src/main/res/values/styles.xml", "utf8");
 
 test("a warm native launch paints the last complete day on its first React frame", () => {
   assert.match(page, /NATIVE_LAUNCH_STATE_KEY = "aerea-native-launch-state-v1"/);
@@ -37,7 +47,7 @@ test("native geometry and the correct greeting exist before the first paint", ()
   assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
 });
 
-test("the launch mark covers the WebView until the complete React frame is ready", () => {
+test("one native splash hands directly to the complete React frame", () => {
   assert.match(nativeHtml, /id="native-launch-cover"[\s\S]{0,160}native-launch-mark/);
   assert.match(
     nativeHtml,
@@ -49,7 +59,37 @@ test("the launch mark covers the WebView until the complete React frame is ready
   );
   assert.match(
     page,
-    /classList\.remove\("startup-pending"\);[\s\S]{0,240}requestAnimationFrame\(\(\) => launchCover\.remove\(\)\)/,
+    /classList\.remove\("startup-pending"\);[\s\S]{0,180}launchCover\?\.remove\(\);[\s\S]{0,180}AereaStorage\.completeLaunch\(\)/,
+  );
+  assert.match(mainActivity, /SplashScreen\.installSplashScreen\(this\)/);
+  assert.match(mainActivity, /setKeepOnScreenCondition\(\(\) -> !launchReady\)/);
+  assert.match(mainActivity, /public void completeLaunch\(\)/);
+  assert.match(mainActivity, /postDelayed\(launchSafetyTimeout, 4_000L\)/);
+  assert.match(nativeStorage, /public void completeLaunch\(PluginCall call\)/);
+  assert.match(androidManifest, /android:theme="@style\/AppTheme\.Starting"/);
+  assert.match(androidStyles, /name="AppTheme\.Starting" parent="Theme\.SplashScreen"/);
+  assert.match(androidStyles, /postSplashScreenTheme">@style\/AppTheme\.NoActionBar/);
+});
+
+test("retired interface experiments fall back without blocking native startup", () => {
+  for (const theme of [
+    "porcelainday",
+    "bluebellpaper",
+    "apricotpocket",
+    "mintledger",
+    "lilacorbit",
+    "cloudglass",
+    "ticketgarden",
+    "linenstudio",
+    "midnightindex",
+    "cherrynoir",
+  ]) {
+    assert.doesNotMatch(page, new RegExp(`id: "${theme}"`));
+    assert.match(nativeHtml, new RegExp(`retiredThemes[\\s\\S]{0,300}"${theme}"`));
+  }
+  assert.match(
+    nativeHtml,
+    /retiredThemes\.includes\(appearance\.appTheme\)[\s\S]{0,220}localStorage\.removeItem\(key\);/,
   );
 });
 

@@ -6,17 +6,25 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.splashscreen.SplashScreen;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private boolean launchReady = false;
+    private final Handler launchHandler = new Handler(Looper.getMainLooper());
+    private final Runnable launchSafetyTimeout = () -> launchReady = true;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         int launchThemeColor = AereaStoragePlugin.launchThemeColor(this);
         getWindow().setBackgroundDrawable(new ColorDrawable(launchThemeColor));
         Intent initialIntent = getIntent();
@@ -34,6 +42,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AereaMicrophonePlugin.class);
         configureEdgeToEdge();
         super.onCreate(savedInstanceState);
+        splashScreen.setKeepOnScreenCondition(() -> !launchReady);
+        // Never strand the user on the native launch screen if WebView startup
+        // fails before React can report its first complete frame.
+        launchHandler.postDelayed(launchSafetyTimeout, 4_000L);
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 if (getBridge() != null) {
@@ -47,6 +59,17 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().setBackgroundColor(launchThemeColor);
             getBridge().getWebView().setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
+    }
+
+    public void completeLaunch() {
+        launchHandler.removeCallbacks(launchSafetyTimeout);
+        launchReady = true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        launchHandler.removeCallbacks(launchSafetyTimeout);
+        super.onDestroy();
     }
 
     @Override
