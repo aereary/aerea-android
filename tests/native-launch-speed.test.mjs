@@ -4,10 +4,21 @@ import test from "node:test";
 
 const page = readFileSync("app/page.tsx", "utf8");
 const nativeEntry = readFileSync("app/native-entry.tsx", "utf8");
+const layout = readFileSync("app/layout.tsx", "utf8");
 const nativeHtml = readFileSync("native.html", "utf8");
 const nativeAppearance = readFileSync("app/native-appearance.ts", "utf8");
+const mainActivity = readFileSync(
+  "android/app/src/main/java/com/aereaary/aerea/MainActivity.java",
+  "utf8",
+);
+const nativeStorage = readFileSync(
+  "android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java",
+  "utf8",
+);
+const androidManifest = readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
+const androidStyles = readFileSync("android/app/src/main/res/values/styles.xml", "utf8");
 
-test("a warm native launch paints the last complete day on its first React frame", () => {
+test("a warm native launch has the last complete day ready for its first React frame", () => {
   assert.match(page, /NATIVE_LAUNCH_STATE_KEY = "aerea-native-launch-state-v1"/);
   assert.match(page, /function readNativeLaunchState/);
   assert.match(page, /isNative\(\) \? readNativeLaunchState\(\) : null/);
@@ -18,10 +29,7 @@ test("a warm native launch paints the last complete day on its first React frame
     page,
     /simplifiedCalendarMode && \(stateReady \|\| cachedNativeState !== null\)/,
   );
-  assert.match(
-    nativeHtml,
-    /aerea-native-launch-state-v1[\s\S]{0,420}classList\.remove\("startup-pending"\)/,
-  );
+  assert.doesNotMatch(nativeHtml, /classList\.remove\("startup-pending"\)/);
 });
 
 test("native geometry and the correct greeting exist before the first paint", () => {
@@ -37,14 +45,41 @@ test("native geometry and the correct greeting exist before the first paint", ()
   assert.doesNotMatch(page, /const \[isNight, setIsNight\] = useState\(false\)/);
 });
 
-test("Android hands off directly to the cached app without a duplicate web splash", () => {
+test("Android keeps one neutral native splash until the complete React frame is painted", () => {
   assert.doesNotMatch(nativeHtml, /native-launch-cover|native-launch-mark/);
+  assert.match(
+    nativeHtml,
+    /html\.startup-pending,html\.startup-pending body\{background:#fff9ed!important\}/,
+  );
   assert.match(nativeHtml, /html\.startup-pending #root\{visibility:hidden\}/);
   assert.match(
     page,
     /if \(!startupHydrated\) return;\s*document\.documentElement\.classList\.remove\("startup-pending"\)/,
   );
   assert.doesNotMatch(page, /launchCover\.remove\(\)/);
+  assert.match(mainActivity, /SplashScreen\.installSplashScreen\(this\)/);
+  assert.match(
+    mainActivity,
+    /setKeepOnScreenCondition\(\(\) -> !launchReady\)/,
+  );
+  assert.match(mainActivity, /MAX_SPLASH_HOLD_MS = 7000L/);
+  assert.match(nativeStorage, /public void finishLaunch\(PluginCall call\)/);
+  assert.match(
+    page,
+    /if \(!startupHydrated \|\| !isNative\(\)\) return;[\s\S]{0,220}AereaStorage\.finishLaunch\(\)/,
+  );
+  assert.match(androidManifest, /android:theme="@style\/AppTheme\.Starting"/);
+  assert.match(
+    androidStyles,
+    /style name="AppTheme\.Starting" parent="Theme\.SplashScreen"[\s\S]{0,400}windowSplashScreenBackground">@color\/aerea_launch_background[\s\S]{0,400}postSplashScreenTheme">@style\/AppTheme\.NoActionBar/,
+  );
+});
+
+test("native startup ships only the Latin Gaegu face used by the interface", () => {
+  assert.match(nativeEntry, /@fontsource\/gaegu\/latin-700\.css/);
+  assert.match(layout, /@fontsource\/gaegu\/latin-700\.css/);
+  assert.doesNotMatch(nativeEntry, /@fontsource\/gaegu\/700\.css/);
+  assert.doesNotMatch(layout, /@fontsource\/gaegu\/700\.css/);
 });
 
 test("the profile photo is present in the first native header frame", () => {
@@ -117,23 +152,17 @@ test("AO3 is loaded just after first paint instead of blocking cold start", () =
   assert.doesNotMatch(page, /import \{[\s\S]{0,120}Ao3Library[\s\S]{0,120}\} from "\.\/ao3-library"/);
 });
 
-test("the normal Library is warmed after first paint without bundling its readers", () => {
+test("the normal Library renders directly like the other Spaces while readers stay lazy", () => {
   assert.match(
     page,
-    /const loadStudyLibraryModule = \(\) => import\("\.\/study-library"\)/,
+    /import \{[\s\S]{0,100}StudyLibrary,[\s\S]{0,240}\} from "\.\/study-library"/,
   );
-  assert.match(
+  assert.doesNotMatch(page, /loadStudyLibraryModule|const StudyLibrary = lazy/);
+  assert.doesNotMatch(
     page,
-    /const StudyLibrary = lazy\([\s\S]{0,180}loadStudyLibraryModule\(\)/,
+    /space === "library"[\s\S]{0,220}<Suspense/,
   );
-  assert.match(
-    page,
-    /requestAnimationFrame\(\(\) => \{[\s\S]{0,100}loadStudyLibraryModule\(\)/,
-  );
-  assert.match(
-    page,
-    /space === "library"[\s\S]{0,220}<Suspense[\s\S]{0,500}className="study-library-screen"[\s\S]{0,120}aria-busy="true"/,
-  );
+  assert.match(page, /space === "library"[\s\S]{0,180}<StudyLibrary/);
   assert.match(
     page,
     /const GenericLibraryBridge = lazy\(\(\) => import\("\.\/generic-library-bridge"\)\)/,

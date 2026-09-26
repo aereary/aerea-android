@@ -102,6 +102,18 @@ public class AereaStoragePlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void finishLaunch(PluginCall call) {
+        if (getActivity() instanceof MainActivity) {
+            getActivity().runOnUiThread(() -> {
+                ((MainActivity) getActivity()).finishLaunch();
+                call.resolve();
+            });
+            return;
+        }
+        call.resolve();
+    }
+
     private String safeEpubName(String requestedName, int workId) {
         String name = requestedName == null ? "" : requestedName
                 .replace('\u0000', ' ')

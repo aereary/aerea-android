@@ -66,7 +66,7 @@ test("class timetable is centered against the viewport", () => {
 test("post-its use bundled Gaegu with Spanish accents", () => {
   assert.match(
     nativeEntry,
-    /@fontsource\/gaegu\/700\.css/,
+    /@fontsource\/gaegu\/latin-700\.css/,
   );
 
   assert.doesNotMatch(

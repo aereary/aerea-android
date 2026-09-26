@@ -36,12 +36,12 @@ test("post-it handwriting stays bundled locally", () => {
 
   assert.match(
     nativeEntry,
-    /@fontsource\/gaegu\/700\.css/,
+    /@fontsource\/gaegu\/latin-700\.css/,
   );
 
   assert.match(
     layout,
-    /@fontsource\/gaegu\/700\.css/,
+    /@fontsource\/gaegu\/latin-700\.css/,
   );
 
   assert.match(

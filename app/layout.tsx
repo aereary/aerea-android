@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import CareerPlanBridge from "./career-plan-bridge";
 import TimetableAgendaBridge from "./timetable-agenda-bridge";
-import "@fontsource/gaegu/700.css";
+import "@fontsource/gaegu/latin-700.css";
 import { APP_APPEARANCE, APP_IDENTITY, UI_DEFAULTS } from "./config/app-config";
 import "./globals.css";
 import "./timetable-agenda.css";
