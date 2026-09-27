@@ -7,6 +7,10 @@ const css = readFileSync("app/globals.css", "utf8");
 const blockStart = css.indexOf("/* Little Sheets Lab");
 const blockEnd = css.indexOf("/* Refined extended calendar", blockStart);
 const littleSheetsCss = css.slice(blockStart, blockEnd);
+const enhancementStart = css.indexOf(
+  "AEREA_INTERACTIVE_WEEK_MAP_AND_SHEET_CARDS_20260927",
+);
+const littleSheetsEnhancementCss = css.slice(enhancementStart);
 
 test("offers Little Sheets Lab as a separate opt-in theme", () => {
   assert.match(page, /type AppTheme =[\s\S]*\| "littlesheets"/);
@@ -49,4 +53,27 @@ test("turns existing editors into animated Little Sheets only in this theme", ()
   assert.match(littleSheetsCss, /\.note-detail-card/);
   assert.match(littleSheetsCss, /\.day-summary-card/);
   assert.match(littleSheetsCss, /@media \(prefers-reduced-motion:reduce\)/);
+});
+
+test("adds rising pastel cards and bottom sheets only to Little Sheets Lab", () => {
+  assert.ok(enhancementStart >= 0, "Little Sheets enhancement block is present");
+  assert.match(
+    littleSheetsEnhancementCss,
+    /data-theme="littlesheets"[\s\S]*animation:little-sheets-card-rise/,
+  );
+  assert.match(littleSheetsEnhancementCss, /@keyframes little-sheets-card-rise/);
+  assert.match(
+    littleSheetsEnhancementCss,
+    /data-theme="littlesheets"[^\n]*phone-canvas :is\([\s\S]*timetable-backdrop,[\s\S]*health-routine-backdrop[\s\S]*align-items:flex-end!important;/,
+  );
+  assert.match(
+    littleSheetsEnhancementCss,
+    /data-theme="littlesheets"[^\n]*phone-canvas :is\([\s\S]*timetable-card,[\s\S]*health-routine-note[\s\S]*border-radius:38px 38px 0 0!important;/,
+  );
+  assert.match(littleSheetsEnhancementCss, /--pink:#f7ddea/);
+  assert.match(littleSheetsEnhancementCss, /--blue:#d9f0f7/);
+  assert.doesNotMatch(
+    littleSheetsEnhancementCss,
+    /data-theme="(?!littlesheets)[^"]+"[^\n]*little-sheets-card-rise/,
+  );
 });

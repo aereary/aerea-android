@@ -33730,3 +33730,317 @@ html[data-native="true"] :where(
     padding-inline:5px;
   }
 }
+
+/* AEREA_INTERACTIVE_WEEK_MAP_AND_SHEET_CARDS_20260927
+   Final, intentionally last layer: interactive Week Map proportions, the
+   calmer Lovely Evening greeting, and the isolated Little Sheets motion. */
+.phone-canvas .timetable-backdrop {
+  align-items:center!important;
+  justify-content:center!important;
+  padding:
+    max(34px,calc(env(safe-area-inset-top) + 18px))
+    20px
+    max(34px,calc(env(safe-area-inset-bottom) + 18px))!important;
+}
+
+.phone-canvas .timetable-card {
+  border-radius:36px!important;
+  display:block!important;
+  max-height:min(88dvh,1120px)!important;
+  min-height:min(68dvh,1040px)!important;
+  overflow:auto!important;
+  padding:28px 24px 24px!important;
+  width:min(calc(100vw - 44px),584px)!important;
+}
+
+.timetable-heading {
+  gap:18px!important;
+  margin-bottom:24px!important;
+}
+
+.timetable-heading h2 {
+  font-size:clamp(29px,6vw,38px)!important;
+  line-height:1!important;
+  white-space:nowrap;
+}
+
+.timetable-heading-actions {
+  flex:0 0 auto;
+  position:static!important;
+}
+
+.timetable-heading-actions button {
+  height:46px!important;
+  width:46px!important;
+}
+
+.timetable-term-meta {
+  column-gap:8px!important;
+  row-gap:8px!important;
+}
+
+.timetable-inline-edit {
+  background:#eee9ff;
+  border:0;
+  border-radius:999px;
+  color:#655a83;
+  font-size:10px;
+  font-weight:900;
+  min-height:30px;
+  padding:6px 11px;
+}
+
+.timetable-week-map { gap:26px!important; }
+
+.timetable-week-map-days {
+  border-radius:28px!important;
+  gap:5px!important;
+  padding:10px!important;
+}
+
+.timetable-week-map-days > button {
+  align-items:center;
+  appearance:none;
+  background:transparent;
+  border:0;
+  border-radius:20px;
+  color:#474263;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  justify-content:center;
+  min-height:74px;
+  min-width:0;
+  padding:8px 2px;
+  transition:background .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+
+.timetable-week-map-days > button small {
+  color:inherit;
+  font-size:10px;
+  font-weight:900;
+}
+
+.timetable-week-map-days > button strong {
+  color:inherit;
+  font-size:14px;
+  font-weight:950;
+}
+
+.timetable-week-map-days > button.active {
+  background:#b7a7ff;
+  box-shadow:0 7px 0 #d7f0ee;
+  color:#fff;
+  transform:translateY(-3px);
+}
+
+.timetable-week-map-days > button:focus-visible {
+  outline:3px solid color-mix(in srgb,#8f7af0 55%,white);
+  outline-offset:2px;
+}
+
+.timetable-week-map-list {
+  align-content:start;
+  gap:14px!important;
+  min-height:300px;
+}
+
+.timetable-week-map-class {
+  border-radius:27px!important;
+  gap:22px!important;
+  grid-template-columns:112px minmax(0,1fr)!important;
+  min-height:96px!important;
+  padding:17px 22px!important;
+}
+
+.timetable-week-map-class > time strong { font-size:18px!important; }
+.timetable-week-map-class > span > strong { font-size:17px!important; }
+.timetable-week-map-class > span > small { font-size:12px!important; }
+
+.timetable-week-map-empty {
+  border-radius:28px!important;
+  min-height:300px!important;
+}
+
+/* Lovely Evening: no hard rectangle and no oversized circular badge. The
+   greeting itself remains the familiar long-press Week Map handle. */
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger {
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  cursor:pointer;
+  min-height:235px!important;
+  padding:24px 10px 32px!important;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger::before,
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger::after {
+  display:none!important;
+}
+
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger > div:first-child {
+  max-width:100%!important;
+}
+
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger:focus-visible {
+  outline:3px solid rgba(111,88,205,.55);
+  outline-offset:8px;
+}
+
+.app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger:active {
+  transform:translateY(1px);
+}
+
+/* Little Sheets Lab is the one opt-in theme that receives the reference's
+   pastel card hierarchy and bottom-up entrance motion. */
+.app-shell[data-theme="littlesheets"] {
+  --cream:#f2f0ff;
+  --cream-deep:#eeebfb;
+  --lime-wash:#edf7ef;
+  --lime-soft:#d5eedc;
+  --leaf:#74c28f;
+  --yellow:#ffe5a2;
+  --yellow-soft:#fff4d3;
+  --orange:#a994f1;
+  --orange-soft:#e4dcff;
+  --coral:#a994f1;
+  --pink:#f7ddea;
+  --blue:#d9f0f7;
+  --lilac:#ded9ff;
+  --sage:#d8efdf;
+  --hero:#b8adf5;
+  --line:#e0dcf0;
+  --app-backdrop:
+    radial-gradient(circle at 12% 8%,rgba(255,255,255,.78),transparent 19rem),
+    linear-gradient(155deg,#c9c0fb,#efedff 48%,#f7f5ff);
+}
+
+.app-shell[data-theme="littlesheets"] :is(
+  .schedule-card,.reminder-card,.habit-row,.space-card,.entry-card,.timer-card,
+  .focus-side,.journal-compose,.record-card,.audio-item
+) {
+  animation:little-sheets-card-rise .42s cubic-bezier(.22,.9,.24,1) both;
+}
+
+.app-shell[data-theme="littlesheets"] .schedule-card:nth-of-type(2),
+.app-shell[data-theme="littlesheets"] .habit-row:nth-of-type(2),
+.app-shell[data-theme="littlesheets"] .space-card:nth-of-type(2) {
+  animation-delay:.045s;
+}
+
+.app-shell[data-theme="littlesheets"] .schedule-card:nth-of-type(3),
+.app-shell[data-theme="littlesheets"] .habit-row:nth-of-type(3),
+.app-shell[data-theme="littlesheets"] .space-card:nth-of-type(3) {
+  animation-delay:.09s;
+}
+
+.app-shell[data-theme="littlesheets"] .phone-canvas :is(
+  .timetable-backdrop,.health-routine-backdrop
+) {
+  align-items:flex-end!important;
+  animation:little-sheets-scrim-in .23s ease both;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  background:rgba(43,38,75,.3)!important;
+  justify-content:center!important;
+  padding:0!important;
+}
+
+.app-shell[data-theme="littlesheets"] .phone-canvas :is(
+  .timetable-card,.health-routine-note
+) {
+  animation:little-sheets-rise .38s cubic-bezier(.22,.9,.24,1) both;
+  background:#fff!important;
+  border:1px solid #e2def3!important;
+  border-bottom:0!important;
+  border-radius:38px 38px 0 0!important;
+  box-shadow:0 -20px 60px rgba(63,52,116,.22)!important;
+  margin:0!important;
+  max-height:94dvh!important;
+  min-height:auto!important;
+  overflow:auto!important;
+  padding:34px 22px calc(28px + var(--aerea-safe-area-bottom))!important;
+  width:min(100%,680px)!important;
+}
+
+.app-shell[data-theme="littlesheets"] .timetable-card::before,
+.app-shell[data-theme="littlesheets"] .health-routine-note::before {
+  background:#d4cfea!important;
+  border:0!important;
+  border-radius:999px!important;
+  clip-path:none!important;
+  content:"";
+  display:block!important;
+  height:5px!important;
+  left:50%!important;
+  position:absolute!important;
+  right:auto!important;
+  top:12px!important;
+  transform:translateX(-50%)!important;
+  width:52px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .timetable-card::after { display:none!important; }
+.app-shell[data-theme="littlesheets"] .timetable-week-map-days { background:#f1effc!important; }
+.app-shell[data-theme="littlesheets"] .timetable-week-map-days > button.active {
+  background:#aa9af2!important;
+  box-shadow:0 7px 0 #d9f0f0!important;
+}
+.app-shell[data-theme="littlesheets"] .timetable-week-map-class {
+  border:1px solid rgba(92,78,137,.07)!important;
+  box-shadow:0 8px 20px rgba(70,57,119,.08)!important;
+}
+
+@keyframes little-sheets-card-rise {
+  from { opacity:0; transform:translateY(34px) scale(.985); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+
+@media (max-width:520px) {
+  .phone-canvas .timetable-card {
+    min-height:min(68dvh,760px)!important;
+    padding:24px 18px 22px!important;
+    width:min(calc(100vw - 36px),584px)!important;
+  }
+
+  .timetable-heading h2 { font-size:clamp(27px,7.2vw,34px)!important; }
+  .timetable-heading-actions button { height:42px!important; width:42px!important; }
+  .timetable-week-map-days > button { border-radius:17px; min-height:62px; }
+  .timetable-week-map-class {
+    gap:15px!important;
+    grid-template-columns:88px minmax(0,1fr)!important;
+    min-height:88px!important;
+    padding:15px 16px!important;
+  }
+  .timetable-week-map-list { min-height:270px; }
+  .timetable-week-map-empty { min-height:270px!important; }
+
+  .app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger {
+    min-height:220px!important;
+    padding:18px 7px 28px!important;
+  }
+
+  .app-shell[data-theme="lovelyevening"] .welcome-row.welcome-row-timetable-trigger h2 {
+    font-size:clamp(39px,11vw,53px)!important;
+  }
+
+  .app-shell[data-theme="littlesheets"] .phone-canvas .timetable-card {
+    min-height:auto!important;
+    padding:32px 18px calc(24px + var(--aerea-safe-area-bottom))!important;
+    width:100%!important;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell[data-theme="littlesheets"] :is(
+    .schedule-card,.reminder-card,.habit-row,.space-card,.entry-card,.timer-card,
+    .focus-side,.journal-compose,.record-card,.audio-item,.timetable-card,
+    .health-routine-note
+  ) {
+    animation:none!important;
+  }
+}

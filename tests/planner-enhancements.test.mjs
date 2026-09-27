@@ -109,7 +109,7 @@ test("Library images use img with a decode fallback while PDF and EPUB keep read
   assert.match(pageSource, /opened\.kind === "epub"[\s\S]*loadEpub/);
 });
 
-test("timetable keeps MON through SAT in the clean weekly map", () => {
+test("timetable filters the interactive weekly map by the selected day", () => {
   for (const day of ["MON", "TUE", "WED", "THU", "FRI", "SAT"]) {
     assert.match(pageSource, new RegExp(`label: "${day}"`));
   }
@@ -117,14 +117,30 @@ test("timetable keeps MON through SAT in the clean weekly map", () => {
   assert.match(pageSource, /This week’s map/);
   assert.match(pageSource, /className="timetable-week-map"/);
   assert.match(pageSource, /className="timetable-week-map-days"/);
+  assert.match(pageSource, /const \[timetableSelectedDate, setTimetableSelectedDate\]/);
+  assert.match(pageSource, /filter\(\(meeting\) => meeting\.day === timetableSelectedDay\)/);
+  assert.match(pageSource, /onClick=\{\(\) => setTimetableSelectedDate\(day\.key\)\}/);
+  assert.match(pageSource, /aria-pressed=\{timetableSelectedDate === day\.key\}/);
+  assert.match(pageSource, /aria-live="polite"/);
   assert.match(pageSource, /timetableAgenda\.map/);
   assert.match(pageSource, /Tap a class to edit or remove/);
   assert.match(cssSource, /\.timetable-week-map-days[\s\S]*grid-template-columns:repeat\(7/);
-  assert.match(cssSource, /\.timetable-week-map-class[\s\S]*grid-template-columns:96px/);
-  const finalTimetableCss = cssSource.slice(
-    cssSource.lastIndexOf("Timetable final cascade guard"),
+  assert.match(cssSource, /\.timetable-week-map-days > button\.active/);
+  assert.match(cssSource, /\.timetable-week-map-class[\s\S]*grid-template-columns:112px/);
+});
+
+test("Lovely Evening removes the old greeting card and keeps Week Map on hold", () => {
+  assert.match(pageSource, /const welcomeOpensTimetable = themeId === "lovelyevening"/);
+  assert.match(pageSource, /showDayCharm && !welcomeOpensTimetable/);
+  assert.match(pageSource, /welcomeOpensTimetable \? beginTimetableLongPress : undefined/);
+  assert.match(
+    cssSource,
+    /data-theme="lovelyevening"[^\n]*welcome-row\.welcome-row-timetable-trigger[\s\S]*background:transparent!important;[\s\S]*box-shadow:none!important;/,
   );
-  assert.doesNotMatch(finalTimetableCss, /align-items:flex-end/);
+  assert.match(
+    cssSource,
+    /welcome-row\.welcome-row-timetable-trigger::before,[\s\S]*::after \{\s*display:none!important;/,
+  );
 });
 
 test("semester editing avoids the old document-wide timetable observer", () => {
@@ -167,22 +183,22 @@ test("timetable classes have stable parent ids with independent meeting rows", (
   assert.match(pageSource, /classItem\.day && classItem\.start && classItem\.end/);
 });
 
-test("timetable mobile overlay stays centered without compressing its contents", () => {
+test("timetable mobile overlay keeps the roomy approved proportions", () => {
   const finalFix = cssSource.slice(
-    cssSource.indexOf("AEREA_TARGETED_HEALTH_TIMETABLE_FIXES"),
+    cssSource.indexOf("AEREA_INTERACTIVE_WEEK_MAP_AND_SHEET_CARDS_20260927"),
   );
 
   assert.match(
     finalFix,
-    /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items: center !important;[\s\S]*justify-content: center !important;/,
+    /\.phone-canvas \.timetable-backdrop \{[\s\S]*align-items:center!important;[\s\S]*justify-content:center!important;/,
   );
   assert.match(
     finalFix,
-    /\.phone-canvas \.timetable-card \{[\s\S]*display: block !important;[\s\S]*max-height: min\(62dvh, 760px\) !important;[\s\S]*overflow: auto !important;/,
+    /\.phone-canvas \.timetable-card \{[\s\S]*display:block!important;[\s\S]*max-height:min\(88dvh,1120px\)!important;[\s\S]*min-height:min\(68dvh,1040px\)!important;/,
   );
   assert.match(
     finalFix,
-    /\.phone-canvas \.timetable-board \{[\s\S]*flex: none !important;/,
+    /width:min\(calc\(100vw - 44px\),584px\)!important;/,
   );
 });
 
