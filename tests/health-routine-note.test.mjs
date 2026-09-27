@@ -86,6 +86,15 @@ test("routine note has per-date Health completion", () => {
   assert.match(page, /health-routine-item/);
 });
 
+test("daily rhythm uses the pastel two-column care pockets", () => {
+  assert.match(page, /Take care of you/);
+  assert.match(page, /healthRoutineIcon\(first\.title\)/);
+  assert.match(page, /className="health-routine-emoji"/);
+  assert.match(css, /\.health-routine-list\s*\{[\s\S]*grid-template-columns:repeat\(2/);
+  assert.match(css, /\.health-routine-item[\s\S]*min-height:210px/);
+  assert.match(css, /\.health-routine-item\.tone-3/);
+});
+
 test("classic bottom nav is no longer hidden by the swipe CSS", () => {
   assert.doesNotMatch(
     css,

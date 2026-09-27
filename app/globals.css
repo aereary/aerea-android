@@ -22540,6 +22540,471 @@ body {
   .boca-reference-card .boca-reference-timing strong { font-size:17px; }
 }
 
+/* AEREA_WEEK_MAP_AND_RHYTHM_REFERENCE_20260927 */
+
+/* Friday is an ordinary weekday. Only Sunday and Saturday carry the
+   start/end-of-week accent when the day is not selected. */
+.app-shell[data-color-mode] .week-strip .day:nth-child(6):not(.active) > span {
+  color:var(--muted)!important;
+}
+
+/* The class schedule is rendered directly by React as a light weekly map.
+   Keeping it out of the old temporal grid also avoids the global DOM scan
+   that used to make the editor feel heavy. */
+.timetable-card {
+  background:#fff!important;
+  border:1px solid color-mix(in srgb,var(--line) 76%,#d9d1ef)!important;
+  border-radius:32px!important;
+  box-shadow:0 22px 58px rgba(75,61,112,.2),0 7px 0 rgba(174,158,214,.15)!important;
+  padding:24px!important;
+  width:min(calc(100vw - 30px),620px)!important;
+}
+
+.timetable-card::before,
+.timetable-card::after { display:none!important; }
+
+.timetable-heading {
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:20px!important;
+  padding:0!important;
+}
+
+.timetable-heading .tiny-label {
+  color:#5b858c;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.16em;
+  margin:0 0 7px;
+}
+
+.timetable-heading h2 {
+  color:#413b68!important;
+  font-family:inherit!important;
+  font-size:clamp(27px,7vw,38px)!important;
+  font-weight:950!important;
+  letter-spacing:-.055em!important;
+  line-height:1!important;
+}
+
+.timetable-term-meta {
+  align-items:center;
+  color:#8e879b!important;
+  display:flex;
+  flex-wrap:wrap;
+  font-size:13px!important;
+  font-weight:750;
+  gap:7px;
+  margin:8px 0 0!important;
+}
+
+.timetable-term-meta > span {
+  background:#f1edf9;
+  border-radius:999px;
+  color:#6a6085;
+  font-size:9px;
+  font-weight:900;
+  padding:4px 8px;
+}
+
+.timetable-heading-actions button {
+  background:#eee9ff!important;
+  border:0!important;
+  border-radius:50%!important;
+  color:#4b456d!important;
+  height:42px!important;
+  width:42px!important;
+}
+
+.timetable-week-map {
+  display:grid;
+  gap:18px;
+}
+
+.timetable-week-map-days {
+  background:#f3f0fb;
+  border-radius:24px;
+  display:grid;
+  gap:4px;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  padding:8px;
+}
+
+.timetable-week-map-days > span {
+  align-items:center;
+  border-radius:18px;
+  color:#474263;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  justify-content:center;
+  min-height:70px;
+}
+
+.timetable-week-map-days small {
+  font-size:10px;
+  font-weight:900;
+}
+
+.timetable-week-map-days strong {
+  font-size:13px;
+  font-weight:950;
+}
+
+.timetable-week-map-days > span.active {
+  background:#b7a7ff;
+  box-shadow:0 7px 0 #d7f0ee;
+  color:#fff;
+  transform:translateY(-3px);
+}
+
+.timetable-week-map-list {
+  display:grid;
+  gap:11px;
+}
+
+.timetable-week-map-class {
+  align-items:center;
+  border:0;
+  border-radius:25px;
+  color:#413c66;
+  display:grid;
+  gap:18px;
+  grid-template-columns:96px minmax(0,1fr);
+  min-height:82px;
+  padding:14px 18px;
+  text-align:left;
+}
+
+.timetable-week-map-class > time {
+  align-items:baseline;
+  display:flex;
+  gap:5px;
+  white-space:nowrap;
+}
+
+.timetable-week-map-class > time strong {
+  font-size:17px;
+  font-weight:950;
+}
+
+.timetable-week-map-class > time small {
+  font-size:10px;
+  font-weight:900;
+}
+
+.timetable-week-map-class > span { min-width:0; }
+.timetable-week-map-class > span > strong,
+.timetable-week-map-class > span > small { display:block; }
+.timetable-week-map-class > span > strong {
+  font-size:16px;
+  font-weight:950;
+  line-height:1.18;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.timetable-week-map-class > span > small {
+  color:#817b91;
+  font-size:11px;
+  font-weight:700;
+  margin-top:5px;
+}
+
+.timetable-week-map-empty {
+  align-items:center;
+  background:#f6f3fb;
+  border:1px dashed #d9cee9;
+  border-radius:24px;
+  color:#4b4567;
+  display:flex;
+  flex-direction:column;
+  min-height:170px;
+  justify-content:center;
+  padding:24px;
+  text-align:center;
+}
+.timetable-week-map-empty > span { font-size:32px; }
+.timetable-week-map-empty > strong { margin-top:8px; }
+.timetable-week-map-empty > small { color:#8c8497; margin-top:4px; }
+
+.timetable-term-fields {
+  background:#f6f3fb;
+  border:1px solid #e7e0ef;
+  border-radius:20px;
+  display:grid;
+  gap:10px!important;
+  grid-template-columns:1fr 1fr!important;
+  margin-top:14px;
+  padding:13px!important;
+}
+
+.timetable-term-fields label:first-child { grid-column:1 / -1; }
+
+.timetable-term-fields label > span,
+.timetable-class-form label > span,
+.timetable-color-picker legend {
+  color:#7b7188!important;
+  font-size:9px!important;
+  letter-spacing:.08em;
+}
+
+.timetable-term-fields input,
+.timetable-class-form input,
+.timetable-class-form select {
+  background:#fff!important;
+  border:1px solid #e0d8e9!important;
+  border-radius:13px!important;
+  color:#403a55!important;
+  font-size:14px!important;
+  min-height:44px;
+  padding:9px 11px!important;
+}
+
+.timetable-editor {
+  border-top:0!important;
+  padding-top:0!important;
+}
+
+.timetable-editor-title {
+  align-items:center;
+  background:#f7f4fb;
+  border-radius:20px;
+  padding:13px;
+}
+
+.timetable-editor-title h3 {
+  color:#47415e!important;
+  font-family:inherit!important;
+  font-size:19px!important;
+  font-weight:950;
+}
+
+.timetable-editor-title > button {
+  background:#e7ddf5!important;
+  border:0!important;
+  min-height:40px;
+  padding:9px 12px!important;
+}
+
+.timetable-edit-list { gap:9px!important; }
+
+.timetable-edit-row {
+  background:#fff!important;
+  border:1px solid #e6dfed!important;
+  border-radius:18px!important;
+  box-shadow:0 4px 12px rgba(71,58,92,.06)!important;
+  min-height:66px;
+  padding:10px 12px!important;
+}
+
+.timetable-edit-row > i {
+  border-radius:10px!important;
+  height:44px!important;
+  width:10px!important;
+}
+
+.timetable-edit-row strong { font-size:13px!important; }
+.timetable-edit-row small {
+  font-size:9px!important;
+  line-height:1.35;
+  white-space:normal;
+}
+
+.timetable-class-form {
+  background:#f8f5fb!important;
+  border:1px solid #e5dced!important;
+  border-radius:24px!important;
+  box-shadow:none!important;
+  margin-top:0!important;
+  padding:16px!important;
+}
+
+.timetable-class-form-heading h3 {
+  font-family:inherit!important;
+  font-size:21px!important;
+  font-weight:950;
+}
+
+.timetable-meeting-list {
+  display:grid;
+  gap:10px;
+  margin-top:13px;
+}
+
+.timetable-meeting-row {
+  background:#fff;
+  border:1px solid #e4ddea;
+  border-radius:18px;
+  display:grid;
+  gap:8px;
+  grid-template-columns:1fr 1fr;
+  padding:12px;
+  position:relative;
+}
+
+.timetable-meeting-row > label { min-width:0; }
+.timetable-meeting-row > button {
+  background:#f8e8ed;
+  border:0;
+  border-radius:50%;
+  color:#9c6674;
+  font-size:17px;
+  height:28px;
+  position:absolute;
+  right:8px;
+  top:8px;
+  width:28px;
+}
+.timetable-meeting-row > label:first-child { padding-right:30px; }
+.timetable-meeting-list > button {
+  background:#eee7f8;
+  border:1px dashed #cfc0e0;
+  border-radius:15px;
+  color:#5e5276;
+  font-weight:850;
+  min-height:42px;
+}
+
+.timetable-class-form footer,
+.timetable-editor-footer {
+  border-top:1px solid #e5deeb;
+  margin-top:16px!important;
+  padding-top:13px;
+}
+
+/* Daily rhythm reference: four large pastel pockets instead of dense rows. */
+.health-routine-note {
+  background:#fff!important;
+  border-radius:32px!important;
+  padding:24px!important;
+  width:min(100%,31rem)!important;
+}
+
+.health-routine-header { margin-bottom:22px!important; }
+.health-routine-header h3 {
+  color:#413c69;
+  font-size:clamp(27px,7vw,38px)!important;
+  font-weight:950;
+  letter-spacing:-.05em;
+}
+.health-routine-header p:not(.tiny-label) { font-size:13px!important; }
+
+.health-routine-list {
+  display:grid!important;
+  gap:12px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.health-routine-item {
+  background:#f5dcea!important;
+  border:0!important;
+  border-radius:30px!important;
+  display:block!important;
+  min-height:210px;
+  padding:0!important;
+  position:relative;
+}
+.health-routine-item.tone-1 { background:#dff2f7!important; }
+.health-routine-item.tone-2 { background:#eeebff!important; }
+.health-routine-item.tone-3 { background:#ffe7a8!important; }
+.health-routine-item.complete { box-shadow:inset 0 0 0 3px rgba(104,181,195,.32); }
+
+.health-routine-body {
+  color:#423d6a!important;
+  display:block!important;
+  height:100%;
+  padding:23px 20px 64px!important;
+  width:100%;
+}
+
+.health-routine-emoji {
+  display:block!important;
+  font-size:43px!important;
+  line-height:1;
+  margin:0 0 34px!important;
+}
+
+.health-routine-body strong {
+  font-size:19px!important;
+  line-height:1.12;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+}
+
+.health-routine-body .health-routine-cadence {
+  color:#817b91!important;
+  font-size:11px!important;
+  line-height:1.45;
+  margin-top:10px!important;
+}
+
+.health-routine-check {
+  background:transparent!important;
+  border:3px solid #6db8c5!important;
+  border-radius:50%!important;
+  bottom:20px;
+  color:#fff!important;
+  font-size:17px!important;
+  height:38px!important;
+  left:20px;
+  position:absolute;
+  width:38px!important;
+}
+
+.health-routine-item.complete .health-routine-check {
+  background:#6db8c5!important;
+}
+
+.health-routine-delete {
+  background:rgba(255,255,255,.5)!important;
+  color:#827b94!important;
+  position:absolute;
+  right:13px;
+  top:13px;
+}
+
+.health-routine-add {
+  background:#f5f1fb!important;
+  border-color:#d9cce8!important;
+  margin-top:14px!important;
+}
+
+@media (max-width:520px) {
+  .phone-canvas .timetable-card {
+    max-height:min(84dvh,820px)!important;
+    padding:20px 16px 17px!important;
+    width:calc(100vw - 28px)!important;
+  }
+  .timetable-week-map-days > span { min-height:59px; }
+  .timetable-week-map-class {
+    border-radius:22px;
+    gap:12px;
+    grid-template-columns:84px minmax(0,1fr);
+    min-height:76px;
+    padding:12px 14px;
+  }
+  .timetable-week-map-class > time strong { font-size:15px; }
+  .timetable-week-map-class > span > strong { font-size:15px; }
+  .timetable-heading h2 { font-size:30px!important; }
+  .timetable-term-fields { grid-template-columns:1fr!important; }
+  .timetable-term-fields label:first-child { grid-column:auto; }
+  .health-routine-note {
+    max-height:min(88dvh,760px)!important;
+    padding:20px!important;
+  }
+  .health-routine-item { min-height:190px; }
+  .health-routine-body { padding:20px 16px 58px!important; }
+  .health-routine-emoji { font-size:38px!important; margin-bottom:27px!important; }
+}
+
+@media (max-width:360px) {
+  .health-routine-list { grid-template-columns:1fr; }
+  .health-routine-item { min-height:175px; }
+}
+
+
 /* Little Sheets Lab -------------------------------------------------------
    Experimental, deliberately isolated recreation of the approved
    little_day_aerea_little_sheets_full_app.html card and sheet system. */

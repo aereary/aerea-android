@@ -109,8 +109,6 @@ import {
   formatTimeBlock,
   isHealthCompletedOn,
   isHealthCompletionEvent,
-  timetableClassPosition,
-  timetableGridWindow,
   toggleHealthCompletedOn,
 } from "./planner-logic";
 import { DEFAULT_HYDRATION_NOTIFICATION_TIMES } from "./config/app-config";
@@ -663,6 +661,15 @@ const timetableDays: { id: TimetableDay; label: string }[] = [
   { id: "sat", label: "SAT" },
 ];
 
+const timetableDayNames: Record<TimetableDay, string> = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+};
+
 const timetableColors = [
   "#ddd8ff",
   "#ffe8a8",
@@ -737,6 +744,18 @@ const HEALTH_ROUTINE_DAY_LABELS = [
   "Fri",
   "Sat",
 ] as const;
+
+function healthRoutineIcon(title: string) {
+  const normalized = title.trim().toLocaleLowerCase();
+  if (/water|drink|hydrat/.test(normalized)) return "💧";
+  if (/vitamin|supplement/.test(normalized)) return "🌼";
+  if (/wash|hair|shampoo/.test(normalized)) return "🫧";
+  if (/skin|cream|lotion|face/.test(normalized)) return "🧴";
+  if (/walk|step|run/.test(normalized)) return "👟";
+  if (/sleep|bed|rest/.test(normalized)) return "🌙";
+  if (/medicine|medication|pill/.test(normalized)) return "💊";
+  return "🌱";
+}
 
 type CalendarEvent = {
   id: string;
@@ -10066,9 +10085,13 @@ export default function Home() {
                     <header className="health-routine-header">
                       <div>
                         <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
-                        <h3>My daily rhythm</h3>
+                        <h3>Take care of you</h3>
                         <p>
-                          Tiny things that quietly take care of you.
+                          {healthRoutineGroups.length === 0
+                            ? "A soft place for your everyday care."
+                            : `${healthRoutineGroups.length} small pocket${
+                                healthRoutineGroups.length === 1 ? "" : "s"
+                              } for today.`}
                         </p>
                       </div>
                       <button
@@ -10098,7 +10121,7 @@ export default function Home() {
                               </p>
                             </div>
                           ) : (
-                            healthRoutineGroups.map((routine) => {
+                            healthRoutineGroups.map((routine, routineIndex) => {
                               const first = routine.events[0];
 
                               const todayOccurrence =
@@ -10144,10 +10167,34 @@ export default function Home() {
                               return (
                                 <article
                                   key={routine.id}
-                                  className={`health-routine-item ${
+                                  className={`health-routine-item tone-${
+                                    routineIndex % 4
+                                  } ${
                                     completedToday ? "complete" : ""
                                   }`.trim()}
                                 >
+                                  <button
+                                    type="button"
+                                    className="health-routine-body"
+                                    onClick={() =>
+                                      editHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    <span
+                                      className="health-routine-emoji"
+                                      aria-hidden="true"
+                                    >
+                                      {healthRoutineIcon(first.title)}
+                                    </span>
+                                    <strong>{first.title}</strong>
+                                    <span className="health-routine-cadence">
+                                      {cadenceLabel}
+                                      {!first.allDay
+                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
+                                        : ""}
+                                    </span>
+                                  </button>
+
                                   <button
                                     type="button"
                                     className="health-routine-check"
@@ -10172,22 +10219,6 @@ export default function Home() {
                                     }}
                                   >
                                     {completedToday ? "✓" : "○"}
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    className="health-routine-body"
-                                    onClick={() =>
-                                      editHealthRoutine(routine.id)
-                                    }
-                                  >
-                                    <strong>{first.title}</strong>
-                                    <span>
-                                      {cadenceLabel}
-                                      {!first.allDay
-                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
-                                        : ""}
-                                    </span>
                                   </button>
 
                                   <button
@@ -16513,15 +16544,24 @@ function TodayScreen({
   const timetableMeetings = classTimetable.classes.flatMap((classItem) =>
     classItem.meetings.map((meeting) => ({ ...meeting, classItem })),
   );
-  const timetableWindow = timetableGridWindow(timetableMeetings);
-  const timetableHourMarks = Array.from(
-    { length: timetableWindow.hours + 1 },
-    (_, index) => timetableWindow.start + index * 60,
+  const timetableDayOrder = new Map(
+    timetableDays.map((day, index) => [day.id, index]),
   );
-  const timetableGridHeight = Math.min(
-    520,
-    Math.max(300, timetableWindow.hours * 52),
-  );
+  const timetableAgenda = [...timetableMeetings].sort((first, second) => {
+    const dayDifference =
+      (timetableDayOrder.get(first.day) ?? 0) -
+      (timetableDayOrder.get(second.day) ?? 0);
+    return dayDifference || first.start.localeCompare(second.start);
+  });
+  const timetableWeekRange = weekDays.length
+    ? `${dateFromKey(weekDays[0].key).toLocaleDateString("en", {
+        month: "short",
+        day: "numeric",
+      })} — ${dateFromKey(weekDays[weekDays.length - 1].key).toLocaleDateString(
+        "en",
+        { month: "short", day: "numeric" },
+      )}`
+    : timetableTermDateLabel(classTimetable);
   const timetableDateRangeValid =
     Boolean(timetableDraft.termStart) &&
     Boolean(timetableDraft.termEnd) &&
@@ -17344,7 +17384,12 @@ function TodayScreen({
           >
             <header className="timetable-heading">
               <div>
-                <h2>My class timetable</h2>
+                <p className="tiny-label">
+                  {timetableEditing ? "SEMESTER SETTINGS" : "STUDY · WEEK MAP"}
+                </p>
+                <h2>
+                  {timetableEditing ? "Edit your semester" : "This week’s map"}
+                </h2>
                 {timetableEditing ? (
                   <div className="timetable-term-fields">
                     <label>
@@ -17391,7 +17436,8 @@ function TodayScreen({
                 ) : (
                   <p className="timetable-term-meta">
                     <i aria-hidden="true" />
-                    {classTimetable.termName} · {timetableTermDateLabel(classTimetable)}
+                    {timetableWeekRange}
+                    <span>{classTimetable.termName}</span>
                   </p>
                 )}
               </div>
@@ -17430,87 +17476,78 @@ function TodayScreen({
             </header>
 
             {!timetableEditing ? (
-              <div
-                className="timetable-board"
-                role="grid"
-                aria-label="Weekly temporal class grid, Monday through Saturday"
-                data-grid-start={timetableWindow.start}
-                data-grid-end={timetableWindow.end}
-                style={
-                  {
-                    "--timetable-grid-height": `${timetableGridHeight}px`,
-                    "--timetable-hour-height": `${100 / timetableWindow.hours}%`,
-                  } as CSSProperties
-                }
-              >
-                <span className="timetable-grid-corner" aria-hidden="true">TIME</span>
-                {timetableDays.map((day) => (
-                  <h3 className="timetable-grid-day-label" key={`heading-${day.id}`}>
-                    {day.label}
-                  </h3>
-                ))}
-                <div className="timetable-time-axis" aria-hidden="true">
-                  {timetableHourMarks.map((minute) => {
-                    const label = formatTimeBlock(
-                      `${String(Math.floor(minute / 60) % 24).padStart(2, "0")}:00`,
-                    );
-                    return (
-                      <span
-                        key={minute}
-                        style={{
-                          top: `${((minute - timetableWindow.start) /
-                            (timetableWindow.end - timetableWindow.start)) * 100}%`,
-                        }}
-                      >
-                        <strong>{label.primary}</strong>
-                        <small>{label.secondary}</small>
-                      </span>
-                    );
-                  })}
+              <div className="timetable-week-map">
+                <div
+                  className="timetable-week-map-days"
+                  aria-label="Current week, Sunday through Saturday"
+                >
+                  {weekDays.map((day) => (
+                    <span
+                      className={selectedDate === day.key ? "active" : ""}
+                      key={`map-${day.key}`}
+                    >
+                      <small>{day.day.slice(0, 1)}</small>
+                      <strong>{day.date}</strong>
+                    </span>
+                  ))}
                 </div>
-                {timetableDays.map((day) => {
-                  const dayClasses = timetableMeetings
-                    .filter((entry) => entry.day === day.id)
-                    .sort((first, second) => first.start.localeCompare(second.start));
-                  return (
-                    <div className="timetable-grid-day" role="gridcell" key={day.id}>
-                      {dayClasses.map(({ classItem, ...meeting }) => (
-                        <button
-                          className="timetable-class-block"
-                          type="button"
-                          key={`${classItem.id}-${meeting.id}`}
-                          style={{
-                            background: classItem.color,
-                            ...timetableClassPosition(
-                              meeting,
-                              timetableWindow.start,
-                              timetableWindow.end,
-                            ),
-                          }}
-                          onClick={() => beginEditTimetableClass(classItem)}
-                          aria-label={`Edit or remove ${classItem.name}, ${day.label}, ${meeting.start} to ${meeting.end}`}
-                        >
-                          <strong>{classItem.name}</strong>
-                          <small>{formatTimeBlock(meeting.start).primary}</small>
-                        </button>
-                      ))}
+
+                <div className="timetable-week-map-list" role="list">
+                  {timetableAgenda.length === 0 ? (
+                    <div className="timetable-week-map-empty">
+                      <span aria-hidden="true">🎓</span>
+                      <strong>Your week is still open</strong>
+                      <small>Add a class and it will appear here.</small>
                     </div>
-                  );
-                })}
+                  ) : (
+                    timetableAgenda.map(({ classItem, ...meeting }) => {
+                      const time = formatTimeBlock(meeting.start);
+                      return (
+                        <button
+                          className="timetable-week-map-class"
+                          type="button"
+                          role="listitem"
+                          key={`${classItem.id}-${meeting.id}`}
+                          style={{ background: classItem.color }}
+                          onClick={() => beginEditTimetableClass(classItem)}
+                          aria-label={`Edit ${classItem.name}, ${timetableDayNames[meeting.day]}, ${meeting.start} to ${meeting.end}`}
+                        >
+                          <time dateTime={meeting.start}>
+                            <strong>{time.primary}</strong>
+                            <small>{time.secondary}</small>
+                          </time>
+                          <span>
+                            <strong>{classItem.name}</strong>
+                            <small>
+                              {timetableDayNames[meeting.day]}
+                              {meeting.room ? ` · ${meeting.room}` : ""}
+                            </small>
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="timetable-editor">
-                <div className="timetable-editor-title">
+              <div
+                className={`timetable-editor ${
+                  timetableClassDraft ? "editing-class" : ""
+                }`.trim()}
+              >
+                {!timetableClassDraft && (
+                  <>
+                    <div className="timetable-editor-title">
                   <div>
                     <p className="tiny-label">SUBJECTS & TIMES</p>
-                    <h3>Build your weekly rhythm</h3>
+                    <h3>Your subjects</h3>
                   </div>
                   <button type="button" onClick={beginNewTimetableClass}>
                     <span aria-hidden="true">＋</span> Add class
                   </button>
-                </div>
+                    </div>
 
-                <div className="timetable-edit-list">
+                    <div className="timetable-edit-list">
                   {timetableDraft.classes.length === 0 ? (
                     <button
                       className="timetable-first-class"
@@ -17535,14 +17572,21 @@ function TodayScreen({
                           <span>
                             <strong>{classItem.name}</strong>
                             <small>
-                              {classItem.meetings.length} weekly meeting{classItem.meetings.length === 1 ? "" : "s"}
+                              {classItem.meetings
+                                .map((meeting) => {
+                                  const time = formatTimeBlock(meeting.start);
+                                  return `${timetableDayNames[meeting.day].slice(0, 3)} ${time.primary} ${time.secondary}`;
+                                })
+                                .join(" · ")}
                             </small>
                           </span>
                           <b aria-hidden="true">›</b>
                         </button>
                       ))
                   )}
-                </div>
+                    </div>
+                  </>
+                )}
 
                 {timetableClassDraft && (
                   <section
@@ -17677,7 +17721,8 @@ function TodayScreen({
                   </section>
                 )}
 
-                <footer className="timetable-editor-footer">
+                {!timetableClassDraft && (
+                  <footer className="timetable-editor-footer">
                   <button
                     type="button"
                     onClick={() => {
@@ -17703,7 +17748,8 @@ function TodayScreen({
                   >
                     Save semester
                   </button>
-                </footer>
+                  </footer>
+                )}
               </div>
             )}
 

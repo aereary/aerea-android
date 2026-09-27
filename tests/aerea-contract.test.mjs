@@ -215,6 +215,16 @@ test("colors Saturday and Sunday across every theme and calendar surface", () =>
   assert.match(cssSource, /\.month-grid > strong:nth-child\(7\)/);
 });
 
+test("keeps Friday identical to the other ordinary home weekdays", () => {
+  const referenceFix = cssSource.slice(
+    cssSource.indexOf("AEREA_WEEK_MAP_AND_RHYTHM_REFERENCE_20260927"),
+  );
+  assert.match(
+    referenceFix,
+    /\.week-strip \.day:nth-child\(6\):not\(\.active\) > span\s*\{[\s\S]*color:var\(--muted\)!important/,
+  );
+});
+
 test("ships a clean draining focus clock and varied journal faces", () => {
   assert.doesNotMatch(pageSource, /timer-status-dot/);
   assert.doesNotMatch(pageSource, /timer-leaf/);
