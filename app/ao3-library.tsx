@@ -9,8 +9,7 @@ import {
   useTransition,
 } from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
-import { AEREA_ACCOUNT } from "./supabase-sync";
-import { supabase } from "./supabase-client";
+import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
 import type { StudyFileItem } from "./study-library";
 
 type SeriesMembership = {

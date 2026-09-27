@@ -1,40 +1,31 @@
 import { Capacitor } from "@capacitor/core";
-import type { EmailOtpType, SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type EmailOtpType,
+} from "@supabase/supabase-js";
 import {
   isBocaSportsEvent,
   type SportsEvent,
   type SportsSettings,
 } from "./aerea-features";
 
+const SUPABASE_URL = "https://wislppgaikbxgibrjizz.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_tONK58MPqu6CkvnAWqgoww_k8D_dcu_";
 export const AEREA_ACCOUNT = "aereaary@gmail.com";
 
-let supabasePromise: Promise<SupabaseClient> | null = null;
-
-function waitForBrowserIdle() {
-  if (typeof window === "undefined") return Promise.resolve();
-  return new Promise<void>((resolve) => {
-    const idleWindow = window as Window & {
-      requestIdleCallback?: (
-        callback: () => void,
-        options?: { timeout: number },
-      ) => number;
-    };
-    if (idleWindow.requestIdleCallback) {
-      idleWindow.requestIdleCallback(resolve, { timeout: 800 });
-      return;
-    }
-    window.setTimeout(resolve, 32);
-  });
-}
-
-export function getSupabase(): Promise<SupabaseClient> {
-  if (!supabasePromise) {
-    supabasePromise = waitForBrowserIdle()
-      .then(() => import("./supabase-client"))
-      .then((module) => module.supabase);
-  }
-  return supabasePromise;
-}
+export const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+  },
+);
 
 const STATE_KEY = "aerea-private-state-v1";
 const STATE_TIME_KEY = "aerea-private-state-updated-at";
@@ -102,7 +93,6 @@ export function readCachedFootballMatches(): FootballMatch[] {
 }
 
 export async function fetchFootballMatches(): Promise<FootballMatch[]> {
-  const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("football_matches")
     .select(
@@ -153,7 +143,6 @@ export async function requestAereaCode(email: string) {
   if (email.trim().toLowerCase() !== AEREA_ACCOUNT) {
     throw new Error("This aérea is private.");
   }
-  const supabase = await getSupabase();
   const { error } = await supabase.auth.signInWithOtp({
     email: AEREA_ACCOUNT,
     options: {
@@ -167,7 +156,6 @@ export async function requestAereaCode(email: string) {
 }
 
 export async function handleAereaAuthCallback(url: string) {
-  const supabase = await getSupabase();
   const callback = new URL(url);
   const hash = new URLSearchParams(callback.hash.replace(/^#/, ""));
   const errorDescription =
@@ -210,7 +198,6 @@ export async function handleAereaAuthCallback(url: string) {
 }
 
 export async function verifyAereaCode(token: string) {
-  const supabase = await getSupabase();
   const { error } = await supabase.auth.verifyOtp({
     email: AEREA_ACCOUNT,
     token: token.trim(),
@@ -220,7 +207,6 @@ export async function verifyAereaCode(token: string) {
 }
 
 export async function currentAereaEmail() {
-  const supabase = await getSupabase();
   const { data } = await supabase.auth.getSession();
   const email = data.session?.user.email?.toLowerCase() || null;
   return email === AEREA_ACCOUNT ? email : null;
@@ -229,7 +215,6 @@ export async function currentAereaEmail() {
 export async function reconcileCloudState<T>(
   localState: T | null,
 ): Promise<T | null> {
-  const supabase = await getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user || user.email?.toLowerCase() !== AEREA_ACCOUNT) return localState;
@@ -255,7 +240,6 @@ export async function reconcileCloudState<T>(
 }
 
 export async function pushCloudState(state: unknown) {
-  const supabase = await getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user || user.email?.toLowerCase() !== AEREA_ACCOUNT) return false;
@@ -273,7 +257,6 @@ export async function pushCloudState(state: unknown) {
 }
 
 export async function fetchSportsFixtures(): Promise<SportsEvent[] | null> {
-  const supabase = await getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user || user.email?.toLowerCase() !== AEREA_ACCOUNT) return null;
@@ -344,7 +327,6 @@ export async function fetchSportsFixtures(): Promise<SportsEvent[] | null> {
 }
 
 export async function syncFollowedSportsTeams(settings: SportsSettings) {
-  const supabase = await getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user || user.email?.toLowerCase() !== AEREA_ACCOUNT) return false;
@@ -383,7 +365,6 @@ export async function syncFollowedSportsTeams(settings: SportsSettings) {
 }
 
 export async function uploadAereaLibraryFile(id: string, file: Blob) {
-  const supabase = await getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user || user.email?.toLowerCase() !== AEREA_ACCOUNT) return null;
@@ -396,7 +377,6 @@ export async function uploadAereaLibraryFile(id: string, file: Blob) {
 }
 
 export async function downloadAereaLibraryFile(path: string) {
-  const supabase = await getSupabase();
   const { data, error } = await supabase.storage
     .from("aerea-library")
     .download(path);
@@ -405,7 +385,6 @@ export async function downloadAereaLibraryFile(path: string) {
 }
 
 export async function deleteAereaLibraryFile(path: string) {
-  const supabase = await getSupabase();
   const { error } = await supabase.storage.from("aerea-library").remove([path]);
   if (error) throw error;
 }

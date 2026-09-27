@@ -9,7 +9,7 @@ import {
   useTransition,
 } from "react";
 import { createPortal } from "react-dom";
-import { supabase } from "./supabase-client";
+import { supabase } from "./supabase-sync";
 
 type GenericLibraryKind = "epub" | "pdf" | "document" | "file";
 
