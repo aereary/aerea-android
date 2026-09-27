@@ -589,7 +589,7 @@ test("opens the normal event editor only from its title and controls", () => {
   );
   assert.match(
     pageSource,
-    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}`\}[\s\S]{0,900}onClickCapture=[\s\S]{0,900}\[data-event-detail-edit="true"\], button[\s\S]{0,400}openSelectedEventEditor\(\)/,
+    /className=\{`event-detail-note \$\{selectedEventDetail\.color\}[^`]*`\}[\s\S]{0,900}onClickCapture=[\s\S]{0,900}\[data-event-detail-edit="true"\], button[\s\S]{0,400}openSelectedEventEditor\(\)/,
   );
   assert.match(pageSource, /className="event-detail-title"[\s\S]{0,120}data-event-detail-edit="true"/);
   assert.match(pageSource, /className="event-detail-time"[\s\S]{0,120}data-event-detail-edit="true"/);
@@ -789,7 +789,6 @@ test("hydrates the complete local payload before waiting for cloud reconciliatio
     "setLibraryCollections",
     "setEntityLinks",
     "setTrashItems",
-    "setResetPreferences",
     "setSportsSettings",
     "setSportsEvents",
     "setCalendarCategories",
@@ -1534,20 +1533,16 @@ test("schedules only one confirmed Boca notification identity", () => {
   );
 });
 
-test("keeps morning, night and smart rescheduling small but actionable", () => {
-  assert.match(pageSource, /MORNING RESET ♡/);
-  assert.match(pageSource, /NIGHT RESET ♡/);
-  assert.match(pageSource, /reset-summary-categories/);
-  assert.match(pageSource, /Still waiting from yesterday/);
-  assert.match(pageSource, /task\.dueDate === yesterdayKey[\s\S]{0,80}\? "yesterday"/);
+test("removes daily resets while preserving normal task rescheduling data", () => {
+  assert.doesNotMatch(pageSource, /MORNING RESET|NIGHT RESET|reset-summary-categories/);
+  assert.doesNotMatch(pageSource, /BEGIN & END GENTLY|Morning and Night Reset/);
+  assert.doesNotMatch(featureSource, /ResetPreferences|DEFAULT_RESET_PREFERENCES/);
   assert.match(pageSource, /rescheduleHistory/);
   assert.match(pageSource, /skipped: dueDate === null/);
   assert.match(featureSource, /attachmentIds\?: string\[\]/);
   assert.match(featureSource, /checklist\?: string\[\]/);
   assert.match(featureSource, /tags\?: string\[\]/);
   assert.match(featureSource, /priority\?: "gentle" \| "important" \| "urgent"/);
-  assert.match(pageSource, /Pick date/);
-  assert.match(pageSource, /Move unfinished things to tomorrow\?/);
 });
 
 test("ships movable post-its with an editor that matches the placed note", () => {

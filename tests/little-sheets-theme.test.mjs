@@ -77,3 +77,19 @@ test("adds rising pastel cards and bottom sheets only to Little Sheets Lab", () 
     /data-theme="(?!littlesheets)[^"]+"[^\n]*little-sheets-card-rise/,
   );
 });
+
+test("matches the reference with rich white cards and pastel inner panels", () => {
+  assert.match(page, /function LittleSheetScheduleDetails/);
+  assert.match(page, /little-sheet-card-facts/);
+  assert.match(page, /little-sheet-card-location/);
+  assert.match(page, /little-sheet-card-tools/);
+  assert.match(page, /little-sheet-card-open/);
+  assert.match(page, /little-sheet-detail-\$\{littleSheetCardKind\(selectedEventDetail\)\}/);
+  assert.match(
+    littleSheetsEnhancementCss,
+    /AEREA_LITTLE_SHEETS_REFERENCE_CARDS_20260927[\s\S]*little-sheet-schedule-card[\s\S]*grid-template-areas:[\s\S]*"copy emblem"[\s\S]*"details details"/,
+  );
+  assert.match(littleSheetsEnhancementCss, /little-sheet-card-tools[\s\S]*grid-template-columns:repeat\(3/);
+  assert.match(littleSheetsEnhancementCss, /little-sheet-detail-card[\s\S]*grid-template-columns:repeat\(2/);
+  assert.match(littleSheetsEnhancementCss, /health-routine-list[\s\S]*grid-template-columns:repeat\(2/);
+});

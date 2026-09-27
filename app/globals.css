@@ -27019,7 +27019,7 @@ html[data-native="true"] .simplified-calendar-screen {
   }
 }
 
-/* Universal capture, global history, daily resets and feature workspaces. */
+/* Universal capture, global history and feature workspaces. */
 .feature-space {
   min-height: 68vh;
   padding-bottom: 110px;
@@ -27213,8 +27213,7 @@ html[data-native="true"] .simplified-calendar-screen {
   padding: 13px 15px;
 }
 
-.quick-capture-modal footer > button,
-.reset-done {
+.quick-capture-modal footer > button {
   background: var(--leaf);
   border: 0;
   border-radius: 999px;
@@ -27294,26 +27293,20 @@ html[data-native="true"] .simplified-calendar-screen {
   padding: 18px;
 }
 
-.reschedule-shelf article,
-.night-unfinished article,
-.reset-overdue article {
+.reschedule-shelf article {
   align-items: center;
   display: flex;
   gap: 14px;
   justify-content: space-between;
 }
 
-.reschedule-shelf article > div,
-.night-unfinished article > div,
-.reset-overdue article > div {
+.reschedule-shelf article > div {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.reschedule-shelf button,
-.night-unfinished button,
-.reset-overdue button {
+.reschedule-shelf button {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -27483,94 +27476,6 @@ html[data-native="true"] .simplified-calendar-screen {
   padding: 8px;
 }
 
-.reset-backdrop {
-  align-items: center;
-}
-
-.reset-modal {
-  background:
-    radial-gradient(circle at 88% 2%, color-mix(in srgb, var(--hero) 28%, transparent), transparent 13rem),
-    var(--paper);
-  border: 2px solid color-mix(in srgb, var(--hero) 22%, white);
-  border-radius: 30px;
-  box-shadow: 0 28px 90px rgba(25, 35, 48, 0.28);
-  display: grid;
-  gap: 18px;
-  max-height: min(760px, calc(100dvh - 30px));
-  max-width: 680px;
-  overflow: auto;
-  padding: 24px;
-  width: 100%;
-}
-
-.reset-modal header {
-  align-items: start;
-  display: flex;
-  justify-content: space-between;
-}
-
-.reset-modal header h2,
-.reset-modal header p,
-.reset-summary {
-  margin: 0;
-}
-
-.reset-modal header button {
-  background: transparent;
-  border: 0;
-  color: var(--ink);
-  font-size: 28px;
-}
-
-.reset-summary {
-  color: var(--ink-soft);
-  font-size: clamp(1.05rem, 3vw, 1.35rem);
-  font-weight: 850;
-}
-
-.reset-category-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.reset-category-grid button {
-  background: color-mix(in srgb, var(--hero) 11%, var(--paper));
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  color: var(--ink);
-  display: grid;
-  gap: 4px;
-  padding: 18px 12px;
-  text-align: left;
-}
-
-.reset-category-grid button > span {
-  font-size: 1.35rem;
-}
-
-.reset-category-grid button > strong {
-  font-size: 1.6rem;
-}
-
-.reset-category-grid button > small {
-  color: var(--muted);
-}
-
-.reset-overdue,
-.night-unfinished {
-  background: color-mix(in srgb, var(--yellow-soft) 60%, var(--paper));
-  border-radius: 22px;
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-}
-
-.reset-done {
-  justify-self: end;
-}
-
-.reset-settings-card,
 .sports-settings-card {
   background: color-mix(in srgb, var(--paper) 90%, var(--hero));
   border: 1px solid var(--line);
@@ -27581,14 +27486,11 @@ html[data-native="true"] .simplified-calendar-screen {
   padding: 20px;
 }
 
-.reset-settings-card h3,
-.reset-settings-card p,
 .sports-settings-card h3,
 .sports-settings-card p {
   margin: 3px 0;
 }
 
-.reset-settings-card > label,
 .sports-toggle-grid > label,
 .follow-team-row {
   align-items: center;
@@ -27600,12 +27502,10 @@ html[data-native="true"] .simplified-calendar-screen {
   padding: 12px 14px;
 }
 
-.reset-settings-card label span,
 .follow-team-row > span:nth-child(2) {
   display: grid;
 }
 
-.reset-settings-card small,
 .follow-team-row small {
   color: var(--muted);
 }
@@ -27639,93 +27539,6 @@ html[data-native="true"] .simplified-calendar-screen {
   border-radius: 12px;
   color: var(--ink);
   padding: 7px;
-}
-
-.reset-summary-categories {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.reset-summary-categories button {
-  background: color-mix(in srgb, var(--cream) 70%, var(--paper));
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  color: var(--ink);
-  display: grid;
-  font: inherit;
-  gap: 2px;
-  padding: 12px 8px;
-  text-align: center;
-}
-
-.reset-summary-categories button.active {
-  background: var(--hero);
-  border-color: transparent;
-  color: white;
-}
-
-.reset-summary-categories strong,
-.reset-summary-categories span {
-  display: block;
-}
-
-.reset-summary-categories strong {
-  font-size: 1.35rem;
-}
-
-.reset-summary-categories span {
-  font-size: 0.72rem;
-  font-weight: 850;
-}
-
-.reset-category-list {
-  background: color-mix(in srgb, var(--paper) 82%, var(--hero));
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  display: grid;
-  gap: 7px;
-  max-height: min(32vh, 280px);
-  overflow: auto;
-  padding: 10px;
-}
-
-.reset-category-list button {
-  align-items: center;
-  background: var(--paper);
-  border: 0;
-  border-radius: 13px;
-  color: var(--ink);
-  display: grid;
-  font: inherit;
-  gap: 9px;
-  grid-template-columns: auto minmax(0, 1fr);
-  padding: 9px 11px;
-  text-align: left;
-}
-
-.reset-category-list button.completed strong {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-
-.reset-category-task {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.reset-category-task .reset-category-delete {
-  color: #a34c56;
-  display: block;
-  font-size: 1.05rem;
-  padding-inline: 13px;
-}
-
-.reset-category-list p {
-  color: var(--muted);
-  margin: 5px;
-  text-align: center;
 }
 
 .calendar-power-tools,
@@ -29250,9 +29063,7 @@ html[data-native="true"] .simplified-calendar-screen {
 
 @media (max-width: 760px) {
   .feature-space-toolbar,
-  .reschedule-shelf article,
-  .night-unfinished article,
-  .reset-overdue article {
+  .reschedule-shelf article {
     align-items: stretch;
     flex-direction: column;
   }
@@ -29266,7 +29077,6 @@ html[data-native="true"] .simplified-calendar-screen {
     justify-content: flex-start;
   }
 
-  .reset-category-grid,
   .sports-toggle-grid {
     grid-template-columns: 1fr;
   }
@@ -29302,14 +29112,9 @@ html[data-native="true"] .simplified-calendar-screen {
 }
 
 @media (max-width: 520px) {
-  .quick-capture-modal,
-  .reset-modal {
+  .quick-capture-modal {
     border-radius: 26px 26px 0 0;
     margin-bottom: calc(-1 * max(10px, var(--safe-area-inset-bottom)));
-  }
-
-  .reset-backdrop {
-    align-items: flex-end;
   }
 
   .calendar-power-tools label {
@@ -29329,18 +29134,6 @@ html[data-native="true"] .simplified-calendar-screen {
   }
 }
 
-/* Cross-linking stays compact so it can be reached from a reset without
-   turning the reset itself into another task-management screen. */
-.reset-category-task {
-  grid-template-columns:minmax(0,1fr) auto auto;
-}
-.reset-category-task .reset-task-attachments {
-  color:var(--ink-soft);
-  display:block;
-  font-size:.68rem;
-  font-weight:900;
-  padding-inline:10px;
-}
 .task-link-backdrop { z-index:270; }
 .task-link-modal {
   background:var(--paper);
@@ -34042,5 +33835,514 @@ html[data-native="true"] :where(
     .health-routine-note
   ) {
     animation:none!important;
+  }
+}
+
+/* AEREA_LITTLE_SHEETS_REFERENCE_CARDS_20260927
+   Faithful card anatomy from the approved six-card reference. */
+.little-sheet-card-details { display:none; }
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card {
+  align-items:start!important;
+  background:#fff!important;
+  border:1px solid #ded9f1!important;
+  border-radius:31px!important;
+  box-shadow:
+    0 12px 0 rgba(184,173,245,.14),
+    0 24px 50px rgba(69,55,126,.13)!important;
+  display:grid!important;
+  gap:15px!important;
+  grid-template-areas:
+    "copy emblem"
+    "details details"!important;
+  grid-template-columns:minmax(0,1fr) 64px!important;
+  min-height:314px!important;
+  overflow:hidden;
+  padding:20px!important;
+  position:relative;
+  text-align:left;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card::before,
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card::after {
+  display:none!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .schedule-copy {
+  align-self:start!important;
+  display:block!important;
+  grid-area:copy;
+  min-height:72px;
+  padding:0!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .card-tag {
+  color:#627f87!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  letter-spacing:.14em!important;
+  margin:0 0 8px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .schedule-copy h4 {
+  color:#292748!important;
+  font-size:clamp(21px,5vw,27px)!important;
+  font-weight:950!important;
+  letter-spacing:-.035em;
+  line-height:1.02!important;
+  margin:0!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .schedule-copy > span:not(.boca-reference-timing) {
+  color:#89869a!important;
+  display:block;
+  font-size:12px!important;
+  line-height:1.25;
+  margin-top:7px!important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .schedule-line {
+  display:none!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .time-block {
+  align-items:center!important;
+  align-self:start!important;
+  background:#e8f5fb!important;
+  border:0!important;
+  border-radius:50%!important;
+  display:flex!important;
+  grid-area:emblem;
+  height:58px!important;
+  justify-content:center!important;
+  min-height:58px!important;
+  width:58px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card:not(.little-sheet-match) .time-block > * {
+  display:none!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card:not(.little-sheet-match) .time-block::before {
+  content:"✦";
+  font-size:27px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-class .time-block {
+  background:#eee9ff!important;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-class .time-block::before { content:"📘"!important; }
+.app-shell[data-theme="littlesheets"] .little-sheet-deadline .time-block {
+  background:#fde7ef!important;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-deadline .time-block::before { content:"📝"!important; }
+.app-shell[data-theme="littlesheets"] .little-sheet-social .time-block {
+  background:#f7e6df!important;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-social .time-block::before { content:"☕"!important; }
+.app-shell[data-theme="littlesheets"] .little-sheet-plan .time-block::before { content:"✦"!important; }
+
+.app-shell[data-theme="littlesheets"] .little-sheet-match .time-block {
+  background:#e8f5fb!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-match .boca-reference-hearts {
+  display:block!important;
+  font-size:23px!important;
+  letter-spacing:-7px!important;
+  padding-right:7px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .mini-people {
+  background:transparent!important;
+  border:0!important;
+  color:transparent!important;
+  display:block!important;
+  height:24px!important;
+  position:absolute;
+  right:17px;
+  top:8px;
+  width:30px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-schedule-card .mini-people::after {
+  color:#514a79;
+  content:"•••";
+  font-size:15px;
+  letter-spacing:2px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-details {
+  display:grid;
+  gap:10px;
+  grid-area:details;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-facts {
+  display:grid;
+  gap:9px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-facts > span,
+.app-shell[data-theme="littlesheets"] .little-sheet-card-location,
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools > span {
+  border:1px solid rgba(92,78,137,.09);
+  border-radius:17px;
+  display:grid;
+  min-width:0;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-facts > span {
+  background:#f7f5ff;
+  padding:11px 12px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-facts small,
+.app-shell[data-theme="littlesheets"] .little-sheet-card-location small,
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools small {
+  color:#77718f;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.08em;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-facts strong,
+.app-shell[data-theme="littlesheets"] .little-sheet-card-location strong {
+  color:#292748;
+  font-size:13px;
+  font-weight:950;
+  margin-top:3px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-location {
+  background:#f4f2fb;
+  padding:11px 13px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools {
+  display:grid;
+  gap:8px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools > span {
+  align-items:center;
+  background:#eef7fb;
+  grid-template-columns:auto minmax(0,1fr);
+  padding:9px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools > span:nth-child(2) { background:#eaf6ee; }
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools > span:nth-child(3) { background:#fff3dc; }
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools b {
+  font-size:17px;
+  grid-row:1/3;
+  margin-right:7px;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-card-tools strong {
+  color:#4a456c;
+  font-size:10px;
+  margin-top:2px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-card-open {
+  align-items:center;
+  background:#e9e3ff;
+  border-radius:18px;
+  color:#332e59;
+  display:flex;
+  font-size:13px;
+  font-weight:950;
+  justify-content:center;
+  min-height:43px;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-card-open b {
+  font-size:22px;
+  margin-left:auto;
+  padding-right:15px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-match .little-sheet-card-open { background:#cceefa; }
+.app-shell[data-theme="littlesheets"] .little-sheet-class .little-sheet-card-open { background:#e4dcff; }
+.app-shell[data-theme="littlesheets"] .little-sheet-social .little-sheet-card-open { background:#e4dcff; }
+.app-shell[data-theme="littlesheets"] .little-sheet-deadline .little-sheet-card-open { background:#e7e0ff; }
+
+/* Opened event sheets use the same dense white-card system as the reference. */
+.app-shell[data-theme="littlesheets"] .event-detail-backdrop {
+  align-items:flex-end!important;
+  background:rgba(45,38,82,.32)!important;
+  padding:0!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card {
+  background:#fff!important;
+  border:1px solid #ded9f1!important;
+  border-bottom:0!important;
+  border-radius:36px 36px 0 0!important;
+  box-shadow:0 -24px 70px rgba(64,51,119,.24)!important;
+  display:grid!important;
+  gap:11px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  margin:0!important;
+  max-height:94dvh!important;
+  max-width:520px!important;
+  overflow:auto!important;
+  padding:34px 22px calc(24px + var(--aerea-safe-area-bottom))!important;
+  width:100%!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card > :is(
+  .event-detail-header,.event-detail-heading-copy,.event-detail-divider,
+  .event-detail-health-completion,.event-detail-facts,.event-detail-section,
+  .event-detail-link,.event-detail-primary-actions,.football-match-detail-heading,
+  .football-match-scoreboard,.football-match-facts,.football-match-read-only
+) {
+  grid-column:1/-1;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-header {
+  min-height:34px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-heading-copy,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-detail-heading {
+  min-height:82px;
+  padding-right:70px;
+  position:relative;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-heading-copy::after,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-detail-heading::after {
+  align-items:center;
+  background:#e9f5fb;
+  border-radius:50%;
+  content:"✦";
+  display:flex;
+  font-size:29px;
+  height:58px;
+  justify-content:center;
+  position:absolute;
+  right:0;
+  top:0;
+  width:58px;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-class .event-detail-heading-copy::after {
+  background:#eee9ff;
+  content:"📘";
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-deadline .event-detail-heading-copy::after {
+  background:#fde7ef;
+  content:"📝";
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-social .event-detail-heading-copy::after {
+  background:#f7e6df;
+  content:"☕";
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-match .football-match-detail-heading::after {
+  background:#e8f5fb;
+  content:"⚽";
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-category {
+  color:#667f8b!important;
+  font-size:10px!important;
+  font-weight:950!important;
+  letter-spacing:.15em!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-title,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-detail-heading h2 {
+  color:#282645!important;
+  font-size:clamp(26px,7vw,34px)!important;
+  font-weight:950!important;
+  letter-spacing:-.045em!important;
+  line-height:1.02!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-divider {
+  display:none!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-time,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-reminder {
+  align-items:center;
+  background:#f7f5ff!important;
+  border:1px solid #e6e1f3!important;
+  border-radius:18px!important;
+  display:flex;
+  grid-column:auto;
+  margin:0!important;
+  min-height:78px!important;
+  padding:12px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-time-icon,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-reminder-icon {
+  background:#eee9ff!important;
+  border-radius:14px!important;
+  flex:0 0 42px;
+  height:42px!important;
+  width:42px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-time strong,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-reminder strong {
+  color:#302d50!important;
+  font-size:13px!important;
+  line-height:1.15;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-facts {
+  display:grid!important;
+  gap:9px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-facts > div,
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-section {
+  background:#f5f3fb!important;
+  border:1px solid #e7e2f1!important;
+  border-radius:18px!important;
+  min-height:68px;
+  padding:12px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-section {
+  background:#f0edff!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-health-completion {
+  background:#e7f6ec!important;
+  border-radius:18px!important;
+  margin:0!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-primary-actions {
+  display:block!important;
+  margin-top:2px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .event-detail-add {
+  display:none!important;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-edit-action {
+  align-items:center;
+  background:#e7e0ff!important;
+  border:0!important;
+  border-radius:19px!important;
+  color:#302b59!important;
+  display:flex;
+  font-size:14px;
+  font-weight:950;
+  justify-content:center;
+  min-height:52px;
+  padding:0 17px;
+  width:100%;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-edit-action span {
+  font-size:24px;
+  margin-left:auto;
+}
+
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-scoreboard {
+  background:#edf7fb!important;
+  border:1px solid #dcecf3!important;
+  border-radius:19px!important;
+  min-height:82px;
+  padding:15px!important;
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-facts {
+  display:grid!important;
+  gap:9px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.app-shell[data-theme="littlesheets"] .little-sheet-detail-card .football-match-facts > div {
+  background:#f5f3fb!important;
+  border:1px solid #e7e2f1!important;
+  border-radius:18px!important;
+  padding:12px!important;
+}
+
+/* Daily Rhythm and reminders mirror the health and upcoming reference cards. */
+.app-shell[data-theme="littlesheets"] .health-routine-note {
+  background:#fff!important;
+  border:1px solid #ded9f1!important;
+  border-bottom:0!important;
+  box-shadow:0 -24px 70px rgba(64,51,119,.24)!important;
+  max-width:520px!important;
+}
+.app-shell[data-theme="littlesheets"] .health-routine-list {
+  gap:12px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.app-shell[data-theme="littlesheets"] .health-routine-item {
+  border:0!important;
+  border-radius:27px!important;
+  box-shadow:none!important;
+  min-height:205px!important;
+}
+.app-shell[data-theme="littlesheets"] .health-routine-item.tone-0 { background:#f7ddea!important; }
+.app-shell[data-theme="littlesheets"] .health-routine-item.tone-1 { background:#d9f0f7!important; }
+.app-shell[data-theme="littlesheets"] .health-routine-item.tone-2 { background:#e7e2ff!important; }
+.app-shell[data-theme="littlesheets"] .health-routine-item.tone-3 { background:#ffe5a2!important; }
+.app-shell[data-theme="littlesheets"] .health-routine-body {
+  padding:20px 16px 54px!important;
+}
+.app-shell[data-theme="littlesheets"] .health-routine-emoji {
+  font-size:40px!important;
+  margin-bottom:26px!important;
+}
+.app-shell[data-theme="littlesheets"] .health-routine-add {
+  background:#e7e0ff!important;
+  border-radius:19px!important;
+  color:#302b59!important;
+  min-height:52px!important;
+}
+
+.app-shell[data-theme="littlesheets"] .reminder-card {
+  background:#fff!important;
+  border:1px solid #ded9f1!important;
+  border-radius:29px!important;
+  box-shadow:0 12px 30px rgba(69,55,126,.11)!important;
+  display:grid;
+  gap:9px;
+  padding:12px!important;
+}
+.app-shell[data-theme="littlesheets"] .reminder-row {
+  border:0!important;
+  border-radius:20px!important;
+  min-height:70px!important;
+  padding:10px 12px!important;
+}
+.app-shell[data-theme="littlesheets"] .reminder-row:nth-child(4n+1) { background:#e7f5fb!important; }
+.app-shell[data-theme="littlesheets"] .reminder-row:nth-child(4n+2) { background:#faf1f4!important; }
+.app-shell[data-theme="littlesheets"] .reminder-row:nth-child(4n+3) { background:#e8f6ed!important; }
+.app-shell[data-theme="littlesheets"] .reminder-row:nth-child(4n) { background:#fff2df!important; }
+
+@media (max-width:420px) {
+  .app-shell[data-theme="littlesheets"] .little-sheet-schedule-card {
+    min-height:300px!important;
+    padding:17px!important;
+  }
+  .app-shell[data-theme="littlesheets"] .little-sheet-card-tools {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .app-shell[data-theme="littlesheets"] .little-sheet-card-tools > span:last-child {
+    grid-column:1/-1;
+  }
+  .app-shell[data-theme="littlesheets"] .little-sheet-detail-card {
+    padding:33px 17px calc(22px + var(--aerea-safe-area-bottom))!important;
   }
 }

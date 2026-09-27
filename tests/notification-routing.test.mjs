@@ -83,7 +83,7 @@ test("Android exposes precise alarm access and sports uses exact alarms when all
   assert.match(manifest, /android\.permission\.SCHEDULE_EXACT_ALARM/);
   assert.match(events, /ACTION_REQUEST_SCHEDULE_EXACT_ALARM/);
   assert.match(page, /openExactAlarmSettings/);
-  assert.match(page, /Precise timing/);
+  assert.doesNotMatch(page, /Precise timing/);
   assert.match(sports, /canScheduleExactAlarms/);
   assert.match(sports, /setExactAndAllowWhileIdle/);
   assert.match(sports, /setAndAllowWhileIdle/);

@@ -43,7 +43,7 @@ Do not rebuild the app from an older APK, old branch, stale artifact, or histori
 | Area | Status | Required behavior |
 | --- | --- | --- |
 | Trash refresh after image import | RECOVER | Importing/refreshing Study Library must never resurrect files that are still in Trash. Filter trashed IDs both at startup inventory hydration and after import refresh. |
-| Notification QA in Settings | RECOVER | Restore a visible native-only test control that schedules an ephemeral notification in ~5 seconds without creating/saving a demo event, plus a path to Android notification settings. |
+| Notification QA in Settings | REMOVED | The temporary five-second Settings test was retired after on-device notification verification. Keep real event and sports reminder scheduling unchanged. |
 | Notification appearance | APK VERIFY | Preserve the previously approved notification appearance. Do not use notification recovery as an excuse to redesign unrelated UI or behavior. |
 | Image open end-to-end | APK VERIFY | Import -> open -> close -> reopen app -> open again must work. |
 | Microphone end-to-end | APK VERIFY | Permission request, record, stop/save and playback must work in the actual APK. |

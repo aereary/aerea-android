@@ -86,26 +86,6 @@ public class AereaEventNotificationsPlugin extends Plugin {
         } catch (Exception error) { call.reject("Could not schedule reminders", error); }
     }
 
-    /** Explicit QA hook: schedules one ephemeral notification and stores no demo event. */
-    @PluginMethod public void scheduleQaNotification(PluginCall call) {
-        int seconds = Math.max(3, Math.min(30, call.getInt("delaySeconds", 5)));
-        String identity = "qa:" + System.currentTimeMillis();
-        long trigger = System.currentTimeMillis() + seconds * 1000L;
-        AlarmManager alarms = getContext().getSystemService(AlarmManager.class);
-        // AEREA_RECOVERY_FIX_003: approved QA notification copy only.
-        PendingIntent intent = pending(
-            getContext(),
-            identity,
-            "aérea notification test",
-            "Your test notification is working",
-            trigger,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        if (canExact(getContext())) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
-        else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, intent);
-        JSObject result = new JSObject(); result.put("identity", identity); result.put("firesInSeconds", seconds); call.resolve(result);
-    }
-
     static void rescheduleStored(Context context) {
         String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(EVENTS, "[]");
         try {
