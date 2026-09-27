@@ -1487,6 +1487,20 @@ test("renders one read-only Boca match across the current v156 surfaces", () => 
   assert.match(pageSource, /window\.setTimeout\([\s\S]{0,120}setDaySummaryDate/);
 });
 
+test("matches the clean white Boca reference inside the normal Home card footprint", () => {
+  assert.match(pageSource, /isFootballVisualEvent\(comingUpEvent\) \? "boca-reference-card"/);
+  assert.match(pageSource, /className="boca-reference-hearts"[\s\S]{0,80}💙💛/);
+  assert.match(pageSource, /className="boca-reference-timing"/);
+  assert.match(
+    cssSource,
+    /\.schedule-card\.match-day-schedule-card\.canonical-boca-match\.boca-reference-card \{[\s\S]{0,520}background:#fff!important;[\s\S]{0,520}grid-template-columns:64px minmax\(0,1fr\);[\s\S]{0,180}min-height:100px/,
+  );
+  assert.match(
+    cssSource,
+    /\.boca-reference-card \.schedule-copy h4 \{[\s\S]{0,260}text-overflow:ellipsis;[\s\S]{0,80}white-space:nowrap/,
+  );
+});
+
 test("schedules only one confirmed Boca notification identity", () => {
   assert.match(pageSource, /const genericNotificationEvents = followedEvents\.map/);
   assert.match(pageSource, /const bocaNotificationEvents = footballMatches\.flatMap/);
