@@ -82,20 +82,10 @@ function enhanceAllTimetables() {
 
 export default function TimetableAgendaBridge() {
   useEffect(() => {
+    // Legacy schedules are enhanced once. The current timetable is rendered
+    // directly as a React week map, so a document-wide MutationObserver is no
+    // longer needed while the user types in the semester editor.
     enhanceAllTimetables();
-
-    const observer = new MutationObserver(() => {
-      enhanceAllTimetables();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["aria-label"],
-    });
-
-    return () => observer.disconnect();
   }, []);
 
   return null;

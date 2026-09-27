@@ -20,6 +20,10 @@ const pageSource = await readFile(
   new URL("../app/page.tsx", import.meta.url),
   "utf8",
 );
+const timetableBridgeSource = await readFile(
+  new URL("../app/timetable-agenda-bridge.tsx", import.meta.url),
+  "utf8",
+);
 const cssSource = await readFile(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
@@ -105,19 +109,28 @@ test("Library images use img with a decode fallback while PDF and EPUB keep read
   assert.match(pageSource, /opened\.kind === "epub"[\s\S]*loadEpub/);
 });
 
-test("timetable keeps MON through SAT and positions classes in a temporal grid", () => {
+test("timetable keeps MON through SAT in the clean weekly map", () => {
   for (const day of ["MON", "TUE", "WED", "THU", "FRI", "SAT"]) {
     assert.match(pageSource, new RegExp(`label: "${day}"`));
   }
-  assert.match(pageSource, /className="timetable-time-axis"/);
-  assert.match(pageSource, /timetableClassPosition\(/);
-  assert.match(pageSource, /data-grid-start=\{timetableWindow\.start\}/);
+  assert.match(pageSource, /STUDY · WEEK MAP/);
+  assert.match(pageSource, /This week’s map/);
+  assert.match(pageSource, /className="timetable-week-map"/);
+  assert.match(pageSource, /className="timetable-week-map-days"/);
+  assert.match(pageSource, /timetableAgenda\.map/);
   assert.match(pageSource, /Tap a class to edit or remove/);
-  assert.match(cssSource, /\.timetable-board[\s\S]*grid-template-columns:42px repeat\(6/);
+  assert.match(cssSource, /\.timetable-week-map-days[\s\S]*grid-template-columns:repeat\(7/);
+  assert.match(cssSource, /\.timetable-week-map-class[\s\S]*grid-template-columns:96px/);
   const finalTimetableCss = cssSource.slice(
     cssSource.lastIndexOf("Timetable final cascade guard"),
   );
   assert.doesNotMatch(finalTimetableCss, /align-items:flex-end/);
+});
+
+test("semester editing avoids the old document-wide timetable observer", () => {
+  assert.doesNotMatch(timetableBridgeSource, /new MutationObserver/);
+  assert.match(pageSource, /timetableClassDraft \? "editing-class"/);
+  assert.match(pageSource, /Your subjects/);
 });
 
 test("Today Health details reuse the existing per-date completion state", () => {
