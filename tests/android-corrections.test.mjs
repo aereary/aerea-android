@@ -30,18 +30,15 @@ test("event reminders use stable occurrence identities and survive system change
   assert.match(notifications, /setAndAllowWhileIdle/);
   assert.match(notifications, /excludedDates/);
   assert.match(notifications, /customRepeatEvery/);
-  assert.match(notifications, /scheduleQaNotification/);
   for (const action of ["BOOT_COMPLETED", "MY_PACKAGE_REPLACED", "TIME_SET", "TIMEZONE_CHANGED"]) assert.match(manifest, new RegExp(action));
   assert.match(page, /Notifications are blocked/);
 });
 
-test("Settings exposes the native 5-second QA notification without saving a demo event", () => {
-  assert.match(page, /scheduleQaNotification\(options: \{ delaySeconds: number \}\)/);
-  assert.match(page, /Test notifications/);
-  assert.match(page, /Send test in 5 seconds/);
-  assert.match(page, /delaySeconds: 5/);
-  assert.match(page, /It does not create or save an event/);
-  assert.match(notifications, /scheduleQaNotification/);
+test("Settings no longer exposes the retired QA notification", () => {
+  assert.doesNotMatch(page, /scheduleQaNotification|Test notifications|Send test in 5 seconds/);
+  assert.doesNotMatch(notifications, /scheduleQaNotification|aérea notification test/);
+  assert.match(page, /AereaEventNotifications\.sync\(\{[\s\S]{0,160}eventsJson/);
+  assert.match(notifications, /@PluginMethod public void sync\(PluginCall call\)/);
 });
 
 test("Study Library inventory cannot resurrect files that are still in Trash", () => {
@@ -89,8 +86,6 @@ test("blocked Android microphone permission opens app settings instead of failin
 test("approved Android notification and Back hint keep native compact appearance", () => {
   assert.match(page, /AereaNavigation\.showExitHint\(\{ message: exitHint \}\)/);
   assert.match(navigation, /Toast\.makeText\(getContext\(\), message, Toast\.LENGTH_SHORT\)\.show\(\)/);
-  assert.match(notifications, /aérea notification test/);
-  assert.match(notifications, /Your test notification is working/);
   assert.match(notifications, /return pending\(c, id, title, "Your event starts soon", trigger, mode\)/);
   assert.match(notificationReceiver, /new NotificationCompat\.Builder\(context, CHANNEL_ID\)/);
   assert.match(notificationReceiver, /setSmallIcon\(R\.drawable\.ic_notification_aerea\)/);

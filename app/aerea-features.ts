@@ -159,13 +159,6 @@ export type TrashItem = {
   purgeAt: string;
 };
 
-export type ResetPreferences = {
-  morningEnabled: boolean;
-  nightEnabled: boolean;
-  lastMorningDate?: string;
-  lastNightDate?: string;
-};
-
 export type SportsSettings = {
   followedTeamIds: string[];
   addAutomatically: boolean;
@@ -266,11 +259,6 @@ export function isBocaSportsEvent(event: SportsEvent) {
       event.teamProviderExternalId ?? registeredTeam?.externalId,
   });
 }
-
-export const DEFAULT_RESET_PREFERENCES: ResetPreferences = {
-  morningEnabled: true,
-  nightEnabled: true,
-};
 
 export const DEFAULT_SPORTS_SETTINGS: SportsSettings = {
   followedTeamIds: [],

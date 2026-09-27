@@ -30,7 +30,6 @@ import {
   type FootballMatch,
 } from "./supabase-sync";
 import {
-  DEFAULT_RESET_PREFERENCES,
   DEFAULT_SPORTS_SETTINGS,
   INITIAL_SPORTS_TEAMS,
   addDays,
@@ -45,7 +44,6 @@ import {
   type LibraryCollection,
   type LibraryItem,
   type PostItGroup,
-  type ResetPreferences,
   type SportsEvent,
   type SportsSettings,
   type TaskItem,
@@ -211,10 +209,6 @@ type AereaEventNotificationsPlugin = {
   requestPermissions(): Promise<{ permission: "granted" | "denied"; channel: "available" | "blocked"; exact: boolean }>;
   openSettings(): Promise<void>;
   openExactAlarmSettings(): Promise<void>;
-  scheduleQaNotification(options: { delaySeconds: number }): Promise<{
-    identity: string;
-    firesInSeconds: number;
-  }>;
   sync(options: { eventsJson: string }): Promise<{ scheduled: number; exact: boolean }>;
 };
 type AereaNavigationPlugin = {
@@ -807,6 +801,86 @@ type CalendarEvent = {
   healthCompletedDates?: string[];
 };
 
+type LittleSheetCardKind =
+  | "match"
+  | "class"
+  | "deadline"
+  | "social"
+  | "plan";
+
+function littleSheetCardKind(event: CalendarEvent): LittleSheetCardKind {
+  if (event.eventType === "sports_event" || event.sportsCardStyle) {
+    return "match";
+  }
+  if (
+    event.sourceType === "timetable" ||
+    /class|study|course|school/i.test(event.calendar ?? "")
+  ) {
+    return "class";
+  }
+  if (
+    (event.todos?.length ?? 0) > 0 ||
+    /deadline|assignment|project|exam/i.test(event.calendar ?? "")
+  ) {
+    return "deadline";
+  }
+  if (event.guests) return "social";
+  return "plan";
+}
+
+function LittleSheetScheduleDetails({ event }: { event: CalendarEvent }) {
+  const start = event.allDay
+    ? "All day"
+    : `${formatTimeBlock(event.time).primary} ${formatTimeBlock(event.time).secondary}`;
+  const end = event.allDay
+    ? "All day"
+    : event.endTime
+      ? `${formatTimeBlock(event.endTime).primary} ${formatTimeBlock(event.endTime).secondary}`
+      : "Open";
+  const notes =
+    (event.attachedNoteIds?.length ?? 0) + (event.note?.trim() ? 1 : 0);
+  const tasks = event.todos?.length ?? 0;
+
+  return (
+    <div className="little-sheet-card-details" aria-hidden="true">
+      <div className="little-sheet-card-facts">
+        <span>
+          <small>STARTS</small>
+          <strong>{start}</strong>
+        </span>
+        <span>
+          <small>ENDS</small>
+          <strong>{end}</strong>
+        </span>
+      </div>
+      <span className="little-sheet-card-location">
+        <small>LOCATION</small>
+        <strong>{event.location || "Saved in your calendar"}</strong>
+      </span>
+      <div className="little-sheet-card-tools">
+        <span>
+          <b aria-hidden="true">▤</b>
+          <small>Notes</small>
+          <strong>{notes || "—"}</strong>
+        </span>
+        <span>
+          <b aria-hidden="true">✓</b>
+          <small>Tasks</small>
+          <strong>{tasks || "—"}</strong>
+        </span>
+        <span>
+          <b aria-hidden="true">♢</b>
+          <small>Reminder</small>
+          <strong>{event.reminder && event.reminder !== "None" ? "Set" : "—"}</strong>
+        </span>
+      </div>
+      <span className="little-sheet-card-open">
+        View details <b aria-hidden="true">›</b>
+      </span>
+    </div>
+  );
+}
+
 type FootballVisualEvent = CalendarEvent & {
   eventType: "sports_event";
   sportsSource: "football_matches";
@@ -1080,7 +1154,6 @@ type PersistedState = {
   libraryCollections?: LibraryCollection[];
   entityLinks?: EntityLink[];
   trashItems?: TrashItem[];
-  resetPreferences?: ResetPreferences;
   sportsSettings?: SportsSettings;
   sportsEvents?: SportsEvent[];
   calendarCategories?: CalendarCategory[];
@@ -2944,15 +3017,6 @@ export default function Home() {
   useLayoutEffect(() => {
     trashItemsRef.current = trashItems;
   }, [trashItems]);
-  const [resetPreferences, setResetPreferences] = useState<ResetPreferences>(
-    DEFAULT_RESET_PREFERENCES,
-  );
-  const [resetExperience, setResetExperience] = useState<
-    "morning" | "night" | null
-  >(null);
-  const [resetCategory, setResetCategory] = useState<
-    "events" | "tasks" | "reminders" | null
-  >(null);
   const [sportsSettings, setSportsSettings] = useState<SportsSettings>(
     DEFAULT_SPORTS_SETTINGS,
   );
@@ -3470,12 +3534,6 @@ export default function Home() {
           (item) => new Date(item.purgeAt).getTime() > now,
         );
         setTrashItems(activeTrash);
-      }
-      if (state.resetPreferences) {
-        setResetPreferences({
-          ...DEFAULT_RESET_PREFERENCES,
-          ...state.resetPreferences,
-        });
       }
       if (state.sportsSettings) {
         setSportsSettings({
@@ -4216,7 +4274,6 @@ export default function Home() {
               libraryCollections,
               entityLinks,
               trashItems,
-              resetPreferences,
               sportsSettings,
               sportsEvents,
               calendarCategories,
@@ -4279,7 +4336,6 @@ export default function Home() {
     profilePhoto,
     reminderHistory,
     reminders,
-    resetPreferences,
     recordings,
     sportsEvents,
     sportsSettings,
@@ -4348,14 +4404,6 @@ export default function Home() {
   const completed = useMemo(
     () => reminders.filter((item) => doneIds.includes(item.id)),
     [doneIds, reminders],
-  );
-  const overdueTasks = useMemo(
-    () =>
-      tasks.filter(
-        (task) =>
-          !task.completed && !task.skipped && task.dueDate < todayKey,
-      ),
-    [tasks, todayKey],
   );
   const todayTasks = useMemo(
     () =>
@@ -5987,17 +6035,6 @@ export default function Home() {
     );
   };
 
-  const closeResetExperience = () => {
-    if (!resetExperience) return;
-    setResetPreferences((current) => ({
-      ...current,
-      [resetExperience === "morning" ? "lastMorningDate" : "lastNightDate"]:
-        todayKey,
-    }));
-    setResetCategory(null);
-    setResetExperience(null);
-  };
-
   const goToCalendarDate = (dateKey: string) => {
     const date = dateFromKey(dateKey);
     setSelectedCalendarDate(dateKey);
@@ -6071,32 +6108,6 @@ export default function Home() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [allCalendarEvents, calendarOpen, calendarScheduleOpen, selectedCalendarDate, todayKey]);
-
-  useEffect(() => {
-    if (!stateReady || resetExperience) return;
-    const hour = new Date().getHours();
-    let nextExperience: "morning" | "night" | null = null;
-    if (
-      resetPreferences.morningEnabled &&
-      hour >= 5 &&
-      hour < 12 &&
-      resetPreferences.lastMorningDate !== todayKey
-    ) {
-      nextExperience = "morning";
-    } else if (
-      resetPreferences.nightEnabled &&
-      (hour >= 19 || hour < 2) &&
-      resetPreferences.lastNightDate !== todayKey
-    ) {
-      nextExperience = "night";
-    }
-    if (!nextExperience) return;
-    const timer = window.setTimeout(
-      () => setResetExperience(nextExperience),
-      0,
-    );
-    return () => window.clearTimeout(timer);
-  }, [resetExperience, resetPreferences, stateReady, todayKey]);
 
   useEffect(() => {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
@@ -6215,40 +6226,6 @@ export default function Home() {
       });
     }
   }, [ao3LibraryLaunching, ao3LibraryOpen, brandOpensAo3]);
-
-  const sendQaNotification = async () => {
-    if (!isNative()) return;
-    try {
-      const current = await AereaEventNotifications.status();
-      const status =
-        current.permission === "granted"
-          ? current
-          : await AereaEventNotifications.requestPermissions();
-
-      if (
-        status.permission !== "granted" ||
-        status.channel === "blocked"
-      ) {
-        setHistoryMessage(
-          "Notifications are blocked. Open Settings to receive reminders.",
-        );
-        return;
-      }
-
-      const result = await AereaEventNotifications.scheduleQaNotification({
-        delaySeconds: 5,
-      });
-      setHistoryMessage(
-        `Test scheduled: it will arrive in ${result.firesInSeconds} seconds.`,
-      );
-    } catch (error) {
-      setHistoryMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not schedule the test notification.",
-      );
-    }
-  };
 
   const changeTab = (tab: Tab) => {
     if (tab !== activeTab) setTabHistory((current) => [...current, activeTab]);
@@ -12103,193 +12080,6 @@ export default function Home() {
         </div>
       )}
 
-      {resetExperience && (
-        <div className="modal-backdrop reset-backdrop" role="presentation">
-          <section
-            className="reset-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={resetExperience === "morning" ? "Morning Reset" : "Night Reset"}
-          >
-            <button
-              type="button"
-              className="reset-close"
-              onClick={closeResetExperience}
-              aria-label="Close daily reset"
-            >
-              ×
-            </button>
-            {resetExperience === "morning" ? (
-              <>
-                <p className="tiny-label">MORNING RESET ♡</p>
-                <h2>
-                  {dateFromKey(todayKey).toLocaleDateString("en", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </h2>
-                <div className="reset-summary-categories" aria-label="Today summary">
-                  {([
-                    ["events", todayWidgetEvents.length, "events"],
-                    ["tasks", todayTasks.length, "tasks"],
-                    ["reminders", pending.length, "reminders"],
-                  ] as const).map(([category, count, label]) => (
-                    <button
-                      type="button"
-                      key={category}
-                      className={resetCategory === category ? "active" : ""}
-                      onClick={() =>
-                        setResetCategory((current) =>
-                          current === category ? null : category,
-                        )
-                      }
-                    >
-                      <strong>{count}</strong>
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-                {resetCategory && (
-                  <div className="reset-category-list">
-                    {resetCategory === "events" &&
-                      todayWidgetEvents.map((event) => (
-                        <button
-                          type="button"
-                          key={event.id}
-                          onClick={() => {
-                            closeResetExperience();
-                            openEventDetail(event);
-                          }}
-                        >
-                          <span>{eventStartTimeLabel(event)}</span>
-                          <strong>{event.title}</strong>
-                        </button>
-                      ))}
-                    {resetCategory === "tasks" &&
-                      todayTasks.map((task) => (
-                        <div className="reset-category-task" key={task.id}>
-                          <button
-                            type="button"
-                            className={task.completed ? "completed" : ""}
-                            onClick={() => toggleTaskCompleted(task.id)}
-                          >
-                            <span>{task.completed ? "✓" : "○"}</span>
-                            <strong>{task.title}</strong>
-                          </button>
-                          <button
-                            type="button"
-                            className="reset-task-attachments"
-                            onClick={() => openTaskEditor(task)}
-                          >
-                            Attached
-                          </button>
-                          <button
-                            type="button"
-                            className="reset-category-delete"
-                            aria-label={`Move ${task.title} to Trash`}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Move “${task.title}” to Trash for 30 days?`,
-                                )
-                              ) {
-                                moveToTrash("task", task.title, task);
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    {resetCategory === "reminders" &&
-                      pending.map((reminder) => (
-                        <button
-                          type="button"
-                          key={reminder.id}
-                          onClick={() => completeReminderItem(reminder.id)}
-                        >
-                          <span>{reminder.icon}</span>
-                          <strong>{reminder.title}</strong>
-                        </button>
-                      ))}
-                    {((resetCategory === "events" && todayWidgetEvents.length === 0) ||
-                      (resetCategory === "tasks" && todayTasks.length === 0) ||
-                      (resetCategory === "reminders" && pending.length === 0)) && (
-                      <p>Nothing waiting here ♡</p>
-                    )}
-                  </div>
-                )}
-                {overdueTasks.length > 0 && (
-                  <div className="reset-overdue">
-                    <strong>Still waiting from yesterday</strong>
-                    {overdueTasks.map((task) => (
-                      <article key={task.id}>
-                        <span>
-                          You didn’t finish “{task.title}” {task.dueDate === yesterdayKey
-                            ? "yesterday"
-                            : `on ${readableDate(task.dueDate)}`}.
-                        </span>
-                        <div>
-                          <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
-                          <button type="button" onClick={() => rescheduleTask(task, todayKey)}>Today</button>
-                          <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const date = window.prompt("Move to date (YYYY-MM-DD)", todayKey);
-                              if (date) rescheduleTask(task, date);
-                            }}
-                          >
-                            Pick date
-                          </button>
-                          <button type="button" onClick={() => rescheduleTask(task, null)}>Dismiss</button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="tiny-label">NIGHT RESET ♡</p>
-                <h2>
-                  You finished {todayTasks.filter((task) => task.completed).length} of {todayTasks.length} things today ♡
-                </h2>
-                <p>Move unfinished things to tomorrow?</p>
-                <div className="night-unfinished">
-                  {todayTasks.filter((task) => !task.completed).map((task) => (
-                    <article key={task.id}>
-                      <span>{task.title}</span>
-                      <div>
-                        <button type="button" onClick={() => openTaskEditor(task)}>Attached</button>
-                        <button type="button" onClick={() => rescheduleTask(task, addDays(todayKey, 1))}>Tomorrow</button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const date = window.prompt(
-                              "Move to date (YYYY-MM-DD)",
-                              addDays(todayKey, 1),
-                            );
-                            if (date) rescheduleTask(task, date);
-                          }}
-                        >
-                          Pick date
-                        </button>
-                        <button type="button" onClick={() => rescheduleTask(task, null)}>Dismiss</button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-            <button type="button" className="reset-done" onClick={closeResetExperience}>
-              Done for now
-            </button>
-          </section>
-        </div>
-      )}
-
       {taskLinkEditor && (
           <div
             className="modal-backdrop task-link-backdrop"
@@ -12366,7 +12156,6 @@ export default function Home() {
                         key={`file-${fileId}`}
                         onClick={() => {
                           closeTaskEditor();
-                          setResetExperience(null);
                           if (capturedFile) void openLibraryItem(capturedFile);
                           else if (studyFile) void openStudyFile(studyFile);
                         }}
@@ -12384,7 +12173,6 @@ export default function Home() {
                         key={`note-${noteId}`}
                         onClick={() => {
                           closeTaskEditor();
-                          setResetExperience(null);
                           setSelectedJournalEntry(note);
                         }}
                       >
@@ -15026,7 +14814,7 @@ export default function Home() {
               }}
             >
               <section
-                className="event-detail-note football-match-detail"
+                className="event-detail-note football-match-detail little-sheet-detail-card little-sheet-detail-match"
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Match details for ${match.home_team} versus ${match.away_team}`}
@@ -15114,7 +14902,7 @@ export default function Home() {
               }}
             >
               <section
-                className={`event-detail-note ${selectedEventDetail.color}`}
+                className={`event-detail-note ${selectedEventDetail.color} little-sheet-detail-card little-sheet-detail-${littleSheetCardKind(selectedEventDetail)}`}
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Details for ${selectedEventDetail.title}`}
@@ -15478,6 +15266,15 @@ export default function Home() {
             )}
 
                 <div className="event-detail-primary-actions">
+                  {appTheme === "littlesheets" && (
+                    <button
+                      className="little-sheet-edit-action"
+                      type="button"
+                      data-event-detail-edit="true"
+                    >
+                      Edit details <span aria-hidden="true">›</span>
+                    </button>
+                  )}
                   {selectedEventDetail.eventType !== "sports_event" && (
                     <button
                       className="day-summary-add event-detail-add"
@@ -16007,46 +15804,6 @@ export default function Home() {
               </div>
             </section>
 
-            <section className="reset-settings-card" aria-label="Daily resets">
-              <div>
-                <p className="tiny-label">BEGIN & END GENTLY</p>
-                <h3>Morning and Night Reset</h3>
-                <p>Small daily check-ins, never another statistics page.</p>
-              </div>
-              <label>
-                <span>
-                  <strong>Morning Reset</strong>
-                  <small>Only what matters today</small>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={resetPreferences.morningEnabled}
-                  onChange={(event) =>
-                    setResetPreferences((current) => ({
-                      ...current,
-                      morningEnabled: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                <span>
-                  <strong>Night Reset</strong>
-                  <small>Decide what happens to unfinished things</small>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={resetPreferences.nightEnabled}
-                  onChange={(event) =>
-                    setResetPreferences((current) => ({
-                      ...current,
-                      nightEnabled: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-            </section>
-
             <section className="sync-card" aria-label="Private device sync">
               <div>
                 <p className="tiny-label">PHONE · TABLET · PC</p>
@@ -16147,40 +15904,6 @@ export default function Home() {
                 </button>
               </div>
             </section>
-
-            {isNative() && (
-              <section className="mode-card" aria-label="Notification test">
-                <div>
-                  <p className="tiny-label">NOTIFICATIONS</p>
-                  <h3>Test notifications</h3>
-                  <p>
-                    Send one temporary test. It does not create or save an event.
-                  </p>
-                </div>
-                <div className="mode-switch">
-                  <button
-                    type="button"
-                    onClick={() => void sendQaNotification()}
-                  >
-                    Send test in 5 seconds
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void AereaEventNotifications.openSettings()}
-                  >
-                    Android settings
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void AereaEventNotifications.openExactAlarmSettings()
-                    }
-                  >
-                    Precise timing
-                  </button>
-                </div>
-              </section>
-            )}
 
             <section className="theme-wardrobe" aria-label="Aérea themes">
               <div className="theme-wardrobe-heading">
@@ -16990,6 +16713,8 @@ function TodayScreen({
               comingUpEvent.sportsCardStyle ? "match-day-schedule-card" : "",
               isFootballVisualEvent(comingUpEvent) ? "canonical-boca-match" : "",
               isFootballVisualEvent(comingUpEvent) ? "boca-reference-card" : "",
+              "little-sheet-schedule-card",
+              `little-sheet-${littleSheetCardKind(comingUpEvent)}`,
             ].filter(Boolean).join(" ")}
             style={
               comingUpEvent.sportsCardStyle
@@ -17056,6 +16781,7 @@ function TodayScreen({
                 </small>
               ) : null}
             </div>
+            <LittleSheetScheduleDetails event={comingUpEvent} />
             <div className="mini-people">
               {isNoirRest ? "•••" : "✦"}
             </div>
@@ -17093,6 +16819,8 @@ function TodayScreen({
                   event.sportsCardStyle ? "match-day-schedule-card" : "",
                   isFootballVisualEvent(event) ? "canonical-boca-match" : "",
                   isFootballVisualEvent(event) ? "boca-reference-card" : "",
+                  "little-sheet-schedule-card",
+                  `little-sheet-${littleSheetCardKind(event)}`,
                 ].filter(Boolean).join(" ")}
                 style={
                   event.sportsCardStyle
@@ -17156,6 +16884,7 @@ function TodayScreen({
                     <small className="match-countdown">{matchCountdownLabel(event)}</small>
                   ) : null}
                 </div>
+                <LittleSheetScheduleDetails event={event} />
                 <div className="mini-people">
                   {isNoirRest ? "•••" : "✦"}
                 </div>
