@@ -16522,6 +16522,8 @@ function TodayScreen({
   const [reminderDraft, setReminderDraft] = useState<Reminder | null>(null);
   const [timetableOpen, setTimetableOpen] = useState(false);
   const [timetableEditing, setTimetableEditing] = useState(false);
+  const [timetableSelectedDate, setTimetableSelectedDate] =
+    useState(selectedDate);
   const [timetableDraft, setTimetableDraft] =
     useState<ClassTimetable>(classTimetable);
   const [timetableClassDraft, setTimetableClassDraft] =
@@ -16544,15 +16546,17 @@ function TodayScreen({
   const timetableMeetings = classTimetable.classes.flatMap((classItem) =>
     classItem.meetings.map((meeting) => ({ ...meeting, classItem })),
   );
-  const timetableDayOrder = new Map(
-    timetableDays.map((day, index) => [day.id, index]),
-  );
-  const timetableAgenda = [...timetableMeetings].sort((first, second) => {
-    const dayDifference =
-      (timetableDayOrder.get(first.day) ?? 0) -
-      (timetableDayOrder.get(second.day) ?? 0);
-    return dayDifference || first.start.localeCompare(second.start);
-  });
+  const timetableSelectedDay = (
+    ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+  )[dateFromKey(timetableSelectedDate).getDay()];
+  const timetableAgenda = timetableSelectedDay === "sun"
+    ? []
+    : timetableMeetings
+        .filter((meeting) => meeting.day === timetableSelectedDay)
+        .sort((first, second) => first.start.localeCompare(second.start));
+  const timetableSelectedDayName = dateFromKey(
+    timetableSelectedDate,
+  ).toLocaleDateString("en", { weekday: "long" });
   const timetableWeekRange = weekDays.length
     ? `${dateFromKey(weekDays[0].key).toLocaleDateString("en", {
         month: "short",
@@ -16579,6 +16583,7 @@ function TodayScreen({
     });
     setTimetableEditing(false);
     setTimetableClassDraft(null);
+    setTimetableSelectedDate(selectedDate);
     setTimetableOpen(true);
   };
 
@@ -16591,7 +16596,7 @@ function TodayScreen({
   };
 
   const beginTimetableLongPress = (
-    event: ReactPointerEvent<HTMLButtonElement>,
+    event: ReactPointerEvent<HTMLElement>,
   ) => {
     timetableLongPressedRef.current = false;
     cancelTimetableLongPress();
@@ -16604,7 +16609,7 @@ function TodayScreen({
   };
 
   const moveTimetableLongPress = (
-    event: ReactPointerEvent<HTMLButtonElement>,
+    event: ReactPointerEvent<HTMLElement>,
   ) => {
     const start = timetablePressStartRef.current;
     if (
@@ -16778,6 +16783,8 @@ function TodayScreen({
     openEventDetail(calendarEvent, null, selectedDate);
   };
 
+  const welcomeOpensTimetable = themeId === "lovelyevening";
+
   useEffect(
     () => () => {
       if (scheduleLongPressTimerRef.current) {
@@ -16792,7 +16799,44 @@ function TodayScreen({
 
   return (
     <>
-      <section className="welcome-row">
+      <section
+        className={`welcome-row ${
+          welcomeOpensTimetable ? "welcome-row-timetable-trigger" : ""
+        }`.trim()}
+        role={welcomeOpensTimetable ? "button" : undefined}
+        tabIndex={welcomeOpensTimetable ? 0 : undefined}
+        aria-label={
+          welcomeOpensTimetable
+            ? "Hold to open your interactive class schedule"
+            : undefined
+        }
+        title={welcomeOpensTimetable ? "Hold for Week Map" : undefined}
+        onPointerDown={
+          welcomeOpensTimetable ? beginTimetableLongPress : undefined
+        }
+        onPointerMove={
+          welcomeOpensTimetable ? moveTimetableLongPress : undefined
+        }
+        onPointerUp={welcomeOpensTimetable ? cancelTimetableLongPress : undefined}
+        onPointerCancel={
+          welcomeOpensTimetable ? cancelTimetableLongPress : undefined
+        }
+        onContextMenu={
+          welcomeOpensTimetable
+            ? (event) => event.preventDefault()
+            : undefined
+        }
+        onKeyDown={
+          welcomeOpensTimetable
+            ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openClassTimetable();
+                }
+              }
+            : undefined
+        }
+      >
         <div>
           <p className="date-label">
             {selectedDateObject
@@ -16840,7 +16884,7 @@ function TodayScreen({
               : "Tap today whenever you want to come back."}
           </p>
         </div>
-        {showDayCharm && (
+        {showDayCharm && !welcomeOpensTimetable && (
           <button
             type="button"
             className={[
@@ -17438,32 +17482,25 @@ function TodayScreen({
                     <i aria-hidden="true" />
                     {timetableWeekRange}
                     <span>{classTimetable.termName}</span>
+                    <button
+                      className="timetable-inline-edit"
+                      type="button"
+                      onClick={() => {
+                        setTimetableDraft({
+                          ...classTimetable,
+                          classes: classTimetable.classes.map((classItem) => ({
+                            ...classItem,
+                          })),
+                        });
+                        setTimetableEditing(true);
+                      }}
+                    >
+                      Edit semester
+                    </button>
                   </p>
                 )}
               </div>
               <div className="timetable-heading-actions">
-                {!timetableEditing && (
-                  <button
-                    className="timetable-edit-button"
-                    type="button"
-                    onClick={() => {
-                      setTimetableDraft({
-                        ...classTimetable,
-                        classes: classTimetable.classes.map((classItem) => ({
-                          ...classItem,
-                        })),
-                      });
-                      setTimetableEditing(true);
-                    }}
-                    aria-label="Edit class schedule"
-                    title="Edit class schedule"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="m5 16-.8 3.8L8 19l9.8-9.8-3-3Z" />
-                      <path d="m13.8 7.2 3 3" />
-                    </svg>
-                  </button>
-                )}
                 <button
                   className="timetable-close-button"
                   type="button"
@@ -17482,22 +17519,33 @@ function TodayScreen({
                   aria-label="Current week, Sunday through Saturday"
                 >
                   {weekDays.map((day) => (
-                    <span
-                      className={selectedDate === day.key ? "active" : ""}
+                    <button
+                      type="button"
+                      className={
+                        timetableSelectedDate === day.key ? "active" : ""
+                      }
                       key={`map-${day.key}`}
+                      onClick={() => setTimetableSelectedDate(day.key)}
+                      aria-pressed={timetableSelectedDate === day.key}
+                      aria-label={`Show ${day.day}'s classes`}
                     >
                       <small>{day.day.slice(0, 1)}</small>
                       <strong>{day.date}</strong>
-                    </span>
+                    </button>
                   ))}
                 </div>
 
-                <div className="timetable-week-map-list" role="list">
+                <div
+                  className="timetable-week-map-list"
+                  role="list"
+                  aria-live="polite"
+                  aria-label={`${timetableSelectedDayName} classes`}
+                >
                   {timetableAgenda.length === 0 ? (
                     <div className="timetable-week-map-empty">
                       <span aria-hidden="true">🎓</span>
-                      <strong>Your week is still open</strong>
-                      <small>Add a class and it will appear here.</small>
+                      <strong>No classes on {timetableSelectedDayName}</strong>
+                      <small>Choose another day or edit your semester.</small>
                     </div>
                   ) : (
                     timetableAgenda.map(({ classItem, ...meeting }) => {
