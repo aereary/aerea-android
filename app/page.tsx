@@ -16905,6 +16905,7 @@ function TodayScreen({
               `${eventDisplayColor(comingUpEvent, selectedDate)}-card`,
               comingUpEvent.sportsCardStyle ? "match-day-schedule-card" : "",
               isFootballVisualEvent(comingUpEvent) ? "canonical-boca-match" : "",
+              isFootballVisualEvent(comingUpEvent) ? "boca-reference-card" : "",
             ].filter(Boolean).join(" ")}
             style={
               comingUpEvent.sportsCardStyle
@@ -16925,14 +16926,30 @@ function TodayScreen({
             aria-label={`Open details for ${scheduleEventTitle(comingUpEvent)}`}
             title="Hold to preview event"
           >
-            <div className="time-block">
-              <strong>{eventTimeBlockPrimary(comingUpEvent)}</strong>
-              <span>{eventTimeBlockSecondary(comingUpEvent)}</span>
+            <div
+              className={`time-block ${
+                isFootballVisualEvent(comingUpEvent)
+                  ? "boca-reference-emblem"
+                  : ""
+              }`}
+            >
+              {isFootballVisualEvent(comingUpEvent) ? (
+                <span className="boca-reference-hearts" aria-hidden="true">
+                  💙💛
+                </span>
+              ) : (
+                <>
+                  <strong>{eventTimeBlockPrimary(comingUpEvent)}</strong>
+                  <span>{eventTimeBlockSecondary(comingUpEvent)}</span>
+                </>
+              )}
             </div>
             <div className="schedule-line" />
             <div className="schedule-copy">
               <p className="card-tag">
-                {comingUpEvent.sportsCardStyle
+                {isFootballVisualEvent(comingUpEvent)
+                  ? "MATCH DAY"
+                  : comingUpEvent.sportsCardStyle
                   ? `${comingUpEvent.sportsIcon ?? "♡"} MATCH DAY`
                   : comingUpEvent.calendar ?? "AÉREA"}
               </p>
@@ -16942,11 +16959,18 @@ function TodayScreen({
                   comingUpEvent.note ||
                   "Saved in your calendar"}
               </span>
-              {comingUpEvent.eventType === "sports_event" && (
+              {isFootballVisualEvent(comingUpEvent) ? (
+                <span className="boca-reference-timing">
+                  <strong>{eventTimeBlockPrimary(comingUpEvent)}</strong>
+                  <small>
+                    {matchCountdownLabel(comingUpEvent).replace(/\s*♡$/, "")}
+                  </small>
+                </span>
+              ) : comingUpEvent.eventType === "sports_event" ? (
                 <small className="match-countdown">
                   {matchCountdownLabel(comingUpEvent)}
                 </small>
-              )}
+              ) : null}
             </div>
             <div className="mini-people">
               {isNoirRest ? "•••" : "✦"}
@@ -16984,6 +17008,7 @@ function TodayScreen({
                   `${eventDisplayColor(event, selectedDate)}-card`,
                   event.sportsCardStyle ? "match-day-schedule-card" : "",
                   isFootballVisualEvent(event) ? "canonical-boca-match" : "",
+                  isFootballVisualEvent(event) ? "boca-reference-card" : "",
                 ].filter(Boolean).join(" ")}
                 style={
                   event.sportsCardStyle
@@ -17005,14 +17030,30 @@ function TodayScreen({
                 aria-label={`Open details for ${scheduleEventTitle(event)}`}
                 title="Hold to preview event"
               >
-                <div className="time-block">
-                  <strong>{eventTimeBlockPrimary(event)}</strong>
-                  <span>{eventTimeBlockSecondary(event)}</span>
+                <div
+                  className={`time-block ${
+                    isFootballVisualEvent(event)
+                      ? "boca-reference-emblem"
+                      : ""
+                  }`}
+                >
+                  {isFootballVisualEvent(event) ? (
+                    <span className="boca-reference-hearts" aria-hidden="true">
+                      💙💛
+                    </span>
+                  ) : (
+                    <>
+                      <strong>{eventTimeBlockPrimary(event)}</strong>
+                      <span>{eventTimeBlockSecondary(event)}</span>
+                    </>
+                  )}
                 </div>
                 <div className="schedule-line" />
                 <div className="schedule-copy">
                   <p className="card-tag">
-                    {event.sportsCardStyle
+                    {isFootballVisualEvent(event)
+                      ? "MATCH DAY"
+                      : event.sportsCardStyle
                       ? `${event.sportsIcon ?? "♡"} MATCH DAY`
                       : event.calendar ?? "AÉREA"}
                   </p>
@@ -17020,9 +17061,16 @@ function TodayScreen({
                   <span>
                     {event.location || event.note || "Saved in your calendar"}
                   </span>
-                  {event.eventType === "sports_event" && (
+                  {isFootballVisualEvent(event) ? (
+                    <span className="boca-reference-timing">
+                      <strong>{eventTimeBlockPrimary(event)}</strong>
+                      <small>
+                        {matchCountdownLabel(event).replace(/\s*♡$/, "")}
+                      </small>
+                    </span>
+                  ) : event.eventType === "sports_event" ? (
                     <small className="match-countdown">{matchCountdownLabel(event)}</small>
-                  )}
+                  ) : null}
                 </div>
                 <div className="mini-people">
                   {isNoirRest ? "•••" : "✦"}

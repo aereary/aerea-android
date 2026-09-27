@@ -22367,6 +22367,140 @@ body {
   }
 }
 
+/* Boca Home card — preserve the normal wide card footprint while matching
+   the clean white reference ticket. */
+.schedule-card.match-day-schedule-card.canonical-boca-match.boca-reference-card {
+  align-items:center;
+  background:#fff!important;
+  border:1px solid #ece8e6!important;
+  border-radius:23px;
+  box-shadow:0 9px 20px rgba(40,49,85,.1),0 5px 0 rgba(214,207,216,.5);
+  color:#172f66!important;
+  gap:16px;
+  grid-template-columns:64px minmax(0,1fr);
+  min-height:100px;
+  padding:13px 18px;
+}
+
+.schedule-card.boca-reference-card::before,
+.schedule-card.boca-reference-card::after,
+.schedule-card.boca-reference-card .schedule-line,
+.schedule-card.boca-reference-card .mini-people {
+  display:none!important;
+}
+
+.boca-reference-card .boca-reference-emblem {
+  align-items:center;
+  align-self:start;
+  background:#e8efff;
+  border:0;
+  border-radius:50%;
+  box-shadow:none;
+  display:flex;
+  height:60px;
+  justify-content:center;
+  margin-top:1px;
+  width:60px;
+}
+
+.boca-reference-card .boca-reference-hearts {
+  color:initial!important;
+  display:block;
+  font-size:23px;
+  letter-spacing:-7px;
+  line-height:1;
+  padding-right:7px;
+  white-space:nowrap;
+}
+
+.boca-reference-card .schedule-copy {
+  align-self:stretch;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  padding:0;
+}
+
+.boca-reference-card .schedule-copy .card-tag {
+  color:#244d8a!important;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.17em;
+  line-height:1;
+  margin:0 0 5px;
+}
+
+.boca-reference-card .schedule-copy h4 {
+  color:#292934!important;
+  font-size:17px;
+  font-weight:950;
+  line-height:1.08;
+  margin:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.boca-reference-card .schedule-copy > span:not(.boca-reference-timing) {
+  color:#8c8890!important;
+  display:block;
+  font-size:13px;
+  line-height:1.15;
+  margin-top:4px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.boca-reference-card .boca-reference-timing {
+  align-items:baseline;
+  color:#174b92!important;
+  display:flex;
+  gap:9px;
+  margin-top:10px;
+  min-width:0;
+}
+
+.boca-reference-card .boca-reference-timing strong {
+  color:#174b92!important;
+  font-size:18px;
+  font-weight:950;
+  letter-spacing:-.02em;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.boca-reference-card .boca-reference-timing small {
+  color:#23467c!important;
+  font-size:10px;
+  font-weight:900;
+  line-height:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media (max-width:520px) {
+  .schedule-card.match-day-schedule-card.canonical-boca-match.boca-reference-card {
+    gap:13px;
+    grid-template-columns:58px minmax(0,1fr);
+    min-height:96px;
+    padding:12px 15px;
+  }
+
+  .boca-reference-card .boca-reference-emblem {
+    height:56px;
+    width:56px;
+  }
+
+  .boca-reference-card .boca-reference-hearts { font-size:21px; }
+  .boca-reference-card .schedule-copy h4 { font-size:16px; }
+  .boca-reference-card .schedule-copy > span:not(.boca-reference-timing) { font-size:12px; }
+  .boca-reference-card .boca-reference-timing { margin-top:8px; }
+  .boca-reference-card .boca-reference-timing strong { font-size:17px; }
+}
+
 /* Little Sheets Lab -------------------------------------------------------
    Experimental, deliberately isolated recreation of the approved
    little_day_aerea_little_sheets_full_app.html card and sheet system. */
