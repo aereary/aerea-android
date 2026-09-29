@@ -151,6 +151,7 @@ type Space =
   | "sketchbook"
   | "trash";
 type MetricsPeriod = "week" | "month" | "year" | "all";
+type InterfaceLab = "blueprint" | "press" | "circuit";
 type AppTheme =
   | "storybook"
   | "otter"
@@ -174,6 +175,9 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
+  | "blueprintrelay"
+  | "sundaypress"
+  | "popcircuit"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -1242,6 +1246,7 @@ const themeOptions: {
   decoratedScene?: boolean;
   featured?: boolean;
   interfaceIdea?: string;
+  interfaceLab?: InterfaceLab;
 }[] = [
   {
     id: "storybook",
@@ -1486,6 +1491,57 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
+  {
+    id: "blueprintrelay",
+    name: "Blueprint Relay",
+    description: "A live technical console with a vertical command rail, hard grid and data-first modules.",
+    colors: ["#07131f", "#55e6ff", "#d7ff4f"],
+    icon: "B/01",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "system live",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "vertical command system",
+    interfaceLab: "blueprint",
+  },
+  {
+    id: "sundaypress",
+    name: "Sunday Press",
+    description: "A monochrome daily newspaper with red ink, editorial columns and typographic navigation.",
+    colors: ["#f1ead9", "#151515", "#c9342d"],
+    icon: "№7",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "daily edition",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "living newspaper",
+    interfaceLab: "press",
+  },
+  {
+    id: "popcircuit",
+    name: "Pop Circuit",
+    description: "An electric block interface with loud type, offset shadows and a playful control board.",
+    colors: ["#3655ff", "#efff38", "#ff4f9a"],
+    icon: "POP!",
+    art: "/assets/openmoji/cloud.svg",
+    accents: [
+      "/assets/openmoji/star.svg",
+      "/assets/openmoji/cloud.svg",
+    ],
+    charm: "make it move",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "electric block board",
+    interfaceLab: "circuit",
+  },
 ];
 
 const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
@@ -1523,6 +1579,103 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
+
+const interfaceLabByTheme: Partial<Record<AppTheme, InterfaceLab>> = {
+  blueprintrelay: "blueprint",
+  sundaypress: "press",
+  popcircuit: "circuit",
+};
+
+const interfaceLabCopy: Record<
+  InterfaceLab,
+  {
+    eyebrow: string;
+    wordmark: string;
+    calendar: string;
+    settings: string;
+    greeting: string;
+    todayLine: string;
+    otherDayLine: string;
+    upcoming: string;
+    scheduleEyebrow: string;
+    scheduleTitle: string;
+    remindersEyebrow: string;
+    remindersTitle: string;
+    addEvent: string;
+    nav: Record<PrimaryNavId, string>;
+  }
+> = {
+  blueprint: {
+    eyebrow: "AÉREA / LIVE SYSTEM",
+    wordmark: "DAY RELAY 01",
+    calendar: "TIMELINE",
+    settings: "CONFIG",
+    greeting: "STATUS / TODAY",
+    todayLine: "Your live queue is synchronized and ready.",
+    otherDayLine: "Reviewing the selected date node.",
+    upcoming: "NEXT SIGNAL",
+    scheduleEyebrow: "01 / ACTIVE QUEUE",
+    scheduleTitle: "Timeline",
+    remindersEyebrow: "02 / OPEN LOOPS",
+    remindersTitle: "Checklist",
+    addEvent: "INSERT NEW BLOCK",
+    nav: {
+      today: "LIVE",
+      habits: "LOOPS",
+      focus: "FOCUS",
+      add: "NEW",
+      journal: "LOG",
+      spaces: "VAULT",
+    },
+  },
+  press: {
+    eyebrow: "THE AÉREA DAILY RECORD",
+    wordmark: "SUNDAY PRESS",
+    calendar: "AGENDA",
+    settings: "DESK",
+    greeting: "Today, in full.",
+    todayLine: "Appointments, small notices and everything worth keeping.",
+    otherDayLine: "An earlier edition from your calendar archive.",
+    upcoming: "THE NEXT APPOINTMENT",
+    scheduleEyebrow: "TODAY'S LEDGER",
+    scheduleTitle: "Appointments",
+    remindersEyebrow: "SMALL NOTICES",
+    remindersTitle: "Reminders",
+    addEvent: "FILE A NEW APPOINTMENT",
+    nav: {
+      today: "FRONT",
+      habits: "ROUTINES",
+      focus: "FOCUS",
+      add: "FILE",
+      journal: "NOTES",
+      spaces: "ARCHIVE",
+    },
+  },
+  circuit: {
+    eyebrow: "AÉREA / PLAY MODE",
+    wordmark: "POP CIRCUIT!",
+    calendar: "BOARD",
+    settings: "TUNE",
+    greeting: "HEY, RHEA!",
+    todayLine: "Pick a block, make a move, keep the day yours.",
+    otherDayLine: "You jumped to another square on the board.",
+    upcoming: "UP NEXT!",
+    scheduleEyebrow: "WHAT'S ON",
+    scheduleTitle: "Day blocks",
+    remindersEyebrow: "DO THIS",
+    remindersTitle: "Tiny wins",
+    addEvent: "+ DROP A NEW BLOCK",
+    nav: {
+      today: "NOW",
+      habits: "MOVES",
+      focus: "ZONE",
+      add: "MAKE",
+      journal: "DIARY",
+      spaces: "STUFF",
+    },
+  },
+};
+
 const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
@@ -5015,6 +5168,10 @@ export default function Home() {
           charm: "my soft space",
         }
       : themeOptions.find((theme) => theme.id === appTheme) ?? themeOptions[0]!;
+  const activeInterfaceLab = interfaceLabByTheme[appTheme] ?? null;
+  const activeInterfaceCopy = activeInterfaceLab
+    ? interfaceLabCopy[activeInterfaceLab]
+    : null;
   const customThemeStyle =
     appTheme === "custom"
       ? colorMode === "dark"
@@ -9542,6 +9699,7 @@ export default function Home() {
     <main
       className="app-shell"
       data-theme={appTheme}
+      data-interface-lab={activeInterfaceLab ?? "classic"}
       data-color-mode={colorMode}
       data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
@@ -9951,17 +10109,26 @@ export default function Home() {
             onClick={openAereaFromBrand}
             aria-label={brandOpensAo3 ? "Open My AO3 Library" : "Open aérea spaces"}
           >
-            <span className="brand-mark profile-mark">
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="" />
-              ) : (
-                <span aria-hidden="true">♡</span>
-              )}
-            </span>
-            <span>
-              <span className="eyebrow">MY LITTLE DAY</span>
-              <strong className="wordmark">aérea</strong>
-            </span>
+            {activeInterfaceCopy ? (
+              <span className="lab-brand-copy">
+                <span className="eyebrow">{activeInterfaceCopy.eyebrow}</span>
+                <strong className="wordmark">{activeInterfaceCopy.wordmark}</strong>
+              </span>
+            ) : (
+              <>
+                <span className="brand-mark profile-mark">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="" />
+                  ) : (
+                    <span aria-hidden="true">♡</span>
+                  )}
+                </span>
+                <span>
+                  <span className="eyebrow">MY LITTLE DAY</span>
+                  <strong className="wordmark">aérea</strong>
+                </span>
+              </>
+            )}
           </button>
           <div className="header-actions">
             <button
@@ -9972,6 +10139,7 @@ export default function Home() {
               title="New post-it"
             >
               <span aria-hidden="true" />
+              {activeInterfaceCopy && <b className="lab-action-copy">NOTE</b>}
             </button>
             <button
               className="calendar-button"
@@ -9979,14 +10147,14 @@ export default function Home() {
               aria-label="Open calendar"
             >
               <span className="calendar-glyph" aria-hidden="true" />
-              Calendar
+              {activeInterfaceCopy?.calendar ?? "Calendar"}
             </button>
             <button
               className="avatar-button"
               aria-label="Open appearance settings"
               onClick={() => setSettingsOpen(true)}
             >
-              <span>⚙</span>
+              <span>{activeInterfaceCopy ? activeInterfaceCopy.settings : "⚙"}</span>
             </button>
           </div>
         </header>}
@@ -11912,8 +12080,10 @@ export default function Home() {
                 }}
               >
                 <span>{tab.icon}</span>
-                {tab.id !== "add" && (
-                  <small>{tab.label}</small>
+                {(tab.id !== "add" || activeInterfaceCopy) && (
+                  <small>
+                    {activeInterfaceCopy?.nav[tab.id] ?? tab.label}
+                  </small>
                 )}
               </button>
             ))}
@@ -15917,7 +16087,7 @@ export default function Home() {
                 {themeOptions.map((theme) => (
                   <button
                     key={theme.id}
-                    className={`theme-option ${appTheme === theme.id ? "active" : ""}`}
+                    className={`theme-option ${theme.interfaceLab ? "interface-lab-theme-option" : ""} ${appTheme === theme.id ? "active" : ""}`}
                     data-theme-option={theme.id}
                     onClick={() => {
                       setAppTheme(theme.id);
@@ -15932,17 +16102,31 @@ export default function Home() {
                     }
                   >
                     <span className="theme-option-art" aria-hidden="true">
-                      <i className="theme-mini-ground" />
-                      <img
-                        className="theme-option-main-art"
-                        src={theme.art}
-                        alt=""
-                      />
-                      <img
-                        className="theme-option-accent-art"
-                        src={theme.accents[0]}
-                        alt=""
-                      />
+                      {theme.interfaceLab ? (
+                        <span
+                          className="interface-lab-preview"
+                          data-interface-preview={theme.interfaceLab}
+                        >
+                          <b>{theme.icon}</b>
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                      ) : (
+                        <>
+                          <i className="theme-mini-ground" />
+                          <img
+                            className="theme-option-main-art"
+                            src={theme.art}
+                            alt=""
+                          />
+                          <img
+                            className="theme-option-accent-art"
+                            src={theme.accents[0]}
+                            alt=""
+                          />
+                        </>
+                      )}
                     </span>
                     <span className="theme-option-copy">
                       <strong>{theme.name}</strong>
@@ -15960,7 +16144,7 @@ export default function Home() {
                       </i>
                     </span>
                     <span className="theme-selected">
-                      {appTheme === theme.id ? "✓" : "♡"}
+                      {appTheme === theme.id ? "✓" : theme.interfaceLab ? "+" : "♡"}
                     </span>
                   </button>
                 ))}
@@ -15979,10 +16163,21 @@ export default function Home() {
             </section>
 
             <div className="settings-footnote">
-              <img src={activeTheme.art} alt="" />
+              {activeInterfaceLab ? (
+                <span
+                  className="settings-lab-mark"
+                  data-interface-preview={activeInterfaceLab}
+                  aria-hidden="true"
+                >
+                  {activeTheme.icon}
+                </span>
+              ) : (
+                <img src={activeTheme.art} alt="" />
+              )}
               <p>
-                Your theme and brightness are saved with the rest of aérea, so
-                the same little world follows you to your tablet.
+                {activeInterfaceLab
+                  ? "This interface lab is saved with aérea and stays isolated from every classic theme."
+                  : "Your theme and brightness are saved with the rest of aérea, so the same little world follows you to your tablet."}
               </p>
             </div>
           </section>
@@ -16260,6 +16455,10 @@ function TodayScreen({
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
+  const activeInterfaceLab = interfaceLabByTheme[themeId] ?? null;
+  const activeInterfaceCopy = activeInterfaceLab
+    ? interfaceLabCopy[activeInterfaceLab]
+    : null;
   const comingUpEvent = selectedIsToday
     ? findComingUpEvent(selectedDateEvents, now)
     : null;
@@ -16572,16 +16771,35 @@ function TodayScreen({
           </p>
           <h2
             aria-label={
-              selectedIsToday
-                ? isNoirRest
-                  ? `${isNight ? "Good evening" : "Good morning"}, Rhea.`
-                  : isNight
-                    ? "Good evening, lovely."
-                    : "Good morning, lovely."
-                : `A little look at ${selectedWeekday}.`
+              activeInterfaceCopy
+                ? selectedIsToday
+                  ? activeInterfaceCopy.greeting
+                  : `${selectedWeekday}, ${activeInterfaceCopy.scheduleTitle}`
+                : selectedIsToday
+                  ? isNoirRest
+                    ? `${isNight ? "Good evening" : "Good morning"}, Rhea.`
+                    : isNight
+                      ? "Good evening, lovely."
+                      : "Good morning, lovely."
+                  : `A little look at ${selectedWeekday}.`
             }
           >
-            {selectedIsToday && isNoirRest ? (
+            {activeInterfaceCopy ? (
+              <>
+                <span className="lab-greeting-title">
+                  {selectedIsToday
+                    ? activeInterfaceCopy.greeting
+                    : selectedWeekday.toUpperCase()}
+                </span>
+                <span className="lab-greeting-date">
+                  {selectedDateObject.toLocaleDateString("en", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                  })}
+                </span>
+              </>
+            ) : selectedIsToday && isNoirRest ? (
               <>
                 <span className="noir-greeting-kicker">
                   {isNight ? "Good evening," : "Good morning,"}
@@ -16600,11 +16818,15 @@ function TodayScreen({
             )}
           </h2>
           <p className="soft-copy">
-            {selectedIsToday
-              ? isNight
-                ? "You did enough today. Let the evening soften around you."
-                : "Let’s make today feel a little lighter."
-              : "Tap today whenever you want to come back."}
+            {activeInterfaceCopy
+              ? selectedIsToday
+                ? activeInterfaceCopy.todayLine
+                : activeInterfaceCopy.otherDayLine
+              : selectedIsToday
+                ? isNight
+                  ? "You did enough today. Let the evening soften around you."
+                  : "Let’s make today feel a little lighter."
+                : "Tap today whenever you want to come back."}
           </p>
         </div>
         {showDayCharm && !welcomeOpensTimetable && (
@@ -16668,6 +16890,20 @@ function TodayScreen({
       </section>
 
       <section className="week-strip" aria-label="Current week">
+        {activeInterfaceCopy && (
+          <div className="lab-week-header">
+            <span>
+              {activeInterfaceLab === "blueprint"
+                ? "WEEK NODE / 07"
+                : activeInterfaceLab === "press"
+                  ? "SEVEN-DAY INDEX"
+                  : "PICK A DAY"}
+            </span>
+            <button type="button" onClick={openCalendar}>
+              {activeInterfaceCopy.calendar}
+            </button>
+          </div>
+        )}
         {isNoirRest && (
           <div className="noir-week-header">
             <span>
@@ -16704,7 +16940,9 @@ function TodayScreen({
           aria-label="Coming up next"
           aria-live="polite"
         >
-          <p className="coming-up-label noir-section-label">COMING UP NEXT</p>
+          <p className="coming-up-label noir-section-label">
+            {activeInterfaceCopy?.upcoming ?? "COMING UP NEXT"}
+          </p>
           <button
             type="button"
             className={[
@@ -16793,11 +17031,17 @@ function TodayScreen({
         <div className="column">
           <div className="section-heading">
             <div>
-              <p className="tiny-label">YOUR RHYTHM</p>
+              <p className="tiny-label">
+                {activeInterfaceCopy?.scheduleEyebrow ?? "YOUR RHYTHM"}
+              </p>
               <h3>
-                {selectedIsToday
-                  ? "Today’s schedule"
-                  : `${selectedWeekday}’s schedule`}
+                {activeInterfaceCopy
+                  ? selectedIsToday
+                    ? activeInterfaceCopy.scheduleTitle
+                    : `${selectedWeekday} / ${activeInterfaceCopy.scheduleTitle}`
+                  : selectedIsToday
+                    ? "Today’s schedule"
+                    : `${selectedWeekday}’s schedule`}
               </h3>
             </div>
             <button className="text-button" onClick={openCalendar}>
@@ -16892,15 +17136,17 @@ function TodayScreen({
             ))
           )}
           <button className="add-event-button" onClick={openEventComposer}>
-            <span>＋</span> Add something to your day
+            <span>＋</span> {activeInterfaceCopy?.addEvent ?? "Add something to your day"}
           </button>
         </div>
 
         <div className="column">
           <div className="section-heading">
             <div>
-              <p className="tiny-label">LITTLE REMINDERS</p>
-              <h3>Take care of you</h3>
+              <p className="tiny-label">
+                {activeInterfaceCopy?.remindersEyebrow ?? "LITTLE REMINDERS"}
+              </p>
+              <h3>{activeInterfaceCopy?.remindersTitle ?? "Take care of you"}</h3>
             </div>
             <div className="reminder-heading-actions">
               <span className="progress-pill">
