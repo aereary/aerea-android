@@ -151,7 +151,7 @@ type Space =
   | "sketchbook"
   | "trash";
 type MetricsPeriod = "week" | "month" | "year" | "all";
-type InterfaceLab = "blueprint" | "press" | "circuit";
+type InterfaceLab = "glass" | "reach" | "dayline";
 type AppTheme =
   | "storybook"
   | "otter"
@@ -175,9 +175,9 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | "blueprintrelay"
-  | "sundaypress"
-  | "popcircuit"
+  | "quietglass"
+  | "softreach"
+  | "dayline"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -1492,55 +1492,55 @@ const themeOptions: {
     decoratedScene: true,
   },
   {
-    id: "blueprintrelay",
-    name: "Blueprint Relay",
-    description: "A live technical console with a vertical command rail, hard grid and data-first modules.",
-    colors: ["#07131f", "#55e6ff", "#d7ff4f"],
-    icon: "B/01",
+    id: "quietglass",
+    name: "Quiet Glass",
+    description: "A calm, spatial interface with translucent layers, disciplined type and one cool accent.",
+    colors: ["#f5f6f8", "#24262b", "#8aa8ff"],
+    icon: "◌",
     art: "/assets/openmoji/cloud.svg",
     accents: [
       "/assets/openmoji/star.svg",
       "/assets/openmoji/cloud.svg",
     ],
-    charm: "system live",
+    charm: "quiet clarity",
     showCharm: false,
     featured: true,
-    interfaceIdea: "vertical command system",
-    interfaceLab: "blueprint",
+    interfaceIdea: "spatial glass",
+    interfaceLab: "glass",
   },
   {
-    id: "sundaypress",
-    name: "Sunday Press",
-    description: "A monochrome daily newspaper with red ink, editorial columns and typographic navigation.",
-    colors: ["#f1ead9", "#151515", "#c9342d"],
-    icon: "№7",
+    id: "softreach",
+    name: "Soft Reach",
+    description: "A one-handed layout with generous viewing space, grounded controls and calm blue depth.",
+    colors: ["#edf2f7", "#18243a", "#5b7cfa"],
+    icon: "●",
     art: "/assets/openmoji/cloud.svg",
     accents: [
       "/assets/openmoji/star.svg",
       "/assets/openmoji/cloud.svg",
     ],
-    charm: "daily edition",
+    charm: "within reach",
     showCharm: false,
     featured: true,
-    interfaceIdea: "living newspaper",
-    interfaceLab: "press",
+    interfaceIdea: "one-handed flow",
+    interfaceLab: "reach",
   },
   {
-    id: "popcircuit",
-    name: "Pop Circuit",
-    description: "An electric block interface with loud type, offset shadows and a playful control board.",
-    colors: ["#3655ff", "#efff38", "#ff4f9a"],
-    icon: "POP!",
+    id: "dayline",
+    name: "Dayline",
+    description: "A warm visual timeline where time, plans and tiny routines read as one continuous day.",
+    colors: ["#f4efe7", "#203937", "#df806d"],
+    icon: "12:45",
     art: "/assets/openmoji/cloud.svg",
     accents: [
       "/assets/openmoji/star.svg",
       "/assets/openmoji/cloud.svg",
     ],
-    charm: "make it move",
+    charm: "one clear line",
     showCharm: false,
     featured: true,
-    interfaceIdea: "electric block board",
-    interfaceLab: "circuit",
+    interfaceIdea: "visual timeline",
+    interfaceLab: "dayline",
   },
 ];
 
@@ -1581,9 +1581,9 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
 ];
 
 const interfaceLabByTheme: Partial<Record<AppTheme, InterfaceLab>> = {
-  blueprintrelay: "blueprint",
-  sundaypress: "press",
-  popcircuit: "circuit",
+  quietglass: "glass",
+  softreach: "reach",
+  dayline: "dayline",
 };
 
 const interfaceLabCopy: Record<
@@ -1602,76 +1602,80 @@ const interfaceLabCopy: Record<
     remindersEyebrow: string;
     remindersTitle: string;
     addEvent: string;
+    weekLabel: string;
     nav: Record<PrimaryNavId, string>;
   }
 > = {
-  blueprint: {
-    eyebrow: "AÉREA / LIVE SYSTEM",
-    wordmark: "DAY RELAY 01",
-    calendar: "TIMELINE",
-    settings: "CONFIG",
-    greeting: "STATUS / TODAY",
-    todayLine: "Your live queue is synchronized and ready.",
-    otherDayLine: "Reviewing the selected date node.",
-    upcoming: "NEXT SIGNAL",
-    scheduleEyebrow: "01 / ACTIVE QUEUE",
-    scheduleTitle: "Timeline",
-    remindersEyebrow: "02 / OPEN LOOPS",
-    remindersTitle: "Checklist",
-    addEvent: "INSERT NEW BLOCK",
+  glass: {
+    eyebrow: "AÉREA",
+    wordmark: "Quiet Glass",
+    calendar: "Calendar",
+    settings: "•••",
+    greeting: "A clear view of today",
+    todayLine: "Your plans, with room to breathe.",
+    otherDayLine: "A clear view of the selected day.",
+    upcoming: "NEXT",
+    scheduleEyebrow: "TODAY",
+    scheduleTitle: "Schedule",
+    remindersEyebrow: "FOR YOU",
+    remindersTitle: "Small reminders",
+    addEvent: "Add to today",
+    weekLabel: "THIS WEEK",
     nav: {
-      today: "LIVE",
-      habits: "LOOPS",
+      today: "Today",
+      habits: "Habits",
       focus: "FOCUS",
-      add: "NEW",
-      journal: "LOG",
-      spaces: "VAULT",
+      add: "Add",
+      journal: "Journal",
+      spaces: "Spaces",
     },
   },
-  press: {
-    eyebrow: "THE AÉREA DAILY RECORD",
-    wordmark: "SUNDAY PRESS",
-    calendar: "AGENDA",
-    settings: "DESK",
-    greeting: "Today, in full.",
-    todayLine: "Appointments, small notices and everything worth keeping.",
-    otherDayLine: "An earlier edition from your calendar archive.",
-    upcoming: "THE NEXT APPOINTMENT",
-    scheduleEyebrow: "TODAY'S LEDGER",
-    scheduleTitle: "Appointments",
-    remindersEyebrow: "SMALL NOTICES",
-    remindersTitle: "Reminders",
-    addEvent: "FILE A NEW APPOINTMENT",
+  reach: {
+    eyebrow: "AÉREA",
+    wordmark: "My day",
+    calendar: "Calendar",
+    settings: "Menu",
+    greeting: "Today feels manageable",
+    todayLine: "Everything important is close at hand.",
+    otherDayLine: "Here is what belongs to this day.",
+    upcoming: "COMING UP",
+    scheduleEyebrow: "YOUR DAY",
+    scheduleTitle: "Plans",
+    remindersEyebrow: "KEEP CLOSE",
+    remindersTitle: "Remember",
+    addEvent: "New plan",
+    weekLabel: "CHOOSE A DAY",
     nav: {
-      today: "FRONT",
-      habits: "ROUTINES",
+      today: "Today",
+      habits: "Habits",
       focus: "FOCUS",
-      add: "FILE",
-      journal: "NOTES",
-      spaces: "ARCHIVE",
+      add: "New",
+      journal: "Journal",
+      spaces: "More",
     },
   },
-  circuit: {
-    eyebrow: "AÉREA / PLAY MODE",
-    wordmark: "POP CIRCUIT!",
-    calendar: "BOARD",
-    settings: "TUNE",
-    greeting: "HEY, RHEA!",
-    todayLine: "Pick a block, make a move, keep the day yours.",
-    otherDayLine: "You jumped to another square on the board.",
-    upcoming: "UP NEXT!",
-    scheduleEyebrow: "WHAT'S ON",
-    scheduleTitle: "Day blocks",
-    remindersEyebrow: "DO THIS",
-    remindersTitle: "Tiny wins",
-    addEvent: "+ DROP A NEW BLOCK",
+  dayline: {
+    eyebrow: "AÉREA PLANNER",
+    wordmark: "Dayline",
+    calendar: "Month",
+    settings: "More",
+    greeting: "Your day, in one line",
+    todayLine: "See what is now, what is next, and what can wait.",
+    otherDayLine: "Following the selected day from morning to night.",
+    upcoming: "NEXT ON THE LINE",
+    scheduleEyebrow: "DAY TIMELINE",
+    scheduleTitle: "Your pace",
+    remindersEyebrow: "UNTIMED",
+    remindersTitle: "Keep in mind",
+    addEvent: "Add a time block",
+    weekLabel: "WEEK OVERVIEW",
     nav: {
-      today: "NOW",
-      habits: "MOVES",
-      focus: "ZONE",
-      add: "MAKE",
-      journal: "DIARY",
-      spaces: "STUFF",
+      today: "Timeline",
+      habits: "Routines",
+      focus: "FOCUS",
+      add: "Add",
+      journal: "Notes",
+      spaces: "Library",
     },
   },
 };
@@ -16892,13 +16896,7 @@ function TodayScreen({
       <section className="week-strip" aria-label="Current week">
         {activeInterfaceCopy && (
           <div className="lab-week-header">
-            <span>
-              {activeInterfaceLab === "blueprint"
-                ? "WEEK NODE / 07"
-                : activeInterfaceLab === "press"
-                  ? "SEVEN-DAY INDEX"
-                  : "PICK A DAY"}
-            </span>
+            <span>{activeInterfaceCopy.weekLabel}</span>
             <button type="button" onClick={openCalendar}>
               {activeInterfaceCopy.calendar}
             </button>
