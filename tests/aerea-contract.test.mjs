@@ -146,8 +146,8 @@ test("keeps the approved worlds and removes every rejected theme", () => {
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    3,
-    "the two full-scene themes and Little Sheets Lab should hide the welcome charm",
+    6,
+    "the two full-scene themes, Little Sheets Lab and three interface labs should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
