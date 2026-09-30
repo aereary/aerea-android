@@ -151,14 +151,6 @@ type Space =
   | "sketchbook"
   | "trash";
 type MetricsPeriod = "week" | "month" | "year" | "all";
-type InterfaceLab =
-  | "cosmos"
-  | "berry"
-  | "aurora"
-  | "bloom"
-  | "atlas"
-  | "ribbon"
-  | "glow";
 type AppTheme =
   | "storybook"
   | "otter"
@@ -182,13 +174,6 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | "violetcosmos"
-  | "berryagenda"
-  | "auroraglass"
-  | "blossomportal"
-  | "pastelatlas"
-  | "ribbondesk"
-  | "glowplanner"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -1257,7 +1242,6 @@ const themeOptions: {
   decoratedScene?: boolean;
   featured?: boolean;
   interfaceIdea?: string;
-  interfaceLab?: InterfaceLab;
 }[] = [
   {
     id: "storybook",
@@ -1502,104 +1486,6 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
-  {
-    id: "violetcosmos",
-    name: "Violet Cosmos",
-    description: "A storybook night of moonlit plans, quiet constellations and deep violet glass.",
-    colors: ["#1c1748", "#7661a5", "#e7cbed"],
-    icon: "☾",
-    art: "/assets/openmoji/moon.svg",
-    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/cloud.svg"],
-    charm: "meet me under the moon",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "celestial story",
-    interfaceLab: "cosmos",
-  },
-  {
-    id: "berryagenda",
-    name: "Berry Agenda",
-    description: "A confident berry dashboard with graphic curves, tonal cards and a crisp cream agenda.",
-    colors: ["#9f215b", "#e5608d", "#fff2ee"],
-    icon: "◒",
-    art: "/assets/openmoji/strawberry.svg",
-    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/tulip.svg"],
-    charm: "make it happen",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "graphic dashboard",
-    interfaceLab: "berry",
-  },
-  {
-    id: "auroraglass",
-    name: "Aurora Glass",
-    description: "Luminous lilac glass, airy gradients and floating controls arranged like a soft gallery.",
-    colors: ["#eef5ff", "#a68cf2", "#f3a9d4"],
-    icon: "✧",
-    art: "/assets/openmoji/cloud.svg",
-    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/tulip.svg"],
-    charm: "light moves softly",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "luminous glass",
-    interfaceLab: "aurora",
-  },
-  {
-    id: "blossomportal",
-    name: "Blossom Portal",
-    description: "A botanical workspace of floating windows, petal controls and soft spring depth.",
-    colors: ["#fff8fa", "#f39ab5", "#c8d995"],
-    icon: "✿",
-    art: "/assets/openmoji/tulip.svg",
-    accents: ["/assets/openmoji/blossom.svg", "/assets/openmoji/star.svg"],
-    charm: "open the little garden",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "botanical portal",
-    interfaceLab: "bloom",
-  },
-  {
-    id: "pastelatlas",
-    name: "Pastel Atlas",
-    description: "An editorial daybook with scenic color fields, elegant type and spacious curved pages.",
-    colors: ["#fffaf8", "#829eef", "#e7a8c9"],
-    icon: "⌁",
-    art: "/assets/openmoji/cloud.svg",
-    accents: ["/assets/openmoji/moon.svg", "/assets/openmoji/star.svg"],
-    charm: "today is somewhere",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "editorial daybook",
-    interfaceLab: "atlas",
-  },
-  {
-    id: "ribbondesk",
-    name: "Ribbon Desk",
-    description: "A precise white workspace with layered ribbon cards, ink outlines and measured color.",
-    colors: ["#ffffff", "#4a427d", "#f29abb"],
-    icon: "≈",
-    art: "/assets/openmoji/love-letter.svg",
-    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/cloud.svg"],
-    charm: "everything in its place",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "layered workspace",
-    interfaceLab: "ribbon",
-  },
-  {
-    id: "glowplanner",
-    name: "Glow Planner",
-    description: "A bright routine planner with friendly progress, clean white space and fresh color blocks.",
-    colors: ["#fffafa", "#f7598b", "#b8ebdc"],
-    icon: "☀",
-    art: "/assets/openmoji/blossom.svg",
-    accents: ["/assets/openmoji/cloud.svg", "/assets/openmoji/blossom.svg"],
-    charm: "a little glow today",
-    showCharm: false,
-    featured: true,
-    interfaceIdea: "routine planner",
-    interfaceLab: "glow",
-  },
 ];
 
 const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
@@ -1637,207 +1523,6 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "spaces", icon: "✦", label: "Spaces" },
 ];
-
-const interfaceLabByTheme: Partial<Record<AppTheme, InterfaceLab>> = {
-  violetcosmos: "cosmos",
-  berryagenda: "berry",
-  auroraglass: "aurora",
-  blossomportal: "bloom",
-  pastelatlas: "atlas",
-  ribbondesk: "ribbon",
-  glowplanner: "glow",
-};
-
-const interfaceLabCopy: Record<
-  InterfaceLab,
-  {
-    eyebrow: string;
-    wordmark: string;
-    calendar: string;
-    settings: string;
-    greeting: string;
-    todayLine: string;
-    otherDayLine: string;
-    upcoming: string;
-    scheduleEyebrow: string;
-    scheduleTitle: string;
-    remindersEyebrow: string;
-    remindersTitle: string;
-    addEvent: string;
-    weekLabel: string;
-    nav: Record<PrimaryNavId, string>;
-  }
-> = {
-  cosmos: {
-    eyebrow: "NIGHT LOG · AÉREA",
-    wordmark: "Violet Cosmos",
-    calendar: "Orbit",
-    settings: "✦",
-    greeting: "Hello, little dreamer",
-    todayLine: "Your plans are waiting under a quiet sky.",
-    otherDayLine: "A small constellation for the selected day.",
-    upcoming: "NEXT IN ORBIT",
-    scheduleEyebrow: "MOON PATH",
-    scheduleTitle: "Tonight’s constellation",
-    remindersEyebrow: "SOFT SIGNALS",
-    remindersTitle: "Things to carry",
-    addEvent: "Add a little star",
-    weekLabel: "SEVEN MOONS",
-    nav: {
-      today: "Today",
-      habits: "Rhythm",
-      focus: "Focus",
-      add: "New star",
-      journal: "Dreams",
-      spaces: "Worlds",
-    },
-  },
-  berry: {
-    eyebrow: "AÉREA · DAILY WORK",
-    wordmark: "Berry Agenda",
-    calendar: "Plan",
-    settings: "Menu",
-    greeting: "Make today yours",
-    todayLine: "A bold little overview of what is moving.",
-    otherDayLine: "The selected day, sorted and ready.",
-    upcoming: "IN PROGRESS",
-    scheduleEyebrow: "TODAY’S FLOW",
-    scheduleTitle: "Agenda",
-    remindersEyebrow: "SMALL WINS",
-    remindersTitle: "Tasks",
-    addEvent: "Create task",
-    weekLabel: "APRIL · WEEK 4",
-    nav: {
-      today: "Home",
-      habits: "Progress",
-      focus: "Focus",
-      add: "Create",
-      journal: "Notes",
-      spaces: "Profile",
-    },
-  },
-  aurora: {
-    eyebrow: "AÉREA · LIGHT STUDIO",
-    wordmark: "Aurora Glass",
-    calendar: "Gallery",
-    settings: "···",
-    greeting: "A softer way through today",
-    todayLine: "Light, time and plans can share the same space.",
-    otherDayLine: "A luminous view of the selected day.",
-    upcoming: "FLOATING NEXT",
-    scheduleEyebrow: "YOUR DAY",
-    scheduleTitle: "In the light",
-    remindersEyebrow: "KEEP NEAR",
-    remindersTitle: "Little notes",
-    addEvent: "Add to the glass",
-    weekLabel: "LIGHT ACROSS THE WEEK",
-    nav: {
-      today: "Studio",
-      habits: "Flow",
-      focus: "Focus",
-      add: "Create",
-      journal: "Pages",
-      spaces: "Gallery",
-    },
-  },
-  bloom: {
-    eyebrow: "AÉREA · BOTANICAL DESK",
-    wordmark: "Blossom Portal",
-    calendar: "Garden",
-    settings: "✿",
-    greeting: "Welcome to your little garden",
-    todayLine: "Every plan has a place to open gently.",
-    otherDayLine: "A new page is blooming for this day.",
-    upcoming: "OPEN WINDOW",
-    scheduleEyebrow: "IN BLOOM",
-    scheduleTitle: "Today’s garden",
-    remindersEyebrow: "PETAL NOTES",
-    remindersTitle: "Keep growing",
-    addEvent: "Plant a plan",
-    weekLabel: "GARDEN WEEK",
-    nav: {
-      today: "Garden",
-      habits: "Grow",
-      focus: "Focus",
-      add: "Plant",
-      journal: "Letters",
-      spaces: "Rooms",
-    },
-  },
-  atlas: {
-    eyebrow: "AÉREA · DAILY EDITION",
-    wordmark: "Pastel Atlas",
-    calendar: "Explore",
-    settings: "••",
-    greeting: "Discover your day",
-    todayLine: "A calm route through what matters now.",
-    otherDayLine: "A new destination for the selected day.",
-    upcoming: "NEXT DESTINATION",
-    scheduleEyebrow: "DAY GUIDE",
-    scheduleTitle: "Your route",
-    remindersEyebrow: "TRAVEL LIGHT",
-    remindersTitle: "Keep close",
-    addEvent: "Add a stop",
-    weekLabel: "THIS WEEK’S ROUTE",
-    nav: {
-      today: "Discover",
-      habits: "Places",
-      focus: "Focus",
-      add: "New stop",
-      journal: "Stories",
-      spaces: "Saved",
-    },
-  },
-  ribbon: {
-    eyebrow: "AÉREA · ORGANIZED",
-    wordmark: "Ribbon Desk",
-    calendar: "Statement",
-    settings: "○",
-    greeting: "Everything in its place",
-    todayLine: "A precise desk for plans, progress and quiet focus.",
-    otherDayLine: "A measured view of the selected day.",
-    upcoming: "ACTIVE CARD",
-    scheduleEyebrow: "TODAY’S STACK",
-    scheduleTitle: "Your cards",
-    remindersEyebrow: "LIMIT",
-    remindersTitle: "Small priorities",
-    addEvent: "Add a card",
-    weekLabel: "STATEMENT · WEEK",
-    nav: {
-      today: "Desk",
-      habits: "Stats",
-      focus: "Focus",
-      add: "Add",
-      journal: "Notes",
-      spaces: "Account",
-    },
-  },
-  glow: {
-    eyebrow: "AÉREA · DAILY GLOW",
-    wordmark: "Glow Planner",
-    calendar: "Routine",
-    settings: "☀",
-    greeting: "Good morning, lovely",
-    todayLine: "A fresh plan with room for every small win.",
-    otherDayLine: "A bright little plan for the selected day.",
-    upcoming: "TODAY’S HIGHLIGHT",
-    scheduleEyebrow: "DAILY ROUTINE",
-    scheduleTitle: "Your glow plan",
-    remindersEyebrow: "PROGRESS",
-    remindersTitle: "Gentle routine",
-    addEvent: "Add a step",
-    weekLabel: "YOUR WEEK",
-    nav: {
-      today: "Home",
-      habits: "Routine",
-      focus: "Focus",
-      add: "Add",
-      journal: "Progress",
-      spaces: "Profile",
-    },
-  },
-};
-
 const extendedCalendarTabs = tabs.filter(
   (tab): tab is { id: Tab; icon: string; label: string } => tab.id !== "add",
 );
@@ -5330,10 +5015,6 @@ export default function Home() {
           charm: "my soft space",
         }
       : themeOptions.find((theme) => theme.id === appTheme) ?? themeOptions[0]!;
-  const activeInterfaceLab = interfaceLabByTheme[appTheme] ?? null;
-  const activeInterfaceCopy = activeInterfaceLab
-    ? interfaceLabCopy[activeInterfaceLab]
-    : null;
   const customThemeStyle =
     appTheme === "custom"
       ? colorMode === "dark"
@@ -9861,7 +9542,6 @@ export default function Home() {
     <main
       className="app-shell"
       data-theme={appTheme}
-      data-interface-lab={activeInterfaceLab ?? "classic"}
       data-color-mode={colorMode}
       data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
@@ -10264,16 +9944,6 @@ export default function Home() {
             )}
           </div>
         )}
-        {activeInterfaceLab && !sketchFullscreen && (
-          <div className="interface-lab-atmosphere" aria-hidden="true">
-            <span className="lab-atmosphere-orb lab-atmosphere-orb-one" />
-            <span className="lab-atmosphere-orb lab-atmosphere-orb-two" />
-            <span className="lab-atmosphere-line lab-atmosphere-line-one" />
-            <span className="lab-atmosphere-line lab-atmosphere-line-two" />
-            <span className="lab-atmosphere-spark lab-atmosphere-spark-one">✦</span>
-            <span className="lab-atmosphere-spark lab-atmosphere-spark-two">✧</span>
-          </div>
-        )}
         {!sketchFullscreen && <header className="topbar">
           <button
             className="brand-wrap"
@@ -10281,26 +9951,17 @@ export default function Home() {
             onClick={openAereaFromBrand}
             aria-label={brandOpensAo3 ? "Open My AO3 Library" : "Open aérea spaces"}
           >
-            {activeInterfaceCopy ? (
-              <span className="lab-brand-copy">
-                <span className="eyebrow">{activeInterfaceCopy.eyebrow}</span>
-                <strong className="wordmark">{activeInterfaceCopy.wordmark}</strong>
-              </span>
-            ) : (
-              <>
-                <span className="brand-mark profile-mark">
-                  {profilePhoto ? (
-                    <img src={profilePhoto} alt="" />
-                  ) : (
-                    <span aria-hidden="true">♡</span>
-                  )}
-                </span>
-                <span>
-                  <span className="eyebrow">MY LITTLE DAY</span>
-                  <strong className="wordmark">aérea</strong>
-                </span>
-              </>
-            )}
+            <span className="brand-mark profile-mark">
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="" />
+              ) : (
+                <span aria-hidden="true">♡</span>
+              )}
+            </span>
+            <span>
+              <span className="eyebrow">MY LITTLE DAY</span>
+              <strong className="wordmark">aérea</strong>
+            </span>
           </button>
           <div className="header-actions">
             <button
@@ -10311,7 +9972,6 @@ export default function Home() {
               title="New post-it"
             >
               <span aria-hidden="true" />
-              {activeInterfaceCopy && <b className="lab-action-copy">NOTE</b>}
             </button>
             <button
               className="calendar-button"
@@ -10319,14 +9979,14 @@ export default function Home() {
               aria-label="Open calendar"
             >
               <span className="calendar-glyph" aria-hidden="true" />
-              {activeInterfaceCopy?.calendar ?? "Calendar"}
+              Calendar
             </button>
             <button
               className="avatar-button"
               aria-label="Open appearance settings"
               onClick={() => setSettingsOpen(true)}
             >
-              <span>{activeInterfaceCopy ? activeInterfaceCopy.settings : "⚙"}</span>
+              <span>⚙</span>
             </button>
           </div>
         </header>}
@@ -12252,10 +11912,8 @@ export default function Home() {
                 }}
               >
                 <span>{tab.icon}</span>
-                {(tab.id !== "add" || activeInterfaceCopy) && (
-                  <small>
-                    {activeInterfaceCopy?.nav[tab.id] ?? tab.label}
-                  </small>
+                {tab.id !== "add" && (
+                  <small>{tab.label}</small>
                 )}
               </button>
             ))}
@@ -16259,7 +15917,7 @@ export default function Home() {
                 {themeOptions.map((theme) => (
                   <button
                     key={theme.id}
-                    className={`theme-option ${theme.interfaceLab ? "interface-lab-theme-option" : ""} ${appTheme === theme.id ? "active" : ""}`}
+                    className={`theme-option ${appTheme === theme.id ? "active" : ""}`}
                     data-theme-option={theme.id}
                     onClick={() => {
                       setAppTheme(theme.id);
@@ -16274,31 +15932,17 @@ export default function Home() {
                     }
                   >
                     <span className="theme-option-art" aria-hidden="true">
-                      {theme.interfaceLab ? (
-                        <span
-                          className="interface-lab-preview"
-                          data-interface-preview={theme.interfaceLab}
-                        >
-                          <b>{theme.icon}</b>
-                          <i />
-                          <i />
-                          <i />
-                        </span>
-                      ) : (
-                        <>
-                          <i className="theme-mini-ground" />
-                          <img
-                            className="theme-option-main-art"
-                            src={theme.art}
-                            alt=""
-                          />
-                          <img
-                            className="theme-option-accent-art"
-                            src={theme.accents[0]}
-                            alt=""
-                          />
-                        </>
-                      )}
+                      <i className="theme-mini-ground" />
+                      <img
+                        className="theme-option-main-art"
+                        src={theme.art}
+                        alt=""
+                      />
+                      <img
+                        className="theme-option-accent-art"
+                        src={theme.accents[0]}
+                        alt=""
+                      />
                     </span>
                     <span className="theme-option-copy">
                       <strong>{theme.name}</strong>
@@ -16316,7 +15960,7 @@ export default function Home() {
                       </i>
                     </span>
                     <span className="theme-selected">
-                      {appTheme === theme.id ? "✓" : theme.interfaceLab ? "+" : "♡"}
+                      {appTheme === theme.id ? "✓" : "♡"}
                     </span>
                   </button>
                 ))}
@@ -16335,21 +15979,10 @@ export default function Home() {
             </section>
 
             <div className="settings-footnote">
-              {activeInterfaceLab ? (
-                <span
-                  className="settings-lab-mark"
-                  data-interface-preview={activeInterfaceLab}
-                  aria-hidden="true"
-                >
-                  {activeTheme.icon}
-                </span>
-              ) : (
-                <img src={activeTheme.art} alt="" />
-              )}
+              <img src={activeTheme.art} alt="" />
               <p>
-                {activeInterfaceLab
-                  ? "This interface lab is saved with aérea and stays isolated from every classic theme."
-                  : "Your theme and brightness are saved with the rest of aérea, so the same little world follows you to your tablet."}
+                Your theme and brightness are saved with the rest of aérea, so
+                the same little world follows you to your tablet.
               </p>
             </div>
           </section>
@@ -16627,10 +16260,6 @@ function TodayScreen({
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
-  const activeInterfaceLab = interfaceLabByTheme[themeId] ?? null;
-  const activeInterfaceCopy = activeInterfaceLab
-    ? interfaceLabCopy[activeInterfaceLab]
-    : null;
   const comingUpEvent = selectedIsToday
     ? findComingUpEvent(selectedDateEvents, now)
     : null;
@@ -16943,35 +16572,16 @@ function TodayScreen({
           </p>
           <h2
             aria-label={
-              activeInterfaceCopy
-                ? selectedIsToday
-                  ? activeInterfaceCopy.greeting
-                  : `${selectedWeekday}, ${activeInterfaceCopy.scheduleTitle}`
-                : selectedIsToday
-                  ? isNoirRest
-                    ? `${isNight ? "Good evening" : "Good morning"}, Rhea.`
-                    : isNight
-                      ? "Good evening, lovely."
-                      : "Good morning, lovely."
-                  : `A little look at ${selectedWeekday}.`
+              selectedIsToday
+                ? isNoirRest
+                  ? `${isNight ? "Good evening" : "Good morning"}, Rhea.`
+                  : isNight
+                    ? "Good evening, lovely."
+                    : "Good morning, lovely."
+                : `A little look at ${selectedWeekday}.`
             }
           >
-            {activeInterfaceCopy ? (
-              <>
-                <span className="lab-greeting-title">
-                  {selectedIsToday
-                    ? activeInterfaceCopy.greeting
-                    : selectedWeekday.toUpperCase()}
-                </span>
-                <span className="lab-greeting-date">
-                  {selectedDateObject.toLocaleDateString("en", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    year: "numeric",
-                  })}
-                </span>
-              </>
-            ) : selectedIsToday && isNoirRest ? (
+            {selectedIsToday && isNoirRest ? (
               <>
                 <span className="noir-greeting-kicker">
                   {isNight ? "Good evening," : "Good morning,"}
@@ -16990,25 +16600,13 @@ function TodayScreen({
             )}
           </h2>
           <p className="soft-copy">
-            {activeInterfaceCopy
-              ? selectedIsToday
-                ? activeInterfaceCopy.todayLine
-                : activeInterfaceCopy.otherDayLine
-              : selectedIsToday
-                ? isNight
-                  ? "You did enough today. Let the evening soften around you."
-                  : "Let’s make today feel a little lighter."
-                : "Tap today whenever you want to come back."}
+            {selectedIsToday
+              ? isNight
+                ? "You did enough today. Let the evening soften around you."
+                : "Let’s make today feel a little lighter."
+              : "Tap today whenever you want to come back."}
           </p>
         </div>
-        {activeInterfaceCopy && (
-          <span className="lab-hero-art" aria-hidden="true">
-            <i className="lab-hero-shape lab-hero-shape-one" />
-            <i className="lab-hero-shape lab-hero-shape-two" />
-            <i className="lab-hero-shape lab-hero-shape-three" />
-            <b className="lab-hero-symbol">{dayCharmText}</b>
-          </span>
-        )}
         {showDayCharm && !welcomeOpensTimetable && (
           <button
             type="button"
@@ -17070,14 +16668,6 @@ function TodayScreen({
       </section>
 
       <section className="week-strip" aria-label="Current week">
-        {activeInterfaceCopy && (
-          <div className="lab-week-header">
-            <span>{activeInterfaceCopy.weekLabel}</span>
-            <button type="button" onClick={openCalendar}>
-              {activeInterfaceCopy.calendar}
-            </button>
-          </div>
-        )}
         {isNoirRest && (
           <div className="noir-week-header">
             <span>
@@ -17114,9 +16704,7 @@ function TodayScreen({
           aria-label="Coming up next"
           aria-live="polite"
         >
-          <p className="coming-up-label noir-section-label">
-            {activeInterfaceCopy?.upcoming ?? "COMING UP NEXT"}
-          </p>
+          <p className="coming-up-label noir-section-label">COMING UP NEXT</p>
           <button
             type="button"
             className={[
@@ -17205,17 +16793,11 @@ function TodayScreen({
         <div className="column">
           <div className="section-heading">
             <div>
-              <p className="tiny-label">
-                {activeInterfaceCopy?.scheduleEyebrow ?? "YOUR RHYTHM"}
-              </p>
+              <p className="tiny-label">YOUR RHYTHM</p>
               <h3>
-                {activeInterfaceCopy
-                  ? selectedIsToday
-                    ? activeInterfaceCopy.scheduleTitle
-                    : `${selectedWeekday} / ${activeInterfaceCopy.scheduleTitle}`
-                  : selectedIsToday
-                    ? "Today’s schedule"
-                    : `${selectedWeekday}’s schedule`}
+                {selectedIsToday
+                  ? "Today’s schedule"
+                  : `${selectedWeekday}’s schedule`}
               </h3>
             </div>
             <button className="text-button" onClick={openCalendar}>
@@ -17310,17 +16892,15 @@ function TodayScreen({
             ))
           )}
           <button className="add-event-button" onClick={openEventComposer}>
-            <span>＋</span> {activeInterfaceCopy?.addEvent ?? "Add something to your day"}
+            <span>＋</span> Add something to your day
           </button>
         </div>
 
         <div className="column">
           <div className="section-heading">
             <div>
-              <p className="tiny-label">
-                {activeInterfaceCopy?.remindersEyebrow ?? "LITTLE REMINDERS"}
-              </p>
-              <h3>{activeInterfaceCopy?.remindersTitle ?? "Take care of you"}</h3>
+              <p className="tiny-label">LITTLE REMINDERS</p>
+              <h3>Take care of you</h3>
             </div>
             <div className="reminder-heading-actions">
               <span className="progress-pill">
