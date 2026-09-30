@@ -151,7 +151,14 @@ type Space =
   | "sketchbook"
   | "trash";
 type MetricsPeriod = "week" | "month" | "year" | "all";
-type InterfaceLab = "glass" | "reach" | "dayline";
+type InterfaceLab =
+  | "cosmos"
+  | "berry"
+  | "aurora"
+  | "bloom"
+  | "atlas"
+  | "ribbon"
+  | "glow";
 type AppTheme =
   | "storybook"
   | "otter"
@@ -175,9 +182,13 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | "quietglass"
-  | "softreach"
-  | "dayline"
+  | "violetcosmos"
+  | "berryagenda"
+  | "auroraglass"
+  | "blossomportal"
+  | "pastelatlas"
+  | "ribbondesk"
+  | "glowplanner"
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -1492,55 +1503,102 @@ const themeOptions: {
     decoratedScene: true,
   },
   {
-    id: "quietglass",
-    name: "Quiet Glass",
-    description: "A calm, spatial interface with translucent layers, disciplined type and one cool accent.",
-    colors: ["#f5f6f8", "#24262b", "#8aa8ff"],
-    icon: "◌",
-    art: "/assets/openmoji/cloud.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "quiet clarity",
+    id: "violetcosmos",
+    name: "Violet Cosmos",
+    description: "A storybook night of moonlit plans, quiet constellations and deep violet glass.",
+    colors: ["#1c1748", "#7661a5", "#e7cbed"],
+    icon: "☾",
+    art: "/assets/openmoji/moon.svg",
+    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/cloud.svg"],
+    charm: "meet me under the moon",
     showCharm: false,
     featured: true,
-    interfaceIdea: "spatial glass",
-    interfaceLab: "glass",
+    interfaceIdea: "celestial story",
+    interfaceLab: "cosmos",
   },
   {
-    id: "softreach",
-    name: "Soft Reach",
-    description: "A one-handed layout with generous viewing space, grounded controls and calm blue depth.",
-    colors: ["#edf2f7", "#18243a", "#5b7cfa"],
-    icon: "●",
-    art: "/assets/openmoji/cloud.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "within reach",
+    id: "berryagenda",
+    name: "Berry Agenda",
+    description: "A confident berry dashboard with graphic curves, tonal cards and a crisp cream agenda.",
+    colors: ["#9f215b", "#e5608d", "#fff2ee"],
+    icon: "◒",
+    art: "/assets/openmoji/strawberry.svg",
+    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/tulip.svg"],
+    charm: "make it happen",
     showCharm: false,
     featured: true,
-    interfaceIdea: "one-handed flow",
-    interfaceLab: "reach",
+    interfaceIdea: "graphic dashboard",
+    interfaceLab: "berry",
   },
   {
-    id: "dayline",
-    name: "Dayline",
-    description: "A warm visual timeline where time, plans and tiny routines read as one continuous day.",
-    colors: ["#f4efe7", "#203937", "#df806d"],
-    icon: "12:45",
+    id: "auroraglass",
+    name: "Aurora Glass",
+    description: "Luminous lilac glass, airy gradients and floating controls arranged like a soft gallery.",
+    colors: ["#eef5ff", "#a68cf2", "#f3a9d4"],
+    icon: "✧",
     art: "/assets/openmoji/cloud.svg",
-    accents: [
-      "/assets/openmoji/star.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "one clear line",
+    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/tulip.svg"],
+    charm: "light moves softly",
     showCharm: false,
     featured: true,
-    interfaceIdea: "visual timeline",
-    interfaceLab: "dayline",
+    interfaceIdea: "luminous glass",
+    interfaceLab: "aurora",
+  },
+  {
+    id: "blossomportal",
+    name: "Blossom Portal",
+    description: "A botanical workspace of floating windows, petal controls and soft spring depth.",
+    colors: ["#fff8fa", "#f39ab5", "#c8d995"],
+    icon: "✿",
+    art: "/assets/openmoji/tulip.svg",
+    accents: ["/assets/openmoji/blossom.svg", "/assets/openmoji/star.svg"],
+    charm: "open the little garden",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "botanical portal",
+    interfaceLab: "bloom",
+  },
+  {
+    id: "pastelatlas",
+    name: "Pastel Atlas",
+    description: "An editorial daybook with scenic color fields, elegant type and spacious curved pages.",
+    colors: ["#fffaf8", "#829eef", "#e7a8c9"],
+    icon: "⌁",
+    art: "/assets/openmoji/cloud.svg",
+    accents: ["/assets/openmoji/moon.svg", "/assets/openmoji/star.svg"],
+    charm: "today is somewhere",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "editorial daybook",
+    interfaceLab: "atlas",
+  },
+  {
+    id: "ribbondesk",
+    name: "Ribbon Desk",
+    description: "A precise white workspace with layered ribbon cards, ink outlines and measured color.",
+    colors: ["#ffffff", "#4a427d", "#f29abb"],
+    icon: "≈",
+    art: "/assets/openmoji/love-letter.svg",
+    accents: ["/assets/openmoji/star.svg", "/assets/openmoji/cloud.svg"],
+    charm: "everything in its place",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "layered workspace",
+    interfaceLab: "ribbon",
+  },
+  {
+    id: "glowplanner",
+    name: "Glow Planner",
+    description: "A bright routine planner with friendly progress, clean white space and fresh color blocks.",
+    colors: ["#fffafa", "#f7598b", "#b8ebdc"],
+    icon: "☀",
+    art: "/assets/openmoji/blossom.svg",
+    accents: ["/assets/openmoji/cloud.svg", "/assets/openmoji/blossom.svg"],
+    charm: "a little glow today",
+    showCharm: false,
+    featured: true,
+    interfaceIdea: "routine planner",
+    interfaceLab: "glow",
   },
 ];
 
@@ -1581,9 +1639,13 @@ const tabs: { id: PrimaryNavId; icon: string; label: string }[] = [
 ];
 
 const interfaceLabByTheme: Partial<Record<AppTheme, InterfaceLab>> = {
-  quietglass: "glass",
-  softreach: "reach",
-  dayline: "dayline",
+  violetcosmos: "cosmos",
+  berryagenda: "berry",
+  auroraglass: "aurora",
+  blossomportal: "bloom",
+  pastelatlas: "atlas",
+  ribbondesk: "ribbon",
+  glowplanner: "glow",
 };
 
 const interfaceLabCopy: Record<
@@ -1606,76 +1668,172 @@ const interfaceLabCopy: Record<
     nav: Record<PrimaryNavId, string>;
   }
 > = {
-  glass: {
-    eyebrow: "AÉREA",
-    wordmark: "Quiet Glass",
-    calendar: "Calendar",
-    settings: "•••",
-    greeting: "A clear view of today",
-    todayLine: "Your plans, with room to breathe.",
-    otherDayLine: "A clear view of the selected day.",
-    upcoming: "NEXT",
-    scheduleEyebrow: "TODAY",
-    scheduleTitle: "Schedule",
-    remindersEyebrow: "FOR YOU",
-    remindersTitle: "Small reminders",
-    addEvent: "Add to today",
-    weekLabel: "THIS WEEK",
+  cosmos: {
+    eyebrow: "NIGHT LOG · AÉREA",
+    wordmark: "Violet Cosmos",
+    calendar: "Orbit",
+    settings: "✦",
+    greeting: "Hello, little dreamer",
+    todayLine: "Your plans are waiting under a quiet sky.",
+    otherDayLine: "A small constellation for the selected day.",
+    upcoming: "NEXT IN ORBIT",
+    scheduleEyebrow: "MOON PATH",
+    scheduleTitle: "Tonight’s constellation",
+    remindersEyebrow: "SOFT SIGNALS",
+    remindersTitle: "Things to carry",
+    addEvent: "Add a little star",
+    weekLabel: "SEVEN MOONS",
     nav: {
       today: "Today",
-      habits: "Habits",
-      focus: "FOCUS",
-      add: "Add",
-      journal: "Journal",
-      spaces: "Spaces",
+      habits: "Rhythm",
+      focus: "Focus",
+      add: "New star",
+      journal: "Dreams",
+      spaces: "Worlds",
     },
   },
-  reach: {
-    eyebrow: "AÉREA",
-    wordmark: "My day",
-    calendar: "Calendar",
+  berry: {
+    eyebrow: "AÉREA · DAILY WORK",
+    wordmark: "Berry Agenda",
+    calendar: "Plan",
     settings: "Menu",
-    greeting: "Today feels manageable",
-    todayLine: "Everything important is close at hand.",
-    otherDayLine: "Here is what belongs to this day.",
-    upcoming: "COMING UP",
-    scheduleEyebrow: "YOUR DAY",
-    scheduleTitle: "Plans",
-    remindersEyebrow: "KEEP CLOSE",
-    remindersTitle: "Remember",
-    addEvent: "New plan",
-    weekLabel: "CHOOSE A DAY",
+    greeting: "Make today yours",
+    todayLine: "A bold little overview of what is moving.",
+    otherDayLine: "The selected day, sorted and ready.",
+    upcoming: "IN PROGRESS",
+    scheduleEyebrow: "TODAY’S FLOW",
+    scheduleTitle: "Agenda",
+    remindersEyebrow: "SMALL WINS",
+    remindersTitle: "Tasks",
+    addEvent: "Create task",
+    weekLabel: "APRIL · WEEK 4",
     nav: {
-      today: "Today",
-      habits: "Habits",
-      focus: "FOCUS",
-      add: "New",
-      journal: "Journal",
-      spaces: "More",
+      today: "Home",
+      habits: "Progress",
+      focus: "Focus",
+      add: "Create",
+      journal: "Notes",
+      spaces: "Profile",
     },
   },
-  dayline: {
-    eyebrow: "AÉREA PLANNER",
-    wordmark: "Dayline",
-    calendar: "Month",
-    settings: "More",
-    greeting: "Your day, in one line",
-    todayLine: "See what is now, what is next, and what can wait.",
-    otherDayLine: "Following the selected day from morning to night.",
-    upcoming: "NEXT ON THE LINE",
-    scheduleEyebrow: "DAY TIMELINE",
-    scheduleTitle: "Your pace",
-    remindersEyebrow: "UNTIMED",
-    remindersTitle: "Keep in mind",
-    addEvent: "Add a time block",
-    weekLabel: "WEEK OVERVIEW",
+  aurora: {
+    eyebrow: "AÉREA · LIGHT STUDIO",
+    wordmark: "Aurora Glass",
+    calendar: "Gallery",
+    settings: "···",
+    greeting: "A softer way through today",
+    todayLine: "Light, time and plans can share the same space.",
+    otherDayLine: "A luminous view of the selected day.",
+    upcoming: "FLOATING NEXT",
+    scheduleEyebrow: "YOUR DAY",
+    scheduleTitle: "In the light",
+    remindersEyebrow: "KEEP NEAR",
+    remindersTitle: "Little notes",
+    addEvent: "Add to the glass",
+    weekLabel: "LIGHT ACROSS THE WEEK",
     nav: {
-      today: "Timeline",
-      habits: "Routines",
-      focus: "FOCUS",
+      today: "Studio",
+      habits: "Flow",
+      focus: "Focus",
+      add: "Create",
+      journal: "Pages",
+      spaces: "Gallery",
+    },
+  },
+  bloom: {
+    eyebrow: "AÉREA · BOTANICAL DESK",
+    wordmark: "Blossom Portal",
+    calendar: "Garden",
+    settings: "✿",
+    greeting: "Welcome to your little garden",
+    todayLine: "Every plan has a place to open gently.",
+    otherDayLine: "A new page is blooming for this day.",
+    upcoming: "OPEN WINDOW",
+    scheduleEyebrow: "IN BLOOM",
+    scheduleTitle: "Today’s garden",
+    remindersEyebrow: "PETAL NOTES",
+    remindersTitle: "Keep growing",
+    addEvent: "Plant a plan",
+    weekLabel: "GARDEN WEEK",
+    nav: {
+      today: "Garden",
+      habits: "Grow",
+      focus: "Focus",
+      add: "Plant",
+      journal: "Letters",
+      spaces: "Rooms",
+    },
+  },
+  atlas: {
+    eyebrow: "AÉREA · DAILY EDITION",
+    wordmark: "Pastel Atlas",
+    calendar: "Explore",
+    settings: "••",
+    greeting: "Discover your day",
+    todayLine: "A calm route through what matters now.",
+    otherDayLine: "A new destination for the selected day.",
+    upcoming: "NEXT DESTINATION",
+    scheduleEyebrow: "DAY GUIDE",
+    scheduleTitle: "Your route",
+    remindersEyebrow: "TRAVEL LIGHT",
+    remindersTitle: "Keep close",
+    addEvent: "Add a stop",
+    weekLabel: "THIS WEEK’S ROUTE",
+    nav: {
+      today: "Discover",
+      habits: "Places",
+      focus: "Focus",
+      add: "New stop",
+      journal: "Stories",
+      spaces: "Saved",
+    },
+  },
+  ribbon: {
+    eyebrow: "AÉREA · ORGANIZED",
+    wordmark: "Ribbon Desk",
+    calendar: "Statement",
+    settings: "○",
+    greeting: "Everything in its place",
+    todayLine: "A precise desk for plans, progress and quiet focus.",
+    otherDayLine: "A measured view of the selected day.",
+    upcoming: "ACTIVE CARD",
+    scheduleEyebrow: "TODAY’S STACK",
+    scheduleTitle: "Your cards",
+    remindersEyebrow: "LIMIT",
+    remindersTitle: "Small priorities",
+    addEvent: "Add a card",
+    weekLabel: "STATEMENT · WEEK",
+    nav: {
+      today: "Desk",
+      habits: "Stats",
+      focus: "Focus",
       add: "Add",
       journal: "Notes",
-      spaces: "Library",
+      spaces: "Account",
+    },
+  },
+  glow: {
+    eyebrow: "AÉREA · DAILY GLOW",
+    wordmark: "Glow Planner",
+    calendar: "Routine",
+    settings: "☀",
+    greeting: "Good morning, lovely",
+    todayLine: "A fresh plan with room for every small win.",
+    otherDayLine: "A bright little plan for the selected day.",
+    upcoming: "TODAY’S HIGHLIGHT",
+    scheduleEyebrow: "DAILY ROUTINE",
+    scheduleTitle: "Your glow plan",
+    remindersEyebrow: "PROGRESS",
+    remindersTitle: "Gentle routine",
+    addEvent: "Add a step",
+    weekLabel: "YOUR WEEK",
+    nav: {
+      today: "Home",
+      habits: "Routine",
+      focus: "Focus",
+      add: "Add",
+      journal: "Progress",
+      spaces: "Profile",
     },
   },
 };
@@ -10106,6 +10264,16 @@ export default function Home() {
             )}
           </div>
         )}
+        {activeInterfaceLab && !sketchFullscreen && (
+          <div className="interface-lab-atmosphere" aria-hidden="true">
+            <span className="lab-atmosphere-orb lab-atmosphere-orb-one" />
+            <span className="lab-atmosphere-orb lab-atmosphere-orb-two" />
+            <span className="lab-atmosphere-line lab-atmosphere-line-one" />
+            <span className="lab-atmosphere-line lab-atmosphere-line-two" />
+            <span className="lab-atmosphere-spark lab-atmosphere-spark-one">✦</span>
+            <span className="lab-atmosphere-spark lab-atmosphere-spark-two">✧</span>
+          </div>
+        )}
         {!sketchFullscreen && <header className="topbar">
           <button
             className="brand-wrap"
@@ -16833,6 +17001,14 @@ function TodayScreen({
                 : "Tap today whenever you want to come back."}
           </p>
         </div>
+        {activeInterfaceCopy && (
+          <span className="lab-hero-art" aria-hidden="true">
+            <i className="lab-hero-shape lab-hero-shape-one" />
+            <i className="lab-hero-shape lab-hero-shape-two" />
+            <i className="lab-hero-shape lab-hero-shape-three" />
+            <b className="lab-hero-symbol">{dayCharmText}</b>
+          </span>
+        )}
         {showDayCharm && !welcomeOpensTimetable && (
           <button
             type="button"
