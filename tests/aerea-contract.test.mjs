@@ -146,8 +146,8 @@ test("keeps the approved worlds and removes every rejected theme", () => {
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    10,
-    "the two full-scene themes, Little Sheets Lab and seven reference interface labs should hide the welcome charm",
+    3,
+    "the two full-scene themes and Little Sheets Lab should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
@@ -180,6 +180,19 @@ test("keeps the approved worlds and removes every rejected theme", () => {
     "lovelyevening",
     "noirrest",
     "ao3night",
+    "radicalglass",
+    "commanddeck",
+    "prismroute",
+    "quietglass",
+    "softreach",
+    "dayline",
+    "violetcosmos",
+    "berryagenda",
+    "auroraglass",
+    "blossomportal",
+    "pastelatlas",
+    "ribbondesk",
+    "glowplanner",
   ]) {
     assert.doesNotMatch(pageSource, new RegExp(`id: "${removedTheme}"`));
   }
