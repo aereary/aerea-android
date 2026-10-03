@@ -112,6 +112,15 @@ public class AereaMonthGridService extends RemoteViewsService {
                 "setBackgroundResource",
                 isToday ? R.drawable.widget_day_today : R.drawable.widget_day_plain
             );
+            String theme = AereaWidgetData.safeString(preferences, "theme", "storybook");
+            if (AereaReferenceWidgetTheme.isReference(theme)) {
+                boolean dark = "dark".equals(AereaWidgetData.safeString(preferences, "colorMode", "light"));
+                int ink = AereaReferenceWidgetTheme.ink(theme, dark);
+                views.setTextColor(R.id.month_day_number, isToday ? 0xFF40304F : inMonth ? ink : (ink & 0x00FFFFFF) | 0x66000000);
+                views.setTextColor(R.id.month_day_marker, isToday ? 0xFF40304F : ink);
+                views.setInt(R.id.month_day_root, "setBackgroundResource",
+                    isToday ? R.drawable.widget_reference_action : R.drawable.widget_day_plain);
+            }
             views.setViewVisibility(
                 R.id.month_day_marker,
                 marker.isEmpty() ? View.INVISIBLE : View.VISIBLE
