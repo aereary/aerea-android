@@ -6,6 +6,7 @@ import "@fontsource/gaegu/latin-700.css";
 import { APP_APPEARANCE, APP_IDENTITY, UI_DEFAULTS } from "./config/app-config";
 import "./globals.css";
 import "./timetable-agenda.css";
+import "./styles/native-themes.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

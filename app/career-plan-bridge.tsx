@@ -599,7 +599,7 @@ function CareerPlanOverlay({
 
   return (
     <div
-      className={styles.overlay}
+      className={styles.overlay} data-native-surface="career"
       role="dialog"
       aria-modal="true"
       aria-label="My degree"

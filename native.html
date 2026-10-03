@@ -25,7 +25,7 @@
           "gentlekitten", "softguidance", "velvetrest", "lovelyevening",
           "rosegrid", "littlesheets", "noirrest", "ao3night",
           "peachparlor", "mintletter", "blueberrynight", "duckmail",
-          "moonquilt", "custom",
+          "moonquilt", "samsungminimal", "samsungao3", "custom",
         ];
         const pending = () => document.documentElement.classList.add("appearance-pending");
         try {
@@ -45,6 +45,10 @@
                   (field) => typeof appearance.customTheme[field] !== "string",
                 )))
           ) return pending();
+          if (["samsungminimal", "samsungao3"].includes(appearance.appTheme)) {
+            document.documentElement.dataset.nativeTheme = appearance.appTheme;
+            document.documentElement.dataset.nativeThemeMode = appearance.colorMode;
+          }
           document.documentElement.style.background = appearance.background;
           document.body.style.background = appearance.background;
           if (typeof appearance.themeColor === "string" && appearance.themeColor.trim()) {
