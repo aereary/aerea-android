@@ -224,6 +224,7 @@ public class AereaMonthWidget extends AppWidgetProvider {
         bindEvent(views, events.optJSONObject(0), 1, agendaDay.optString("mood"));
         bindEvent(views, events.optJSONObject(1), 2, agendaDay.optString("mood"));
 
+        AereaReferenceWidgetTheme.apply(views, preferences, true);
         manager.updateAppWidget(appWidgetId, views);
         manager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.month_widget_grid);
     }
