@@ -223,7 +223,6 @@ public class AereaTodayWidget extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_add, openApp);
         views.setOnClickPendingIntent(R.id.widget_event_row_1, openApp);
         views.setOnClickPendingIntent(R.id.widget_event_row_2, openApp);
-        AereaReferenceWidgetTheme.apply(views, preferences, false);
         manager.updateAppWidget(appWidgetId, views);
     }
 
