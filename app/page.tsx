@@ -1,7 +1,5 @@
 "use client";
 
-import { isReferenceTheme, REFERENCE_THEMES, type ReferenceThemeId } from "./reference-themes";
-import { ReferenceIcon } from "./components/reference-icon";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import {
   Capacitor,
@@ -176,7 +174,6 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
-  | ReferenceThemeId
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -187,8 +184,7 @@ type AereaWidgetPlugin = {
     eventTime: string;
     temperature: string;
     progress: string;
-    theme: "storybook" | "otter" | ReferenceThemeId;
-    colorMode?: ColorMode;
+    theme: "storybook" | "otter";
     daysJson: string;
   }): Promise<void>;
 };
@@ -1490,7 +1486,6 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
-  ...REFERENCE_THEMES,
 ];
 
 const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
@@ -3414,21 +3409,6 @@ export default function Home() {
     reminderHistory[yesterdayKey]?.length ?? 0;
 
   useLayoutEffect(() => {
-    // HTML scope also reaches body portals (degree/professors), unlike shell-only CSS.
-    if (isReferenceTheme(appTheme)) {
-      document.documentElement.dataset.referenceTheme = appTheme;
-      document.documentElement.dataset.referenceMode = colorMode;
-    } else {
-      delete document.documentElement.dataset.referenceTheme;
-      delete document.documentElement.dataset.referenceMode;
-    }
-    return () => {
-      delete document.documentElement.dataset.referenceTheme;
-      delete document.documentElement.dataset.referenceMode;
-    };
-  }, [appTheme, colorMode]);
-
-  useLayoutEffect(() => {
     if (!isNative() || !appearanceHydrated) return;
     const shell = document.querySelector<HTMLElement>(".app-shell");
     const computed = window.getComputedStyle(shell ?? document.documentElement);
@@ -3714,7 +3694,6 @@ export default function Home() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const themeNeedsLightSystemBarContent = [
-      "astralnight",
       "ao3night",
       "noirrest",
       "blueberrynight",
@@ -6134,7 +6113,7 @@ export default function Home() {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
 
     const nextEvent = todayWidgetEvents[0];
-    const widgetTheme = isReferenceTheme(appTheme) ? appTheme : appTheme === "otter" ? "otter" : "storybook";
+    const widgetTheme = appTheme === "otter" ? "otter" : "storybook";
     void AereaWidget.sync({
       date: dateFromKey(todayKey).toLocaleDateString("en-US", {
         weekday: "long",
@@ -6150,14 +6129,12 @@ export default function Home() {
       temperature: activeTheme.icon,
       progress: `${doneIds.length}/${reminders.length} reminders · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tasks`,
       theme: widgetTheme,
-      colorMode,
       daysJson: widgetDaysJson,
     }).catch(() => {
       // The app remains usable if a launcher does not support widgets.
     });
   }, [
     appTheme,
-    colorMode,
     activeTheme.icon,
     doneIds.length,
     reminders.length,
@@ -9565,7 +9542,6 @@ export default function Home() {
     <main
       className="app-shell"
       data-theme={appTheme}
-      data-reference-theme={isReferenceTheme(appTheme) ? appTheme : undefined}
       data-color-mode={colorMode}
       data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
@@ -9995,14 +9971,14 @@ export default function Home() {
               aria-label="Create a movable post-it"
               title="New post-it"
             >
-              {isReferenceTheme(appTheme) ? <ReferenceIcon name="note" /> : <span aria-hidden="true" />}
+              <span aria-hidden="true" />
             </button>
             <button
               className="calendar-button"
               onClick={openCalendarAtToday}
               aria-label="Open calendar"
             >
-              {isReferenceTheme(appTheme) ? <ReferenceIcon name="calendar" /> : <span className="calendar-glyph" aria-hidden="true" />}
+              <span className="calendar-glyph" aria-hidden="true" />
               Calendar
             </button>
             <button
@@ -10010,7 +9986,7 @@ export default function Home() {
               aria-label="Open appearance settings"
               onClick={() => setSettingsOpen(true)}
             >
-              {isReferenceTheme(appTheme) ? <ReferenceIcon name="settings" /> : <span>⚙</span>}
+              <span>⚙</span>
             </button>
           </div>
         </header>}
@@ -11935,7 +11911,7 @@ export default function Home() {
                   changeTab(tab.id);
                 }}
               >
-                <span>{isReferenceTheme(appTheme) ? <ReferenceIcon name={tab.id} /> : tab.icon}</span>
+                <span>{tab.icon}</span>
                 {tab.id !== "add" && (
                   <small>{tab.label}</small>
                 )}
@@ -16530,7 +16506,7 @@ function TodayScreen({
     openEventDetail(calendarEvent, null, selectedDate);
   };
 
-  const welcomeOpensTimetable = themeId === "lovelyevening" || isReferenceTheme(themeId);
+  const welcomeOpensTimetable = themeId === "lovelyevening";
 
   useEffect(
     () => () => {
@@ -16584,7 +16560,6 @@ function TodayScreen({
             : undefined
         }
       >
-        {isReferenceTheme(themeId) && <img className="reference-welcome-scene" src={`/assets/reference-themes/${themeId}.svg`} alt="" aria-hidden="true" />}
         <div>
           <p className="date-label">
             {selectedDateObject

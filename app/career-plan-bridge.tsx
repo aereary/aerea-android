@@ -599,7 +599,7 @@ function CareerPlanOverlay({
 
   return (
     <div
-      className={styles.overlay} data-reference-surface="career"
+      className={styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-label="My degree"

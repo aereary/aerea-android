@@ -25,7 +25,7 @@
           "gentlekitten", "softguidance", "velvetrest", "lovelyevening",
           "rosegrid", "littlesheets", "noirrest", "ao3night",
           "peachparlor", "mintletter", "blueberrynight", "duckmail",
-          "moonquilt", "astralnight", "blushcards", "pastellayers", "pasteljourney", "custom",
+          "moonquilt", "custom",
         ];
         const pending = () => document.documentElement.classList.add("appearance-pending");
         try {
@@ -45,10 +45,6 @@
                   (field) => typeof appearance.customTheme[field] !== "string",
                 )))
           ) return pending();
-          if (["astralnight", "blushcards", "pastellayers", "pasteljourney"].includes(appearance.appTheme)) {
-            document.documentElement.dataset.referenceTheme = appearance.appTheme;
-            document.documentElement.dataset.referenceMode = appearance.colorMode;
-          }
           document.documentElement.style.background = appearance.background;
           document.body.style.background = appearance.background;
           if (typeof appearance.themeColor === "string" && appearance.themeColor.trim()) {
