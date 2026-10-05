@@ -1,5 +1,7 @@
 "use client";
 
+import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
+import { NativeIcon } from "./components/native-icon";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import {
   Capacitor,
@@ -174,6 +176,7 @@ type AppTheme =
   | "blueberrynight"
   | "duckmail"
   | "moonquilt"
+  | NativeThemeId
   | "custom";
 type ColorMode = "light" | "dark";
 
@@ -184,7 +187,8 @@ type AereaWidgetPlugin = {
     eventTime: string;
     temperature: string;
     progress: string;
-    theme: "storybook" | "otter";
+    theme: "storybook" | "otter" | NativeThemeId;
+    colorMode?: ColorMode;
     daysJson: string;
   }): Promise<void>;
 };
@@ -1486,6 +1490,7 @@ const themeOptions: {
     showCharm: false,
     decoratedScene: true,
   },
+  ...NATIVE_THEMES,
 ];
 
 const BUILTIN_HABITS_RESTORE_VERSION = "builtin-habits-restored-2026-08-26";
@@ -3407,6 +3412,20 @@ export default function Home() {
   const yesterdayKey = localDateKey(yesterdayDate);
   const yesterdayDoneCount =
     reminderHistory[yesterdayKey]?.length ?? 0;
+
+  useLayoutEffect(() => {
+    if (isNativeTheme(appTheme)) {
+      document.documentElement.dataset.nativeTheme = appTheme;
+      document.documentElement.dataset.nativeThemeMode = colorMode;
+    } else {
+      delete document.documentElement.dataset.nativeTheme;
+      delete document.documentElement.dataset.nativeThemeMode;
+    }
+    return () => {
+      delete document.documentElement.dataset.nativeTheme;
+      delete document.documentElement.dataset.nativeThemeMode;
+    };
+  }, [appTheme, colorMode]);
 
   useLayoutEffect(() => {
     if (!isNative() || !appearanceHydrated) return;
@@ -6113,7 +6132,7 @@ export default function Home() {
     if (!stateReady || !Capacitor.isNativePlatform()) return;
 
     const nextEvent = todayWidgetEvents[0];
-    const widgetTheme = appTheme === "otter" ? "otter" : "storybook";
+    const widgetTheme = isNativeTheme(appTheme) ? appTheme : appTheme === "otter" ? "otter" : "storybook";
     void AereaWidget.sync({
       date: dateFromKey(todayKey).toLocaleDateString("en-US", {
         weekday: "long",
@@ -6129,12 +6148,14 @@ export default function Home() {
       temperature: activeTheme.icon,
       progress: `${doneIds.length}/${reminders.length} reminders · ${todayTasks.filter((task) => task.completed).length}/${todayTasks.length} tasks`,
       theme: widgetTheme,
+      colorMode,
       daysJson: widgetDaysJson,
     }).catch(() => {
       // The app remains usable if a launcher does not support widgets.
     });
   }, [
     appTheme,
+    colorMode,
     activeTheme.icon,
     doneIds.length,
     reminders.length,
@@ -9542,6 +9563,7 @@ export default function Home() {
     <main
       className="app-shell"
       data-theme={appTheme}
+      data-native-theme={isNativeTheme(appTheme) ? appTheme : undefined}
       data-color-mode={colorMode}
       data-simplified-calendar={simplifiedCalendarMode ? "true" : "false"}
       style={customThemeStyle}
@@ -9945,6 +9967,11 @@ export default function Home() {
           </div>
         )}
         {!sketchFullscreen && <header className="topbar">
+          {isNativeTheme(appTheme) && (
+            <button className="native-menu-button" type="button" aria-label="Open navigation" onClick={() => setAereaHubOpen(true)}>
+              <NativeIcon name="menu" />
+            </button>
+          )}
           <button
             className="brand-wrap"
             type="button"
@@ -9971,14 +9998,14 @@ export default function Home() {
               aria-label="Create a movable post-it"
               title="New post-it"
             >
-              <span aria-hidden="true" />
+              {isNativeTheme(appTheme) ? <NativeIcon name="note" /> : <span aria-hidden="true" />}
             </button>
             <button
               className="calendar-button"
               onClick={openCalendarAtToday}
               aria-label="Open calendar"
             >
-              <span className="calendar-glyph" aria-hidden="true" />
+              {isNativeTheme(appTheme) ? <NativeIcon name="calendar" /> : <span className="calendar-glyph" aria-hidden="true" />}
               Calendar
             </button>
             <button
@@ -9986,7 +10013,7 @@ export default function Home() {
               aria-label="Open appearance settings"
               onClick={() => setSettingsOpen(true)}
             >
-              <span>⚙</span>
+              {isNativeTheme(appTheme) ? <NativeIcon name="settings" /> : <span>⚙</span>}
             </button>
           </div>
         </header>}
@@ -11898,6 +11925,7 @@ export default function Home() {
                   activeTab === tab.id ? "active" : "",
                   tab.id === "add" ? "quick-capture-nav" : "",
                 ].filter(Boolean).join(" ")}
+                aria-current={activeTab === tab.id ? "page" : undefined}
                 aria-label={
                   tab.id === "add"
                     ? "Open Quick Capture"
@@ -11911,7 +11939,7 @@ export default function Home() {
                   changeTab(tab.id);
                 }}
               >
-                <span>{tab.icon}</span>
+                <span>{isNativeTheme(appTheme) ? <NativeIcon name={tab.id} /> : tab.icon}</span>
                 {tab.id !== "add" && (
                   <small>{tab.label}</small>
                 )}
@@ -11965,6 +11993,18 @@ export default function Home() {
                 ×
               </button>
             </header>
+            {isNativeTheme(appTheme) && (
+              <nav className="native-menu-primary" aria-label="All sections">
+                {tabs.filter((tab) => tab.id !== "add").map((tab) => (
+                  <button key={tab.id} type="button" aria-current={activeTab === tab.id ? "page" : undefined} onClick={() => { setAereaHubOpen(false); if (tab.id !== "add") changeTab(tab.id); }}>
+                    <NativeIcon name={tab.id} /><span>{tab.label}</span>
+                  </button>
+                ))}
+                <button type="button" onClick={() => { setAereaHubOpen(false); changeTab("spaces"); setSpace("library"); }}><NativeIcon name="journal" /><span>Library</span></button>
+                <button type="button" onClick={() => { setAereaHubOpen(false); openCalendarAtToday(); }}><NativeIcon name="calendar" /><span>Calendar</span></button>
+                <button type="button" onClick={() => { setAereaHubOpen(false); setSettingsOpen(true); }}><NativeIcon name="settings" /><span>Settings</span></button>
+              </nav>
+            )}
             <div className="aerea-hub-links">
               <button
                 type="button"
@@ -15921,6 +15961,7 @@ export default function Home() {
                     data-theme-option={theme.id}
                     onClick={() => {
                       setAppTheme(theme.id);
+                      if (isNativeTheme(theme.id)) setColorMode("dark");
                     }}
                     aria-pressed={appTheme === theme.id}
                     style={
@@ -16506,7 +16547,7 @@ function TodayScreen({
     openEventDetail(calendarEvent, null, selectedDate);
   };
 
-  const welcomeOpensTimetable = themeId === "lovelyevening";
+  const welcomeOpensTimetable = themeId === "lovelyevening" || isNativeTheme(themeId);
 
   useEffect(
     () => () => {
@@ -16892,7 +16933,7 @@ function TodayScreen({
             ))
           )}
           <button className="add-event-button" onClick={openEventComposer}>
-            <span>＋</span> Add something to your day
+            {isNativeTheme(themeId) ? <NativeIcon name="add" /> : <span>＋</span>} Add something to your day
           </button>
         </div>
 

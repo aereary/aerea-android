@@ -83,13 +83,13 @@
         android:layout_height="24dp"
         android:orientation="horizontal">
 
-        <TextView style="@style/AereaWidgetWeekday" android:text="S" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="M" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="T" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="W" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="T" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="F" />
-        <TextView style="@style/AereaWidgetWeekday" android:text="S" />
+        <TextView android:id="@+id/month_weekday_sun" style="@style/AereaWidgetWeekday" android:text="S" />
+        <TextView android:id="@+id/month_weekday_mon" style="@style/AereaWidgetWeekday" android:text="M" />
+        <TextView android:id="@+id/month_weekday_tue" style="@style/AereaWidgetWeekday" android:text="T" />
+        <TextView android:id="@+id/month_weekday_wed" style="@style/AereaWidgetWeekday" android:text="W" />
+        <TextView android:id="@+id/month_weekday_thu" style="@style/AereaWidgetWeekday" android:text="T" />
+        <TextView android:id="@+id/month_weekday_fri" style="@style/AereaWidgetWeekday" android:text="F" />
+        <TextView android:id="@+id/month_weekday_sat" style="@style/AereaWidgetWeekday" android:text="S" />
     </LinearLayout>
 
     <GridView

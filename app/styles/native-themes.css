@@ -1,0 +1,836 @@
+/* Only these two opt-in themes own this attribute. Legacy themes never match.
+   Reference: Samsung Reminder, Rhea's 22-second screen recording, 2026-10-03. */
+html[data-native-theme] {
+  --one-font: "SamsungOne", "One UI Sans", Roboto, "Noto Sans", Arial, sans-serif;
+  --one-heading: var(--one-font);
+  --one-heading-weight: 500;
+  --one-radius: 14px;
+  --one-control-radius: 10px;
+  --one-page: #000000;
+  --one-panel: #171717;
+  --one-raised: #252525;
+  --one-soft: #202020;
+  --one-ink: #f3f3f3;
+  --one-muted: #a4a4a4;
+  --one-accent: #a294f9;
+  --one-on-accent: #171225;
+  --one-pink: #252525;
+  --one-lilac: #252525;
+  --one-blue: #252525;
+  --one-peach: #252525;
+  --one-mint: #252525;
+  --one-line: #333333;
+  --one-shadow: none;
+  --one-backdrop: #000000;
+  --one-danger: #ff919a;
+  --one-danger-bg: #331b20;
+  --one-success: #a2ccb2;
+  --one-selected: #414045;
+  --one-category-pink: #ce668c;
+  --one-category-blue: #79a6b7;
+  --one-category-lilac: #aca1cf;
+  --one-category-peach: #dcaa61;
+  --one-category-mint: #a2b09b;
+  background: var(--one-page) !important;
+  color-scheme: dark;
+}
+html[data-native-theme="samsungao3"] {
+  --one-page: #131313;
+  --one-panel: #1b1b1b;
+  --one-raised: #29272e;
+  --one-soft: #202024;
+  --one-ink: #dfdbec;
+  --one-muted: #b1abbc;
+  --one-accent: #f4bfd7;
+  --one-on-accent: #29202a;
+  --one-pink: #38252e;
+  --one-lilac: #302c45;
+  --one-blue: #23383e;
+  --one-peach: #3b3021;
+  --one-mint: #2c352b;
+  --one-line: #3b3742;
+  --one-backdrop: #131313;
+  --one-selected: #3b313d;
+  --one-success: #b7c8ae;
+}
+html[data-native-theme][data-native-theme-mode="light"] {
+  --one-page: #f3f3f3;
+  --one-panel: #ffffff;
+  --one-raised: #eaeaea;
+  --one-soft: #eeeeee;
+  --one-ink: #161616;
+  --one-muted: #636363;
+  --one-accent: #6552a9;
+  --one-on-accent: #ffffff;
+  --one-line: #dedede;
+  --one-backdrop: #f3f3f3;
+  --one-selected: #e2dff0;
+  --one-pink: #eeeeee;
+  --one-lilac: #eeeeee;
+  --one-blue: #eeeeee;
+  --one-peach: #eeeeee;
+  --one-mint: #eeeeee;
+  --one-danger: #a51f36;
+  --one-danger-bg: #f9e3e8;
+  --one-success: #38674a;
+  color-scheme: light;
+}
+html[data-native-theme="samsungao3"][data-native-theme-mode="light"] {
+  --one-page: #f6f3f6;
+  --one-backdrop: #f6f3f6;
+  --one-accent: #913d66;
+  --one-on-accent: #ffffff;
+  --one-pink: #f5dce7;
+  --one-lilac: #e8e2f2;
+  --one-blue: #daedf0;
+  --one-peach: #f4e6cf;
+  --one-mint: #e3eadf;
+  --one-selected: #efdae5;
+}
+html[data-native-theme] body {
+  background: var(--one-backdrop) !important;
+  color: var(--one-ink);
+  font-family: var(--one-font);
+}
+html[data-native-theme] .app-shell[data-native-theme] {
+  --ink: var(--one-ink) !important;
+  --ink-soft: var(--one-muted) !important;
+  --muted: var(--one-muted) !important;
+  --cream: var(--one-page) !important;
+  --cream-deep: var(--one-soft) !important;
+  --paper: var(--one-panel) !important;
+  --hero: var(--one-lilac) !important;
+  --leaf: var(--one-accent) !important;
+  --leaf-deep: var(--one-accent) !important;
+  --lime-wash: var(--one-soft) !important;
+  --lime-soft: var(--one-mint) !important;
+  --yellow: var(--one-peach) !important;
+  --yellow-soft: var(--one-peach) !important;
+  --orange: var(--one-accent) !important;
+  --orange-soft: var(--one-peach) !important;
+  --coral: var(--one-accent) !important;
+  --pink: var(--one-pink) !important;
+  --blue: var(--one-blue) !important;
+  --lilac: var(--one-lilac) !important;
+  --sage: var(--one-mint) !important;
+  --line: var(--one-line) !important;
+  --shadow: var(--one-shadow) !important;
+  --shadow-soft: var(--one-shadow) !important;
+  --app-backdrop: var(--one-backdrop) !important;
+  background: var(--one-backdrop) !important;
+  color: var(--one-ink) !important;
+  font-family: var(--one-font) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(h1,h2,h3,h4) {
+  font-family: var(--one-heading) !important;
+  color: var(--one-ink) !important;
+  font-weight: var(--one-heading-weight) !important;
+  letter-spacing: -.035em !important;
+  text-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary) {
+  font-family: var(--one-font) !important;
+  color: var(--one-ink);
+  accent-color: var(--one-accent);
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-native-theme] .app-shell[data-native-theme] :where(button:not([style])) {
+  background: var(--one-raised) !important;
+  border-color: var(--one-line) !important;
+  border-style: solid !important;
+  border-radius: var(--one-control-radius) !important;
+  box-shadow: none !important;
+  color: var(--one-ink) !important;
+  text-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *)) {
+  color: inherit !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :where(a) {
+  color: var(--one-accent) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]) {
+  background: var(--one-soft) !important;
+  background-image: none !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: 14px !important;
+  color: var(--one-ink) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea)::placeholder {
+  color: var(--one-muted) !important;
+  opacity: .8;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary,a,[role="button"]):focus-visible {
+  outline: 2px solid var(--one-accent) !important;
+  outline-offset: 3px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(button,[role="button"]):active:not(.movable-post-it) {
+  filter: brightness(.96);
+}
+html[data-native-theme] .app-shell[data-native-theme] button:disabled {
+  opacity: .42 !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.tiny-label,.date-label,.soft-copy,.card-tag,.screen-intro p,.section-heading p,.settings-footnote,.theme-credit,.sync-account,.reader-used-in,.note-used-in,.study-file-used-in,.study-library-stats,.ao3-card-meta,.ao3-eyebrow,.ao3-context,.ao3-subtitle,.ao3-status,.ao3-result-count) {
+  color: var(--one-muted) !important;
+  font-family: var(--one-font) !important;
+  text-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.paper-grain,.storybook-scene,.day-charm,.theme-scene-accent,.reminder-editor-sparkles,.event-editor-themed::before,.event-editor-themed::after) {
+  display: none !important;
+}
+/* Screen architecture and coherent line icon chrome. */
+html[data-native-theme] .app-shell[data-native-theme] .phone-canvas {
+  background: var(--one-page) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 36px;
+  box-shadow: var(--one-shadow) !important;
+  color: var(--one-ink) !important;
+  isolation: isolate;
+}
+html[data-native-theme] .app-shell[data-native-theme] .topbar {
+  background: var(--one-page) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  gap: 10px;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.brand-wrap,.calendar-button,.avatar-button,.post-it-create-button) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--one-ink) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .brand-mark {
+  background: var(--one-lilac) !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  color: var(--one-accent) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .wordmark {
+  font-family: var(--one-heading) !important;
+  color: var(--one-ink) !important;
+  letter-spacing: -.04em;
+}
+html[data-native-theme] .reference-icon { width: 23px; height: 23px; display: block; flex-shrink: 0; }
+html[data-native-theme] .app-shell[data-native-theme] .welcome-row {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 180px;
+  padding: 28px 24px !important;
+  border: 0 !important;
+  border-radius: var(--one-radius) !important;
+  background: var(--one-pink) !important;
+  box-shadow: var(--one-shadow) !important;
+  margin-bottom: 22px;
+}
+html[data-native-theme] .reference-welcome-scene {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  z-index: -1;
+  pointer-events: none;
+}
+html[data-native-theme] .welcome-row > div { position: relative; z-index: 1; max-width: 80%; }
+html[data-native-theme] .welcome-row .reference-welcome-scene { z-index: 0; }
+html[data-native-theme] .welcome-row h2 { font-size: clamp(23px,4.8vw,33px) !important; line-height: 1.2 !important; }
+html[data-native-theme] .welcome-row .date-label { font-size: 10px !important; letter-spacing: .1em; }
+html[data-native-theme] .welcome-row .soft-copy { font-size: 12px !important; max-width: 260px; margin-bottom: 0; }
+html[data-native-theme] .app-shell[data-native-theme] .week-strip {
+  display: grid;
+  grid-template-columns: repeat(7,minmax(0,1fr));
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  gap: 4px;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day {
+  border: 1px solid transparent !important;
+  border-radius: var(--one-control-radius) !important;
+  background: transparent !important;
+  color: var(--one-ink) !important;
+  box-shadow: none !important;
+  min-width: 0;
+  padding: 8px 0 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day :is(span,strong) { color: inherit !important; font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day:first-child,
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day:last-child { color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day.today:not(.active) { background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day.active { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .week-strip .day i { background: currentColor !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.section-heading,.inner-header,.screen-intro) { background: transparent !important; border-color: var(--one-line) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.section-heading,.inner-header) h3 { font-size: 20px !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.text-button,.inner-back,.sync-resend) { background: transparent !important; color: var(--one-accent) !important; border: 0 !important; box-shadow: none !important; }
+/* Every editor and overlay shares the active design, including lazy screens. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.modal-backdrop,.calendar-backdrop,.settings-backdrop,.event-detail-backdrop,.note-detail-backdrop,.agenda-overlay-backdrop,.ao3-modal-backdrop,.metrics-v2-backdrop,.health-routine-backdrop,.study-editor-backdrop,.library-reader-backdrop) {
+  background: color-mix(in srgb,var(--one-page) 55%,#14101e80) !important;
+  backdrop-filter: blur(5px);
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.class-editor-modal,.event-editor,.event-editor-card,.event-options-card,.settings-modal,.quick-capture-modal,.note-detail-card,.note-detail-editor,.post-it-editor-modal,.aerea-hub-modal,.category-editor-modal,.task-link-modal,.health-routine-note,.health-routine-editor,.timetable-card,.day-summary-card,.event-delete-dialog,.football-match-detail,.little-sheet-detail-card,.calendar-modal,.metrics-screen,.metrics-screen-v2,.study-editor-card,.ao3-modal,.library-reader-modal,.reminder-editor-preview) {
+  background: var(--one-panel) !important;
+  background-image: none !important;
+  color: var(--one-ink) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: var(--one-radius) !important;
+  box-shadow: var(--one-shadow) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.class-editor-modal,.event-editor,.settings-modal,.note-detail-card,.study-editor-card,.ao3-modal,.timetable-card,.category-editor-modal) :is(header,footer) {
+  background: transparent !important;
+  border-color: var(--one-line) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-title-input,.event-detail-title) { color: var(--one-ink) !important; font-family: var(--one-heading) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-detail-date-eyebrow,.event-detail-heading-copy,.event-detail-facts,.event-detail-section,.event-detail-note,.event-detail-time,.event-detail-reminder,.event-detail-primary-actions,.event-detail-files,.event-detail-todos,.event-template-history,.event-todo-item,.event-existing-attachments,.event-setting-heading,.health-completion-card,.day-summary-memo,.task-linked-items) {
+  background: var(--one-soft) !important;
+  border-color: var(--one-line) !important;
+  border-radius: 18px !important;
+  color: var(--one-ink) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-detail-back,.event-editor-back,.day-summary-close,.health-routine-close,.timetable-close-button) {
+  background: var(--one-soft) !important;
+  color: var(--one-ink) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: 50% !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.save-class,.event-save-button,.mobile-event-save,.post-it-save,.category-save,.timetable-save-class,.study-library-new,.study-library-import,.study-library-add-image,.study-library-organize,.ao3-modal-primary,.quick-capture-file,.record-button,.timetable-editor-footer button:last-child,.journal-actions button:last-child) {
+  background: var(--one-accent) !important;
+  color: var(--one-on-accent) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--one-control-radius) !important;
+  box-shadow: none !important;
+  font-weight: 550 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.delete-class,.delete-entry,.mobile-event-delete,.post-it-delete,.category-delete,.recording-delete,.delete-sketch,.empty-trash-button,.inbox-discard,.delete-reminder-button,.event-delete-confirm-actions button:last-child) {
+  background: var(--one-danger-bg) !important;
+  color: var(--one-danger) !important;
+  border: 1px solid color-mix(in srgb,var(--one-danger) 20%,transparent) !important;
+  border-radius: var(--one-control-radius) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-date-error,.category-editor-error,.record-error,.ao3-modal-error) { color: var(--one-danger) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-dot,.habit-dot,.mood-bubble,.day-counter-option,.check-circle,.health-routine-check,.health-completion-toggle) { border-color: var(--one-line) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-dot,.habit-dot,.check-circle,.health-routine-check).done,
+html[data-native-theme] .app-shell[data-native-theme] :is(.habit-dot,.check-circle,.health-completion-toggle)[aria-pressed="true"] { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
+/* Cards: context stays readable; no default green or paper tape survives. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.schedule-card,.reminder-card,.reminder-row,.habit-row,.entry-card,.class-item,.audio-item,.inbox-item,.trash-list article,.study-file-card,.study-note-card,.study-recording-card,.space-card,.mode-card,.profile-card,.sync-card,.timer-card,.record-card,.journal-compose,.journal-paper,.metrics-chart-card,.metrics-summary-card,.metrics-overview-card,.metrics-v2-progress-card,.metrics-v2-insight-card,.metrics-v2-mood-card,.metrics-v2-summary,.theme-option,.ao3-card,.ao3-part,.ao3-alternative-body,.ao3-alternative-item,.ao3-series-link,.aerea-hub-links button,.timetable-edit-row,.timetable-class-form,.health-routine-item) {
+  background: var(--one-panel) !important;
+  background-image: none !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: var(--one-radius) !important;
+  color: var(--one-ink) !important;
+  box-shadow: var(--one-shadow) !important;
+  transform: none;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.schedule-card,.reminder-row,.habit-row,.entry-card,.space-card,.inbox-item,.audio-item) { padding: 16px !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.schedule-copy,.reminder-copy,.class-item-copy,.audio-copy,.inbox-item-copy,.entry-card) :is(p,span,small,strong) { color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.time-block,.reminder-icon,.habit-icon,.audio-icon,.inbox-item-icon,.class-icon-edit,.entry-face,.event-detail-time-icon,.event-detail-reminder-icon) {
+  background: var(--one-lilac) !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  color: var(--one-ink) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .time-block { border-radius: 14px !important; min-width: 66px; }
+html[data-native-theme] .app-shell[data-native-theme] .time-block :is(strong,span) { color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.schedule-line,.day-summary-divider,.event-detail-divider,.completed-history-line) { background: var(--one-line) !important; border-color: var(--one-line) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.blue-card,.habit-blue,.space-blue) { background: var(--one-blue) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.lilac-card,.habit-lilac,.space-lilac) { background: var(--one-lilac) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.pink-card,.habit-pink) { background: var(--one-pink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.peach-card,.space-peach,.yellow-card) { background: var(--one-peach) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.sage-card,.habit-sage) { background: var(--one-mint) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.empty-schedule,.empty-class-card,.empty-feature-space,.empty-day,.empty-classes,.empty-completed,.empty-sketch-gallery,.study-library-empty,.ao3-empty,.calendar-search-empty) {
+  background: var(--one-soft) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: var(--one-radius) !important;
+  color: var(--one-muted) !important;
+  box-shadow: none !important;
+}
+/* All calendar presentations, lookup, date menus, agenda and recurrence menus. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-search-screen,.simplified-calendar-screen,.extended-calendar-view,.agenda-v2-modal,.calendar-date-menu,.simplified-month-picker,.calendar-search-field,.selected-day-panel,.calendar-sources,.calendar-search-result,.extended-calendar-picker,.calendar-date-menu-columns,.agenda-v2-board,.agenda-v2-week-content) {
+  background: var(--one-page) !important;
+  background-image: none !important;
+  color: var(--one-ink) !important;
+  border-color: var(--one-line) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-month-heading,.simplified-calendar-header,.extended-calendar-header,.agenda-v2-homebar,.agenda-v2-heading-trigger,.calendar-search-header,.calendar-search-footer,.calendar-search-summary,.simplified-calendar-filters,.extended-calendar-filters,.selected-day-heading,.agenda-v2-days,.agenda-v2-scroll,.agenda-v2-time-axis) { background: var(--one-page) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.simplified-calendar-cell,.extended-calendar-cell,.month-grid button,.agenda-v2-day,.agenda-v2-time-grid,.agenda-v2-timeline,.agenda-v2-day-periods,.calendar-day-number) {
+  background-color: transparent !important;
+  color: var(--one-ink) !important;
+  border-color: var(--one-line) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.simplified-calendar-date,.extended-calendar-date,.calendar-day-number) { font-family: var(--one-font) !important; color: inherit !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.month-grid button,.simplified-calendar-cell,.extended-calendar-cell).selected { background: var(--one-soft) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.month-grid button,.simplified-calendar-cell,.extended-calendar-cell).today:not(.selected) { background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-sources button,.simplified-calendar-filters button,.extended-filter-list button,.calendar-date-menu-list button,.calendar-today-shortcut,.agenda-v2-return-today,.calendar-search-trigger,.extended-back-button,.extended-compact-button,.calendar-more-events,.simplified-more-events) { color: var(--one-ink) !important; background: var(--one-soft) !important; border-color: var(--one-line) !important; border-radius: 999px !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-chip,.calendar-cell-event,.extended-event-pill,.simplified-event-strip,.agenda-v2-event,.day-summary-event,.timetable-event,.timetable-class-block,.timetable-linked-event-card,.agenda-v2-all-day-event) {
+  background: var(--one-lilac) !important;
+  color: var(--one-ink) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.agenda-v2-event,.event-chip,.day-summary-event).pink { background: var(--one-pink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.agenda-v2-event,.event-chip,.day-summary-event).blue { background: var(--one-blue) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-chip-main,.event-chip-delete,.agenda-v2-event-copy,.agenda-v2-event-category,.agenda-v2-time-label,.agenda-v2-event-shortline,.day-summary-event-time,.day-summary-event-heart) { color: var(--one-ink) !important; background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-mood-picker,.calendar-sticker-picker,.day-marker-picker) { background: var(--one-raised) !important; border-color: var(--one-line) !important; box-shadow: none !important; border-radius: 20px !important; }
+/* Post-it coordinates, angle, size, selection and drag logic are deliberately kept. */
+html[data-native-theme] .app-shell[data-native-theme] .movable-post-it {
+  border: 1px solid var(--one-line) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--one-shadow) !important;
+  color: var(--one-ink) !important;
+  background-image: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .post-it-tape { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).pink { background: var(--one-pink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).lilac { background: var(--one-lilac) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).blue { background: var(--one-blue) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .movable-post-it.multi-selected { outline: 2px solid var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .post-it-resize-handle { background: var(--one-accent) !important; border-radius: 50% !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.postit-multi-toolbar,.post-it-palette-nav,.post-it-group-action,.sketch-tools,.sketch-primary-tools,.sketch-smart-tools,.sketch-shape-tools,.sketch-zoom-controls,.sketch-history-controls,.sketch-selection-actions,.sketch-fullscreen-topbar,.sketch-fullscreen-bottombar,.sketch-export-card,.sketch-gallery article) {
+  background: var(--one-panel) !important;
+  color: var(--one-ink) !important;
+  border-color: var(--one-line) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--one-shadow) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] .sketch-viewport { background: var(--one-soft) !important; }
+/* Reading pages/canvas/ink are content; re-skin the complete surrounding toolbar. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.study-library-screen,.study-library-hero,.study-library-section,.ao3-library-layer,.ao3-shell,.ao3-screen-header,.study-reader,.study-reader-titlebar,.study-reader-footer,.library-reader-header,.library-reader-panel,.pdf-tool-ribbon,.epub-tool-ribbon,.pdf-navigation-panel,.epub-panel-row,.epub-panel-tabs,.pdf-search-control,.pdf-zoom-controls,.selection-highlight-menu,.ao3-toolbar,.ao3-tabs,.ao3-toolbar-row,.ao3-modal,.ao3-alternative-body,.ao3-more-tags-list) {
+  background: var(--one-page) !important;
+  background-image: none !important;
+  color: var(--one-ink) !important;
+  border-color: var(--one-line) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.study-file-open,.study-note-title,.ao3-copy-title,.ao3-card-header,.ao3-card-body,.ao3-synopsis,.ao3-work-details,.ao3-work-title,.ao3-secondary-series) { color: var(--one-ink) !important; background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.ao3-tag,.ao3-filter-chip,.ao3-status,.study-pin-toggle,.study-note-collections button,.study-card-actions button,.ao3-actions button,.ao3-actions a,.ao3-back,.ao3-toolbar button,.study-library-actions button,.pdf-tool-ribbon button,.epub-tool-ribbon button,.study-reader-titlebar button,.study-reader-footer button,.library-reader-header button) {
+  background: var(--one-soft) !important;
+  color: var(--one-ink) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: var(--one-control-radius) !important;
+  box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.ao3-toast,.study-library-toast,.study-reader-message,.sketch-message,.recording-edit-actions) { background: var(--one-accent) !important; color: var(--one-on-accent) !important; border-radius: 18px !important; box-shadow: var(--one-shadow) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.ao3-highlight,.epub-search-match,.pdf-search-match) { background: var(--one-peach) !important; color: var(--one-ink) !important; }
+/* Focus and statistics keep actual values and animations, with new framing. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.timer-main,.timer-bloom,.timer-bloom-face,.timer-keepsake,.focus-sticker,.metrics-v2-keepsake) { background: var(--one-lilac) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.timer-modes,.timer-actions,.metrics-period-tabs,.metrics-v2-controls,.metrics-date-nav,.mode-switch) { background: var(--one-soft) !important; border: 0 !important; border-radius: 999px !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.timer-modes,.metrics-period-tabs,.mode-switch) button.active { background: var(--one-accent) !important; color: var(--one-on-accent) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.metrics-donut,.metrics-v2-progress) { border-color: var(--one-lilac) !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.metrics-mood-chart,.metrics-v2-mood-card) svg { color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.theme-option,.profile-card,.sync-card,.mode-card) { border-radius: 24px !important; }
+html[data-native-theme] .app-shell[data-native-theme] .theme-option.active { border: 2px solid var(--one-accent) !important; background: var(--one-soft) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .theme-option-art { border-radius: 20px !important; background: var(--one-soft) !important; }
+html[data-native-theme] .theme-option[data-theme-option="astralnight"] .theme-option-main-art,
+html[data-native-theme] .theme-option[data-theme-option="blushcards"] .theme-option-main-art,
+html[data-native-theme] .theme-option[data-theme-option="pastellayers"] .theme-option-main-art,
+html[data-native-theme] .theme-option[data-theme-option="pasteljourney"] .theme-option-main-art { width: 100%; height: 100%; inset: 0; object-fit: cover; transform: none !important; }
+html[data-native-theme] .theme-option[data-theme-option="astralnight"] :is(.theme-option-accent-art,.theme-mini-ground),
+html[data-native-theme] .theme-option[data-theme-option="blushcards"] :is(.theme-option-accent-art,.theme-mini-ground),
+html[data-native-theme] .theme-option[data-theme-option="pastellayers"] :is(.theme-option-accent-art,.theme-mini-ground),
+html[data-native-theme] .theme-option[data-theme-option="pasteljourney"] :is(.theme-option-accent-art,.theme-mini-ground) { display: none; }
+html[data-native-theme] .app-shell[data-native-theme] .bottom-nav {
+  background: var(--one-panel) !important;
+  border: 1px solid var(--one-line) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--one-shadow) !important;
+  gap: 2px;
+}
+html[data-native-theme] .app-shell[data-native-theme] .nav-item {
+  background: transparent !important;
+  color: var(--one-muted) !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  min-width: 0;
+}
+html[data-native-theme] .app-shell[data-native-theme] .nav-item :is(span,small) { color: inherit !important; }
+html[data-native-theme] .app-shell[data-native-theme] .nav-item.active { background: var(--one-soft) !important; color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .quick-capture-nav { background: var(--one-accent) !important; color: var(--one-on-accent) !important; border-radius: 50% !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] .nav-item > span::before,
+html[data-native-theme] .app-shell[data-native-theme] .nav-item > span::after { content: none !important; }
+/* CSS-module portal: degree, prerequisites, course state, professor sheets. */
+html[data-native-theme] [data-native-surface="career"] {
+  background: var(--one-backdrop) !important;
+  color: var(--one-ink) !important;
+  font-family: var(--one-font) !important;
+}
+html[data-native-theme] [data-native-surface="career"] :is(h1,h2,h3,h4) { font-family: var(--one-heading) !important; color: var(--one-ink) !important; }
+html[data-native-theme] [data-native-surface="career"] :is(button,input,select,textarea) { font-family: var(--one-font) !important; border-color: var(--one-line) !important; border-radius: var(--one-control-radius) !important; color: var(--one-ink) !important; background: var(--one-soft) !important; }
+html[data-native-theme] [data-native-surface="career"] :is(button,input):focus-visible { outline: 2px solid var(--one-accent); outline-offset: 3px; }
+html[data-native-theme] [data-native-surface="career"] :is(small,p,dt,dd) { color: var(--one-muted) !important; }
+html[data-native-theme] [data-native-surface="career"] [class*="screen"],
+html[data-native-theme] [data-native-surface="career"] [class*="professorsPanel"],
+html[data-native-theme] [data-native-surface="career"] [class*="topbar"] { background: var(--one-page) !important; color: var(--one-ink) !important; }
+html[data-native-theme] [data-native-surface="career"] :is([class*="hero"],[class*="card"],[class*="Card"],[class*="sheet_"],[class*="professorForm"],[class*="courseRow"],[class*="courseButton"],[class*="stats"],[class*="detailGrid"],[class*="professorIntro"]) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: var(--one-radius) !important; box-shadow: var(--one-shadow) !important; color: var(--one-ink) !important; }
+html[data-native-theme] [data-native-surface="career"] [class*="hero"] { background: var(--one-lilac) !important; }
+html[data-native-theme] [data-native-surface="career"] [class*="progressTrack"] { background: var(--one-soft) !important; }
+html[data-native-theme] [data-native-surface="career"] [class*="progressTrack"] span { background: var(--one-accent) !important; }
+html[data-native-theme] [data-native-surface="career"] :is([class*="sheetBackdrop"],[class*="formBackdrop"]) { background: color-mix(in srgb,var(--one-page) 65%,#14101e80) !important; }
+html[data-native-theme] [data-native-surface="career"] :is([class*="Active"],[class*="active"],[class*="saveProfessorButton"]) { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
+/* Secondary chrome found in the full control inventory. */
+html[data-native-theme] .app-shell[data-native-theme] :is(.completed-item,.session-count,.day-summary-empty,.football-match-scoreboard,.metrics-insights-card,.mood-chart-card,.auth-callback-modal,.study-reader-loading,.epub-margin-note,.calendar-mood-note,.timetable-week-map-empty,.timetable-board,.timetable-week-map-class,.timetable-week-map-list,.timetable-term-meta,.profile-preview,.day-completion-control,.calendar-day-status) {
+  background: var(--one-soft) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; border-radius: 18px !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.timetable-backdrop,.day-summary-backdrop,.metrics-backdrop,.event-delete-backdrop,.agenda-v2-focus-backdrop,.aerea-hub-backdrop) { background: color-mix(in srgb,var(--one-page) 55%,#14101e80) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-detail-category,.day-summary-category,.event-detail-category-row > span,.agenda-v2-event-icon,.agenda-v2-event-extras > span,.day-summary-health-icon,.space-icon,.screen-sticker,.theme-interface-chip,.calendar-mood-note > span:first-child) { background: var(--one-lilac) !important; color: var(--one-ink) !important; border-radius: 16px !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.health-routine-delete,.event-delete-series-actions button:last-child,.danger,.clear-page) { background: var(--one-danger-bg) !important; color: var(--one-danger) !important; border-color: var(--one-danger) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.health-routine-add,.timetable-empty-action,.timetable-first-class,.day-summary-add,.event-detail-add,.download-page,.simplified-calendar-add) { background: var(--one-accent) !important; color: var(--one-on-accent) !important; border-radius: var(--one-control-radius) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] .simplified-calendar-add > span,
+html[data-native-theme] .app-shell[data-native-theme] .simplified-calendar-add > span::after { background: var(--one-on-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.boca-pocket-heart,.boca-pocket-score,.boca-pocket-match-label,.boca-reference-emblem) { background: var(--one-lilac) !important; color: var(--one-ink) !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] .match-day-schedule-card::after { content: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.tape,.theme-scene-frame,.theme-scene-ribbon,.theme-scene-dots) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-mood-sticker,.selected-mood-sticker,.mood-bubble,.sticker-bubble) { border: 1px solid var(--one-line) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.mood-pink,.sticker-pink) { background: var(--one-pink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.mood-lilac,.sticker-lilac) { background: var(--one-lilac) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.mood-blue,.mood-sky,.sticker-blue,.sticker-sky) { background: var(--one-blue) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.mood-mint,.sticker-mint) { background: var(--one-mint) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.mood-peach,.mood-yellow,.mood-coral,.sticker-peach,.sticker-yellow,.sticker-coral) { background: var(--one-peach) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview) {
+  --post-it-paper: var(--one-lilac) !important; background-color: var(--post-it-paper) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).lavender { --post-it-paper: var(--one-lilac) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).rose { --post-it-paper: var(--one-pink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).sky { --post-it-paper: var(--one-blue) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).mint { --post-it-paper: var(--one-mint) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).peach,
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).coral,
+html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).cream { --post-it-paper: var(--one-peach) !important; }
+html[data-native-theme] .app-shell[data-native-theme] .post-it-editor-preview textarea { background: transparent !important; border: 0 !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.metrics-insights-card > div,.metrics-summary-grid > div,.timetable-term-meta i) { background: var(--one-raised) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; }
+html[data-native-theme] [data-native-surface="career"] :is([class*="legend"],[class*="badge"],[class*="Badge"],[class*="details"],[class*="routeBox"],[class*="courseStatusEditor"]) { background: var(--one-soft) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; border-radius: 16px !important; }
+/* Native composition: flat page, short headers, grouped rows, no paper scenes. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] {
+  padding: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.phone-canvas,.ao3-shell) {
+  border-radius: 0 !important;
+  max-width: 1100px;
+  margin-inline: auto;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.phone-canvas::before,.phone-canvas::after,.welcome-row::before,.welcome-row::after,.screen-intro::before,.screen-intro::after,.schedule-card::before,.schedule-card::after,.reminder-card::before,.reminder-card::after) { content: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.paper-grain,.storybook-scene,.day-charm,.theme-scene-accent,.tape,.post-it-tape,.mini-people,.focus-sticker,.timer-keepsake,.timer-bloom-decoration,.metrics-v2-keepsake,.boca-pocket-doodles,.boca-pocket-ribbon,.boca-pocket-stadium-wrap,.reminder-editor-sparkles,.reference-welcome-scene) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(h1,h2,h3,h4) {
+  letter-spacing: 0 !important;
+  font-weight: 500 !important;
+  font-style: normal !important;
+  line-height: 1.25 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .topbar {
+  min-height: 56px !important;
+  padding: 8px 16px !important;
+  align-items: center;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .brand-wrap { gap: 0; padding: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.brand-mark,.brand-wrap .eyebrow) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .wordmark { font: 500 21px/1.3 var(--one-font) !important; letter-spacing: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .header-actions { gap: 4px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-button,.avatar-button,.post-it-create-button) {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px;
+  padding: 10px !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50% !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-button { font-size: 0 !important; gap: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.avatar-button,.post-it-create-button)::before,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.avatar-button,.post-it-create-button)::after { content: none !important; }
+html[data-native-theme] .native-icon { width: 23px; height: 23px; display: block; flex-shrink: 0; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .main-content { padding: 0 16px 100px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .welcome-row {
+  min-height: 132px !important;
+  padding: 22px 8px 20px !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  overflow: visible;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .welcome-row > div { display: flex; flex-direction: column; max-width: 100%; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .welcome-row h2 { order: 0; font-size: clamp(25px,6vw,32px) !important; margin-bottom: 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .date-label { order: 1; font-size: 13px !important; letter-spacing: 0 !important; text-transform: none !important; margin-bottom: 0; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .welcome-row .soft-copy { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip { gap: 0 !important; margin: 0 0 20px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip .day { padding: 7px 0 !important; min-height: 58px; border-radius: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip .day span { font-size: 10px !important; font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip .day strong { font-size: 17px !important; font-weight: 500 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip .day.active { background: var(--one-selected) !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .week-strip .day i { width: 3px; height: 3px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .day-grid { gap: 24px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .section-heading { padding: 0 8px 10px !important; margin: 0 !important; align-items: center; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.section-heading,.inner-header) h3 { font-size: 17px !important; margin: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .section-heading .tiny-label { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.tiny-label,.coming-up-label,.completed-title) { font-size: 11px !important; font-weight: 400 !important; letter-spacing: .025em !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.text-button,.inner-back) { font-size: 12px !important; min-height: 44px; padding: 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.schedule-card,.canonical-boca-match,.boca-reference-card,.boca-pocket-ticket) { background: var(--one-panel) !important; border: 0 !important; border-radius: 14px !important; padding: 14px !important; box-shadow: none !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .schedule-card { min-height: 86px !important; margin-bottom: 8px !important; gap: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.time-block,.boca-reference-emblem) { background: transparent !important; padding: 0 !important; border-radius: 0 !important; width: 68px !important; min-width: 68px; color: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .schedule-copy h4 { font-size: 15px !important; margin: 2px 0 4px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .schedule-copy > span { font-size: 12px !important; color: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .card-tag { margin-bottom: 4px !important; font-size: 10px !important; letter-spacing: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .add-event-button { background: var(--one-raised) !important; border: 1px solid var(--one-line) !important; border-radius: 999px !important; color: var(--one-muted) !important; min-height: 44px; margin-top: 8px; font-size: 13px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-card { padding: 0 14px !important; overflow: hidden; border: 0 !important; background: var(--one-panel) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-row { display: flex; min-height: 60px; gap: 9px !important; padding: 8px 0 !important; margin: 0 !important; background: transparent !important; border: 0 !important; border-bottom: 1px solid var(--one-line) !important; border-radius: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-row:last-child { border-bottom: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-row .check-circle { order: -2; width: 20px !important; height: 20px !important; min-width: 20px !important; border: 1.5px solid var(--one-accent) !important; background: transparent !important; color: transparent !important; font-size: 0 !important; border-radius: 50% !important; position: relative; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-row .check-circle::before { content: ""; position: absolute; inset: -12px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-row .reminder-icon { order: -1; width: 30px !important; height: 44px !important; min-width: 30px; background: transparent !important; font-size: 19px !important; padding: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-copy strong { font-size: 14px !important; font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-copy small { font-size: 11px !important; color: var(--one-muted) !important; margin-top: 3px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-add-button,.progress-pill) { border: 0 !important; background: transparent !important; border-radius: 50% !important; color: var(--one-muted) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-add-button { min-width: 44px; min-height: 44px; color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .completed-history-line { background: transparent !important; padding: 12px 8px 0; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .completed-item { min-height: 44px; border: 0 !important; padding: 8px 14px !important; font-size: 13px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .empty-completed { background: transparent !important; border: 0 !important; padding: 0 8px !important; font-size: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .empty-schedule { min-height: 84px; padding: 20px !important; background: var(--one-panel) !important; border: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .empty-schedule > span { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .empty-schedule p { margin: 0 !important; font-size: 13px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-intro { padding: 26px 8px !important; min-height: 132px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-intro h2 { font-size: 28px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-intro .screen-sticker { background: transparent !important; border: 0 !important; box-shadow: none !important; font-size: 22px !important; width: 44px; height: 44px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.screen-intro p,.screen-intro .tiny-label) { color: var(--one-muted) !important; font-size: 12px !important; letter-spacing: 0 !important; }
+/* Native bottom actions live on the page, without a floating decorative dock. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .bottom-nav {
+  background: var(--one-page) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  min-height: 72px;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) !important;
+  gap: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-width: 1100px;
+  margin-inline: auto;
+  transform: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .nav-item { min-height: 52px; padding: 5px 2px !important; border-radius: 0 !important; background: transparent !important; color: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .nav-item.active { background: transparent !important; color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .nav-item > span { background: transparent !important; border: 0 !important; width: 24px !important; height: 24px !important; padding: 0 !important; border-radius: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .nav-item small { font-size: 10px !important; font-weight: 400 !important; letter-spacing: 0 !important; margin-top: 5px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .quick-capture-nav { margin: 0 !important; min-height: 52px; height: auto !important; width: auto !important; background: transparent !important; color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .quick-capture-nav > span { width: 42px !important; height: 42px !important; background: var(--one-accent) !important; color: var(--one-on-accent) !important; border-radius: 50% !important; display: grid; place-items: center; }
+/* Editors use grouped fields, plain action text and short, anchored transitions. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-editor-note,.auth-callback-modal,.event-detail-card,.habit-editor,.post-it-editor-modal,.calendar-mood-note) { background: var(--one-panel) !important; background-image: none !important; border: 0 !important; border-radius: 16px !important; color: var(--one-ink) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.modal-backdrop,.settings-backdrop,.event-detail-backdrop,.note-detail-backdrop,.reminder-editor-backdrop,.calendar-backdrop,.health-routine-backdrop,.timetable-backdrop,.day-summary-backdrop,.agenda-overlay-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.event-delete-backdrop) { background: #00000099 !important; backdrop-filter: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-save-button,.mobile-event-save,.save-class,.post-it-save,.save-reminder-button,.reminder-editor-actions button:last-child,.habit-editor-actions button:last-child,.timetable-save-class,.category-save) { background: transparent !important; color: var(--one-accent) !important; border: 0 !important; min-height: 44px; font-size: 15px !important; font-weight: 500 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-editor-actions,.reminder-editor-actions,.post-it-editor-actions,.habit-editor-actions,.category-editor-actions) { background: transparent !important; border-top: 1px solid var(--one-line) !important; gap: 12px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-editor-actions,.reminder-editor-actions,.post-it-editor-actions,.habit-editor-actions,.category-editor-actions) button { flex: 1; min-height: 48px; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-date-fields,.event-time-fields,.event-setting-row,.event-detail-facts > div,.event-detail-section,.event-todo-item,.class-editor-row,.reminder-editor-note label,.habit-editor label) { background: var(--one-soft) !important; border-color: var(--one-line) !important; border-radius: 12px !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]) { min-height: 44px; font-size: 14px !important; border: 0 !important; border-radius: 10px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] textarea { line-height: 1.5 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] input[type="range"] { accent-color: var(--one-accent); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] input[type="checkbox"] { accent-color: var(--one-accent); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-options-card,.calendar-date-menu,.simplified-month-picker,.ao3-more-tags-list,.post-it-palette-picker) { background: var(--one-raised) !important; border: 0 !important; border-radius: 18px !important; box-shadow: 0 6px 24px #00000030 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.theme-option,.mode-card,.profile-card,.sync-card) { border: 0 !important; padding: 16px !important; border-radius: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-option.active { outline: 2px solid var(--one-accent); outline-offset: -2px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.theme-option-art,.settings-footnote > img) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-option-copy { width: 100%; padding: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-option { grid-template-columns: minmax(0,1fr) 26px !important; min-height: 96px !important; gap: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-selected { grid-column: 2; background: var(--one-soft) !important; color: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-option.active .theme-selected { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.profile-actions label,.theme-wardrobe-heading > span) { background: var(--one-raised) !important; color: var(--one-ink) !important; border: 0 !important; box-shadow: none !important; border-radius: 10px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .profile-actions label { display: flex; align-items: center; min-height: 44px; padding: 10px 14px !important; cursor: pointer; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.mode-switch,.brightness-switch,.theme-grid) button[aria-pressed="true"] { background: var(--one-selected) !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .habit-row { padding: 14px !important; border: 0 !important; background: var(--one-panel) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.habit-icon,.entry-face,.space-icon,.audio-icon,.inbox-item-icon,.class-icon-edit) { background: transparent !important; box-shadow: none !important; border-radius: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.habit-row h3,.space-card h3,.entry-card h3) { font-size: 16px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timer-main { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timer-main strong { font: 300 clamp(48px,15vw,80px)/1.2 var(--one-font) !important; font-variant-numeric: tabular-nums; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timer-card { background: transparent !important; border: 0 !important; }
+/* Calendar geometry stays seven columns; fine rules replace paper decorations. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-cell-event,.simplified-event-strip,.extended-event-pill,.agenda-v2-event,.day-summary-event,.timetable-class-block) { border: 0 !important; border-radius: 5px !important; font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.month-grid button,.calendar-day-number) { border-radius: 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.simplified-calendar-nav,.calendar-navigation,.calendar-footer) { background: var(--one-page) !important; border-color: var(--one-line) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-today-shortcut,.agenda-v2-return-today,.calendar-search-trigger) { background: transparent !important; color: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.mood-bubble,.sticker-bubble,.calendar-mood-picker,.calendar-sticker-picker) { border-radius: 12px !important; }
+/* AO3 colors are semantic, sampled from the attached skin; neutral Samsung keeps rows quiet. */
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-work-title,.ao3-copy-title,.ao3-series-title,.ao3-secondary-series a) { color: #9acbd1 !important; }
+html[data-native-theme="samsungao3"][data-native-theme-mode="light"] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-work-title,.ao3-copy-title,.ao3-series-title,.ao3-secondary-series a) { color: #366771 !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag { background: var(--one-lilac) !important; border: 0 !important; border-radius: 999px !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag-fandom { background: var(--one-mint) !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag-relationship { background: var(--one-pink) !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag-character { background: var(--one-blue) !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-tag-warning,.ao3-tag-rating) { background: var(--one-peach) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-card,.study-file-card,.study-note-card,.study-recording-card,.space-card,.inbox-item,.class-item,.entry-card) { border: 0 !important; border-radius: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-back,.study-library-back,.study-reader-titlebar button,.library-reader-header button) { min-height: 44px; background: transparent !important; border: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.pdf-tool-ribbon,.epub-tool-ribbon,.sketch-tools) { border-radius: 0 !important; }
+/* User colors, paper, pen strokes, image content and post-it drag transforms retain meaning. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it,.post-it-editor-preview) { border-radius: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview textarea { font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.health-routine-item,.timetable-edit-row,.timetable-class-form) { border: 0 !important; background: var(--one-panel) !important; border-radius: 12px !important; }
+html[data-native-theme] [data-native-surface="career"] :is([class*="hero"],[class*="card"],[class*="Card"],[class*="sheet_"],[class*="courseRow"],[class*="courseButton"]) { border: 0 !important; border-radius: 14px !important; }
+html[data-native-theme] [data-native-surface="career"] :is(h1,h2,h3,h4) { font-weight: 500 !important; letter-spacing: 0 !important; }
+/* Motion from the recording: quick surface entrance, subdued press; never animate layout. */
+@keyframes one-surface-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes one-page-in { from { opacity: .4; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(button,a,input,select,textarea) { transition: background-color 120ms ease-out, color 120ms ease-out, opacity 120ms ease-out !important; text-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(button,[role="button"]):active:not(.movable-post-it) { filter: none !important; opacity: .65; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.settings-modal,.event-editor,.event-detail-card,.reminder-editor-note,.note-detail-card,.post-it-editor-modal,.class-editor-modal,.quick-capture-modal,.timetable-card,.category-editor-modal,.study-editor-card) { animation: one-surface-in 220ms cubic-bezier(.2,.8,.2,1) both !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.screen-section,.study-library-screen,.ao3-shell) { animation: one-page-in 180ms cubic-bezier(.2,.8,.2,1) both !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .movable-post-it { transition: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] button:disabled { opacity: .38 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(button,input,textarea,select,a,[role="button"]):focus-visible { outline: 2px solid var(--one-accent) !important; outline-offset: 3px !important; }
+@media (max-width: 600px) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .day-grid { grid-template-columns: minmax(0,1fr) !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.settings-modal,.event-editor,.note-detail-card,.class-editor-modal,.timetable-card) { width: 100% !important; max-width: 100% !important; border-radius: 18px 18px 0 0 !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-grid { grid-template-columns: minmax(0,1fr) !important; }
+}
+@media (min-width: 768px) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .main-content { padding-inline: 32px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .topbar { padding-inline: 32px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .welcome-row { min-height: 164px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .day-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] *,
+  html[data-native-theme] [data-native-surface="career"] * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+/* Remaining detail/editor surfaces use their actual component class names. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal,.journal-note-editor,.recording-editor-modal,.task-editor-modal,.sketch-export-card) { background: var(--one-panel) !important; color: var(--one-ink) !important; border: 0 !important; border-radius: 16px !important; box-shadow: none !important; background-image: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal,.recording-editor-modal,.task-editor-modal) { animation: one-surface-in 220ms cubic-bezier(.2,.8,.2,1) both !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.habit-editor-backdrop,.recording-editor-backdrop) { background: #00000099 !important; backdrop-filter: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal,.reminder-editor-note)::before,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal,.reminder-editor-note)::after { content: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer button { min-height: 44px; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer button:last-child { color: var(--one-accent) !important; }
+@media (max-width: 600px) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal) { width: 100% !important; max-width: 100% !important; border-radius: 18px 18px 0 0 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.habit-editor-modal,.recording-editor-modal,.task-editor-modal) { animation: none !important; }
+}
+/* Lazy AO3 supplies its own tokens and styles: override those tokens explicitly. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-library {
+  --ao3-ink: var(--one-ink) !important;
+  --ao3-plum: var(--one-accent) !important;
+  --ao3-plum-dark: var(--one-ink) !important;
+  --ao3-rose: var(--one-pink) !important;
+  --ao3-lav: var(--one-lilac) !important;
+  --ao3-cream: var(--one-panel) !important;
+  --ao3-sage: var(--one-mint) !important;
+  --ao3-peach: var(--one-peach) !important;
+  --ao3-muted: var(--one-muted) !important;
+  --ao3-border: var(--one-line) !important;
+  --ao3-surface: var(--one-page) !important;
+  color: var(--one-ink) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-library-tools,.ao3-card-meta,.ao3-series-parts,.ao3-part > summary,.ao3-alternatives,.ao3-synopsis,.ao3-more-tags > summary,.ao3-filter-row,.ao3-part-body,.ao3-actions) { background: var(--one-panel) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; backdrop-filter: none !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-card-header,.ao3-part > summary,.ao3-series-parts > summary) { font-weight: 500 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-tag-section > b,.ao3-card-header h3) { letter-spacing: 0 !important; text-transform: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-library-layer { animation: one-page-in 180ms cubic-bezier(.2,.8,.2,1) both !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag:nth-of-type(4n+2) { background: var(--one-pink) !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag:nth-of-type(4n+3) { background: var(--one-blue) !important; }
+html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag:nth-of-type(4n+4) { background: var(--one-mint) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-tag[aria-pressed="true"] { outline: 2px solid var(--one-accent) !important; outline-offset: 1px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-screen-header,.ao3-library-intro) h2 { font-size: 26px !important; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-library-layer { animation: none !important; }
+}
+/* Overlay scrims, menus and forms enumerated by the component inventory. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.auth-callback-backdrop,.category-editor-backdrop,.class-editor-backdrop,.extended-month-backdrop,.football-match-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop) { background: #00000099 !important; backdrop-filter: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.extended-filter-menu,.simplified-filter-menu,.category-editor-form,.category-editor-list,.post-it-editor-options,.study-note-editor,.task-editor-basics,.task-editor-notes,.aerea-generic-library-card,.simplified-mode-card) { background: var(--one-panel) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; border-radius: 12px !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.category-editor-form-heading,.event-editor-top,.entry-card-top,.modal-top,.task-editor-footer,.ao3-modal-actions) { background: transparent !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-date-menu-done,.calendar-date-menu-trigger,.health-routine-editor-actions button,.task-editor-footer button) { min-height: 44px; background: transparent !important; color: var(--one-accent) !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .ao3-modal-kicker { color: var(--one-muted) !important; }
+/* Existing book pages choose their own reading mode; surrounding UI is native. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.pdf-tool-ribbon,.epub-tool-ribbon,.library-reader-panel,.study-reader-footer) :is(button,select) { font-size: 12px !important; font-weight: 400 !important; min-height: 36px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.study-library-actions,.study-card-actions,.ao3-actions) button { font-weight: 500 !important; font-size: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.phone-canvas,.welcome-row,.screen-intro,.schedule-card,.reminder-card,.avatar-button,.post-it-create-button,.event-detail-note,.habit-editor-modal,.reminder-editor-note)::before,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.phone-canvas,.welcome-row,.screen-intro,.schedule-card,.reminder-card,.avatar-button,.post-it-create-button,.event-detail-note,.habit-editor-modal,.reminder-editor-note)::after { content: none !important; display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .main-content { background: var(--one-page) !important; background-image: none !important; border-radius: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-mood-note { background: var(--one-panel) !important; padding: 14px !important; font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-mood-note > span:first-child { font-size: 20px !important; background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .add-event-button { font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .date-label { font-weight: 400 !important; }
+/* The recording's left drawer, using existing navigation and Back state. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .native-menu-button { background: transparent !important; width: 44px; height: 44px; padding: 10px !important; border: 0 !important; box-shadow: none !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .topbar { gap: 4px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .brand-wrap { margin-right: auto !important; }
+@keyframes one-drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-backdrop { justify-content: flex-start !important; align-items: stretch !important; padding: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal { width: min(85vw,340px) !important; max-width: 340px !important; height: 100dvh; max-height: 100dvh !important; margin: 0 !important; padding: calc(20px + env(safe-area-inset-top)) 16px 24px !important; background: var(--one-panel) !important; border: 0 !important; border-radius: 0 18px 18px 0 !important; overflow-y: auto; animation: one-drawer-in 240ms cubic-bezier(.2,.8,.2,1) both !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal header { margin-bottom: 24px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal header .tiny-label { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal h2 { font-size: 24px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .native-menu-primary { display: grid; gap: 2px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--one-line); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .native-menu-primary button { display: flex; align-items: center; gap: 14px; min-height: 48px; width: 100%; padding: 10px 14px !important; background: transparent !important; border: 0 !important; border-radius: 8px !important; text-align: left; font-weight: 400 !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .native-menu-primary button[aria-current="page"] { background: var(--one-selected) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .native-menu-primary .native-icon { width: 20px; height: 20px; color: var(--one-muted); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-links { gap: 2px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-links button { min-height: 48px; background: transparent !important; border: 0 !important; border-radius: 8px !important; padding: 10px 14px !important; font-weight: 400 !important; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal { animation: none !important; }
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it p,.post-it-editor-preview textarea,.postit-archive-card p) { font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal header button { width: 44px; height: 44px; background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 50% !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-links strong { font-weight: 400 !important; font-size: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.journal-actions,.health-routine-header,.study-library-hero,.inner-header) { background: transparent !important; border-color: var(--one-line) !important; color: var(--one-ink) !important; }
+/* Structural details from the visual pass: remove remaining bubbles and paper type. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-intro { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; min-height: 112px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-card { min-height: 88px !important; padding: 14px !important; grid-template-columns: 36px minmax(0,1fr) auto; gap: 12px !important; align-items: center; background: var(--one-panel) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-card::after { content: none !important; display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-icon { width: 36px; height: 44px; background: transparent !important; border-radius: 0 !important; font-size: 23px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-copy strong { font: 400 16px/1.3 var(--one-font) !important; letter-spacing: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-copy small { font-size: 11px !important; margin-bottom: 4px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .space-copy p { margin-top: 5px; font-size: 11px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .spaces-grid { gap: 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .habit-summary { background: var(--one-panel) !important; border: 0 !important; border-radius: 14px !important; padding: 16px !important; gap: 16px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .habit-ring { width: 58px !important; height: 58px !important; background: transparent !important; border: 2px solid var(--one-accent) !important; color: var(--one-ink) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .habit-summary h3 { font-size: 16px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .habit-row strong { font-weight: 400 !important; font-size: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-paper { border: 0 !important; background: var(--one-soft) !important; padding: 16px !important; min-height: 240px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-paper > span { font: 400 14px/1.4 var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-paper textarea { font-family: var(--one-font) !important; background: transparent !important; min-height: 190px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-compose { border: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-actions button { background: transparent !important; border: 0 !important; color: var(--one-accent) !important; font-size: 14px !important; font-weight: 500 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .add-event-button > span { background: transparent !important; font-family: var(--one-font) !important; }
+/* The Library and calendar have independent framing in the original app. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *)) { font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.study-library-hero,.study-library-actions,.study-library-organize,.study-library-shelves) { background: var(--one-panel) !important; background-image: none !important; border: 0 !important; box-shadow: none !important; border-radius: 14px !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-hero { background: transparent !important; padding: 20px 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-hero::after { content: none !important; display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-hero h1 { font: 500 28px/1.25 var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.study-library-stats > div,.study-library-stats > span,.study-library-stats article,.study-library-search,.study-library-actions nav,.study-collection-list button) { background: var(--one-soft) !important; color: var(--one-ink) !important; border: 0 !important; box-shadow: none !important; border-radius: 10px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-organize > header button { background: transparent !important; color: var(--one-accent) !important; border: 0 !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-actions nav button { font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-actions nav button.active,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-collection-list button.active { background: var(--one-selected) !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.study-library-new,.study-new-note,.study-new-file) { background: var(--one-panel) !important; color: var(--one-accent) !important; border: 0 !important; border-radius: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid > button { border: 0 !important; border-bottom: 1px solid var(--one-line) !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid > button.selected { background: var(--one-selected) !important; border-radius: 8px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid > button .calendar-day-number { font-weight: 400 !important; font-size: 14px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.selected-day-panel,.calendar-mood-picker,.calendar-sticker-picker) { background: var(--one-panel) !important; border: 0 !important; border-radius: 14px !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading h2 { font-size: 26px !important; font-weight: 500 !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-modal { border: 0 !important; }
+html[data-native-theme] [data-native-surface="career"] :is(span,strong,small,label,button,input,textarea,select) { font-family: var(--one-font) !important; }
+
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.timer-color-well,.timer-keepsake,.timer-bloom-decoration) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timer-bloom-face strong { font: 300 clamp(48px,15vw,80px)/1.2 var(--one-font) !important; font-variant-numeric: tabular-nums; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-editor-themed::before,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-editor-themed::after { content: none !important; display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-search { min-width: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-organize > header { display: grid; grid-template-columns: minmax(0,1fr) auto; }
+@media (max-width: 600px) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-actions { grid-template-columns: minmax(0,1fr) auto !important; padding: 10px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-actions nav { display: grid !important; grid-template-columns: repeat(4,minmax(0,1fr)); grid-column: 1/-1; grid-row: 2; width: 100%; overflow: visible; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-actions nav button { min-width: 0; padding: 8px 3px !important; font-size: 11px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-import:not(.study-library-add-image) { grid-column: 2; grid-row: 1; }
+}

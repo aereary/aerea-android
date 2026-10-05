@@ -35,6 +35,7 @@ public class AereaWidgetPlugin extends Plugin {
                 call.getString("progress", "No events yet ♡")
             );
             editor.putString("theme", call.getString("theme", "storybook"));
+            editor.putString("colorMode", call.getString("colorMode", "light"));
             editor.putString("daysJson", call.getString("daysJson", "[]"));
             editor.apply();
         } catch (RuntimeException ignored) {
