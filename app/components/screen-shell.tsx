@@ -1,5 +1,7 @@
 "use client";
 
+import { NativeIcon } from "./native-icon";
+
 export function ScreenIntro({
   label,
   title,
@@ -37,6 +39,7 @@ export function ScreenIntro({
         }}
       >
         {sticker}
+        {onStickerClick && <NativeIcon name="habits" />}
       </span>
     </header>
   );

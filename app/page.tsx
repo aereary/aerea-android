@@ -10246,7 +10246,7 @@ export default function Home() {
                           className="health-routine-add"
                           onClick={startNewHealthRoutine}
                         >
-                          <span aria-hidden="true">＋</span>
+                          {isNativeTheme(appTheme) ? <NativeIcon name="add" /> : <span aria-hidden="true">＋</span>}
                           Add a little routine
                         </button>
                       </>
@@ -14950,7 +14950,7 @@ export default function Home() {
                   const target = event.target as Element;
                   if (
                     target.closest(
-                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back, .event-detail-health-completion button",
                     )
                   ) {
                     return;
@@ -14971,7 +14971,7 @@ export default function Home() {
                   const target = event.target as Element;
                   if (
                     target.closest(
-                      ".event-detail-add, .event-detail-header > button, .event-detail-back",
+                      ".event-detail-add, .event-detail-header > button, .event-detail-back, .event-detail-health-completion button",
                     ) ||
                     !target.closest('[data-event-detail-edit="true"]')
                   ) {
