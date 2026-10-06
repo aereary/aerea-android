@@ -45,6 +45,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AereaEventNotificationsPlugin.class);
         registerPlugin(AereaNavigationPlugin.class);
         registerPlugin(AereaMicrophonePlugin.class);
+        registerPlugin(AereaUpdatesPlugin.class);
         configureEdgeToEdge();
         super.onCreate(savedInstanceState);
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {

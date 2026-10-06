@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/manual-customization.css";
+@import "./styles/app-updates.css";
 
 * {
   box-sizing: border-box;
