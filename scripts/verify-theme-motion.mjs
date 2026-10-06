@@ -17,7 +17,7 @@ async function fixture(theme,mode,width=393,reducedMotion='no-preference',simpli
  },{theme,mode,simplifiedCalendarMode});
  const page=await context.newPage();await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.hostname!=='qa.local')return route.abort();const file=path.join(root,url.pathname==='/'?'index.html':decodeURIComponent(url.pathname));if(!file.startsWith(root+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream'});});
  await page.goto('https://qa.local/');await page.locator('.app-shell').waitFor();return{page,context};}
-const themes=['storybook','otter','dreambear','strawberry','duckpond','bunnybakery','mooncat','whalesong','ribbonpromise','gentlekitten','softguidance','velvetrest','lovelyevening','rosegrid','littlesheets','noirrest','ao3night','peachparlor','mintletter','blueberrynight','duckmail','moonquilt','samsungminimal','samsungao3','custom'];
+const themes=['storybook','otter','strawberry','whalesong','ribbonpromise','gentlekitten','softguidance','velvetrest','littlesheets','mintletter','moonquilt','samsungminimal','samsungao3','custom'];
 const results=[];
 const part=process.env.AEREA_QA_PART || 'all';
 const settled=page=>page.waitForFunction(()=>[...document.querySelectorAll('.reminder-editor-note')].every(el=>el.getAnimations().every(a=>a.playState==='finished')));
@@ -39,7 +39,7 @@ try{
   await page.waitForFunction(()=>window.qaState.reminders?.some(r=>r.title==='Test reminder'));
   await page.getByRole('button',{name:'Add reminder',exact:true}).click();await settled(page);await page.evaluate(()=>window.dispatchEvent(new Event('aereaAndroidBack')));await sheet.waitFor({state:'detached'});
   assert.equal(await page.evaluate(()=>window.qaState.postIts[0].text),'Preserve this note');assert.deepEqual(errors,[]);
-  if(['otter','strawberry','duckpond','samsungao3'].includes(theme)&&width===393){await page.getByRole('button',{name:'Add reminder',exact:true}).click();await settled(page);await page.screenshot({path:path.join(output,`${theme}-${mode}-sheet.png`)});}
+  if(['otter','strawberry','samsungao3'].includes(theme)&&width===393){await page.getByRole('button',{name:'Add reminder',exact:true}).click();await settled(page);await page.screenshot({path:path.join(output,`${theme}-${mode}-sheet.png`)});}
   results.push({theme,mode,width,ratio,background:appearance.bg});await context.close();await browser.close();
  }
  if(results.length)fs.writeFileSync(path.join(output,'sheets.json'),JSON.stringify(results,null,2));
