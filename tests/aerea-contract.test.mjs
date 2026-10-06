@@ -136,25 +136,30 @@ test("keeps the approved worlds and removes every rejected theme", () => {
   for (const theme of [
     "storybook",
     "otter",
-    "peachparlor",
     "mintletter",
-    "blueberrynight",
-    "duckmail",
     "moonquilt",
   ]) {
     assert.match(pageSource, new RegExp(`id: "${theme}"`));
   }
   assert.equal(
     [...pageSource.matchAll(/showCharm: false/g)].length,
-    3,
-    "the two full-scene themes and Little Sheets Lab should hide the welcome charm",
+    2,
+    "Moonberry quilt and Little Sheets Lab should hide the welcome charm",
   );
   assert.equal(
     [...pageSource.matchAll(/decoratedScene: true/g)].length,
-    2,
-    "only the two remaining full-scene themes should decorate the sky",
+    1,
+    "only Moonberry quilt should decorate the sky",
   );
   for (const removedTheme of [
+    "duckpond",
+    "bunnybakery",
+    "mooncat",
+    "rosegrid",
+    "peachparlor",
+    "blueberrynight",
+    "duckmail",
+
     "piggyparcel",
     "rainywindow",
     "scrapbookdesk",
@@ -1757,13 +1762,10 @@ test("keeps legacy calendar surfaces unreachable and removes statistics", () => 
   assert.match(cssSource, /max-width:560px/);
 });
 
-test("keeps the rose editorial interface in the theme gallery", () => {
-  assert.match(pageSource, /id: "rosegrid"/);
-  assert.match(cssSource, /data-theme="rosegrid"/);
-  assert.match(cssSource, /data-theme-option="rosegrid"/);
+test("removes the retired rose editorial theme without replacing shared interfaces", () => {
+  assert.doesNotMatch(pageSource, /id: "rosegrid"/);
   assert.match(pageSource, /themeId=\{appTheme\}/);
-  assert.match(cssSource, /Rose paper editorial/);
-  assert.match(cssSource, /linear-gradient\(rgba\(231,148,166,\.075\) 1px/);
+  assert.match(pageSource, /setAppTheme\("storybook"\)/);
 });
 
 test("shows Coming up next dynamically on today across every theme", () => {
