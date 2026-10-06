@@ -86,6 +86,16 @@ try {
       return route.fulfill({ body: fs.readFileSync(file), contentType: file.endsWith(".js") ? "text/javascript" : file.endsWith(".css") ? "text/css" : file.endsWith(".html") ? "text/html" : "application/octet-stream" });
     });
     await page.goto("https://qa.local/");
+    const confirmation = page.getByRole("dialog", { name: "estás en la versión correcta, las actualizaciones aparecen" });
+    await confirmation.waitFor();
+    await confirmation.getByText("Installed version 0.112", { exact: true }).waitFor();
+    const confirmationBounds = await confirmation.boundingBox();
+    assert.ok(confirmationBounds.x >= 0 && confirmationBounds.x + confirmationBounds.width <= width + 1 && confirmationBounds.y >= 0);
+    assert.equal(await confirmation.evaluate(el => el.scrollWidth > el.clientWidth), false);
+    await page.evaluate(() => window.dispatchEvent(new Event("aereaAndroidBack")));
+    await confirmation.waitFor({ state: "detached" });
+    assert.equal(await page.evaluate(() => localStorage.getItem("aerea-update-confirmation-seen")), "seen");
+    assert.equal(await page.evaluate(() => window.updateFixture.calls.includes("AereaNavigation.exitApp")), false);
     await page.getByRole("button", { name: "Habits", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "A new version of aérea is here" });
     await dialog.waitFor();
@@ -134,6 +144,9 @@ try {
     await page.getByRole("button", { name: "Check for updates", exact: true }).click();
     await page.getByText("Could not check for updates. Try again when you are online.", { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.updateFixture.saved.postIts[0].text), "Keep my note");
+    await page.reload();
+    await page.getByRole("button", { name: "Habits", exact: true }).waitFor();
+    assert.equal(await confirmation.count(), 0, "confirmation stays dismissed after reopening");
     assert.deepEqual(errors, []);
     results.push({ theme, mode, width, contrast, delayedCheckMs: Math.round(delay), checks: "Back, cancel, retry, permission error, same version, offline, saved note" });
     await context.close();

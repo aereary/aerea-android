@@ -17,6 +17,36 @@ interface UpdatesPlugin {
 }
 const Updates = registerPlugin<UpdatesPlugin>("AereaUpdates");
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
+const CONFIRMATION_KEY = "aerea-update-confirmation-seen";
+
+function UpdateConfirmation({ version, onDismiss }: { version: string; onDismiss: () => void }) {
+  const dialog = useRef<HTMLElement>(null);
+  useBackLayer(true, onDismiss, 100);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    dialog.current?.focus();
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, []);
+  return (
+    <div className="app-update-backdrop" onPointerDown={(event) => {
+      if (event.target === event.currentTarget) onDismiss();
+    }}>
+      <section className="app-update-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="app-update-confirmation-title" tabIndex={-1} ref={dialog}
+        onKeyDown={(event) => {
+          if (event.key === "Tab") {
+            event.preventDefault(); dialog.current?.querySelector<HTMLButtonElement>("button")?.focus();
+          }
+        }}>
+        <span className="app-update-symbol" aria-hidden="true">✓</span>
+        <p className="app-update-eyebrow">UPDATE CONFIRMED</p>
+        <h2 id="app-update-confirmation-title" lang="es">estás en la versión correcta, las actualizaciones aparecen</h2>
+        <p>Installed version {version}</p>
+        <footer><button type="button" className="app-update-primary" onClick={onDismiss}>Got it</button></footer>
+      </section>
+    </div>
+  );
+}
 
 function UpdateDialog({ release, phase, progress, ready, error, onDismiss, onUpdate }: {
   release: Release; phase: Phase; progress: number; ready: boolean; error: string;
@@ -75,6 +105,7 @@ export function useAppUpdates(appReady: boolean) {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [visible, setVisible] = useState(false);
+  const [confirmationVisible, setConfirmationVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -89,7 +120,12 @@ export function useAppUpdates(appReady: boolean) {
     mounted.current = true;
     let active = true;
     let listener: PluginListenerHandle | undefined;
-    void Updates.getStatus().then((value) => { if (active) setStatus(value); }).catch(() => undefined);
+    void Updates.getStatus().then((value) => {
+      if (!active) return;
+      setStatus(value);
+      try { setConfirmationVisible(localStorage.getItem(CONFIRMATION_KEY) !== "seen"); }
+      catch { setConfirmationVisible(true); }
+    }).catch(() => undefined);
     void Updates.addListener("downloadProgress", ({ percent }) => {
       if (active) setProgress(Math.max(0, Math.min(100, percent)));
     }).then((handle) => { if (active) listener = handle; else void handle.remove(); }).catch(() => undefined);
@@ -139,6 +175,11 @@ export function useAppUpdates(appReady: boolean) {
     }
   }, [phase, status]);
 
+  const dismissConfirmation = useCallback(() => {
+    setConfirmationVisible(false);
+    try { localStorage.setItem(CONFIRMATION_KEY, "seen"); } catch { /* Dismiss for this session. */ }
+  }, []);
+
   const update = useCallback(async () => {
     if (busy.current || !status?.available) return;
     busy.current = true;
@@ -186,6 +227,8 @@ export function useAppUpdates(appReady: boolean) {
     dialog: native && visible && status?.available ? (
       <UpdateDialog release={status.available} phase={phase} progress={progress} ready={status.ready}
         error={error} onDismiss={dismiss} onUpdate={() => { void update(); }} />
+    ) : native && appReady && confirmationVisible && status ? (
+      <UpdateConfirmation version={status.installedVersion} onDismiss={dismissConfirmation} />
     ) : null,
   };
 }
