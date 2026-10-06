@@ -36,7 +36,7 @@ await walk(path.join(root, "public/assets"), "/assets");
 await embed(path.join(root, "public/pdf.worker.min.mjs"), "/pdf.worker.min.mjs");
 // Every bundled static path becomes an embedded asset. PDF.js receives a blob
 // worker URL because module workers cannot resolve a file:// server endpoint.
-javascript = javascript.replace(/(["'])(\/(?:assets\/[^"']+|pdf\.worker\.min\.mjs))\1/g, (original, _quote, url) => assets[url] ? `__aereaAsset(${JSON.stringify(url)})` : original);
+javascript = javascript.replace(/(["'`])(\/(?:assets\/[^"'`]+|pdf\.worker\.min\.mjs))\1/g, (original, _quote, url) => assets[url] ? `__aereaAsset(${JSON.stringify(url)})` : original);
 css = css.replace(/url\(["']?(\/assets\/[^)"']+)["']?\)/g, (original, url) => assets[url] ? `url("${assets[url]}")` : original);
 const assetBootstrap = `const __aereaAssets=${JSON.stringify(assets)};const __aereaWorker=URL.createObjectURL(new Blob([Uint8Array.from(atob(__aereaAssets['/pdf.worker.min.mjs'].split(',')[1]),c=>c.charCodeAt(0))],{type:'text/javascript'}));const __aereaAsset=url=>url==='/pdf.worker.min.mjs'?__aereaWorker:(__aereaAssets[url]||url);`;
 const safeScript = code => code.replace(/<\/script/gi, "<\\/script");
