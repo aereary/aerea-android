@@ -2785,6 +2785,17 @@ export default function Home() {
       );
   }, [calendarEvents]);
 
+  const healthCareToday = useMemo(() => {
+    const scheduled = healthRoutineGroups.flatMap((routine) => {
+      const occurrence = routine.events.find((event) => eventOccursOn(event, todayKey));
+      return occurrence ? [occurrence] : [];
+    });
+    return {
+      scheduled: scheduled.length,
+      completed: scheduled.filter((event) => isHealthCompletedOn(event, todayKey)).length,
+    };
+  }, [healthRoutineGroups, todayKey]);
+
   const resetHealthRoutineDraft = useCallback(() => {
     setHealthRoutineEditingGroupId(null);
     setHealthRoutineDraft({
@@ -10118,9 +10129,17 @@ export default function Home() {
                     <header className="health-routine-header">
                       <div>
                         <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
-                        <h3>Take care of you</h3>
+                        <h3>{isNativeTheme(appTheme)
+                          ? healthRoutineEditorOpen
+                            ? healthRoutineEditingGroupId ? "Edit routine" : "New routine"
+                            : "Daily care"
+                          : "Take care of you"}</h3>
                         <p>
-                          {healthRoutineGroups.length === 0
+                          {isNativeTheme(appTheme)
+                            ? healthRoutineEditorOpen
+                              ? "Choose a rhythm that works for you."
+                              : "Your routines, at your own pace."
+                            : healthRoutineGroups.length === 0
                             ? "A soft place for your everyday care."
                             : `${healthRoutineGroups.length} small pocket${
                                 healthRoutineGroups.length === 1 ? "" : "s"
@@ -10142,10 +10161,23 @@ export default function Home() {
 
                     {!healthRoutineEditorOpen ? (
                       <>
+                        {isNativeTheme(appTheme) && healthRoutineGroups.length > 0 && (
+                          <div className="health-care-summary" role="status">
+                            <span>Today</span>
+                            <strong>{healthCareToday.scheduled
+                              ? `${healthCareToday.completed} of ${healthCareToday.scheduled} done`
+                              : "Nothing scheduled"}</strong>
+                            {healthCareToday.scheduled > 0 && <progress
+                              value={healthCareToday.completed}
+                              max={healthCareToday.scheduled}
+                              aria-label="Daily care completed"
+                            />}
+                          </div>
+                        )}
                         <div className="health-routine-list">
                           {healthRoutineGroups.length === 0 ? (
                             <div className="health-routine-empty">
-                              <span aria-hidden="true">🌱</span>
+                              {!isNativeTheme(appTheme) && <span aria-hidden="true">🌱</span>}
                               <strong>No little routines yet</strong>
                               <p>
                                 Add skincare, hair wash days, vitamins,
@@ -10209,17 +10241,21 @@ export default function Home() {
                                   <button
                                     type="button"
                                     className="health-routine-body"
+                                    aria-label={isNativeTheme(appTheme) ? `Edit ${first.title}` : undefined}
                                     onClick={() =>
                                       editHealthRoutine(routine.id)
                                     }
                                   >
-                                    <span
+                                    {!isNativeTheme(appTheme) && <span
                                       className="health-routine-emoji"
                                       aria-hidden="true"
                                     >
                                       {healthRoutineIcon(first.title)}
-                                    </span>
+                                    </span>}
                                     <strong>{first.title}</strong>
+                                    {isNativeTheme(appTheme) && <span className="health-care-state">
+                                      {todayOccurrence ? completedToday ? "Done today" : "For today" : "Not today"}
+                                    </span>}
                                     <span className="health-routine-cadence">
                                       {cadenceLabel}
                                       {!first.allDay
@@ -10251,10 +10287,12 @@ export default function Home() {
                                       );
                                     }}
                                   >
-                                    {completedToday ? "✓" : "○"}
+                                    {isNativeTheme(appTheme)
+                                      ? completedToday ? <NativeIcon name="check" /> : <span className="health-care-check-ring" aria-hidden="true" />
+                                      : completedToday ? "✓" : "○"}
                                   </button>
 
-                                  <button
+                                  {!isNativeTheme(appTheme) && <button
                                     type="button"
                                     className="health-routine-delete"
                                     aria-label={`Delete ${first.title}`}
@@ -10263,7 +10301,7 @@ export default function Home() {
                                     }
                                   >
                                     ×
-                                  </button>
+                                  </button>}
                                 </article>
                               );
                             })
@@ -10335,6 +10373,7 @@ export default function Home() {
                                       selected ? "selected" : ""
                                     }
                                     aria-pressed={selected}
+                                    aria-label={label}
                                     onClick={() =>
                                       setHealthRoutineDraft(
                                         (current) => ({
@@ -10354,7 +10393,7 @@ export default function Home() {
                                       )
                                     }
                                   >
-                                    {label.slice(0, 1)}
+                                    {isNativeTheme(appTheme) ? label : label.slice(0, 1)}
                                   </button>
                                 );
                               },
@@ -10376,6 +10415,11 @@ export default function Home() {
                           />
                         </label>
 
+                        {isNativeTheme(appTheme) && healthRoutineEditingGroupId && <button
+                          type="button"
+                          className="health-care-remove"
+                          onClick={() => deleteHealthRoutine(healthRoutineEditingGroupId)}
+                        >Delete routine</button>}
                         <div className="health-routine-editor-actions">
                           <button
                             type="button"
