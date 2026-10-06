@@ -1,5 +1,19 @@
-/* Samsung Minimal and Samsung AO3 only. Sheet geometry, motion and legibility.
-   Keep this after native-themes.css: older theme styles use !important. */
+/* Approved sheet geometry and motion, recolored by each active theme.
+   Native themes retain their exact palette; other themes keep their own ink/font.
+   Repeated theme attributes preserve specificity against legacy !important rules.
+   Keep this after native-themes.css. */
+.app-shell[data-theme][data-color-mode] {
+  --sheet-panel: var(--one-panel, color-mix(in srgb, var(--paper) 92%, var(--hero)));
+  --sheet-raised: var(--one-raised, color-mix(in srgb, var(--paper) 78%, var(--hero)));
+  --sheet-soft: var(--one-soft, var(--cream-deep));
+  --sheet-ink: var(--one-ink, var(--ink));
+  --sheet-muted: var(--one-muted, var(--ink-soft));
+  --sheet-accent: var(--one-accent, var(--leaf-deep));
+  --sheet-on-accent: var(--one-on-accent, var(--paper));
+  --sheet-line: var(--one-line, var(--line));
+  --sheet-selected: var(--one-selected, var(--lime-wash));
+  --sheet-font: var(--one-font, var(--font-geist-sans, "Nunito Sans"), "Segoe UI", sans-serif);
+}
 @keyframes one-sheet-rise {
   /* Independent translation avoids legacy transform: none !important rules. */
   from { translate: 0 calc(100% + 24px); }
@@ -16,15 +30,15 @@
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.screen-section,.study-library-screen,.ao3-shell) {
   animation-name: one-screen-enter !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode]:has(:is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode))) :is(.primary-swipe-surface,.screen-section,.study-library-screen,.ao3-shell) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode]:has(:is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode))) :is(.primary-swipe-surface,.screen-section,.study-library-screen,.ao3-shell) {
   transform: none !important;
   animation: none !important;
   will-change: auto !important;
   z-index: auto !important;
   isolation: auto !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode]:has(:is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode))) .bottom-nav { visibility: hidden !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode)) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode]:has(:is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode))) .bottom-nav { visibility: hidden !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode)) {
   position: fixed !important;
   inset: 0 !important;
   z-index: 21000 !important;
@@ -40,8 +54,8 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   backdrop-filter: none !important;
   animation: one-sheet-scrim 180ms ease-out both !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-delete-backdrop { z-index: 22000 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-delete-backdrop { z-index: 22000 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) {
   position: relative !important;
   inset: auto !important;
   display: block !important;
@@ -61,13 +75,13 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   scroll-padding-block: 24px 96px;
   border: 0 !important;
   border-radius: 28px 28px 0 0 !important;
-  background: var(--one-panel) !important;
-  color: var(--one-ink) !important;
+  background: var(--sheet-panel) !important;
+  color: var(--sheet-ink) !important;
   box-shadow: 0 -12px 40px rgba(0,0,0,.2) !important;
   transform: none !important;
   animation: one-sheet-rise 360ms cubic-bezier(.22,.9,.25,1) both !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode)::before {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode)::before {
   content: "" !important;
   display: block !important;
   position: static !important;
@@ -76,55 +90,55 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   margin: 0 auto 20px !important;
   border: 0 !important;
   border-radius: 4px !important;
-  background: var(--one-muted) !important;
+  background: var(--sheet-muted) !important;
   opacity: .5 !important;
   transform: none !important;
   box-shadow: none !important;
   clip-path: none !important;
   mask: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode)::after { content: none !important; display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(.event-editor,.health-routine-editor,.reminder-editor-form) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode)::after { content: none !important; display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(.event-editor,.health-routine-editor,.reminder-editor-form) {
   animation: none !important;
   transform: none !important;
   background: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(h2,h3) {
-  font: 500 24px/1.25 var(--one-font) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(h2,h3) {
+  font: 500 24px/1.25 var(--sheet-font) !important;
   letter-spacing: -.02em !important;
-  color: var(--one-ink) !important;
+  color: var(--sheet-ink) !important;
   overflow-wrap: anywhere;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=color])):not(.post-it-editor-preview textarea) {
-  color: var(--one-ink) !important;
-  background: var(--one-raised) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=color])):not(.post-it-editor-preview textarea) {
+  color: var(--sheet-ink) !important;
+  background: var(--sheet-raised) !important;
   border: 1px solid transparent !important;
   border-radius: 12px !important;
   min-width: 0 !important;
   font-size: 16px !important;
-  font-family: var(--one-font) !important;
+  font-family: var(--sheet-font) !important;
   font-weight: 400 !important;
   line-height: 1.5 !important;
-  caret-color: var(--one-accent);
+  caret-color: var(--sheet-accent);
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):focus-visible:not(.post-it-editor-preview textarea) {
-  outline: 2px solid var(--one-accent) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):focus-visible:not(.post-it-editor-preview textarea) {
+  outline: 2px solid var(--sheet-accent) !important;
   outline-offset: 2px;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,textarea):not(.post-it-editor-preview textarea)::placeholder {
-  color: var(--one-muted) !important; opacity: 1 !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,textarea):not(.post-it-editor-preview textarea)::placeholder {
+  color: var(--sheet-muted) !important; opacity: 1 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) button:not(.post-it-editor-options button) { min-height: 44px; touch-action: manipulation; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-header,.health-routine-header,.timetable-heading,.habit-editor-modal > header,.class-editor-modal > header,.note-detail-header,.reminder-editor-header,.study-editor-card > header) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) button:not(.post-it-editor-options button) { min-height: 44px; touch-action: manipulation; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-header,.health-routine-header,.timetable-heading,.habit-editor-modal > header,.class-editor-modal > header,.note-detail-header,.reminder-editor-header,.study-editor-card > header) {
   align-items: flex-start !important;
   gap: 12px !important;
   margin-bottom: 20px !important;
   border: 0 !important;
   background: transparent !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.health-routine-close,.event-detail-header > button,.timetable-close-button,.note-detail-close,.habit-editor-modal > header > button,.class-editor-modal > header > button,.study-editor-card > header > button) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.health-routine-close,.event-detail-header > button,.timetable-close-button,.note-detail-close,.habit-editor-modal > header > button,.class-editor-modal > header > button,.study-editor-card > header > button) {
   position: static !important;
   flex: 0 0 44px;
   width: 44px !important;
@@ -133,88 +147,88 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   padding: 10px !important;
   border: 0 !important;
   border-radius: 50% !important;
-  background: var(--one-raised) !important;
-  color: var(--one-ink) !important;
+  background: var(--sheet-raised) !important;
+  color: var(--sheet-ink) !important;
   box-shadow: none !important;
-  font: 400 24px/1 var(--one-font) !important;
+  font: 400 24px/1 var(--sheet-font) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-heading-copy,.event-detail-facts,.event-detail-section,.event-editor-card,.reminder-editor-preview,.habit-editor-preview,.health-routine-empty,.health-routine-editor,.timetable-week-map-empty,.timetable-editor,.timetable-class-form,.timetable-edit-row,.day-summary-empty) {
-  color: var(--one-ink) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-heading-copy,.event-detail-facts,.event-detail-section,.event-editor-card,.reminder-editor-preview,.habit-editor-preview,.health-routine-empty,.health-routine-editor,.timetable-week-map-empty,.timetable-editor,.timetable-class-form,.timetable-edit-row,.day-summary-empty) {
+  color: var(--sheet-ink) !important;
   border: 0 !important;
   border-radius: 16px !important;
-  background: var(--one-raised) !important;
+  background: var(--sheet-raised) !important;
   box-shadow: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-heading-copy {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-heading-copy {
   background: transparent !important;
   padding: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-title { margin: 12px 0 20px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.reminder-editor-note,.timetable-card,.calendar-event-mode) :is(p,span,strong,small,label,legend) {
-  font-family: var(--one-font) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-title { margin: 12px 0 20px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.reminder-editor-note,.timetable-card,.calendar-event-mode) :is(p,span,strong,small,label,legend) {
+  font-family: var(--sheet-font) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.reminder-editor-note,.timetable-card,.calendar-event-mode) strong { font-weight: 500 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-editor-top {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.reminder-editor-note,.timetable-card,.calendar-event-mode) strong { font-weight: 500 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-editor-top {
   position: sticky !important; top: -12px !important; z-index: 3;
-  padding-block: 12px !important; background: var(--one-panel) !important;
+  padding-block: 12px !important; background: var(--sheet-panel) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-dates { gap: 12px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-dates > label {
-  min-width: 0; padding: 12px !important; background: var(--one-soft) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-dates { gap: 12px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-dates > label {
+  min-width: 0; padding: 12px !important; background: var(--sheet-soft) !important;
   border: 0 !important; border-radius: 12px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-dates > label > span { font-size: 13px !important; font-weight: 400 !important; color: var(--one-muted) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-editor .event-title-input > span { font-size: 13px !important; font-weight: 400 !important; letter-spacing: 0 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-editor :is(select,.event-title-input input) { font-weight: 400 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-row-icon { background: transparent !important; color: var(--one-muted) !important; font-weight: 400 !important; font-size: 18px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-time strong { font-size: 20px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-reminder strong { font-size: 16px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-date-eyebrow,.event-detail-calendar-badge) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-dates > label > span { font-size: 13px !important; font-weight: 400 !important; color: var(--sheet-muted) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-editor .event-title-input > span { font-size: 13px !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-editor :is(select,.event-title-input input) { font-weight: 400 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-row-icon { background: transparent !important; color: var(--sheet-muted) !important; font-weight: 400 !important; font-size: 18px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-time strong { font-size: 20px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-reminder strong { font-size: 16px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-date-eyebrow,.event-detail-calendar-badge) {
   font-size: 12px !important; font-weight: 500 !important; letter-spacing: .06em !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-divider { display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-time,.event-detail-reminder) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-divider { display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-time,.event-detail-reminder) {
   background: transparent !important;
-  color: var(--one-ink) !important;
+  color: var(--sheet-ink) !important;
   padding: 14px 0 !important;
   border: 0 !important;
-  border-bottom: 1px solid var(--one-line) !important;
+  border-bottom: 1px solid var(--sheet-line) !important;
   border-radius: 0 !important;
   min-height: 64px;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-time-icon,.event-detail-reminder-icon) {
-  color: var(--one-accent) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-time-icon,.event-detail-reminder-icon) {
+  color: var(--sheet-accent) !important;
   background: transparent !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-time-icon,.event-detail-reminder-icon) svg * {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-time-icon,.event-detail-reminder-icon) svg * {
   stroke: currentColor !important; fill: none !important; stroke-width: 1.6 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-health-completion {
-  color: var(--one-ink) !important;
-  background: var(--one-raised) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion {
+  color: var(--sheet-ink) !important;
+  background: var(--sheet-raised) !important;
   border: 0 !important;
   gap: 12px !important;
   padding: 16px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-health-completion strong { font-size: 15px !important; line-height: 1.4; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-detail-health-completion small { color: var(--one-muted) !important; font-size: 12px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-health-completion button,.health-routine-check) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion strong { font-size: 15px !important; line-height: 1.4; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion small { color: var(--sheet-muted) !important; font-size: 12px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-health-completion button,.health-routine-check) {
   position: static !important;
   flex: 0 0 44px;
   width: 44px !important; height: 44px !important;
-  border: 1px solid var(--one-muted) !important;
+  border: 1px solid var(--sheet-muted) !important;
   border-radius: 50% !important;
-  color: var(--one-ink) !important;
+  color: var(--sheet-ink) !important;
   background: transparent !important;
   box-shadow: none !important;
   padding: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-health-completion.complete button,.health-routine-item.complete .health-routine-check) {
-  color: var(--one-on-accent) !important;
-  background: var(--one-accent) !important;
-  border-color: var(--one-accent) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-health-completion.complete button,.health-routine-item.complete .health-routine-check) {
+  color: var(--sheet-on-accent) !important;
+  background: var(--sheet-accent) !important;
+  border-color: var(--sheet-accent) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-primary-actions,.event-detail-footer,.reminder-editor-actions,.habit-editor-modal footer,.health-routine-editor-actions,.timetable-editor-actions,.study-editor-card footer) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-primary-actions,.event-detail-footer,.reminder-editor-actions,.habit-editor-modal footer,.health-routine-editor-actions,.timetable-editor-actions,.study-editor-card footer) {
   display: flex !important;
   align-items: center !important;
   flex-wrap: wrap !important;
@@ -223,16 +237,16 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   border: 0 !important;
   background: transparent !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-add,.event-save-button,.health-routine-add) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-add,.event-save-button,.health-routine-add) {
   min-height: 48px !important;
   padding: 12px 20px !important;
   border: 0 !important;
   border-radius: 24px !important;
-  background: var(--one-accent) !important;
-  color: var(--one-on-accent) !important;
+  background: var(--sheet-accent) !important;
+  color: var(--sheet-on-accent) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-list { grid-template-columns: minmax(0,1fr) !important; gap: 1px !important; border-radius: 16px; overflow: hidden; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-list { grid-template-columns: minmax(0,1fr) !important; gap: 1px !important; border-radius: 16px; overflow: hidden; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-item {
   display: grid !important;
   grid-template-columns: minmax(0,1fr) 44px 44px !important;
   align-items: center !important;
@@ -241,11 +255,11 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   padding: 12px !important;
   border: 0 !important;
   border-radius: 0 !important;
-  background: var(--one-raised) !important;
-  color: var(--one-ink) !important;
+  background: var(--sheet-raised) !important;
+  color: var(--sheet-ink) !important;
   box-shadow: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body {
   display: grid !important;
   grid-template-columns: 28px minmax(0,1fr) !important;
   grid-template-rows: auto auto;
@@ -253,67 +267,67 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   column-gap: 10px;
   height: auto !important;
   padding: 0 !important;
-  color: var(--one-ink) !important;
+  color: var(--sheet-ink) !important;
   background: transparent !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-emoji {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-emoji {
   grid-row: 1/3;
   font-size: 24px !important;
   line-height: 1.3 !important;
   margin: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body strong { font-size: 15px !important; font-weight: 500 !important; line-height: 1.4 !important; overflow-wrap: anywhere; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body .health-routine-cadence {
-  font-size: 12px !important; color: var(--one-muted) !important; margin: 4px 0 0 !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body strong { font-size: 15px !important; font-weight: 500 !important; line-height: 1.4 !important; overflow-wrap: anywhere; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body .health-routine-cadence {
+  font-size: 12px !important; color: var(--sheet-muted) !important; margin: 4px 0 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-delete {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-delete {
   position: static !important;
   width: 44px !important; height: 44px !important;
   padding: 0 !important;
   background: transparent !important;
-  color: var(--one-muted) !important;
+  color: var(--sheet-muted) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-add { margin-top: 16px !important; width: 100%; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-heading-actions { flex: 0 0 auto; display: flex; gap: 4px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-heading h2 { white-space: normal !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-heading > div:first-child { min-width: 0; flex: 1; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-term-fields {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-add { margin-top: 16px !important; width: 100%; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading-actions { flex: 0 0 auto; display: flex; gap: 4px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading h2 { white-space: normal !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading > div:first-child { min-width: 0; flex: 1; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields {
   display: grid !important; grid-template-columns: minmax(0,1fr) !important; gap: 16px !important;
-  background: var(--one-raised) !important; color: var(--one-ink) !important;
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
   border: 0 !important; border-radius: 16px !important; padding: 14px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-class-form { background: var(--one-soft) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-term-fields input { background: var(--one-soft) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-class-form-heading { align-items: flex-start !important; gap: 12px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-class-form-heading > button {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form { background: var(--sheet-soft) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields input { background: var(--sheet-soft) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form-heading { align-items: flex-start !important; gap: 12px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form-heading > button {
   flex: 0 0 44px; width: 44px !important; height: 44px !important;
   border: 0 !important; border-radius: 50% !important;
-  padding: 0 !important; background: var(--one-raised) !important;
+  padding: 0 !important; background: var(--sheet-raised) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.timetable-term-fields,.timetable-class-form,.health-routine-editor) label > span {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.timetable-term-fields,.timetable-class-form,.health-routine-editor) label > span {
   font-size: 13px !important; font-weight: 400 !important; letter-spacing: 0 !important;
-  text-transform: none !important; color: var(--one-muted) !important;
+  text-transform: none !important; color: var(--sheet-muted) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-editor-actions > button { flex: 1; min-height: 48px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-editor-actions > button.primary { background: var(--one-accent) !important; color: var(--one-on-accent) !important; border-radius: 24px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-editor-actions > button { flex: 1; min-height: 48px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-editor-actions > button.primary { background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important; border-radius: 24px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row {
   grid-template-columns: repeat(2,minmax(0,1fr)) !important;
   gap: 12px !important; border: 0 !important; border-radius: 12px !important;
-  background: var(--one-soft) !important; padding: 12px !important;
+  background: var(--sheet-soft) !important; padding: 12px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.timetable-term-fields,.timetable-meeting-row) label { min-width: 0; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > button {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.timetable-term-fields,.timetable-meeting-row) label { min-width: 0; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > button {
   position: static !important; grid-column: 2; justify-self: end;
   width: 44px !important; height: 44px !important; padding: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > label:first-child { padding-right: 0 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(1) { grid-row: 1; grid-column: 1; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(4) { grid-row: 1; grid-column: 2; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(2) { grid-row: 2; grid-column: 1; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(3) { grid-row: 2; grid-column: 2; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-list { min-height: 0 !important; background: transparent !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-note { color: var(--one-muted) !important; font-size: 12px !important; margin-top: 20px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-note > span:last-child { display: none; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > label:first-child { padding-right: 0 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(1) { grid-row: 1; grid-column: 1; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(4) { grid-row: 1; grid-column: 2; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(2) { grid-row: 2; grid-column: 1; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > label:nth-child(3) { grid-row: 2; grid-column: 2; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-list { min-height: 0 !important; background: transparent !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-note { color: var(--sheet-muted) !important; font-size: 12px !important; margin-top: 20px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-note > span:last-child { display: none; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-aerea-career-plan-slot] > [aria-label="Academic section"] {
   display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px;
   width: 100%; max-width: 100%; margin: 0 0 20px; padding: 4px;
@@ -321,50 +335,50 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-aerea-career-plan-slot] button { font-size: 14px !important; background: transparent !important; box-shadow: none !important; border: 0 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-aerea-career-plan-slot] button:first-child { background: var(--one-selected) !important; border-radius: 12px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-editor-note,.habit-editor-modal,.class-editor-modal) > label {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.habit-editor-modal,.class-editor-modal) > label {
   margin-top: 16px !important; gap: 8px !important; background: transparent !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-editor-note,.habit-editor-modal,.class-editor-modal) label > small {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.habit-editor-modal,.class-editor-modal) label > small {
   font-size: 13px !important; font-weight: 400 !important; letter-spacing: 0 !important;
-  text-transform: none !important; color: var(--one-muted) !important;
+  text-transform: none !important; color: var(--sheet-muted) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-preview { margin-bottom: 16px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-subtitle { font-size: 14px !important; margin-top: 8px !important; color: var(--one-muted) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer { margin-top: 24px !important; gap: 8px !important; flex-wrap: wrap; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer button:last-child { background: var(--one-accent) !important; color: var(--one-on-accent) !important; min-width: 88px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-event-mode) button:not(.post-it-editor-options button) {
-  font-family: var(--one-font) !important; font-weight: 500 !important; font-size: 15px !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .reminder-editor-preview { margin-bottom: 16px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .reminder-editor-subtitle { font-size: 14px !important; margin-top: 8px !important; color: var(--sheet-muted) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .reminder-editor-note footer { margin-top: 24px !important; gap: 8px !important; flex-wrap: wrap; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .reminder-editor-note footer button:last-child { background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important; min-width: 88px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-event-mode) button:not(.post-it-editor-options button) {
+  font-family: var(--sheet-font) !important; font-weight: 500 !important; font-size: 15px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.health-routine-close,.habit-editor-modal > header > button,.class-editor-modal > header > button) { font-size: 24px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-heading-actions button {
-  background: var(--one-raised) !important; color: var(--one-ink) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.health-routine-close,.habit-editor-modal > header > button,.class-editor-modal > header > button) { font-size: 24px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading-actions button {
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
   width: 44px !important; height: 44px !important; border: 0 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-days {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-days {
   padding: 4px !important; gap: 2px !important;
-  background: var(--one-raised) !important; border: 0 !important; border-radius: 16px !important;
+  background: var(--sheet-raised) !important; border: 0 !important; border-radius: 16px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-days > button {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-days > button {
   width: 100% !important; min-width: 0 !important; min-height: 64px !important;
   padding: 8px 2px !important; border: 0 !important; border-radius: 12px !important;
-  background: transparent !important; color: var(--one-ink) !important;
+  background: transparent !important; color: var(--sheet-ink) !important;
   box-shadow: none !important; transform: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-days > button.active {
-  background: var(--one-selected) !important; color: var(--one-ink) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-days > button.active {
+  background: var(--sheet-selected) !important; color: var(--sheet-ink) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-days small { font-size: 12px !important; font-weight: 400 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-days strong { font-size: 16px !important; font-weight: 500 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-class {
-  background: var(--one-raised) !important; color: var(--one-ink) !important;
-  border: 0 !important; border-inline-start: 3px solid var(--one-accent) !important;
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-days small { font-size: 12px !important; font-weight: 400 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-days strong { font-size: 16px !important; font-weight: 500 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-class {
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
+  border: 0 !important; border-inline-start: 3px solid var(--sheet-accent) !important;
   border-radius: 12px !important; padding: 16px 12px !important;
   grid-template-columns: 88px minmax(0,1fr) !important; gap: 12px !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-class > span > strong { white-space: normal !important; overflow-wrap: anywhere; font-size: 16px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-week-map-class > span > small { color: var(--one-muted) !important; font-size: 12px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-term-meta { background: transparent !important; color: var(--one-muted) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-term-meta > span { background: var(--one-raised) !important; color: var(--one-ink) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-class > span > strong { white-space: normal !important; overflow-wrap: anywhere; font-size: 16px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-class > span > small { color: var(--sheet-muted) !important; font-size: 12px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta { background: transparent !important; color: var(--sheet-muted) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta > span { background: var(--sheet-raised) !important; color: var(--sheet-ink) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker:not([role=button]) { display: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker[role=button] {
   display: grid !important; place-items: center;
@@ -378,12 +392,38 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row strong,.calendar-summary-title) { font-size: 16px !important; line-height: 1.4 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row small,.calendar-summary-time) { color: var(--one-muted) !important; font-size: 12px !important; }
 @media (max-width: 360px) {
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .event-dates { grid-template-columns: minmax(0,1fr) !important; }
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { padding-inline: 16px !important; }
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item { grid-template-columns: minmax(0,1fr) 44px !important; }
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-delete { grid-column: 2; }
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body { grid-row: 1/3; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-dates { grid-template-columns: minmax(0,1fr) !important; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { padding-inline: 16px !important; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-item { grid-template-columns: minmax(0,1fr) 44px !important; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-delete { grid-column: 2; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body { grid-row: 1/3; }
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode)), html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { animation: none !important; }
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode)), html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { animation: none !important; }
+}
+
+/* Decorative paper layers must not cover the shared sheet controls. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.calendar-event-mode) .reminder-editor-sparkles,
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.calendar-event-mode) .event-editor-themed::before,
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.calendar-event-mode) .event-editor-themed::after { display: none !important; }
+
+/* Snapshot layers animate months together without changing any grid geometry. */
+.month-grid-viewport, .extended-calendar-view { position: relative; }
+[data-calendar-month-grid] { animation: none !important; }
+[data-calendar-month-grid][data-month-moving] { opacity: 0 !important; }
+.calendar-month-motion {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: var(--month-motion-radius, 0px);
+}
+.calendar-month-motion > [data-calendar-month-grid] {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: var(--month-snapshot-height) !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
+import { CalendarMonthGrid } from "./components/calendar-month-grid";
 import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
 import { useAppUpdates } from "./use-app-updates";
@@ -2717,9 +2718,6 @@ export default function Home() {
   const [viewMonth, setViewMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
-  const [calendarSlideDirection, setCalendarSlideDirection] = useState<
-    "previous" | "next" | null
-  >(null);
   const [scheduleSlideDirection, setScheduleSlideDirection] = useState<
     "previous" | "next" | null
   >(null);
@@ -7157,7 +7155,6 @@ export default function Home() {
   };
 
   const shiftCalendarMonth = (offset: number) => {
-    setCalendarSlideDirection(offset > 0 ? "next" : "previous");
     const next = new Date(
       viewMonth.getFullYear(),
       viewMonth.getMonth() + offset,
@@ -9776,22 +9773,14 @@ export default function Home() {
             </button>
           </section>
 
-          <div
-            key={`simplified-${calendarYear}-${calendarMonth}`}
-            className={[
-              "simplified-month-grid",
-              calendarSlideDirection
-                ? `calendar-slide-${calendarSlideDirection}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+          <CalendarMonthGrid
+            month={calendarYear * 12 + calendarMonth}
+            className="simplified-month-grid"
             style={
               {
                 "--simplified-calendar-weeks": simplifiedCalendarWeekCount,
               } as CSSProperties
             }
-            onAnimationEnd={() => setCalendarSlideDirection(null)}
             onTouchStart={startCalendarSwipe}
             onTouchEnd={finishCalendarSwipe}
             role="grid"
@@ -9903,7 +9892,7 @@ export default function Home() {
                 </div>
               );
             })}
-          </div>
+          </CalendarMonthGrid>
 
           <button
             className="simplified-calendar-add"
@@ -13578,22 +13567,14 @@ export default function Home() {
                       </button>
                     </section>
 
-                    <div
-                      key={`${calendarYear}-${calendarMonth}`}
-                      className={[
-                        "extended-month-grid",
-                        calendarSlideDirection
-                          ? `calendar-slide-${calendarSlideDirection}`
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
+                    <CalendarMonthGrid
+                      month={calendarYear * 12 + calendarMonth}
+                      className="extended-month-grid"
                       style={
                         {
                           "--extended-calendar-weeks": extendedCalendarWeekCount,
                         } as CSSProperties
                       }
-                      onAnimationEnd={() => setCalendarSlideDirection(null)}
                       onTouchStart={startCalendarSwipe}
                       onTouchEnd={finishCalendarSwipe}
                       aria-label="Extended calendar month. Swipe left or right to change month."
@@ -13678,7 +13659,7 @@ export default function Home() {
                           </div>
                         );
                       })}
-                    </div>
+                    </CalendarMonthGrid>
 
                     <nav className="extended-calendar-nav" aria-label="Primary navigation">
                       {extendedCalendarTabs.map((tab) => (
@@ -14269,17 +14250,9 @@ export default function Home() {
                   </div>
                 )}
                 <div className="month-grid-viewport">
-                  <div
-                    key={`${calendarYear}-${calendarMonth}`}
-                    className={[
-                      "month-grid",
-                      calendarSlideDirection
-                        ? `calendar-slide-${calendarSlideDirection}`
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onAnimationEnd={() => setCalendarSlideDirection(null)}
+                  <CalendarMonthGrid
+                    month={calendarYear * 12 + calendarMonth}
+                    className="month-grid"
                     onTouchStart={startCalendarSwipe}
                     onTouchEnd={finishCalendarSwipe}
                     aria-label="Calendar month. Swipe left or right to change month."
@@ -14393,7 +14366,7 @@ export default function Home() {
                       </button>
                     );
                   })}
-                  </div>
+                  </CalendarMonthGrid>
                 </div>
                 <div className="selected-day-panel">
                   <div className="selected-day-heading">
