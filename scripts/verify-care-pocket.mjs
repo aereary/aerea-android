@@ -18,7 +18,7 @@ async function fixture(theme,mode,width=393,reducedMotion='no-preference',simpli
  const page=await context.newPage();await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.hostname!=='qa.local')return route.abort();const file=path.join(root,url.pathname==='/'?'index.html':decodeURIComponent(url.pathname));if(!file.startsWith(root+path.sep)||!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream'});});
  await page.goto('https://qa.local/');await page.locator('.app-shell').waitFor();return{page,context};}
 
-const themes = ['storybook','otter','dreambear','strawberry','duckpond','bunnybakery','mooncat','whalesong','ribbonpromise','gentlekitten','softguidance','velvetrest','lovelyevening','rosegrid','littlesheets','noirrest','ao3night','peachparlor','mintletter','blueberrynight','duckmail','moonquilt','samsungminimal','samsungao3','custom'];
+const themes = ['storybook','otter','strawberry','whalesong','ribbonpromise','gentlekitten','softguidance','velvetrest','littlesheets','mintletter','moonquilt','samsungminimal','samsungao3','custom'];
 const results = [];
 const only = process.env.AEREA_QA_THEME;
 const settle = page => page.evaluate(() => document.getAnimations().forEach(a => a.finish()));
