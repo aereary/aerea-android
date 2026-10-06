@@ -3,6 +3,7 @@
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
+import { useAppUpdates } from "./use-app-updates";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import {
   Capacitor,
@@ -3078,6 +3079,7 @@ export default function Home() {
     color: "lavender",
   });
   const [stateReady, setStateReady] = useState(false);
+  const appUpdates = useAppUpdates(stateReady);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [simplifiedCalendarMode, setSimplifiedCalendarMode] = useState(
@@ -9623,6 +9625,7 @@ export default function Home() {
         else undoGlobal();
       }}
     >
+      {appUpdates.dialog}
       <span className="visually-hidden" aria-live="polite">
         {historyMessage}
       </span>
@@ -15883,6 +15886,7 @@ export default function Home() {
               </button>
             </header>
 
+            {appUpdates.settings}
             <section className="profile-card" aria-label="Profile picture">
               <span className="profile-preview">
                 {profilePhoto ? (
