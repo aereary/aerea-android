@@ -212,7 +212,8 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion strong { font-size: 15px !important; line-height: 1.4; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion small { color: var(--sheet-muted) !important; font-size: 12px !important; }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-health-completion button,.health-routine-check) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion button,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-check {
   position: static !important;
   flex: 0 0 44px;
   width: 44px !important; height: 44px !important;
@@ -223,7 +224,8 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   box-shadow: none !important;
   padding: 0 !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-health-completion.complete button,.health-routine-item.complete .health-routine-check) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-detail-health-completion.complete button,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item.complete .health-routine-check {
   color: var(--sheet-on-accent) !important;
   background: var(--sheet-accent) !important;
   border-color: var(--sheet-accent) !important;
@@ -245,8 +247,8 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   background: var(--sheet-accent) !important;
   color: var(--sheet-on-accent) !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-list { grid-template-columns: minmax(0,1fr) !important; gap: 1px !important; border-radius: 16px; overflow: hidden; }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-item {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-list { grid-template-columns: minmax(0,1fr) !important; gap: 1px !important; border-radius: 16px; overflow: hidden; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item {
   display: grid !important;
   grid-template-columns: minmax(0,1fr) 44px 44px !important;
   align-items: center !important;
@@ -259,7 +261,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   color: var(--sheet-ink) !important;
   box-shadow: none !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body {
   display: grid !important;
   grid-template-columns: 28px minmax(0,1fr) !important;
   grid-template-rows: auto auto;
@@ -270,24 +272,24 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   color: var(--sheet-ink) !important;
   background: transparent !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-emoji {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-emoji {
   grid-row: 1/3;
   font-size: 24px !important;
   line-height: 1.3 !important;
   margin: 0 !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body strong { font-size: 15px !important; font-weight: 500 !important; line-height: 1.4 !important; overflow-wrap: anywhere; }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body .health-routine-cadence {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body strong { font-size: 15px !important; font-weight: 500 !important; line-height: 1.4 !important; overflow-wrap: anywhere; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body .health-routine-cadence {
   font-size: 12px !important; color: var(--sheet-muted) !important; margin: 4px 0 0 !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-delete {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-delete {
   position: static !important;
   width: 44px !important; height: 44px !important;
   padding: 0 !important;
   background: transparent !important;
   color: var(--sheet-muted) !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-add { margin-top: 16px !important; width: 100%; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-add { margin-top: 16px !important; width: 100%; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading-actions { flex: 0 0 auto; display: flex; gap: 4px; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading h2 { white-space: normal !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading > div:first-child { min-width: 0; flex: 1; }
@@ -379,24 +381,23 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-class > span > small { color: var(--sheet-muted) !important; font-size: 12px !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta { background: transparent !important; color: var(--sheet-muted) !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta > span { background: var(--sheet-raised) !important; color: var(--sheet-ink) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker:not([role=button]) { display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker[role=button] {
+/* Keep the original leaf, feather and sparkles visible, including small phones. */
+.app-shell[data-theme][data-color-mode] .screen-sticker { display: flex; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker {
   display: grid !important; place-items: center;
   flex: 0 0 44px; width: 44px !important; height: 44px !important;
   padding: 0 !important; border: 0 !important; border-radius: 50% !important;
-  color: var(--one-accent) !important; background: var(--one-panel) !important;
-  transform: none !important; box-shadow: none !important; font-size: 0 !important;
+  background: var(--one-panel) !important;
+  transform: none !important; box-shadow: none !important; font-size: 28px !important;
 }
-.screen-sticker > .native-icon { display: none; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker > .native-icon { display: block; width: 24px; height: 24px; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row strong,.calendar-summary-title) { font-size: 16px !important; line-height: 1.4 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row small,.calendar-summary-time) { color: var(--one-muted) !important; font-size: 12px !important; }
 @media (max-width: 360px) {
   html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .event-dates { grid-template-columns: minmax(0,1fr) !important; }
   html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { padding-inline: 16px !important; }
-  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-item { grid-template-columns: minmax(0,1fr) 44px !important; }
-  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-delete { grid-column: 2; }
-  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-body { grid-row: 1/3; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item { grid-template-columns: minmax(0,1fr) 44px !important; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-delete { grid-column: 2; }
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body { grid-row: 1/3; }
 }
 @media (prefers-reduced-motion: reduce) {
   html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode)), html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) { animation: none !important; }
@@ -426,4 +427,83 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   margin: 0 !important;
   opacity: 1 !important;
   pointer-events: none !important;
+}
+
+/* Day Pocket owns its vertical scroll. A full-height inner auto scroller trapped
+   touch/wheel gestures before they could reach the overflowing sheet. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-backdrop .day-summary-card {
+  max-height: calc(100dvh - var(--aerea-safe-area-top, env(safe-area-inset-top, 0px)) - 12px) !important;
+  touch-action: pan-y;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-card .day-summary-events {
+  overflow: visible !important;
+  overscroll-behavior: auto;
+  max-height: none !important;
+  touch-action: pan-y;
+}
+
+/* Boca: compact match card and readable details in the active sheet palette. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.boca-pocket-ticket,.football-match-detail) {
+  --match-muted: color-mix(in srgb, var(--sheet-ink) 90%, var(--sheet-raised));
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-event.canonical-boca-match {
+  background: var(--sheet-raised) !important;
+  color: var(--sheet-ink) !important;
+  border: 1px solid var(--sheet-line) !important;
+  border-radius: 18px !important;
+  clip-path: none !important; filter: none !important;
+  box-shadow: none !important; padding: 16px !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-event.canonical-boca-match::before,
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-event.canonical-boca-match::after { display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-ticket {
+  display: grid !important; gap: 18px;
+  min-height: 0 !important; padding: 0 !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  color: var(--sheet-ink) !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  color: var(--match-muted); font-size: 12px; line-height: 1.4;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-header > span {
+  color: var(--sheet-ink); font-size: 11px; font-weight: 700; letter-spacing: .07em;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-teams {
+  display: grid; grid-template-columns: 54px minmax(0,1fr); gap: 14px; align-items: center;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-teams > img { width: 54px; height: 64px; object-fit: contain; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .day-summary-card .boca-pocket-match-teams h3 { font-size: 20px !important; margin: 0 0 4px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-teams p { color: var(--match-muted) !important; margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-meta {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px; border-top: 1px solid var(--sheet-line); padding-top: 14px;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-meta small { display: block; color: var(--match-muted); font-size: 11px; margin-bottom: 4px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-meta strong { color: var(--sheet-ink); font-size: 15px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .boca-pocket-match-footer { color: var(--match-muted); font-size: 12px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-detail-heading > p,
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-read-only { color: var(--match-muted) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .event-detail-title { line-height: 1.3 !important; margin: 18px 0 8px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .event-detail-title em { color: var(--match-muted) !important; font-size: .7em; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .event-detail-category-row { flex-wrap: wrap; gap: 8px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .event-detail-category-row > span {
+  color: var(--match-muted) !important; background: transparent !important; padding: 4px 0;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-scoreboard {
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
+  border: 1px solid var(--sheet-line) !important; box-shadow: none !important;
+  border-radius: 16px !important; padding: 18px 12px !important; gap: 12px;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-scoreboard :is(span,strong) { color: var(--sheet-ink) !important; line-height: 1.4; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 16px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts > div {
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
+  border: 1px solid var(--sheet-line) !important; border-radius: 14px !important;
+  padding: 16px 12px !important; gap: 8px;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts small { color: var(--match-muted) !important; font-size: 11px; letter-spacing: .05em; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts strong { color: var(--sheet-ink) !important; font-size: 14px; line-height: 1.5; }
+@media (max-width: 360px) {
+  html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts { grid-template-columns: minmax(0,1fr); }
 }
