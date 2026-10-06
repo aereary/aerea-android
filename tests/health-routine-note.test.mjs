@@ -30,6 +30,10 @@ test("Habits keeps the same leaf sticker and uses it as the hidden routine trigg
     screenShell,
     /<button[^>]*className="screen-sticker"/,
   );
+  // The original emoji remains the complete visible sticker in every theme.
+  assert.doesNotMatch(screenShell, /<NativeIcon/);
+  assert.match(page, /sticker="🪶"/);
+  assert.match(page, /sticker="✨"/);
 });
 
 test("daily rhythm routines are actual Health calendar events", () => {
