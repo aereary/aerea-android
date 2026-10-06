@@ -1290,45 +1290,6 @@ const themeOptions: {
     charm: "sweet effort",
   },
   {
-    id: "duckpond",
-    name: "Duckling pond",
-    description: "A tiny duck, blue water, butter-yellow light, and spring tulips.",
-    colors: ["#cceeff", "#fff8cf", "#a8d98d"],
-    icon: "🦆",
-    art: "/assets/openmoji/duck.svg",
-    accents: [
-      "/assets/openmoji/tulip.svg",
-      "/assets/openmoji/cloud.svg",
-    ],
-    charm: "one soft step",
-  },
-  {
-    id: "bunnybakery",
-    name: "Bunny bakery",
-    description: "Warm bread, vanilla cream, rosy cheeks, and a very polite bunny.",
-    colors: ["#f7dec7", "#fffaf0", "#efb7c8"],
-    icon: "🐇",
-    art: "/assets/openmoji/bunny.svg",
-    accents: [
-      "/assets/openmoji/croissant.svg",
-      "/assets/openmoji/blossom.svg",
-    ],
-    charm: "good job",
-  },
-  {
-    id: "mooncat",
-    name: "Moonlit calico",
-    description: "A dreamy blue night with one curious cat, moonlight, and soft stars.",
-    colors: ["#8fa9ef", "#eef0ff", "#ffd27d"],
-    icon: "🐈",
-    art: "/assets/openmoji/cat.svg",
-    accents: [
-      "/assets/openmoji/moon.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "stay close",
-  },
-  {
     id: "whalesong",
     name: "Little whale song",
     description: "Sea-glass blues, foamy clouds, lavender water, and a gentle whale.",
@@ -1394,21 +1355,6 @@ const themeOptions: {
     charm: "you may rest",
   },
   {
-    id: "rosegrid",
-    name: "Rose paper editorial",
-    description: "Warm ivory graph paper, blush ink, fine serif headlines, and airy stationery cards.",
-    colors: ["#f3a8ba", "#fffdf9", "#272522"],
-    icon: "♡",
-    art: "/assets/openmoji/otter.svg",
-    accents: [
-      "/assets/openmoji/blossom.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "you may rest",
-    featured: true,
-    interfaceIdea: "editorial grid",
-  },
-  {
     id: "littlesheets",
     name: "Little Sheets Lab",
     description: "The experimental card system: airy surfaces and animated sheets that rise from below.",
@@ -1425,19 +1371,6 @@ const themeOptions: {
     interfaceIdea: "animated sheets",
   },
   {
-    id: "peachparlor",
-    name: "Peach ribbon parlor",
-    description: "Peach cream, satin bows, tiny berries, and warm golden details.",
-    colors: ["#f7b9ad", "#fff6ef", "#f4d27e"],
-    icon: "🎀",
-    art: "/assets/openmoji/strawberry.svg",
-    accents: [
-      "/assets/openmoji/blossom.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "soft & cherished",
-  },
-  {
     id: "mintletter",
     name: "Mint letter garden",
     description: "Fresh mint stationery, pressed flowers, cloudy blue, and soft ink.",
@@ -1449,34 +1382,6 @@ const themeOptions: {
       "/assets/openmoji/blossom.svg",
     ],
     charm: "held with care",
-  },
-  {
-    id: "blueberrynight",
-    name: "Blueberry starglow",
-    description: "Deep blueberry dusk, glowing lilac, silver clouds, and small stars.",
-    colors: ["#626ab7", "#f3f2ff", "#c9b8ef"],
-    icon: "🫐",
-    art: "/assets/openmoji/blueberries.svg",
-    accents: [
-      "/assets/openmoji/moon.svg",
-      "/assets/openmoji/star.svg",
-    ],
-    charm: "safe in the quiet",
-  },
-  {
-    id: "duckmail",
-    name: "Duckling happy mail",
-    description: "Blue stationery, scalloped stamps, cloud stickers, and a tiny duck.",
-    colors: ["#bfe8f7", "#fffdf5", "#f4d777"],
-    icon: "💌",
-    art: "/assets/openmoji/duck.svg",
-    accents: [
-      "/assets/openmoji/cloud.svg",
-      "/assets/openmoji/tulip.svg",
-    ],
-    charm: "a note for you",
-    showCharm: false,
-    decoratedScene: true,
   },
   {
     id: "moonquilt",
@@ -4303,7 +4208,7 @@ export default function Home() {
   }, [sketchFullscreen]);
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && !document.documentElement.hasAttribute("data-portable")) {
       void navigator.serviceWorker.register("/sw.js");
     }
   }, []);
