@@ -12,6 +12,8 @@ export async function setup(theme,mode,width,reduced=false){
 const browser=await chromium.launch({executablePath:process.env.AEREA_QA_BROWSER || undefined,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--single-process','--no-zygote']});
 const c=await browser.newContext({viewport:{width,height:width<600?852:1100},deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:reduced?'reduce':'no-preference'});
 await c.addInitScript(({theme,mode})=>{
+ // Seed this isolated context once; reloads must exercise actual persistence.
+ if(localStorage.getItem('aerea-private-state-v1'))return;
  const date=new Date(); const today=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
  const routines=['Skincare','Vitamins','Wash hair'].map((title,i)=>({id:'qa-health-'+i,title,date:today,time:'08:00',color:'pink',calendar:'Health',sourceType:'health-routine',healthRoutineGroupId:'qa-routine-'+i,healthRoutineCadence:'daily',repeat:'Daily'}));
  const state={appTheme:theme,colorMode:mode,calendarEvents:routines,classTimetable:{termName:'Second semester',termDates:'',termStart:'2026-09-01',termEnd:'2026-12-31',classes:[{id:'qa-class',name:'Introduction to research and critical thinking',professor:'Professor Example',color:'#dff2f7',meetings:[{id:'qa-meeting',day:'mon',start:'09:00',end:'11:00',room:'Room 4'}]}]}};

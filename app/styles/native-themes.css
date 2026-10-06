@@ -128,13 +128,14 @@ html[data-native-theme] .app-shell[data-native-theme] :is(h1,h2,h3,h4) {
   letter-spacing: -.035em !important;
   text-shadow: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary) {
+/* Shared paper and mood artwork retain the legacy component rules. */
+html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary):not(:where(.movable-post-it,.movable-post-it *,.post-it-editor-preview,.post-it-editor-preview *,.post-it-editor-options *,.mood-bubble,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker)) {
   font-family: var(--one-font) !important;
   color: var(--one-ink);
   accent-color: var(--one-accent);
   -webkit-tap-highlight-color: transparent;
 }
-html[data-native-theme] .app-shell[data-native-theme] :where(button:not([style])) {
+html[data-native-theme] .app-shell[data-native-theme] :where(button:not([style])):not(:where(.movable-post-it,.movable-post-it *,.post-it-editor-preview,.post-it-editor-preview *,.post-it-editor-options *,.mood-bubble,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker)) {
   background: var(--one-raised) !important;
   border-color: var(--one-line) !important;
   border-style: solid !important;
@@ -143,13 +144,13 @@ html[data-native-theme] .app-shell[data-native-theme] :where(button:not([style])
   color: var(--one-ink) !important;
   text-shadow: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *)) {
+html[data-native-theme] .app-shell[data-native-theme] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *,.movable-post-it *,.post-it-editor-options *,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker)) {
   color: inherit !important;
 }
 html[data-native-theme] .app-shell[data-native-theme] :where(a) {
   color: var(--one-accent) !important;
 }
-html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]) {
+html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]):not(:where(.movable-post-it,.movable-post-it *,.post-it-editor-preview,.post-it-editor-preview *,.post-it-editor-options *,.mood-bubble,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker)) {
   background: var(--one-soft) !important;
   background-image: none !important;
   border: 1px solid var(--one-line) !important;
@@ -157,11 +158,11 @@ html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea,select)
   color: var(--one-ink) !important;
   box-shadow: none !important;
 }
-html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea)::placeholder {
+html[data-native-theme] .app-shell[data-native-theme] :is(input,textarea):not(:where(.movable-post-it,.movable-post-it *,.post-it-editor-preview,.post-it-editor-preview *,.post-it-editor-options *,.mood-bubble,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker))::placeholder {
   color: var(--one-muted) !important;
   opacity: .8;
 }
-html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary,a,[role="button"]):focus-visible {
+html[data-native-theme] .app-shell[data-native-theme] :is(button,input,textarea,select,summary,a,[role="button"]):focus-visible:not(.post-it-editor-preview textarea) {
   outline: 2px solid var(--one-accent) !important;
   outline-offset: 3px !important;
 }
@@ -314,7 +315,7 @@ html[data-native-theme] .app-shell[data-native-theme] :is(.delete-class,.delete-
   border-radius: var(--one-control-radius) !important;
 }
 html[data-native-theme] .app-shell[data-native-theme] :is(.event-date-error,.category-editor-error,.record-error,.ao3-modal-error) { color: var(--one-danger) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.event-dot,.habit-dot,.mood-bubble,.day-counter-option,.check-circle,.health-routine-check,.health-completion-toggle) { border-color: var(--one-line) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme] :is(.event-dot,.habit-dot,.day-counter-option,.check-circle,.health-routine-check,.health-completion-toggle) { border-color: var(--one-line) !important; box-shadow: none !important; }
 html[data-native-theme] .app-shell[data-native-theme] :is(.event-dot,.habit-dot,.check-circle,.health-routine-check).done,
 html[data-native-theme] .app-shell[data-native-theme] :is(.habit-dot,.check-circle,.health-completion-toggle)[aria-pressed="true"] { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
 /* Cards: context stays readable; no default green or paper tape survives. */
@@ -381,21 +382,7 @@ html[data-native-theme] .app-shell[data-native-theme] :is(.agenda-v2-event,.even
 html[data-native-theme] .app-shell[data-native-theme] :is(.agenda-v2-event,.event-chip,.day-summary-event).blue { background: var(--one-blue) !important; }
 html[data-native-theme] .app-shell[data-native-theme] :is(.event-chip-main,.event-chip-delete,.agenda-v2-event-copy,.agenda-v2-event-category,.agenda-v2-time-label,.agenda-v2-event-shortline,.day-summary-event-time,.day-summary-event-heart) { color: var(--one-ink) !important; background: transparent !important; }
 html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-mood-picker,.calendar-sticker-picker,.day-marker-picker) { background: var(--one-raised) !important; border-color: var(--one-line) !important; box-shadow: none !important; border-radius: 20px !important; }
-/* Post-it coordinates, angle, size, selection and drag logic are deliberately kept. */
-html[data-native-theme] .app-shell[data-native-theme] .movable-post-it {
-  border: 1px solid var(--one-line) !important;
-  border-radius: 20px !important;
-  box-shadow: var(--one-shadow) !important;
-  color: var(--one-ink) !important;
-  background-image: none !important;
-}
-html[data-native-theme] .app-shell[data-native-theme] .post-it-tape { display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).pink { background: var(--one-pink) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).lilac { background: var(--one-lilac) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).blue { background: var(--one-blue) !important; }
-html[data-native-theme] .app-shell[data-native-theme] .movable-post-it.multi-selected { outline: 2px solid var(--one-accent) !important; }
-html[data-native-theme] .app-shell[data-native-theme] .post-it-resize-handle { background: var(--one-accent) !important; border-radius: 50% !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.postit-multi-toolbar,.post-it-palette-nav,.post-it-group-action,.sketch-tools,.sketch-primary-tools,.sketch-smart-tools,.sketch-shape-tools,.sketch-zoom-controls,.sketch-history-controls,.sketch-selection-actions,.sketch-fullscreen-topbar,.sketch-fullscreen-bottombar,.sketch-export-card,.sketch-gallery article) {
+html[data-native-theme] .app-shell[data-native-theme] :is(.postit-multi-toolbar,.post-it-group-action,.sketch-tools,.sketch-primary-tools,.sketch-smart-tools,.sketch-shape-tools,.sketch-zoom-controls,.sketch-history-controls,.sketch-selection-actions,.sketch-fullscreen-topbar,.sketch-fullscreen-bottombar,.sketch-export-card,.sketch-gallery article) {
   background: var(--one-panel) !important;
   color: var(--one-ink) !important;
   border-color: var(--one-line) !important;
@@ -466,7 +453,7 @@ html[data-native-theme] [data-native-surface="career"] {
 }
 html[data-native-theme] [data-native-surface="career"] :is(h1,h2,h3,h4) { font-family: var(--one-heading) !important; color: var(--one-ink) !important; }
 html[data-native-theme] [data-native-surface="career"] :is(button,input,select,textarea) { font-family: var(--one-font) !important; border-color: var(--one-line) !important; border-radius: var(--one-control-radius) !important; color: var(--one-ink) !important; background: var(--one-soft) !important; }
-html[data-native-theme] [data-native-surface="career"] :is(button,input):focus-visible { outline: 2px solid var(--one-accent); outline-offset: 3px; }
+html[data-native-theme] [data-native-surface="career"] :is(button,input):focus-visible:not(.post-it-editor-preview textarea) { outline: 2px solid var(--one-accent); outline-offset: 3px; }
 html[data-native-theme] [data-native-surface="career"] :is(small,p,dt,dd) { color: var(--one-muted) !important; }
 html[data-native-theme] [data-native-surface="career"] [class*="screen"],
 html[data-native-theme] [data-native-surface="career"] [class*="professorsPanel"],
@@ -490,23 +477,6 @@ html[data-native-theme] .app-shell[data-native-theme] .simplified-calendar-add >
 html[data-native-theme] .app-shell[data-native-theme] :is(.boca-pocket-heart,.boca-pocket-score,.boca-pocket-match-label,.boca-reference-emblem) { background: var(--one-lilac) !important; color: var(--one-ink) !important; border: 0 !important; box-shadow: none !important; }
 html[data-native-theme] .app-shell[data-native-theme] .match-day-schedule-card::after { content: none !important; }
 html[data-native-theme] .app-shell[data-native-theme] :is(.tape,.theme-scene-frame,.theme-scene-ribbon,.theme-scene-dots) { display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.calendar-mood-sticker,.selected-mood-sticker,.mood-bubble,.sticker-bubble) { border: 1px solid var(--one-line) !important; box-shadow: none !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.mood-pink,.sticker-pink) { background: var(--one-pink) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.mood-lilac,.sticker-lilac) { background: var(--one-lilac) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.mood-blue,.mood-sky,.sticker-blue,.sticker-sky) { background: var(--one-blue) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.mood-mint,.sticker-mint) { background: var(--one-mint) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.mood-peach,.mood-yellow,.mood-coral,.sticker-peach,.sticker-yellow,.sticker-coral) { background: var(--one-peach) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview) {
-  --post-it-paper: var(--one-lilac) !important; background-color: var(--post-it-paper) !important;
-}
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).lavender { --post-it-paper: var(--one-lilac) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).rose { --post-it-paper: var(--one-pink) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).sky { --post-it-paper: var(--one-blue) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).mint { --post-it-paper: var(--one-mint) !important; }
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).peach,
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).coral,
-html[data-native-theme] .app-shell[data-native-theme] :is(.movable-post-it,.post-it-editor-preview).cream { --post-it-paper: var(--one-peach) !important; }
-html[data-native-theme] .app-shell[data-native-theme] .post-it-editor-preview textarea { background: transparent !important; border: 0 !important; color: var(--one-ink) !important; }
 html[data-native-theme] .app-shell[data-native-theme] :is(.metrics-insights-card > div,.metrics-summary-grid > div,.timetable-term-meta i) { background: var(--one-raised) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; }
 html[data-native-theme] [data-native-surface="career"] :is([class*="legend"],[class*="badge"],[class*="Badge"],[class*="details"],[class*="routeBox"],[class*="courseStatusEditor"]) { background: var(--one-soft) !important; color: var(--one-ink) !important; border-color: var(--one-line) !important; border-radius: 16px !important; }
 /* Native composition: flat page, short headers, grouped rows, no paper scenes. */
@@ -521,7 +491,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   margin-inline: auto;
 }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.phone-canvas::before,.phone-canvas::after,.welcome-row::before,.welcome-row::after,.screen-intro::before,.screen-intro::after,.schedule-card::before,.schedule-card::after,.reminder-card::before,.reminder-card::after) { content: none !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.paper-grain,.storybook-scene,.day-charm,.theme-scene-accent,.tape,.post-it-tape,.mini-people,.focus-sticker,.timer-keepsake,.timer-bloom-decoration,.metrics-v2-keepsake,.boca-pocket-doodles,.boca-pocket-ribbon,.boca-pocket-stadium-wrap,.reminder-editor-sparkles,.reference-welcome-scene) { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.paper-grain,.storybook-scene,.day-charm,.theme-scene-accent,.tape,.mini-people,.focus-sticker,.timer-keepsake,.timer-bloom-decoration,.metrics-v2-keepsake,.boca-pocket-doodles,.boca-pocket-ribbon,.boca-pocket-stadium-wrap,.reminder-editor-sparkles,.reference-welcome-scene) { display: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(h1,h2,h3,h4) {
   letter-spacing: 0 !important;
   font-weight: 500 !important;
@@ -634,11 +604,11 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-editor-actions,.reminder-editor-actions,.post-it-editor-actions,.habit-editor-actions,.category-editor-actions) { background: transparent !important; border-top: 1px solid var(--one-line) !important; gap: 12px; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-editor-actions,.reminder-editor-actions,.post-it-editor-actions,.habit-editor-actions,.category-editor-actions) button { flex: 1; min-height: 48px; background: transparent !important; border: 0 !important; box-shadow: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-date-fields,.event-time-fields,.event-setting-row,.event-detail-facts > div,.event-detail-section,.event-todo-item,.class-editor-row,.reminder-editor-note label,.habit-editor label) { background: var(--one-soft) !important; border-color: var(--one-line) !important; border-radius: 12px !important; color: var(--one-ink) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]) { min-height: 44px; font-size: 14px !important; border: 0 !important; border-radius: 10px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] textarea { line-height: 1.5 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(input,textarea,select):not([type="color"]):not([type="range"]):not([type="checkbox"]):not(.post-it-editor-preview textarea) { min-height: 44px; font-size: 14px !important; border: 0 !important; border-radius: 10px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] textarea:not(.post-it-editor-preview textarea) { line-height: 1.5 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] input[type="range"] { accent-color: var(--one-accent); }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] input[type="checkbox"] { accent-color: var(--one-accent); }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-options-card,.calendar-date-menu,.simplified-month-picker,.ao3-more-tags-list,.post-it-palette-picker) { background: var(--one-raised) !important; border: 0 !important; border-radius: 18px !important; box-shadow: 0 6px 24px #00000030 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-options-card,.calendar-date-menu,.simplified-month-picker,.ao3-more-tags-list) { background: var(--one-raised) !important; border: 0 !important; border-radius: 18px !important; box-shadow: 0 6px 24px #00000030 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.theme-option,.mode-card,.profile-card,.sync-card) { border: 0 !important; padding: 16px !important; border-radius: 14px !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .theme-option.active { outline: 2px solid var(--one-accent); outline-offset: -2px; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.theme-option-art,.settings-footnote > img) { display: none !important; }
@@ -660,7 +630,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.month-grid button,.calendar-day-number) { border-radius: 8px !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.simplified-calendar-nav,.calendar-navigation,.calendar-footer) { background: var(--one-page) !important; border-color: var(--one-line) !important; box-shadow: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-today-shortcut,.agenda-v2-return-today,.calendar-search-trigger) { background: transparent !important; color: var(--one-accent) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.mood-bubble,.sticker-bubble,.calendar-mood-picker,.calendar-sticker-picker) { border-radius: 12px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.calendar-mood-picker,.calendar-sticker-picker) { border-radius: 12px !important; }
 /* AO3 colors are semantic, sampled from the attached skin; neutral Samsung keeps rows quiet. */
 html[data-native-theme="samsungao3"] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-work-title,.ao3-copy-title,.ao3-series-title,.ao3-secondary-series a) { color: #9acbd1 !important; }
 html[data-native-theme="samsungao3"][data-native-theme-mode="light"] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-work-title,.ao3-copy-title,.ao3-series-title,.ao3-secondary-series a) { color: #366771 !important; }
@@ -673,8 +643,6 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.ao3-back,.study-library-back,.study-reader-titlebar button,.library-reader-header button) { min-height: 44px; background: transparent !important; border: 0 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.pdf-tool-ribbon,.epub-tool-ribbon,.sketch-tools) { border-radius: 0 !important; }
 /* User colors, paper, pen strokes, image content and post-it drag transforms retain meaning. */
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it,.post-it-editor-preview) { border-radius: 12px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview textarea { font-family: var(--one-font) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.health-routine-item,.timetable-edit-row,.timetable-class-form) { border: 0 !important; background: var(--one-panel) !important; border-radius: 12px !important; }
 html[data-native-theme] [data-native-surface="career"] :is([class*="hero"],[class*="card"],[class*="Card"],[class*="sheet_"],[class*="courseRow"],[class*="courseButton"]) { border: 0 !important; border-radius: 14px !important; }
 html[data-native-theme] [data-native-surface="career"] :is(h1,h2,h3,h4) { font-weight: 500 !important; letter-spacing: 0 !important; }
@@ -687,7 +655,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.screen-section,.study-library-screen,.ao3-shell) { animation: one-page-in 180ms cubic-bezier(.2,.8,.2,1) both !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .movable-post-it { transition: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] button:disabled { opacity: .38 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(button,input,textarea,select,a,[role="button"]):focus-visible { outline: 2px solid var(--one-accent) !important; outline-offset: 3px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(button,input,textarea,select,a,[role="button"]):focus-visible:not(.post-it-editor-preview textarea) { outline: 2px solid var(--one-accent) !important; outline-offset: 3px !important; }
 @media (max-width: 600px) {
   html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .day-grid { grid-template-columns: minmax(0,1fr) !important; }
   html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.settings-modal,.event-editor,.note-detail-card,.class-editor-modal,.timetable-card) { width: 100% !important; max-width: 100% !important; border-radius: 18px 18px 0 0 !important; }
@@ -779,7 +747,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 @media (prefers-reduced-motion: reduce) {
   html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal { animation: none !important; }
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it p,.post-it-editor-preview textarea,.postit-archive-card p) { font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .postit-archive-card p { font-family: var(--one-font) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-modal header button { width: 44px; height: 44px; background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 50% !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .aerea-hub-links strong { font-weight: 400 !important; font-size: 14px !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.journal-actions,.health-routine-header,.study-library-hero,.inner-header) { background: transparent !important; border-color: var(--one-line) !important; color: var(--one-ink) !important; }
@@ -803,7 +771,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .journal-actions button { background: transparent !important; border: 0 !important; color: var(--one-accent) !important; font-size: 14px !important; font-weight: 500 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .add-event-button > span { background: transparent !important; font-family: var(--one-font) !important; }
 /* The Library and calendar have independent framing in the original app. */
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *)) { font-family: var(--one-font) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :where(p,span,strong,small,label,legend,dt,dd,summary):not(:where(.epub-paper *, .pdf-text-layer *,.movable-post-it *,.post-it-editor-options *,.mood-bubble *,.calendar-mood-sticker,.selected-mood-sticker)) { font-family: var(--one-font) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.study-library-hero,.study-library-actions,.study-library-organize,.study-library-shelves) { background: var(--one-panel) !important; background-image: none !important; border: 0 !important; box-shadow: none !important; border-radius: 14px !important; color: var(--one-ink) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-hero { background: transparent !important; padding: 20px 8px !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .study-library-hero::after { content: none !important; display: none !important; }

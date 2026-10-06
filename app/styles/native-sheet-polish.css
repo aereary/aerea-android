@@ -97,7 +97,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   color: var(--one-ink) !important;
   overflow-wrap: anywhere;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=color])) {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=color])):not(.post-it-editor-preview textarea) {
   color: var(--one-ink) !important;
   background: var(--one-raised) !important;
   border: 1px solid transparent !important;
@@ -109,14 +109,14 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   line-height: 1.5 !important;
   caret-color: var(--one-accent);
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):focus-visible {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):focus-visible:not(.post-it-editor-preview textarea) {
   outline: 2px solid var(--one-accent) !important;
   outline-offset: 2px;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,textarea)::placeholder {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,textarea):not(.post-it-editor-preview textarea)::placeholder {
   color: var(--one-muted) !important; opacity: 1 !important;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) button { min-height: 44px; touch-action: manipulation; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) button:not(.post-it-editor-options button) { min-height: 44px; touch-action: manipulation; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-header,.health-routine-header,.timetable-heading,.habit-editor-modal > header,.class-editor-modal > header,.note-detail-header,.reminder-editor-header,.study-editor-card > header) {
   align-items: flex-start !important;
   gap: 12px !important;
@@ -332,7 +332,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-subtitle { font-size: 14px !important; margin-top: 8px !important; color: var(--one-muted) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer { margin-top: 24px !important; gap: 8px !important; flex-wrap: wrap; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .reminder-editor-note footer button:last-child { background: var(--one-accent) !important; color: var(--one-on-accent) !important; min-width: 88px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-event-mode) button {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-event-mode) button:not(.post-it-editor-options button) {
   font-family: var(--one-font) !important; font-weight: 500 !important; font-size: 15px !important;
 }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.health-routine-close,.habit-editor-modal > header > button,.class-editor-modal > header > button) { font-size: 24px !important; }
@@ -375,17 +375,6 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 }
 .screen-sticker > .native-icon { display: none; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker > .native-icon { display: block; width: 24px; height: 24px; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubbles { gap: 8px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble {
-  background: var(--one-raised) !important; color: var(--one-ink) !important;
-  padding: 10px 4px !important; min-height: 76px !important; border: 0 !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble > span {
-  background: transparent !important; box-shadow: none !important; border: 0 !important;
-  color: var(--one-ink) !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble > small { color: var(--one-ink) !important; font-size: 12px !important; line-height: 1.4; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble.active { background: var(--one-selected) !important; outline: 2px solid var(--one-accent); outline-offset: -2px; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row strong,.calendar-summary-title) { font-size: 16px !important; line-height: 1.4 !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.reminder-row small,.calendar-summary-time) { color: var(--one-muted) !important; font-size: 12px !important; }
 @media (max-width: 360px) {

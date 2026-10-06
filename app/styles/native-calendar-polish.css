@@ -17,33 +17,6 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-color-picker button.active::before {
   outline: 2px solid var(--one-accent); outline-offset: 4px;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it,.post-it-editor-preview) {
-  background: var(--native-post-it-paper) !important; color: #282337 !important; border: 0 !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .movable-post-it p {
-  color: #282337 !important; font-family: var(--one-font) !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal .post-it-editor-preview textarea {
-  background: transparent !important; color: #282337 !important; border: 0 !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal .post-it-editor-preview textarea::placeholder {
-  color: #32253c !important; opacity: 1 !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-picker {
-  display: grid !important; grid-template-columns: 44px minmax(0,1fr) 44px !important; gap: 8px !important; padding: 8px 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches {
-  display: grid !important; grid-template-columns: repeat(4,minmax(0,1fr)) !important; gap: 4px !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button {
-  display: grid !important; place-items: center; width: 100% !important; height: 44px !important; min-height: 44px !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button span {
-  display: block; width: 22px !important; height: 22px !important; border: 1px solid #00000020 !important; border-radius: 50% !important; background: var(--post-it-swatch) !important;
-}
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button.active span {
-  outline: 2px solid var(--one-accent); outline-offset: 4px;
-}
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading {
   width: 100% !important; display: grid !important; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; gap: 8px !important; padding-block: 8px; background: transparent !important;
 }
@@ -141,12 +114,6 @@ html[data-native-theme] [data-native-surface="career"] [class*="quarterHead"] sm
   font-size: 12px !important; line-height: 1.5 !important;
 }
 html[data-native-theme] [data-native-surface="career"] [class*="searchBox"] span { color: var(--one-muted) !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview { transform: none !important; box-shadow: none !important; padding: 20px !important; margin-block: 24px !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview::after { display: none !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options fieldset { width: 100% !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 0 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options legend { color: var(--one-muted) !important; font-size: 14px !important; text-transform: none !important; letter-spacing: 0 !important; text-align: left !important; margin: 0 !important; font-weight: 400 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-count { font-size: 12px !important; color: var(--one-muted) !important; font-weight: 400 !important; letter-spacing: 0 !important; }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-nav { width: 44px !important; height: 44px !important; border: 0 !important; border-radius: 50% !important; background: var(--one-soft) !important; color: var(--one-ink) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal > header > button { border: 0 !important; width: 44px !important; height: 44px !important; border-radius: 50% !important; background: var(--one-raised) !important; color: var(--one-ink) !important; box-shadow: none !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal > footer button:last-child { color: var(--one-on-accent) !important; background: var(--one-accent) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-modal .selected-day-heading { background: transparent !important; color: var(--one-ink) !important; }
@@ -155,3 +122,87 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html[data-native-theme] [data-native-surface="career"] [class*="tabs"] button[class*="activeTab"] { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .selected-day-heading button { font-family: var(--one-font) !important; font-size: 14px !important; font-weight: 500 !important; min-height: 44px !important; border: 0 !important; color: var(--one-ink) !important; background: var(--one-soft) !important; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-health-completion button,.health-routine-check) { transition: opacity 120ms ease !important; }
+
+/* Shared paper and mood artwork: use the same rules and colors as legacy themes.
+   Only their surrounding sheet and the dark-mode text treatment are native. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options fieldset {
+  color: #514a62; background: #eee8f9;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview textarea::placeholder {
+  color: #32253c; opacity: 1;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.mood-bubble > span,.calendar-mood-sticker,.selected-mood-sticker) {
+  color: #282337 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble small {
+  color: var(--one-ink);
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .mood-bubble.active {
+  box-shadow: inset 0 0 0 2px var(--one-accent);
+}
+
+/* Daily care: a status summary and quiet, spacious rows. Editing owns deletion. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px;
+  padding: 16px; margin: 20px 0 16px; border-radius: 16px;
+  background: var(--one-soft); color: var(--one-ink);
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary strong { font-size: 14px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary progress {
+  grid-column: 1/-1; width: 100%; height: 4px; appearance: none;
+  border: 0; border-radius: 4px; overflow: hidden; background: var(--one-line);
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary progress::-webkit-progress-bar { background: var(--one-line); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary progress::-webkit-progress-value { background: var(--one-accent); border-radius: 4px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-summary progress::-moz-progress-bar { background: var(--one-accent); }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-list {
+  gap: 10px !important; overflow: visible; border-radius: 0;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-item {
+  grid-template-columns: 44px minmax(0,1fr) !important; min-height: 100px !important;
+  padding: 16px !important; gap: 14px !important; border-radius: 16px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body {
+  grid-column: 2; grid-row: 1; display: flex !important; flex-direction: column;
+  align-items: flex-start; min-width: 0; min-height: 60px; border: 0 !important;
+  gap: 4px !important; text-align: left;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body strong {
+  font-size: 17px !important; line-height: 1.4 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body .health-care-state {
+  color: var(--one-accent) !important; font-size: 12px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-body .health-routine-cadence {
+  margin: 0 !important; line-height: 1.5; overflow-wrap: anywhere;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-note .health-routine-check {
+  grid-column: 1; grid-row: 1; border: 0 !important; display: grid; place-items: center;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-check-ring {
+  width: 24px; height: 24px; border: 1.5px solid var(--one-muted); border-radius: 50%;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-check .native-icon { width: 24px; height: 24px; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-add {
+  display: flex !important; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px !important; margin-top: 20px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-care-remove {
+  background: transparent !important; color: var(--one-danger) !important;
+  border: 0 !important; padding: 12px 0; min-height: 44px; margin-top: 12px;
+}
+
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-count { color: #5e536e; }
+@media (max-width: 360px) {
+  html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal { padding-inline: 12px !important; }
+}
+
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options legend {
+  background: #eee8f9; border-radius: 999px; padding: 2px 8px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-weekdays {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .health-routine-weekdays button {
+  min-width: 44px; min-height: 44px; font-size: 12px !important;
+}
