@@ -18,6 +18,9 @@ const notificationReceiver = await readFile(new URL("../android/app/src/main/jav
 test("Android Back closes layers, preserves real tab history, and double-confirms exit", () => {
   assert.match(activity, /getOnBackPressedDispatcher\(\)\.addCallback/);
   assert.match(page, /aereaAndroidBack/);
+  assert.match(page, /const onAndroidBack = \(event: Event\) => \{\s*if \(consumeBackLayer\(event\)\) \{ lastExitBackRef.current = 0; return; \}/);
+  assert.match(page, /useBackLayer\(Boolean\(reminderDraft\) \|\| timetableOpen/);
+  assert.match(studyLibrary, /useBackLayer\(Boolean\(activeNoteEditor\), closeNoteEditor, 10\)/);
   assert.match(page, /Press Back again to exit aérea/);
   assert.match(page, /now - lastExitBackRef\.current <= 2000/);
   assert.match(page, /setTabHistory\(\(current\) => \[\.\.\.current, activeTab\]\)/);

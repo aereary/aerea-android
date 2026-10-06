@@ -608,7 +608,10 @@ test("opens the normal event editor only from its title and controls", () => {
   assert.match(pageSource, /className="event-detail-time"[\s\S]{0,120}data-event-detail-edit="true"/);
   assert.match(pageSource, /className="event-detail-reminder"[\s\S]{0,120}data-event-detail-edit="true"/);
   assert.match(cssSource, /Event-note paper stays calm; only its title and controls invite editing/);
-  assert.match(pageSource, /const closeCalendarEventEditor = \(\) =>[\s\S]{0,500}setCalendarOpen\(false\);[\s\S]{0,180}changeTab\("today"\)/);
+  const closeEditor = pageSource.split("const closeCalendarEventEditor = useCallback(() => {")[1].split("const openEventDetail")[0];
+  assert.match(closeEditor, /setCalendarOpen\(false\)/);
+  assert.doesNotMatch(closeEditor, /changeTab|scrollTo\(|setSelectedHomeDate/);
+  assert.match(closeEditor, /if \(eventEditorReturnDayPocket\) setDaySummaryDate\(eventEditorReturnDayPocket\)/);
   assert.match(pageSource, /onClick=\{closeCalendarEventEditor\}/);
   assert.match(pageSource, /closeCalendarEventEditor\(\);/);
 });
@@ -628,7 +631,7 @@ test("Today adds an event directly to the selected home day", () => {
   );
   assert.match(
     pageSource,
-    /const returnHome = editingEventId !== null \|\| eventEditorReturnHome;[\s\S]{0,500}setCalendarOpen\(false\)/,
+    /const returnHome = eventEditorReturnHome;[\s\S]{0,1500}setCalendarOpen\(false\)/,
   );
 });
 
@@ -1611,7 +1614,7 @@ test("ships movable post-its with an editor that matches the placed note", () =>
   assert.match(pageSource, /function postItVisualStyle/);
   assert.match(pageSource, /const fontSize = length > 150 \? 15 : length > 80 \? 16 : 18/);
   assert.match(pageSource, /\.\.\.postItVisualStyle\(postIt\.text\)/);
-  assert.match(pageSource, /style=\{postItVisualStyle\(postItDraft\.text\)\}/);
+  assert.match(pageSource, /style=\{\{ \.\.\.postItVisualStyle\(postItDraft\.text\), "--native-post-it-paper": postItColors\.find/);
   assert.match(cssSource, /Movable paper notes/);
   assert.match(cssSource, /Full monthly calendar/);
   assert.match(cssSource, /font-family:"Gaegu","Chalkboard SE","Marker Felt",cursive/);

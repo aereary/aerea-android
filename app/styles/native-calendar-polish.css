@@ -1,0 +1,157 @@
+/* Samsung themes only: calendar rhythm and inherited light surfaces. */
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-editor-title {
+  background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 12px 0 !important; color: var(--one-ink) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-editor-title h3 {
+  color: var(--one-ink) !important; font-size: 20px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-color-picker {
+  display: flex !important; flex-wrap: wrap; gap: 4px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-color-picker button {
+  display: grid !important; place-items: center; width: 44px !important; height: 44px !important; min-height: 44px !important; padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-color-picker button::before {
+  content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--class-swatch); border: 1px solid #00000020;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .timetable-color-picker button.active::before {
+  outline: 2px solid var(--one-accent); outline-offset: 4px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.movable-post-it,.post-it-editor-preview) {
+  background: var(--native-post-it-paper) !important; color: #282337 !important; border: 0 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .movable-post-it p {
+  color: #282337 !important; font-family: var(--one-font) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal .post-it-editor-preview textarea {
+  background: transparent !important; color: #282337 !important; border: 0 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal .post-it-editor-preview textarea::placeholder {
+  color: #32253c !important; opacity: 1 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-picker {
+  display: grid !important; grid-template-columns: 44px minmax(0,1fr) 44px !important; gap: 8px !important; padding: 8px 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches {
+  display: grid !important; grid-template-columns: repeat(4,minmax(0,1fr)) !important; gap: 4px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button {
+  display: grid !important; place-items: center; width: 100% !important; height: 44px !important; min-height: 44px !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button span {
+  display: block; width: 22px !important; height: 22px !important; border: 1px solid #00000020 !important; border-radius: 50% !important; background: var(--post-it-swatch) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-swatches button.active span {
+  outline: 2px solid var(--one-accent); outline-offset: 4px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading {
+  width: 100% !important; display: grid !important; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; gap: 8px !important; padding-block: 8px; background: transparent !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading .tiny-label {
+  display: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading > div {
+  min-width: 0; text-align: center;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading > button {
+  width: 44px !important; height: 44px !important; min-height: 44px !important; background: var(--one-soft) !important; color: var(--one-ink) !important; border: 0 !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-month-heading .calendar-date-menu-trigger {
+  width: 100% !important; max-width: 100%; min-height: 44px; text-align: center !important; justify-content: center !important; padding: 8px 0 !important; font-size: clamp(18px,5vw,24px) !important; line-height: 1.3 !important; font-weight: 500 !important; color: var(--one-ink) !important; background: transparent !important; border: 0 !important; letter-spacing: 0 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources {
+  gap: 8px 12px !important; margin: 8px 0 16px !important; padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources > span {
+  font-size: 12px !important; color: var(--one-muted) !important; line-height: 1.5;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources :is(.mood-source,.swipe-source) {
+  display: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources .calendar-search-trigger {
+  margin-left: auto !important; flex: 0 0 44px !important; width: 44px !important; height: 44px !important; min-height: 44px !important; padding: 0 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources .calendar-today-shortcut {
+  min-height: 44px !important; padding: 8px 14px !important; font-size: 14px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid > strong {
+  font-size: 11px !important; font-weight: 500 !important; letter-spacing: .03em !important; color: var(--one-muted) !important; padding-block: 8px !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid > strong:is(:first-child,:nth-child(7)) {
+  color: var(--one-accent) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid button {
+  min-height: 54px !important; border: 0 !important; border-radius: 12px !important; box-shadow: none !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid button.selected {
+  background: var(--one-selected) !important; outline: 1px solid var(--one-accent); outline-offset: -1px;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .month-grid .calendar-day-number {
+  font-size: 16px !important; font-weight: 500 !important; line-height: 1.5 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .selected-day-panel {
+  margin-top: 20px !important; padding: 16px !important; border: 0 !important; border-radius: 20px !important; background: var(--one-panel) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-mood-picker > div > span > strong {
+  color: var(--one-ink) !important; font-size: 15px !important; line-height: 1.4 !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-mood-picker > div > span > small {
+  color: var(--one-muted) !important; font-size: 12px !important; line-height: 1.5 !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="stats"] {
+  background: transparent !important; border: 0 !important; padding: 0 !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="stats"] > div {
+  background: var(--one-raised) !important; color: var(--one-ink) !important; border: 0 !important; border-radius: 12px !important; padding: 12px 8px !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="stats"] strong {
+  font-size: 22px !important; color: var(--one-ink) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="stats"] small {
+  font-size: 12px !important; line-height: 1.4 !important; color: var(--one-muted) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="tabs"] {
+  background: var(--one-page) !important; border: 0 !important; backdrop-filter: none !important; gap: 8px !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="tabs"] button {
+  font-size: 14px !important; min-height: 44px !important; font-weight: 500 !important; transition: opacity 120ms ease !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="searchBox"] {
+  background: var(--one-soft) !important; color: var(--one-muted) !important; border: 0 !important; padding: 8px 12px !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="searchBox"] input {
+  background: transparent !important; font-size: 15px !important; min-height: 36px;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="searchBox"] input::placeholder {
+  color: var(--one-muted) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="quarter"] {
+  border-color: var(--one-line) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="quarterNumber"] {
+  background: var(--one-raised) !important; color: var(--one-ink) !important; border: 0 !important; font-size: 14px !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="quarterHead"] {
+  background: var(--one-panel) !important; color: var(--one-ink) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="quarterHead"] strong {
+  font-size: 15px !important; color: var(--one-ink) !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="quarterHead"] small {
+  font-size: 12px !important; line-height: 1.5 !important;
+}
+html[data-native-theme] [data-native-surface="career"] [class*="searchBox"] span { color: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview { transform: none !important; box-shadow: none !important; padding: 20px !important; margin-block: 24px !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-preview::after { display: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options fieldset { width: 100% !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-options legend { color: var(--one-muted) !important; font-size: 14px !important; text-transform: none !important; letter-spacing: 0 !important; text-align: left !important; margin: 0 !important; font-weight: 400 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-count { font-size: 12px !important; color: var(--one-muted) !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-palette-nav { width: 44px !important; height: 44px !important; border: 0 !important; border-radius: 50% !important; background: var(--one-soft) !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal > header > button { border: 0 !important; width: 44px !important; height: 44px !important; border-radius: 50% !important; background: var(--one-raised) !important; color: var(--one-ink) !important; box-shadow: none !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .post-it-editor-modal > footer button:last-child { color: var(--one-on-accent) !important; background: var(--one-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-modal .selected-day-heading { background: transparent !important; color: var(--one-ink) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources i { background: var(--one-muted) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .calendar-sources .calendar-today-shortcut { color: var(--one-ink) !important; background: var(--one-soft) !important; border: 0 !important; font-family: var(--one-font) !important; font-weight: 500 !important; }
+html[data-native-theme] [data-native-surface="career"] [class*="tabs"] button[class*="activeTab"] { background: var(--one-accent) !important; color: var(--one-on-accent) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .selected-day-heading button { font-family: var(--one-font) !important; font-size: 14px !important; font-weight: 500 !important; min-height: 44px !important; border: 0 !important; color: var(--one-ink) !important; background: var(--one-soft) !important; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-health-completion button,.health-routine-check) { transition: opacity 120ms ease !important; }

@@ -2,6 +2,7 @@
 
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { NativeIcon } from "./components/native-icon";
+import { consumeBackLayer, useBackLayer } from "./use-back-layer";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import {
   Capacitor,
@@ -2724,6 +2725,8 @@ export default function Home() {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayKey);
   const [eventEditorOpen, setEventEditorOpen] = useState(false);
   const [eventEditorReturnHome, setEventEditorReturnHome] = useState(false);
+  const [eventEditorReturnDayPocket, setEventEditorReturnDayPocket] = useState<string | null>(null);
+  const [eventEditorOrigin, setEventEditorOrigin] = useState<{ scroll: number; date: string; month: Date; searchOpen: boolean } | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] =
     useState<CalendarEvent | null>(null);
@@ -2782,7 +2785,7 @@ export default function Home() {
       );
   }, [calendarEvents]);
 
-  const resetHealthRoutineDraft = () => {
+  const resetHealthRoutineDraft = useCallback(() => {
     setHealthRoutineEditingGroupId(null);
     setHealthRoutineDraft({
       title: "",
@@ -2790,7 +2793,7 @@ export default function Home() {
       weekdays: [dateFromKey(todayKey).getDay()],
       time: "",
     });
-  };
+  }, [todayKey]);
 
   const openHealthRoutineNote = () => {
     setHealthRoutineEditorOpen(false);
@@ -6540,50 +6543,6 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isNative()) return;
-    const onAndroidBack = () => {
-      const consumesNavigation = Boolean(eventDeleteRequest || eventEditorOpen || selectedEventDetail || selectedFootballMatch || daySummaryDate || activeStudyFile || selectedLibraryItem || quickCaptureOpen || postItEditorOpen || habitEditorOpen || classEditorOpen || taskLinkEditorId || categoryEditorOpen || monthPickerOpen || calendarSearchOpen || settingsOpen || metricsOpen || ao3LibraryLaunching || ao3LibraryOpen || aereaHubOpen || sketchFullscreen || calendarExpanded || calendarScheduleOpen || calendarOpen || space !== "menu" || tabHistory.length || activeTab !== "today");
-      if (consumesNavigation) lastExitBackRef.current = 0;
-      if (eventDeleteRequest) return setEventDeleteRequest(null);
-      if (eventEditorOpen) { setEventEditorOpen(false); setEditingEventId(null); return; }
-      if (selectedEventDetail || selectedFootballMatch) { setSelectedEventDetail(null); setSelectedFootballMatch(null); setEventDetailReturnDayPocket(null); return; }
-      if (daySummaryDate) return setDaySummaryDate(null);
-      if (activeStudyFile) { setActiveStudyFile(null); setActiveEpubBook(null); return; }
-      if (selectedLibraryItem) return setSelectedLibraryItem(null);
-      if (quickCaptureOpen) return setQuickCaptureOpen(false);
-      if (postItEditorOpen) return setPostItEditorOpen(false);
-      if (habitEditorOpen) return setHabitEditorOpen(false);
-      if (classEditorOpen) return setClassEditorOpen(false);
-      if (taskLinkEditorId) return setTaskLinkEditorId(null);
-      if (categoryEditorOpen) return setCategoryEditorOpen(false);
-      if (monthPickerOpen) return setMonthPickerOpen(false);
-      if (calendarSearchOpen) return setCalendarSearchOpen(false);
-      if (settingsOpen) return setSettingsOpen(false);
-      if (metricsOpen) return setMetricsOpen(false);
-      if (ao3LibraryLaunching || ao3LibraryOpen) { window.history.back(); return; }
-      if (aereaHubOpen) return setAereaHubOpen(false);
-      if (sketchFullscreen) return setSketchFullscreen(false);
-      if (calendarExpanded) return setCalendarExpanded(false);
-      if (calendarScheduleOpen) return setCalendarScheduleOpen(false);
-      if (calendarOpen) return setCalendarOpen(false);
-      if (space !== "menu") return setSpace("menu");
-      const prior = tabHistory.at(-1);
-      if (prior) { setTabHistory((current) => current.slice(0, -1)); setActiveTab(prior); return; }
-      if (activeTab !== "today") { setActiveTab("today"); return; }
-      const now = Date.now();
-      if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
-      lastExitBackRef.current = now;
-      const exitHint = "Press Back again to exit aérea";
-      setHistoryMessage(exitHint);
-      // AEREA_RECOVERY_FIX_003: use Android's native Toast so Samsung renders
-      // the compact system pill + app icon exactly like the approved reference.
-      void AereaNavigation.showExitHint({ message: exitHint });
-    };
-    window.addEventListener("aereaAndroidBack", onAndroidBack);
-    return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
-  }, [activeStudyFile, selectedLibraryItem, eventDeleteRequest, eventEditorOpen, selectedEventDetail, selectedFootballMatch, daySummaryDate, quickCaptureOpen, postItEditorOpen, habitEditorOpen, classEditorOpen, taskLinkEditorId, categoryEditorOpen, monthPickerOpen, calendarSearchOpen, settingsOpen, metricsOpen, ao3LibraryLaunching, ao3LibraryOpen, aereaHubOpen, sketchFullscreen, calendarExpanded, calendarScheduleOpen, calendarOpen, space, activeTab, tabHistory]);
-
   const openMetrics = () => {
     setMetricsAnchorDate(new Date());
     setMetricsOpen(true);
@@ -7557,10 +7516,17 @@ export default function Home() {
     });
   };
 
+  const rememberEventEditorOrigin = () => {
+    const calendar = document.querySelector<HTMLElement>(".calendar-modal");
+    setEventEditorOrigin(calendar ? { scroll: calendar.scrollTop, date: selectedCalendarDate, month: viewMonth, searchOpen: calendarSearchOpen } : null);
+  };
+
   const openNewEvent = (dateKey = selectedCalendarDate) => {
+    rememberEventEditorOrigin();
     const defaultCategory = calendarCategories[0] ?? starterCalendarCategories[0];
     setCalendarSearchOpen(false);
     setEventEditorReturnHome(false);
+    setEventEditorReturnDayPocket(null);
     setEditingEventId(null);
     setEventTemplateSuggestionsDismissed(false);
     setEventDraft({
@@ -7621,8 +7587,10 @@ export default function Home() {
   };
 
   const openEventEditor = (calendarEvent: CalendarEvent) => {
+    rememberEventEditorOrigin();
     setCalendarSearchOpen(false);
-    setEventEditorReturnHome(false);
+    setEventEditorReturnHome(!calendarOpen);
+    setEventEditorReturnDayPocket(null);
     setEditingEventId(calendarEvent.id);
     setEventTemplateSuggestionsDismissed(true);
     setEventDraft({
@@ -7633,8 +7601,21 @@ export default function Home() {
     setEventEditorOpen(true);
   };
 
-  const closeCalendarEventEditor = () => {
-    const returnHome = editingEventId !== null || eventEditorReturnHome;
+  const closeCalendarEventEditor = useCallback(() => {
+    const returnHome = eventEditorReturnHome;
+    const origin = eventEditorOrigin;
+    setEventEditorOrigin(null);
+    if (origin && !returnHome) {
+      setSelectedCalendarDate(origin.date);
+      setViewMonth(origin.month);
+      setCalendarSearchOpen(origin.searchOpen);
+      window.requestAnimationFrame(() => {
+        const calendar = document.querySelector<HTMLElement>(".calendar-modal");
+        if (calendar) calendar.scrollTop = origin.scroll;
+      });
+    }
+    if (eventEditorReturnDayPocket) setDaySummaryDate(eventEditorReturnDayPocket);
+    setEventEditorReturnDayPocket(null);
     setEventEditorOpen(false);
     setEventEditorReturnHome(false);
     setEditingEventId(null);
@@ -7644,9 +7625,7 @@ export default function Home() {
     setCalendarSearchOpen(false);
     setMonthPickerOpen(false);
     setCalendarOpen(false);
-    setDaySummaryDate(null);
-    changeTab("today");
-  };
+  }, [eventEditorOrigin, eventEditorReturnDayPocket, eventEditorReturnHome]);
 
   const openEventDetail = (
     calendarEvent: CalendarEvent,
@@ -7664,11 +7643,12 @@ export default function Home() {
     setSelectedEventDetail(detailEvent);
   };
 
-  const closeEventDetail = () => {
+  const closeEventDetail = useCallback(() => {
+    if (eventDetailReturnDayPocket) setDaySummaryDate(eventDetailReturnDayPocket);
     setSelectedEventDetail(null);
     setSelectedFootballMatch(null);
     setEventDetailReturnDayPocket(null);
-  };
+  }, [eventDetailReturnDayPocket]);
 
   const openSelectedEventEditor = () => {
     if (!selectedEventDetail || selectedEventDetail.eventType === "sports_event") {
@@ -7684,8 +7664,10 @@ export default function Home() {
       new Date(eventMonth.getFullYear(), eventMonth.getMonth(), 1),
     );
     closeEventDetail();
+    setDaySummaryDate(null);
     setCalendarOpen(true);
     openEventEditor(editableEvent);
+    setEventEditorReturnDayPocket(eventDetailReturnDayPocket);
   };
 
   const returnToDayPocket = () => {
@@ -7697,6 +7679,53 @@ export default function Home() {
     setSelectedCalendarDate(returnDate);
     setDaySummaryDate(returnDate);
   };
+
+  useEffect(() => {
+    const onAndroidBack = (event: Event) => {
+      if (consumeBackLayer(event)) { lastExitBackRef.current = 0; return; }
+      const consumesNavigation = Boolean(eventDeleteRequest || eventEditorOpen || selectedEventDetail || selectedFootballMatch || selectedJournalEntry || healthRoutineOpen || daySummaryDate || activeStudyFile || selectedLibraryItem || quickCaptureOpen || postItEditorOpen || habitEditorOpen || classEditorOpen || taskLinkEditorId || categoryEditorOpen || monthPickerOpen || calendarSearchOpen || settingsOpen || metricsOpen || ao3LibraryLaunching || ao3LibraryOpen || aereaHubOpen || sketchFullscreen || calendarExpanded || calendarScheduleOpen || calendarOpen || space !== "menu" || tabHistory.length || activeTab !== "today");
+      if (consumesNavigation) lastExitBackRef.current = 0;
+      if (eventDeleteRequest) return setEventDeleteRequest(null);
+      if (categoryEditorOpen) return setCategoryEditorOpen(false);
+      if (taskLinkEditorId) return setTaskLinkEditorId(null);
+      if (eventEditorOpen) { closeCalendarEventEditor(); return; }
+      if (selectedEventDetail || selectedFootballMatch) { closeEventDetail(); return; }
+      if (selectedJournalEntry) return setSelectedJournalEntry(null);
+      if (healthRoutineEditorOpen) { setHealthRoutineEditorOpen(false); resetHealthRoutineDraft(); return; }
+      if (healthRoutineOpen) return setHealthRoutineOpen(false);
+      if (daySummaryDate) return setDaySummaryDate(null);
+      if (activeStudyFile) { setActiveStudyFile(null); setActiveEpubBook(null); return; }
+      if (selectedLibraryItem) return setSelectedLibraryItem(null);
+      if (quickCaptureOpen) return setQuickCaptureOpen(false);
+      if (postItEditorOpen) return setPostItEditorOpen(false);
+      if (habitEditorOpen) return setHabitEditorOpen(false);
+      if (classEditorOpen) return setClassEditorOpen(false);
+      if (monthPickerOpen) return setMonthPickerOpen(false);
+      if (calendarSearchOpen) return setCalendarSearchOpen(false);
+      if (settingsOpen) return setSettingsOpen(false);
+      if (metricsOpen) return setMetricsOpen(false);
+      if (ao3LibraryLaunching || ao3LibraryOpen) { window.history.back(); return; }
+      if (aereaHubOpen) return setAereaHubOpen(false);
+      if (sketchFullscreen) return setSketchFullscreen(false);
+      if (calendarExpanded) return setCalendarExpanded(false);
+      if (calendarScheduleOpen) return setCalendarScheduleOpen(false);
+      if (calendarOpen) return setCalendarOpen(false);
+      if (space !== "menu") return setSpace("menu");
+      const prior = tabHistory.at(-1);
+      if (prior) { setTabHistory((current) => current.slice(0, -1)); setActiveTab(prior); return; }
+      if (activeTab !== "today") { setActiveTab("today"); return; }
+      const now = Date.now();
+      if (now - lastExitBackRef.current <= 2000) { void AereaNavigation.exitApp(); return; }
+      lastExitBackRef.current = now;
+      const exitHint = "Press Back again to exit aérea";
+      setHistoryMessage(exitHint);
+      // AEREA_RECOVERY_FIX_003: use Android's native Toast so Samsung renders
+      // the compact system pill + app icon exactly like the approved reference.
+      void AereaNavigation.showExitHint({ message: exitHint });
+    };
+    window.addEventListener("aereaAndroidBack", onAndroidBack);
+    return () => window.removeEventListener("aereaAndroidBack", onAndroidBack);
+  }, [closeCalendarEventEditor, closeEventDetail, resetHealthRoutineDraft, activeStudyFile, selectedLibraryItem, eventDeleteRequest, eventEditorOpen, eventEditorReturnHome, eventEditorReturnDayPocket, eventDetailReturnDayPocket, selectedEventDetail, selectedFootballMatch, selectedJournalEntry, healthRoutineOpen, healthRoutineEditorOpen, daySummaryDate, quickCaptureOpen, postItEditorOpen, habitEditorOpen, classEditorOpen, taskLinkEditorId, categoryEditorOpen, monthPickerOpen, calendarSearchOpen, settingsOpen, metricsOpen, ao3LibraryLaunching, ao3LibraryOpen, aereaHubOpen, sketchFullscreen, calendarExpanded, calendarScheduleOpen, calendarOpen, space, activeTab, tabHistory]);
 
   const editTimetableClassFromCalendar = () => {
     if (
@@ -11875,6 +11904,7 @@ export default function Home() {
                 style={
                   {
                     ...postItVisualStyle(postIt.text),
+                    "--native-post-it-paper": postItColors.find((color) => color.value === postIt.color)?.hex ?? "#d8d0f0",
                     "--post-it-x": `${postIt.x}%`,
                     "--post-it-y": `${postIt.y}%`,
                     "--post-it-rotation": `${postIt.rotation}deg`,
@@ -14738,7 +14768,7 @@ export default function Home() {
                   })}
                 </div>
               )}
-              <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); }}>
+              <button className="day-summary-add" onClick={() => { setDaySummaryDate(null); openNewEvent(daySummaryDate); setEventEditorReturnDayPocket(daySummaryDate); }}>
                 <span className="day-summary-add-icon" aria-hidden="true">
                   <svg viewBox="0 0 42 42" focusable="false">
                     <rect x="5" y="8" width="32" height="28" rx="7" />
@@ -15679,7 +15709,7 @@ export default function Home() {
 
             <div
               className={`post-it-editor-preview ${postItDraft.color}`}
-              style={postItVisualStyle(postItDraft.text)}
+              style={{ ...postItVisualStyle(postItDraft.text), "--native-post-it-paper": postItColors.find((color) => color.value === postItDraft.color)?.hex ?? "#d8d0f0" } as CSSProperties}
             >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
@@ -16298,6 +16328,12 @@ function TodayScreen({
   const timetablePressTimerRef = useRef<number | null>(null);
   const timetablePressStartRef = useRef<{ x: number; y: number } | null>(null);
   const timetableLongPressedRef = useRef(false);
+  useBackLayer(Boolean(reminderDraft) || timetableOpen, () => {
+    if (reminderDraft) { setReminderDraft(null); return; }
+    if (timetableClassDraft) { setTimetableClassDraft(null); return; }
+    if (timetableEditing) { setTimetableEditing(false); return; }
+    setTimetableOpen(false);
+  }, 10);
   const selectedDateObject = dateFromKey(selectedDate);
   const selectedIsToday = selectedDate === todayKey;
   const isNoirRest = themeId === "noirrest";
@@ -17493,7 +17529,7 @@ function TodayScreen({
                           type="button"
                           key={color}
                           className={timetableClassDraft.color === color ? "active" : ""}
-                          style={{ background: color }}
+                          style={{ background: color, "--class-swatch": color } as CSSProperties}
                           onClick={() =>
                             setTimetableClassDraft((current) =>
                               current ? { ...current, color } : current,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useBackLayer } from "./use-back-layer";
+
 import {
   ChangeEvent,
   CSSProperties,
@@ -417,6 +419,8 @@ export function StudyLibrary({
     setNoteEditor(null);
     if (requestedNoteId) onRequestedNoteOpened?.();
   };
+
+  useBackLayer(Boolean(activeNoteEditor), closeNoteEditor, 10);
 
   return (
     <section className="study-library-screen" aria-label="Library">

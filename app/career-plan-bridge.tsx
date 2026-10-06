@@ -8,6 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { useBackLayer } from "./use-back-layer";
 import {
   CAREER_COURSES,
   CAREER_PROFESSORS,
@@ -506,43 +507,12 @@ function CareerPlanOverlay({
     };
   }, []);
 
-  useEffect(() => {
-    const closeTopLayer = (event: Event) => {
-      if (addProfessorOpen) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setAddProfessorOpen(false);
-        return;
-      }
-      if (professorsOpen) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setProfessorsOpen(false);
-        return;
-      }
-      if (selectedCourse) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setSelectedCourse(null);
-        setShowRoute(false);
-        return;
-      }
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      onClose();
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeTopLayer(event);
-    };
-
-    window.addEventListener("aereaAndroidBack", closeTopLayer, true);
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.removeEventListener("aereaAndroidBack", closeTopLayer, true);
-      window.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, [addProfessorOpen, onClose, professorsOpen, selectedCourse]);
+  useBackLayer(true, () => {
+    if (addProfessorOpen) { setAddProfessorOpen(false); return; }
+    if (professorsOpen) { setProfessorsOpen(false); return; }
+    if (selectedCourse) { setSelectedCourse(null); setShowRoute(false); return; }
+    onClose();
+  }, 20);
 
   const saveProfessor = (event: FormEvent) => {
     event.preventDefault();
