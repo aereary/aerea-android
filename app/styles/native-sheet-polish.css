@@ -408,7 +408,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.reminder-editor-note,.calendar-event-mode) .event-editor-themed::after { display: none !important; }
 
 /* Snapshot layers animate months together without changing any grid geometry. */
-.month-grid-viewport, .extended-calendar-view, .simplified-calendar-screen { position: relative; }
+.month-grid-viewport, .extended-calendar-view { position: relative; }
 [data-calendar-month-grid] { animation: none !important; }
 [data-calendar-month-grid][data-month-moving] { opacity: 0 !important; }
 .calendar-month-motion {
@@ -422,7 +422,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
-  height: 100% !important;
+  height: var(--month-snapshot-height) !important;
   margin: 0 !important;
   opacity: 1 !important;
   pointer-events: none !important;
