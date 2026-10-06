@@ -27,7 +27,9 @@ test("career plan is isolated from the protected page state", () => {
   assert.match(bridge, /querySelector<HTMLElement>\("\.timetable-card"\)/);
   assert.match(bridge, /data-aerea-career-plan-slot/);
   assert.match(bridge, /createPortal/);
-  assert.match(bridge, /aereaAndroidBack/);
+  assert.match(bridge, /useBackLayer\(true,[\s\S]*?onClose\(\);[\s\S]*?20\)/);
+  const backHook = readFileSync(new URL("../app/use-back-layer.ts", import.meta.url), "utf8");
+  assert.match(backHook, /consumeBackLayer = \(event: Event\) => layers.consume\(event\)/);
   assert.match(bridge, /aerea_academic_profile/);
   assert.match(bridge, /aerea-academic-profile-v1/);
   assert.doesNotMatch(bridge, /＋ Add professor/);

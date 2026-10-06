@@ -1,14 +1,14 @@
 // Browser regression gate for Samsung sheets. Uses isolated synthetic state only.
 // npm run build:native first; install Playwright and its Chromium browser to run.
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const root=fileURLToPath(new URL('../native-shell',import.meta.url));
 const output=process.env.AEREA_QA_OUTPUT || fileURLToPath(new URL('../outputs/samsung-sheet-qa',import.meta.url));
 fs.mkdirSync(output,{recursive:true});
-async function setup(theme,mode,width,reduced=false){
+export async function setup(theme,mode,width,reduced=false){
 const browser=await chromium.launch({executablePath:process.env.AEREA_QA_BROWSER || undefined,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--single-process','--no-zygote']});
 const c=await browser.newContext({viewport:{width,height:width<600?852:1100},deviceScaleFactor:1,serviceWorkers:'block',reducedMotion:reduced?'reduce':'no-preference'});
 await c.addInitScript(({theme,mode})=>{
@@ -24,7 +24,7 @@ const path=root+(u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname));
 if(!fs.existsSync(path))return route.fulfill({status:404,body:'Not found'});
 return route.fulfill({status:200,contentType:path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':path.endsWith('.html')?'text/html':path.endsWith('.svg')?'image/svg+xml':'application/octet-stream',body:fs.readFileSync(path)});
 });
-await p.goto('http://qa.local/');await p.waitForSelector('[data-theme="'+theme+'"]'); await p.waitForTimeout(500);
+await p.goto('https://qa.local/');await p.waitForSelector('[data-theme="'+theme+'"]'); await p.waitForTimeout(500);
 // The browser has no Capacitor Android host. Apply the same native geometry
 // after its web-only platform probe; include the Android safe-area fallbacks.
 await p.evaluate(()=>document.documentElement.dataset.native='true');
@@ -66,14 +66,14 @@ const parse=c=>c.match(/[\d.]+/g).slice(0,3).map(Number);
 const lum=c=>parse(c).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
 const a=lum(fg),b=lum(bg);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
 }
-async function checkContrast(p,selector,label){
-const colors=await p.locator(selector).evaluate(el=>{
+export async function checkContrast(p,selector,label,pseudo=null){
+const colors=await p.locator(selector).evaluate((el,pseudo)=>{
 let parent=el;let bg='rgba(0, 0, 0, 0)';
 while(parent&&bg==='rgba(0, 0, 0, 0)'){bg=getComputedStyle(parent).backgroundColor;parent=parent.parentElement;}
-return {color:getComputedStyle(el).color,bg};});
+return {color:getComputedStyle(el,pseudo).color,bg};},pseudo);
 const ratio=contrast(colors.color,colors.bg);assert.ok(ratio>=4.5,label+' text contrast '+ratio.toFixed(2));return {label,...colors,ratio};
 }
-(async()=>{
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) (async()=>{
 const results=[];
 for(const theme of ['samsungminimal','samsungao3'])for(const mode of ['dark','light'])for(const width of [393,800]){
 const {browser,p}=await setup(theme,mode,width);const label=theme+'-'+mode+'-'+width;const checks=[];

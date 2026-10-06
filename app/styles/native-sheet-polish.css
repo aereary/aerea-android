@@ -97,7 +97,7 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   color: var(--one-ink) !important;
   overflow-wrap: anywhere;
 }
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input:not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea) {
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.event-detail-note,.health-routine-note,.habit-editor-modal,.class-editor-modal,.reminder-editor-note,.timetable-card,.note-detail-card,.post-it-editor-modal,.quick-capture-modal,.task-link-modal,.category-editor-modal,.study-editor-card,.ao3-modal,.day-summary-card,.event-delete-dialog,.settings-modal,.calendar-modal.calendar-event-mode) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=color])) {
   color: var(--one-ink) !important;
   background: var(--one-raised) !important;
   border: 1px solid transparent !important;
