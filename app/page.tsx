@@ -11933,7 +11933,7 @@ export default function Home() {
                   void saveQuickCapture();
                 }
               }}
-              placeholder="entregar tarea martes…"
+              placeholder="Something to remember…"
               aria-label="Quick Capture text"
             />
             <div className="quick-capture-file">
