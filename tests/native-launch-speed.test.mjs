@@ -51,9 +51,9 @@ test("Android hands off its compact neutral splash after the first React frame",
   assert.doesNotMatch(nativeHtml, /native-launch-cover|native-launch-mark/);
   assert.match(
     nativeHtml,
-    /--native-launch-background:#f5f6f8/,
+    /--native-launch-background:#171719/,
   );
-  assert.match(nativeHtml, /prefers-color-scheme:dark[\s\S]{0,100}#0e1418/);
+  assert.doesNotMatch(nativeHtml, /--native-launch-background:#(?:f5f6f8|0e1418)/);
   assert.match(nativeHtml, /html\.startup-pending #root\{visibility:hidden\}/);
   assert.match(
     page,
@@ -78,8 +78,8 @@ test("Android hands off its compact neutral splash after the first React frame",
     /style name="AppTheme\.Starting" parent="Theme\.SplashScreen"[\s\S]{0,400}windowSplashScreenBackground">@color\/aerea_launch_background[\s\S]{0,400}postSplashScreenTheme">@style\/AppTheme\.NoActionBar/,
   );
   assert.match(androidStyles, /windowSplashScreenAnimatedIcon">@mipmap\/aerea_splash_icon/);
-  assert.match(androidColors, /aerea_launch_background">#F5F6F8/);
-  assert.match(androidNightColors, /aerea_launch_background">#0E1418/);
+  assert.match(androidColors, /aerea_launch_background">#171719/);
+  assert.match(androidNightColors, /aerea_launch_background">#171719/);
   for (const density of ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]) {
     assert.ok(
       existsSync(`android/app/src/main/res/mipmap-${density}/aerea_splash_icon.png`),

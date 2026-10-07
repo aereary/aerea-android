@@ -47,6 +47,7 @@ next-env.d.ts
 # local Android and Codespaces artifacts
 /android/.gradle/
 /android/**/build/
+/android/app/src/main/res/drawable-nodpi/aerea_icon_*.png
 /*.patch
 /add-codespaces-port-3000.sh
 /trigger-apk-build-from-recovery.sh
