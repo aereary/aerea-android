@@ -30,9 +30,13 @@
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] :is(.screen-section,.study-library-screen,.ao3-shell) {
   animation-name: one-screen-enter !important;
 }
+/* Let entrance animations finish once; sheets must not cancel/restart the page.
+   No filled transform may keep a viewport overlay inside a containing block. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.screen-section,.study-library-screen,.ao3-shell) {
+  animation-fill-mode: none !important;
+}
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode]:has(:is(.event-detail-backdrop,.health-routine-backdrop,.habit-editor-backdrop,.class-editor-backdrop,.reminder-editor-backdrop,.timetable-backdrop,.note-detail-backdrop,.post-it-editor-backdrop,.quick-capture-backdrop,.task-link-backdrop,.category-editor-backdrop,.study-editor-backdrop,.ao3-modal-backdrop,.day-summary-backdrop,.event-delete-backdrop,.settings-backdrop,.calendar-backdrop:has(> .calendar-event-mode))) :is(.primary-swipe-surface,.screen-section,.study-library-screen,.ao3-shell) {
   transform: none !important;
-  animation: none !important;
   will-change: auto !important;
   z-index: auto !important;
   isolation: auto !important;
@@ -434,6 +438,70 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-week-map-class > span > small { color: var(--sheet-muted) !important; font-size: 12px !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta { background: transparent !important; color: var(--sheet-muted) !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-meta > span { background: var(--sheet-raised) !important; color: var(--sheet-ink) !important; }
+/* Selection must remain visible after dark/native button overrides. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-weekdays { grid-template-columns: repeat(7,minmax(0,1fr)) !important; gap: 4px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-weekdays > button {
+  min-width: 0 !important; min-height: 44px !important; aspect-ratio: auto !important;
+  padding: 8px 2px !important; border: 1px solid var(--sheet-line) !important;
+  border-radius: 12px !important; background: var(--sheet-raised) !important;
+  color: var(--sheet-ink) !important; font-size: 12px !important; font-weight: 400 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .health-routine-weekdays > button[aria-pressed="true"] {
+  background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important;
+  border-color: var(--sheet-accent) !important; font-weight: 700 !important;
+}
+/* The + capture sheet follows the same field, close and action rhythm. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal { display: grid !important; gap: 16px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal::before { margin-bottom: 4px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > header {
+  display: flex !important; align-items: flex-start !important; gap: 12px !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > header > div { flex: 1; min-width: 0; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > header > button {
+  flex: 0 0 44px !important; width: 44px !important; height: 44px !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+  border-radius: 50% !important; background: var(--sheet-raised) !important;
+  color: var(--sheet-ink) !important; font-size: 24px !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > textarea {
+  display: block !important; width: 100% !important; min-height: 144px !important;
+  max-height: 32dvh; margin: 0 !important; padding: 16px !important;
+  box-sizing: border-box !important; resize: none; overflow-y: auto;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file {
+  display: grid !important; gap: 8px !important; margin: 0 !important; padding: 0 !important;
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file > label {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  min-height: 48px; width: 100%; padding: 10px 16px; box-sizing: border-box;
+  border: 1px solid var(--sheet-line); border-radius: 24px;
+  background: var(--sheet-raised) !important; color: var(--sheet-ink) !important; font-size: 15px;
+  cursor: pointer;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file > label > span { color: var(--sheet-ink) !important; font-weight: 500 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file > label > input[type="file"] {
+  display: block !important; position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0 !important; opacity: 0; cursor: pointer;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file > label:focus-within { outline: 2px solid var(--sheet-accent); outline-offset: 2px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-file > button {
+  width: 100%; min-height: 44px; padding: 10px 12px; border: 0;
+  border-radius: 12px; background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
+  overflow-wrap: anywhere;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > footer {
+  display: grid !important; grid-template-columns: minmax(0,1fr) !important; width: 100% !important;
+  gap: 12px !important; margin: 0 !important; padding: 0 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > footer > small { color: var(--sheet-muted) !important; font-size: 13px; line-height: 1.5; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-modal > footer > button {
+  width: 100% !important; min-height: 48px !important; margin: 0 !important;
+  padding: 12px 20px !important; border: 0 !important; border-radius: 24px !important;
+  background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important;
+}
+
 /* Keep the original leaf, feather and sparkles visible, including small phones. */
 .app-shell[data-theme][data-color-mode] .screen-sticker { display: flex; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker {
