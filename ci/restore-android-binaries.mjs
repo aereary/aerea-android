@@ -41,8 +41,10 @@ for (const icon of icons) {
 `);
   // Below Android 12, the compat splash clips to a 2/3 circle. A 5/9 tile
   // preserves its rounded corners inside that circle without an added frame.
+  // Its 288dp canvas needs 64dp insets; dimensions also work on API 24/25,
+  // which cannot inflate the fraction-valued insets added in API 26.
   await writeFile(`${drawableDir}/aerea_splash_${icon.id}.xml`, `<?xml version="1.0" encoding="utf-8"?>
-<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="22.222222%">
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="64dp">
     <bitmap android:src="@drawable/aerea_icon_tile_${icon.id}" android:gravity="fill" android:filter="true" />
 </inset>
 `);
