@@ -132,6 +132,7 @@ const Ao3LibraryOpening = lazy(() =>
   })),
 );
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
+const AppIconPicker = lazy(() => import("./app-icon-picker"));
 const PdfStudyReader = lazy(() =>
   loadStudyReaderModule().then((module) => ({ default: module.PdfStudyReader })),
 );
@@ -15643,6 +15644,7 @@ export default function Home() {
             </header>
 
             {appUpdates.settings}
+            {isNative() && <Suspense fallback={null}><AppIconPicker /></Suspense>}
             <section className="profile-card" aria-label="Profile picture">
               <span className="profile-preview">
                 {profilePhoto ? (
