@@ -72,7 +72,7 @@ test("generated adaptive icons fill the launcher viewport and retain the complet
       assert.ok(colors.size > 100, `${id}: artwork stays in a multicolor background, so Android retains the entire tile`);
       const compat = read(join(resources, `drawable/aerea_splash_${id}.xml`));
       assert.ok(compat.includes(`@drawable/aerea_icon_tile_${id}`));
-      assert.match(compat, /android:inset="22\.222222%"/);
+      assert.match(compat, /android:inset="64dp"/);
       assert.deepEqual(readFileSync(join(resources, `drawable-nodpi/aerea_icon_tile_${id}.png`)), Buffer.from(image, "base64"));
       assert.ok(styles.includes(`@drawable/aerea_splash_${id}`));
     }
