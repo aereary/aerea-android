@@ -24,6 +24,11 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Android 12+ reads the launching alias's icon itself. Older Android
+        // versions need the matching compat splash theme before installation.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            setTheme(AereaAppIconsPlugin.startingTheme(this));
+        }
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         splashScreen.setKeepOnScreenCondition(() -> !launchReady);
         new Handler(Looper.getMainLooper()).postDelayed(
@@ -46,6 +51,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AereaNavigationPlugin.class);
         registerPlugin(AereaMicrophonePlugin.class);
         registerPlugin(AereaUpdatesPlugin.class);
+        registerPlugin(AereaAppIconsPlugin.class);
         configureEdgeToEdge();
         super.onCreate(savedInstanceState);
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {

@@ -17,7 +17,9 @@ public class AereaEventNotificationReceiver extends BroadcastReceiver {
             CHANNEL_ID, "Event reminders", NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Reminders for events saved in aérea");
         manager.createNotificationChannel(channel);
-        Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        // Notification taps must keep working after a launcher alias is changed.
+        Intent launch = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent content = PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         String identity = intent.getStringExtra("identity");
         String title = intent.getStringExtra("title");
