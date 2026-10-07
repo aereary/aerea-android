@@ -966,7 +966,7 @@ test("hands off the native startup at the first React frame while local state re
   );
 });
 
-test("uses one quiet light-or-dark neutral Android launch frame", () => {
+test("uses the requested charcoal Android launch frame in both color modes", () => {
   assert.doesNotMatch(nativeStorageSource, /setLaunchAppearance|LAUNCH_THEME_COLOR/);
   assert.match(mainActivitySource, /ContextCompat\.getColor\(this, R\.color\.aerea_launch_background\)/);
   assert.match(
@@ -981,9 +981,9 @@ test("uses one quiet light-or-dark neutral Android launch frame", () => {
     androidStylesSource,
     /android:windowBackground">@color\/aerea_launch_background/,
   );
-  assert.match(androidColorsSource, /aerea_launch_background">#F5F6F8/);
-  assert.match(androidNightColorsSource, /aerea_launch_background">#0E1418/);
-  assert.match(capacitorSource, /backgroundColor: "#f5f6f8"/);
+  assert.match(androidColorsSource, /aerea_launch_background">#171719/);
+  assert.match(androidNightColorsSource, /aerea_launch_background">#171719/);
+  assert.match(capacitorSource, /backgroundColor: "#171719"/);
   assert.doesNotMatch(pageSource, /AereaStorage\.setLaunchAppearance/);
 });
 
