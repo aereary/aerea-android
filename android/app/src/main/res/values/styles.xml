@@ -28,31 +28,31 @@
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
     <style name="AppTheme.Starting.pocket_heart" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_pocket_heart</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_pocket_heart</item>
     </style>
     <style name="AppTheme.Starting.bunny_cloud" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_bunny_cloud</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_bunny_cloud</item>
     </style>
     <style name="AppTheme.Starting.sunrise" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_sunrise</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_sunrise</item>
     </style>
     <style name="AppTheme.Starting.feather_orbit" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_feather_orbit</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_feather_orbit</item>
     </style>
     <style name="AppTheme.Starting.heart_planet" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_heart_planet</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_heart_planet</item>
     </style>
     <style name="AppTheme.Starting.little_pocket" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_little_pocket</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_little_pocket</item>
     </style>
     <style name="AppTheme.Starting.orbit_star" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_orbit_star</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_orbit_star</item>
     </style>
     <style name="AppTheme.Starting.moon_cloud" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_moon_cloud</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_moon_cloud</item>
     </style>
     <style name="AppTheme.Starting.orbital_a" parent="AppTheme.Starting">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_icon_orbital_a</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_orbital_a</item>
     </style>
     <style name="AereaWidgetWeekday">
         <item name="android:layout_width">0dp</item>
