@@ -306,7 +306,52 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   width: 100% !important; max-width: 100% !important;
   padding: 9px 4px !important;
 }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form { background: var(--sheet-soft) !important; }
+/* Class details use the sheet itself, without the semester header or nested frame. */
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-card:has(.editing-class) > .timetable-heading { display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-editor.editing-class {
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+  background: transparent !important; box-shadow: none !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form {
+  display: grid !important; gap: 16px !important; width: 100% !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+  background: transparent !important; box-shadow: none !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form .timetable-class-name {
+  display: flex !important; flex-direction: column !important; gap: 6px !important; margin: 0 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form :is(input,select) { width: 100% !important; max-width: 100% !important; min-height: 44px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-card .timetable-class-form .timetable-meeting-row input[type="time"] { padding: 9px 4px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-list {
+  display: grid !important; gap: 12px !important; margin: 0 !important; padding: 0 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-list > button {
+  width: 100% !important; min-height: 44px !important; margin: 0 !important;
+  border: 1px solid var(--sheet-line) !important; border-radius: 24px !important;
+  background: transparent !important; color: var(--sheet-ink) !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-meeting-row > button:disabled { display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form .timetable-color-picker {
+  display: grid !important; grid-template-columns: repeat(6,minmax(0,1fr)) !important; gap: 4px !important;
+  margin: 0 !important; padding: 0 !important; border: 0 !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form .timetable-color-picker legend { margin-bottom: 12px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form .timetable-color-picker button {
+  width: 44px !important; height: 44px !important; min-height: 44px !important;
+  margin: 0 !important; padding: 0 !important; border-radius: 50% !important; justify-self: center;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer {
+  display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 8px !important;
+  margin: 0 !important; padding: 16px 0 0 !important; border-top: 1px solid var(--sheet-line) !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer:has(.timetable-delete-class) { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.25fr) !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer > span { display: none !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer > button {
+  width: 100% !important; min-width: 0 !important; min-height: 48px !important; margin: 0 !important; padding: 10px 8px !important; grid-column: auto !important;
+  border: 0 !important; border-radius: 24px !important; background: var(--sheet-raised) !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer > .timetable-delete-class { background: transparent !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form > footer > .timetable-save-class { background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields input { background: var(--sheet-soft) !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form-heading { align-items: flex-start !important; gap: 12px; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form-heading > button {
