@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "aérea",
   webDir: "native-shell",
   android: {
-    backgroundColor: "#f5f6f8",
+    backgroundColor: "#171719",
   },
   plugins: {
     SystemBars: {
