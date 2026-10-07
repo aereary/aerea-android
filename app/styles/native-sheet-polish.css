@@ -293,10 +293,18 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading-actions { flex: 0 0 auto; display: flex; gap: 4px; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading h2 { white-space: normal !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading > div:first-child { min-width: 0; flex: 1; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading:has(.timetable-term-fields) { position: relative; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading:has(.timetable-term-fields) .timetable-heading-actions { position: absolute !important; top: 0 !important; right: 0 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-heading:has(.timetable-term-fields) > div:first-child > :is(.tiny-label,h2) { padding-right: 56px !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields {
-  display: grid !important; grid-template-columns: minmax(0,1fr) !important; gap: 16px !important;
+  display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 16px 10px !important;
   background: var(--sheet-raised) !important; color: var(--sheet-ink) !important;
   border: 0 !important; border-radius: 16px !important; padding: 14px !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields > label:first-child { grid-column: 1/-1 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-card .timetable-term-fields input[type="date"] {
+  width: 100% !important; max-width: 100% !important;
+  padding: 9px 4px !important;
 }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-class-form { background: var(--sheet-soft) !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .timetable-term-fields input { background: var(--sheet-soft) !important; }
