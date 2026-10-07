@@ -48,6 +48,8 @@ next-env.d.ts
 /android/.gradle/
 /android/**/build/
 /android/app/src/main/res/drawable-nodpi/aerea_icon_*.png
+/android/app/src/main/res/drawable-anydpi-v26/aerea_icon_*.xml
+/android/app/src/main/res/drawable/aerea_splash_*.xml
 /*.patch
 /add-codespaces-port-3000.sh
 /trigger-apk-build-from-recovery.sh
