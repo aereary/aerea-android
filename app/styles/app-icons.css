@@ -1,0 +1,119 @@
+.app-icon-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 23500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) 12px
+    max(12px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.45);
+}
+.app-icon-dialog {
+  width: min(100%, 520px);
+  max-height: calc(
+    100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 24px 18px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  animation: app-update-rise 0.28s ease-out;
+}
+.app-icon-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.app-icon-dialog h2 {
+  margin: 6px 0;
+  font-size: 24px;
+}
+.app-icon-dialog p {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.app-icon-dialog header button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 28px;
+}
+.app-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.app-icon-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 5px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.app-shell .app-icon-grid button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--lime-wash);
+}
+.app-icon-grid img,
+.app-icon-original {
+  display: block;
+  width: min(100%, 80px);
+  aspect-ratio: 1;
+  border-radius: 22%;
+  object-fit: contain;
+}
+.app-icon-original {
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  font-weight: 800;
+  background: #171719;
+  color: #f3bfdd;
+}
+.app-icon-grid small {
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.app-icon-grid button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.app-icon-dialog button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.app-icon-dialog .app-icon-error {
+  color: var(--ink);
+  font-weight: 700;
+}
+@media (min-width: 700px) {
+  .app-icon-backdrop {
+    align-items: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-icon-dialog {
+    animation: none;
+  }
+}
