@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { SheetPresence } from "./components/sheet-presence";
 import { createPortal } from "react-dom";
 import { useBackLayer } from "./use-back-layer";
 import {
@@ -838,7 +839,7 @@ function CareerPlanOverlay({
         </main>
       </div>
 
-      {selectedCourse && (
+      <SheetPresence>{selectedCourse && (
         <div
           className={styles.sheetBackdrop}
           onMouseDown={(event) => {
@@ -992,7 +993,7 @@ function CareerPlanOverlay({
             )}
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
       {professorsOpen && (
         <div className={styles.professorsPanel}>
@@ -1028,7 +1029,7 @@ function CareerPlanOverlay({
         </div>
       )}
 
-      {addProfessorOpen && (
+      <SheetPresence>{addProfessorOpen && (
         <div
           className={styles.formBackdrop}
           onMouseDown={(event) => {
@@ -1062,7 +1063,7 @@ function CareerPlanOverlay({
             </button>
           </form>
         </div>
-      )}
+      )}</SheetPresence>
     </div>
   );
 }
@@ -1134,11 +1135,10 @@ export default function CareerPlanBridge() {
           </div>,
           slot,
         )}
-      {open &&
-        createPortal(
-          <CareerPlanOverlay onClose={() => setOpen(false)} />,
-          document.body,
-        )}
+      {typeof document !== "undefined" && createPortal(
+        <SheetPresence>{open && <CareerPlanOverlay onClose={() => setOpen(false)} />}</SheetPresence>,
+        document.body,
+      )}
     </>
   );
 }
