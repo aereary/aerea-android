@@ -460,6 +460,8 @@ html[data-native-theme] [data-native-surface="career"] [class*="professorsPanel"
 html[data-native-theme] [data-native-surface="career"] [class*="topbar"] { background: var(--one-page) !important; color: var(--one-ink) !important; }
 html[data-native-theme] [data-native-surface="career"] :is([class*="hero"],[class*="card"],[class*="Card"],[class*="sheet_"],[class*="professorForm"],[class*="courseRow"],[class*="courseButton"],[class*="stats"],[class*="detailGrid"],[class*="professorIntro"]) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: var(--one-radius) !important; box-shadow: var(--one-shadow) !important; color: var(--one-ink) !important; }
 html[data-native-theme] [data-native-surface="career"] [class*="hero"] { background: var(--one-lilac) !important; }
+/* Term containers are visible through the rounded course rows. */
+html[data-native-theme] [data-native-surface="career"] [class*="quarter_"] { background: var(--one-panel) !important; border-color: var(--one-line) !important; }
 html[data-native-theme] [data-native-surface="career"] [class*="progressTrack"] { background: var(--one-soft) !important; }
 html[data-native-theme] [data-native-surface="career"] [class*="progressTrack"] span { background: var(--one-accent) !important; }
 html[data-native-theme] [data-native-surface="career"] :is([class*="sheetBackdrop"],[class*="formBackdrop"]) { background: color-mix(in srgb,var(--one-page) 65%,#14101e80) !important; }
