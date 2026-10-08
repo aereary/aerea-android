@@ -131,3 +131,54 @@ export function timetableClassPosition(
     height: `${((Math.min(gridEnd, visibleEnd) - visibleStart) / duration) * 100}%`,
   };
 }
+
+
+export type TimedCalendarEvent = {
+  date: string;
+  time: string;
+  endDate?: string;
+  endTime?: string;
+  allDay?: boolean;
+  timePending?: boolean;
+};
+
+function localEventTime(date: string, time: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || timeToMinutes(time) === null) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const minutes = timeToMinutes(time)!;
+  const value = new Date(year, month - 1, day, Math.floor(minutes / 60), minutes % 60);
+  if (value.getFullYear() !== year || value.getMonth() !== month - 1 || value.getDate() !== day) return null;
+  return value;
+}
+
+/** Local occurrence dates, including midnight crossings. Unknown times stay unknown. */
+export function eventTimeWindow(event: TimedCalendarEvent) {
+  if (event.allDay || event.timePending) return null;
+  const start = localEventTime(event.date, event.time);
+  if (!start) return null;
+  const end = event.endTime
+    ? localEventTime(event.endDate || event.date, event.endTime)
+    : new Date(start.getTime() + 60 * 60_000);
+  if (!end) return null;
+  if (end.getTime() < start.getTime() && (!event.endDate || event.endDate === event.date)) {
+    end.setDate(end.getDate() + 1);
+  }
+  if (end.getTime() <= start.getTime()) return null;
+  return { start: start.getTime(), end: end.getTime() };
+}
+
+export function eventCountdown(event: TimedCalendarEvent, now: Date) {
+  const window = eventTimeWindow(event);
+  if (!window || !Number.isFinite(now.getTime()) || now.getTime() >= window.end) return null;
+  if (now.getTime() >= window.start) {
+    return { active: true, label: "now", description: "Happening now" };
+  }
+  const minutes = Math.ceil((window.start - now.getTime()) / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return {
+    active: false,
+    label: `in ${hours}:${String(remainder).padStart(2, "0")}`,
+    description: `Starts in ${hours} hours and ${remainder} minutes`,
+  };
+}
