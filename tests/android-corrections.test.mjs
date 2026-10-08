@@ -11,6 +11,7 @@ const manifest = await readFile(new URL("../android/app/src/main/AndroidManifest
 const storage = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaStoragePlugin.java", import.meta.url), "utf8");
 const notifications = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationsPlugin.java", import.meta.url), "utf8");
 const activity = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/MainActivity.java", import.meta.url), "utf8");
+const recorder = await readFile(new URL("../app/use-class-recording.ts", import.meta.url), "utf8");
 const microphone = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaMicrophonePlugin.java", import.meta.url), "utf8");
 const navigation = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaNavigationPlugin.java", import.meta.url), "utf8");
 const notificationReceiver = await readFile(new URL("../android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationReceiver.java", import.meta.url), "utf8");
@@ -57,19 +58,21 @@ test("Study Library inventory cannot resurrect files that are still in Trash", (
   );
 });
 
-test("Start recording explicitly requests Android microphone permission before getUserMedia", () => {
+test("Start recording explicitly requests Android microphone permission before native capture", () => {
   assert.match(manifest, /android\.permission\.RECORD_AUDIO/);
   assert.match(manifest, /android\.permission\.MODIFY_AUDIO_SETTINGS/);
   assert.match(activity, /registerPlugin\(AereaMicrophonePlugin\.class\)/);
   assert.match(microphone, /name\s*=\s*"AereaMicrophone"/);
   assert.match(microphone, /Manifest\.permission\.RECORD_AUDIO/);
   assert.match(microphone, /requestPermissionForAlias\("microphone"/);
-  assert.match(page, /registerPlugin<AereaMicrophonePlugin>\("AereaMicrophone"\)/);
-  assert.match(page, /AereaMicrophone\.requestPermissions\(\)/);
-  assert.match(page, /Please allow microphone access to record a class\./);
-  const permissionIndex = page.indexOf("AereaMicrophone.requestPermissions()");
-  const captureIndex = page.indexOf("navigator.mediaDevices.getUserMedia({ audio: true })");
+  assert.match(page, /useClassRecording\(/);
+  assert.match(recorder, /registerPlugin<MicrophonePlugin>\("AereaMicrophone"\)/);
+  assert.match(recorder, /microphone\.requestPermissions\(\)/);
+  assert.match(recorder, /Please allow microphone access to record a class\./);
+  const permissionIndex = recorder.indexOf("microphone.requestPermissions()");
+  const captureIndex = recorder.indexOf("microphone.startRecording(session)");
   assert.ok(permissionIndex >= 0 && captureIndex > permissionIndex);
+
 });
 
 test("blocked Android microphone permission opens app settings instead of failing silently", () => {

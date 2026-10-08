@@ -20,10 +20,12 @@ test("recovery baseline keeps Boca UI and center-based post-it dragging", () => 
   assert.match(page, /offsetY:\s*event\.clientY - centerY/);
 });
 
-test("recovery baseline keeps microphone recording wired", () => {
-  assert.match(page, /navigator\.mediaDevices\?\.getUserMedia/);
-  assert.match(page, /window\.MediaRecorder/);
-  assert.match(page, /new MediaRecorder\(stream\)/);
+test("recovery baseline keeps microphone recording wired", async () => {
+  const recorder = await readFile(new URL("../app/use-class-recording.ts", import.meta.url), "utf8");
+  assert.match(page, /useClassRecording\(/);
+  assert.match(recorder, /navigator\.mediaDevices\?\.getUserMedia/);
+  assert.match(recorder, /window\.MediaRecorder/);
+  assert.match(recorder, /new MediaRecorder\(stream\)/);
   assert.match(page, /Stop & save/);
 });
 
