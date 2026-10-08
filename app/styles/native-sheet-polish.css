@@ -502,7 +502,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   background: var(--sheet-accent) !important; color: var(--sheet-on-accent) !important;
 }
 
-/* Keep the original leaf, feather and sparkles visible, including small phones. */
+/* Keep title decorations in the colorful themes and light minimalist palettes. */
 .app-shell[data-theme][data-color-mode] .screen-sticker { display: flex; }
 html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .screen-sticker {
   display: grid !important; place-items: center;
@@ -647,7 +647,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 }
 
 /* Only title decorations disappear in the two dark minimalist palettes. */
-.app-shell:is([data-theme="samsungminimal"],[data-theme="samsungao3"])[data-color-mode="dark"] .screen-intro .screen-sticker {
+html .app-shell:is([data-theme="samsungminimal"],[data-theme="samsungao3"])[data-color-mode][data-simplified-calendar][data-theme][data-color-mode="dark"] .screen-intro .screen-sticker {
   display: none !important;
 }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .screen-intro:has(.daily-care-trigger) { position: relative; padding-right: 0 !important; }
@@ -664,7 +664,7 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
   font-size: 13px;
 }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .daily-care-trigger:focus-visible { outline: 2px solid var(--sheet-accent); outline-offset: 3px; }
-html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up .schedule-card { position: relative !important; padding-bottom: 34px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up .schedule-card { position: relative !important; }
 html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up .coming-up-timing {
   position: absolute !important;
   right: 16px !important;
