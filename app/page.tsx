@@ -2,6 +2,7 @@
 
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { CalendarMonthGrid } from "./components/calendar-month-grid";
+import { SheetPresence } from "./components/sheet-presence";
 import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
 import { useAppUpdates } from "./use-app-updates";
@@ -109,6 +110,8 @@ import {
 import {
   cycleHabitDay,
   eventDisplayColor,
+  eventCountdown,
+  eventTimeWindow,
   formatTimeBlock,
   isHealthCompletedOn,
   isHealthCompletionEvent,
@@ -2283,7 +2286,7 @@ function eventDraftHasValidRange(draft: EventDraft) {
 }
 
 function findComingUpEvent(events: CalendarEvent[], now: Date) {
-  const currentMinute = now.getHours() * 60 + now.getMinutes();
+  const currentMinute = now.getTime() / 60_000;
 
   return (
     events
@@ -2302,15 +2305,15 @@ function findComingUpEvent(events: CalendarEvent[], now: Date) {
             end: Number.POSITIVE_INFINITY,
           };
         }
-        const start = minutesFromTime(event.time);
-        const requestedEnd = event.endTime
-          ? minutesFromTime(event.endTime)
-          : start + 60;
-        const end =
-          isFootballVisualEvent(event) &&
-          footballMatchIsLive(event.footballMatch)
-            ? Number.POSITIVE_INFINITY
-            : Math.min(24 * 60, Math.max(start + 15, requestedEnd));
+        const occurrence = event.repeat && event.repeat !== "Never"
+          ? calendarEventAtOccurrence(event, localDateKey(now))
+          : event;
+        const window = eventTimeWindow(occurrence);
+        if (!window) return { event, start: 0, end: 0 };
+        const start = window.start / 60_000;
+        const end = isFootballVisualEvent(event) && footballMatchIsLive(event.footballMatch)
+          ? Number.POSITIVE_INFINITY
+          : window.end / 60_000;
         return { event, start, end };
       })
       .filter(({ end }) => end > currentMinute)
@@ -3476,8 +3479,24 @@ export default function Home() {
       setIsNight(now.getHours() >= 18 || now.getHours() < 5);
     };
     updateClock();
-    const interval = window.setInterval(updateClock, 30_000);
-    return () => window.clearInterval(interval);
+    let timer: number;
+    const tick = () => {
+      updateClock();
+      timer = window.setTimeout(tick, 60_000 - (Date.now() % 60_000) + 20);
+    };
+    const resume = () => {
+      if (document.hidden) return;
+      window.clearTimeout(timer);
+      tick();
+    };
+    tick();
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("focus", resume);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("focus", resume);
+    };
   }, []);
 
   useEffect(() => {
@@ -9406,7 +9425,349 @@ export default function Home() {
         else undoGlobal();
       }}
     >
-      {appUpdates.dialog}
+      <SheetPresence>{appUpdates.dialog}</SheetPresence>
+
+      <SheetPresence>{healthRoutineOpen && (
+                <div
+                  className="health-routine-backdrop"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      setHealthRoutineOpen(false);
+                      setHealthRoutineEditorOpen(false);
+                    }
+                  }}
+                >
+                  <section
+                    className="health-routine-note"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="My daily rhythm"
+                  >
+                    <header className="health-routine-header">
+                      <div>
+                        <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
+                        <h3>{isNativeTheme(appTheme)
+                          ? healthRoutineEditorOpen
+                            ? healthRoutineEditingGroupId ? "Edit routine" : "New routine"
+                            : "Daily care"
+                          : "Take care of you"}</h3>
+                        <p>
+                          {isNativeTheme(appTheme)
+                            ? healthRoutineEditorOpen
+                              ? "Choose a rhythm that works for you."
+                              : "Your routines, at your own pace."
+                            : healthRoutineGroups.length === 0
+                            ? "A soft place for your everyday care."
+                            : `${healthRoutineGroups.length} small pocket${
+                                healthRoutineGroups.length === 1 ? "" : "s"
+                              } for today.`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="health-routine-close"
+                        aria-label="Close daily rhythm"
+                        onClick={() => {
+                          setHealthRoutineOpen(false);
+                          setHealthRoutineEditorOpen(false);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </header>
+
+                    {!healthRoutineEditorOpen ? (
+                      <>
+                        {isNativeTheme(appTheme) && healthRoutineGroups.length > 0 && (
+                          <div className="health-care-summary" role="status">
+                            <span>Today</span>
+                            <strong>{healthCareToday.scheduled
+                              ? `${healthCareToday.completed} of ${healthCareToday.scheduled} done`
+                              : "Nothing scheduled"}</strong>
+                            {healthCareToday.scheduled > 0 && <progress
+                              value={healthCareToday.completed}
+                              max={healthCareToday.scheduled}
+                              aria-label="Daily care completed"
+                            />}
+                          </div>
+                        )}
+                        <div className="health-routine-list">
+                          {healthRoutineGroups.length === 0 ? (
+                            <div className="health-routine-empty">
+                              {!isNativeTheme(appTheme) && <span aria-hidden="true">🌱</span>}
+                              <strong>No little routines yet</strong>
+                              <p>
+                                Add skincare, hair wash days, vitamins,
+                                stretching, or anything that belongs to
+                                your health rhythm.
+                              </p>
+                            </div>
+                          ) : (
+                            healthRoutineGroups.map((routine, routineIndex) => {
+                              const first = routine.events[0];
+
+                              const todayOccurrence =
+                                routine.events.find((event) =>
+                                  eventOccursOn(event, todayKey),
+                                );
+
+                              const completedToday = todayOccurrence
+                                ? isHealthCompletedOn(
+                                    todayOccurrence,
+                                    todayKey,
+                                  )
+                                : false;
+
+                              const cadence =
+                                first.healthRoutineCadence ?? "daily";
+
+                              const cadenceLabel =
+                                cadence === "alternate"
+                                  ? "Every other day"
+                                  : cadence === "weekdays"
+                                    ? Array.from(
+                                        new Set(
+                                          routine.events.map(
+                                            (event) =>
+                                              event.healthRoutineWeekday ??
+                                              dateFromKey(
+                                                event.date,
+                                              ).getDay(),
+                                          ),
+                                        ),
+                                      )
+                                        .sort((a, b) => a - b)
+                                        .map(
+                                          (weekday) =>
+                                            HEALTH_ROUTINE_DAY_LABELS[
+                                              weekday
+                                            ],
+                                        )
+                                        .join(" · ")
+                                    : "Every day";
+
+                              return (
+                                <article
+                                  key={routine.id}
+                                  className={`health-routine-item tone-${
+                                    routineIndex % 4
+                                  } ${
+                                    completedToday ? "complete" : ""
+                                  }`.trim()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="health-routine-body"
+                                    aria-label={isNativeTheme(appTheme) ? `Edit ${first.title}` : undefined}
+                                    onClick={() =>
+                                      editHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    {!isNativeTheme(appTheme) && <span
+                                      className="health-routine-emoji"
+                                      aria-hidden="true"
+                                    >
+                                      {healthRoutineIcon(first.title)}
+                                    </span>}
+                                    <strong>{first.title}</strong>
+                                    {isNativeTheme(appTheme) && <span className="health-care-state">
+                                      {todayOccurrence ? completedToday ? "Done today" : "For today" : "Not today"}
+                                    </span>}
+                                    <span className="health-routine-cadence">
+                                      {cadenceLabel}
+                                      {!first.allDay
+                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
+                                        : ""}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="health-routine-check"
+                                    disabled={!todayOccurrence}
+                                    aria-pressed={completedToday}
+                                    aria-label={
+                                      todayOccurrence
+                                        ? `${
+                                            completedToday
+                                              ? "Mark incomplete"
+                                              : "Mark complete"
+                                          }: ${first.title}`
+                                        : `${first.title} is not scheduled today`
+                                    }
+                                    onClick={(clickEvent) => {
+                                      if (!todayOccurrence) return;
+                                      toggleHealthOccurrence(
+                                        clickEvent,
+                                        todayOccurrence,
+                                        todayKey,
+                                      );
+                                    }}
+                                  >
+                                    {isNativeTheme(appTheme)
+                                      ? completedToday ? <NativeIcon name="check" /> : <span className="health-care-check-ring" aria-hidden="true" />
+                                      : completedToday ? "✓" : "○"}
+                                  </button>
+
+                                  {!isNativeTheme(appTheme) && <button
+                                    type="button"
+                                    className="health-routine-delete"
+                                    aria-label={`Delete ${first.title}`}
+                                    onClick={() =>
+                                      deleteHealthRoutine(routine.id)
+                                    }
+                                  >
+                                    ×
+                                  </button>}
+                                </article>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="health-routine-add"
+                          onClick={startNewHealthRoutine}
+                        >
+                          {isNativeTheme(appTheme) ? <NativeIcon name="add" /> : <span aria-hidden="true">＋</span>}
+                          Add a little routine
+                        </button>
+                      </>
+                    ) : (
+                      <div className="health-routine-editor">
+                        <label>
+                          <span>Little routine</span>
+                          <input
+                            value={healthRoutineDraft.title}
+                            placeholder="Skincare, wash my hair…"
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>Rhythm</span>
+                          <select
+                            value={healthRoutineDraft.cadence}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                cadence:
+                                  event.target
+                                    .value as HealthRoutineCadence,
+                              }))
+                            }
+                          >
+                            <option value="daily">Every day</option>
+                            <option value="alternate">
+                              Every other day
+                            </option>
+                            <option value="weekdays">
+                              Certain days
+                            </option>
+                          </select>
+                        </label>
+
+                        {healthRoutineDraft.cadence === "weekdays" && (
+                          <div className="health-routine-weekdays">
+                            {HEALTH_ROUTINE_DAY_LABELS.map(
+                              (label, weekday) => {
+                                const selected =
+                                  healthRoutineDraft.weekdays.includes(
+                                    weekday,
+                                  );
+
+                                return (
+                                  <button
+                                    type="button"
+                                    key={label}
+                                    className={
+                                      selected ? "selected" : ""
+                                    }
+                                    aria-pressed={selected}
+                                    aria-label={label}
+                                    onClick={() =>
+                                      setHealthRoutineDraft(
+                                        (current) => ({
+                                          ...current,
+                                          weekdays: selected
+                                            ? current.weekdays.filter(
+                                                (item) =>
+                                                  item !== weekday,
+                                              )
+                                            : [
+                                                ...current.weekdays,
+                                                weekday,
+                                              ].sort(
+                                                (a, b) => a - b,
+                                              ),
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    {isNativeTheme(appTheme) ? label : label.slice(0, 1)}
+                                  </button>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
+
+                        <label>
+                          <span>Time · optional</span>
+                          <input
+                            type="time"
+                            value={healthRoutineDraft.time}
+                            onChange={(event) =>
+                              setHealthRoutineDraft((current) => ({
+                                ...current,
+                                time: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+
+                        {isNativeTheme(appTheme) && healthRoutineEditingGroupId && <button
+                          type="button"
+                          className="health-care-remove"
+                          onClick={() => deleteHealthRoutine(healthRoutineEditingGroupId)}
+                        >Delete routine</button>}
+                        <div className="health-routine-editor-actions">
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => {
+                              setHealthRoutineEditorOpen(false);
+                              resetHealthRoutineDraft();
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="primary"
+                            disabled={
+                              !healthRoutineDraft.title.trim() ||
+                              (
+                                healthRoutineDraft.cadence === "weekdays" &&
+                                healthRoutineDraft.weekdays.length === 0
+                              )
+                            }
+                            onClick={saveHealthRoutine}
+                          >
+                            Save routine
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}</SheetPresence>
       <span className="visually-hidden" aria-live="polite">
         {historyMessage}
       </span>
@@ -9445,7 +9806,7 @@ export default function Home() {
             </button>
           </header>
 
-          {monthPickerOpen && (
+          <SheetPresence>{monthPickerOpen && (
             <section
               className="simplified-month-picker"
               role="dialog"
@@ -9498,7 +9859,7 @@ export default function Home() {
                 ))}
               </div>
             </section>
-          )}
+          )}</SheetPresence>
 
           <section
             className="simplified-calendar-filters"
@@ -9884,349 +10245,10 @@ export default function Home() {
                 copy="Consistency matters more than perfection. Tap today when a little promise is done."
                 sticker="🌿"
                 onStickerClick={openHealthRoutineNote}
+                hideSticker={isNativeTheme(appTheme) && colorMode === "dark"}
               />
 
-              {healthRoutineOpen && (
-                <div
-                  className="health-routine-backdrop"
-                  onMouseDown={(event) => {
-                    if (event.target === event.currentTarget) {
-                      setHealthRoutineOpen(false);
-                      setHealthRoutineEditorOpen(false);
-                    }
-                  }}
-                >
-                  <section
-                    className="health-routine-note"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="My daily rhythm"
-                  >
-                    <header className="health-routine-header">
-                      <div>
-                        <p className="tiny-label">HEALTH · DAILY RHYTHM</p>
-                        <h3>{isNativeTheme(appTheme)
-                          ? healthRoutineEditorOpen
-                            ? healthRoutineEditingGroupId ? "Edit routine" : "New routine"
-                            : "Daily care"
-                          : "Take care of you"}</h3>
-                        <p>
-                          {isNativeTheme(appTheme)
-                            ? healthRoutineEditorOpen
-                              ? "Choose a rhythm that works for you."
-                              : "Your routines, at your own pace."
-                            : healthRoutineGroups.length === 0
-                            ? "A soft place for your everyday care."
-                            : `${healthRoutineGroups.length} small pocket${
-                                healthRoutineGroups.length === 1 ? "" : "s"
-                              } for today.`}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="health-routine-close"
-                        aria-label="Close daily rhythm"
-                        onClick={() => {
-                          setHealthRoutineOpen(false);
-                          setHealthRoutineEditorOpen(false);
-                        }}
-                      >
-                        ×
-                      </button>
-                    </header>
-
-                    {!healthRoutineEditorOpen ? (
-                      <>
-                        {isNativeTheme(appTheme) && healthRoutineGroups.length > 0 && (
-                          <div className="health-care-summary" role="status">
-                            <span>Today</span>
-                            <strong>{healthCareToday.scheduled
-                              ? `${healthCareToday.completed} of ${healthCareToday.scheduled} done`
-                              : "Nothing scheduled"}</strong>
-                            {healthCareToday.scheduled > 0 && <progress
-                              value={healthCareToday.completed}
-                              max={healthCareToday.scheduled}
-                              aria-label="Daily care completed"
-                            />}
-                          </div>
-                        )}
-                        <div className="health-routine-list">
-                          {healthRoutineGroups.length === 0 ? (
-                            <div className="health-routine-empty">
-                              {!isNativeTheme(appTheme) && <span aria-hidden="true">🌱</span>}
-                              <strong>No little routines yet</strong>
-                              <p>
-                                Add skincare, hair wash days, vitamins,
-                                stretching, or anything that belongs to
-                                your health rhythm.
-                              </p>
-                            </div>
-                          ) : (
-                            healthRoutineGroups.map((routine, routineIndex) => {
-                              const first = routine.events[0];
-
-                              const todayOccurrence =
-                                routine.events.find((event) =>
-                                  eventOccursOn(event, todayKey),
-                                );
-
-                              const completedToday = todayOccurrence
-                                ? isHealthCompletedOn(
-                                    todayOccurrence,
-                                    todayKey,
-                                  )
-                                : false;
-
-                              const cadence =
-                                first.healthRoutineCadence ?? "daily";
-
-                              const cadenceLabel =
-                                cadence === "alternate"
-                                  ? "Every other day"
-                                  : cadence === "weekdays"
-                                    ? Array.from(
-                                        new Set(
-                                          routine.events.map(
-                                            (event) =>
-                                              event.healthRoutineWeekday ??
-                                              dateFromKey(
-                                                event.date,
-                                              ).getDay(),
-                                          ),
-                                        ),
-                                      )
-                                        .sort((a, b) => a - b)
-                                        .map(
-                                          (weekday) =>
-                                            HEALTH_ROUTINE_DAY_LABELS[
-                                              weekday
-                                            ],
-                                        )
-                                        .join(" · ")
-                                    : "Every day";
-
-                              return (
-                                <article
-                                  key={routine.id}
-                                  className={`health-routine-item tone-${
-                                    routineIndex % 4
-                                  } ${
-                                    completedToday ? "complete" : ""
-                                  }`.trim()}
-                                >
-                                  <button
-                                    type="button"
-                                    className="health-routine-body"
-                                    aria-label={isNativeTheme(appTheme) ? `Edit ${first.title}` : undefined}
-                                    onClick={() =>
-                                      editHealthRoutine(routine.id)
-                                    }
-                                  >
-                                    {!isNativeTheme(appTheme) && <span
-                                      className="health-routine-emoji"
-                                      aria-hidden="true"
-                                    >
-                                      {healthRoutineIcon(first.title)}
-                                    </span>}
-                                    <strong>{first.title}</strong>
-                                    {isNativeTheme(appTheme) && <span className="health-care-state">
-                                      {todayOccurrence ? completedToday ? "Done today" : "For today" : "Not today"}
-                                    </span>}
-                                    <span className="health-routine-cadence">
-                                      {cadenceLabel}
-                                      {!first.allDay
-                                        ? ` · ${formatTimeBlock(first.time).primary} ${formatTimeBlock(first.time).secondary}`
-                                        : ""}
-                                    </span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    className="health-routine-check"
-                                    disabled={!todayOccurrence}
-                                    aria-pressed={completedToday}
-                                    aria-label={
-                                      todayOccurrence
-                                        ? `${
-                                            completedToday
-                                              ? "Mark incomplete"
-                                              : "Mark complete"
-                                          }: ${first.title}`
-                                        : `${first.title} is not scheduled today`
-                                    }
-                                    onClick={(clickEvent) => {
-                                      if (!todayOccurrence) return;
-                                      toggleHealthOccurrence(
-                                        clickEvent,
-                                        todayOccurrence,
-                                        todayKey,
-                                      );
-                                    }}
-                                  >
-                                    {isNativeTheme(appTheme)
-                                      ? completedToday ? <NativeIcon name="check" /> : <span className="health-care-check-ring" aria-hidden="true" />
-                                      : completedToday ? "✓" : "○"}
-                                  </button>
-
-                                  {!isNativeTheme(appTheme) && <button
-                                    type="button"
-                                    className="health-routine-delete"
-                                    aria-label={`Delete ${first.title}`}
-                                    onClick={() =>
-                                      deleteHealthRoutine(routine.id)
-                                    }
-                                  >
-                                    ×
-                                  </button>}
-                                </article>
-                              );
-                            })
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          className="health-routine-add"
-                          onClick={startNewHealthRoutine}
-                        >
-                          {isNativeTheme(appTheme) ? <NativeIcon name="add" /> : <span aria-hidden="true">＋</span>}
-                          Add a little routine
-                        </button>
-                      </>
-                    ) : (
-                      <div className="health-routine-editor">
-                        <label>
-                          <span>Little routine</span>
-                          <input
-                            value={healthRoutineDraft.title}
-                            placeholder="Skincare, wash my hair…"
-                            onChange={(event) =>
-                              setHealthRoutineDraft((current) => ({
-                                ...current,
-                                title: event.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-
-                        <label>
-                          <span>Rhythm</span>
-                          <select
-                            value={healthRoutineDraft.cadence}
-                            onChange={(event) =>
-                              setHealthRoutineDraft((current) => ({
-                                ...current,
-                                cadence:
-                                  event.target
-                                    .value as HealthRoutineCadence,
-                              }))
-                            }
-                          >
-                            <option value="daily">Every day</option>
-                            <option value="alternate">
-                              Every other day
-                            </option>
-                            <option value="weekdays">
-                              Certain days
-                            </option>
-                          </select>
-                        </label>
-
-                        {healthRoutineDraft.cadence === "weekdays" && (
-                          <div className="health-routine-weekdays">
-                            {HEALTH_ROUTINE_DAY_LABELS.map(
-                              (label, weekday) => {
-                                const selected =
-                                  healthRoutineDraft.weekdays.includes(
-                                    weekday,
-                                  );
-
-                                return (
-                                  <button
-                                    type="button"
-                                    key={label}
-                                    className={
-                                      selected ? "selected" : ""
-                                    }
-                                    aria-pressed={selected}
-                                    aria-label={label}
-                                    onClick={() =>
-                                      setHealthRoutineDraft(
-                                        (current) => ({
-                                          ...current,
-                                          weekdays: selected
-                                            ? current.weekdays.filter(
-                                                (item) =>
-                                                  item !== weekday,
-                                              )
-                                            : [
-                                                ...current.weekdays,
-                                                weekday,
-                                              ].sort(
-                                                (a, b) => a - b,
-                                              ),
-                                        }),
-                                      )
-                                    }
-                                  >
-                                    {isNativeTheme(appTheme) ? label : label.slice(0, 1)}
-                                  </button>
-                                );
-                              },
-                            )}
-                          </div>
-                        )}
-
-                        <label>
-                          <span>Time · optional</span>
-                          <input
-                            type="time"
-                            value={healthRoutineDraft.time}
-                            onChange={(event) =>
-                              setHealthRoutineDraft((current) => ({
-                                ...current,
-                                time: event.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-
-                        {isNativeTheme(appTheme) && healthRoutineEditingGroupId && <button
-                          type="button"
-                          className="health-care-remove"
-                          onClick={() => deleteHealthRoutine(healthRoutineEditingGroupId)}
-                        >Delete routine</button>}
-                        <div className="health-routine-editor-actions">
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => {
-                              setHealthRoutineEditorOpen(false);
-                              resetHealthRoutineDraft();
-                            }}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="primary"
-                            disabled={
-                              !healthRoutineDraft.title.trim() ||
-                              (
-                                healthRoutineDraft.cadence === "weekdays" &&
-                                healthRoutineDraft.weekdays.length === 0
-                              )
-                            }
-                            onClick={saveHealthRoutine}
-                          >
-                            Save routine
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </section>
-                </div>
-              )}
+              
 
               <div className="habit-summary card">
                 <div className="habit-ring">
@@ -11518,7 +11540,7 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
-                      {sketchTextEditor && (
+                      <SheetPresence>{sketchTextEditor && (
                         <div className="sketch-text-sheet" role="dialog" aria-label="Add text to the page">
                           <div>
                             <p className="tiny-label">TEXT NOTE</p>
@@ -11553,7 +11575,7 @@ export default function Home() {
                             </button>
                           </footer>
                         </div>
-                      )}
+                      )}</SheetPresence>
                       <div
                         className="sketch-viewport"
                         ref={sketchViewportRef}
@@ -11816,7 +11838,7 @@ export default function Home() {
         </>
       )}
 
-      {aereaHubOpen && (
+      <SheetPresence>{aereaHubOpen && (
         <div
           className="modal-backdrop aerea-hub-backdrop"
           role="presentation"
@@ -11892,9 +11914,9 @@ export default function Home() {
             </div>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {quickCaptureOpen && (
+      <SheetPresence>{quickCaptureOpen && (
         <div
           className="modal-backdrop quick-capture-backdrop"
           role="presentation"
@@ -11968,9 +11990,9 @@ export default function Home() {
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {taskLinkEditor && (
+      <SheetPresence>{taskLinkEditor && (
           <div
             className="modal-backdrop task-link-backdrop"
             role="presentation"
@@ -12158,9 +12180,9 @@ export default function Home() {
               </footer>
             </section>
           </div>
-      )}
+      )}</SheetPresence>
 
-      {authCallbackStatus && (
+      <SheetPresence>{authCallbackStatus && (
         <div className="modal-backdrop auth-callback-backdrop" role="presentation">
           <section className="auth-callback-modal" role="dialog" aria-modal="true">
             <span>{authCallbackStatus.kind === "success" ? "♡" : authCallbackStatus.kind === "error" ? "!" : "…"}</span>
@@ -12192,9 +12214,9 @@ export default function Home() {
             )}
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {selectedLibraryItem && (
+      <SheetPresence>{selectedLibraryItem && (
         <div className="modal-backdrop library-reader-backdrop" role="presentation">
           <section
             className={`library-reader-modal ${
@@ -12262,7 +12284,7 @@ export default function Home() {
             </div>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
       {selectedPostItIds.length > 0 && (
         <div className="postit-multi-toolbar" aria-label="Selected post-it actions">
@@ -12442,7 +12464,7 @@ export default function Home() {
         </button>
       )}
 
-      {calendarOpen && (
+      <SheetPresence>{calendarOpen && (
         <div
           className={[
             "modal-backdrop",
@@ -13285,7 +13307,7 @@ export default function Home() {
                       </nav>
                     </header>
 
-                    {monthPickerOpen && (
+                    <SheetPresence>{monthPickerOpen && (
                       <div className="extended-calendar-picker" role="dialog" aria-label="Choose month">
                         {Array.from({ length: 12 }, (_, month) => (
                           <button
@@ -13303,7 +13325,7 @@ export default function Home() {
                           </button>
                         ))}
                       </div>
-                    )}
+                    )}</SheetPresence>
 
                     <section className="extended-calendar-filters" aria-label="Visible event types">
                       <div className="extended-filter-list">
@@ -13487,7 +13509,7 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-                {monthPickerOpen && !calendarExpanded && !calendarScheduleOpen && (
+                <SheetPresence>{monthPickerOpen && !calendarExpanded && !calendarScheduleOpen && (
                   <div className="calendar-date-menu" role="dialog" aria-label="Choose month and year">
                     <div className="calendar-date-menu-columns">
                       <div className="calendar-date-menu-list" aria-label="Months">
@@ -13517,7 +13539,7 @@ export default function Home() {
                     </div>
                     <button className="calendar-date-menu-done" onClick={() => setMonthPickerOpen(false)}>Done</button>
                   </div>
-                )}
+                )}</SheetPresence>
                 <div className="calendar-sources">
                   <span>
                     <i className="source-android" /> Android calendar
@@ -13784,13 +13806,13 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {scheduleFocusOpen && (
+                    <SheetPresence>{scheduleFocusOpen && (
                       <div
                         className="agenda-v2-focus-backdrop"
                         onClick={() => setScheduleFocusOpen(false)}
                         aria-hidden="true"
                       />
-                    )}
+                    )}</SheetPresence>
                     <div
                       className={[
                         selectedScheduleAgendaEvents.length
@@ -14313,9 +14335,9 @@ export default function Home() {
             )}
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {categoryEditorOpen && (
+      <SheetPresence>{categoryEditorOpen && (
         <div
           className="modal-backdrop category-editor-backdrop"
           role="presentation"
@@ -14439,9 +14461,9 @@ export default function Home() {
             </form>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {daySummaryDate && (() => {
+      <SheetPresence>{daySummaryDate && (() => {
         const summaryEvents = allCalendarEvents.filter((event) =>
           eventOccursOn(event, daySummaryDate),
         );
@@ -14587,9 +14609,9 @@ export default function Home() {
             </section>
           </div>
         );
-      })()}
+      })()}</SheetPresence>
 
-      {selectedJournalEntry && (
+      <SheetPresence>{selectedJournalEntry && (
         <NoteDetailDialog
           date={selectedJournalEntry.date}
           face={selectedJournalEntry.mood || "♡"}
@@ -14672,9 +14694,9 @@ export default function Home() {
           }}
           onDelete={() => deleteJournalEntry(selectedJournalEntry.id)}
         />
-      )}
+      )}</SheetPresence>
 
-      {selectedFootballMatch &&
+      <SheetPresence>{selectedFootballMatch &&
         (() => {
           const match = selectedFootballMatch.footballMatch;
           const score = footballScore(match);
@@ -14760,9 +14782,9 @@ export default function Home() {
               </section>
             </div>
           );
-        })()}
+        })()}</SheetPresence>
 
-      {selectedEventDetail &&
+      <SheetPresence>{selectedEventDetail &&
         (() => {
           const detailTime = eventDetailTimeParts(selectedEventDetail);
           return (
@@ -15184,9 +15206,9 @@ export default function Home() {
               </section>
             </div>
           );
-        })()}
+        })()}</SheetPresence>
 
-      {eventDeleteRequest &&
+      <SheetPresence>{eventDeleteRequest &&
         (() => {
           const eventToDelete = calendarEvents.find(
             (event) => event.id === eventDeleteRequest.eventId,
@@ -15267,7 +15289,7 @@ export default function Home() {
               </section>
             </div>
           );
-        })()}
+        })()}</SheetPresence>
 
       {false && metricsOpen && (
         <div className="metrics-backdrop metrics-v2-backdrop" role="presentation">
@@ -15488,7 +15510,7 @@ export default function Home() {
         </div>
       )}
 
-      {postItEditorOpen && (
+      <SheetPresence>{postItEditorOpen && (
         <div className="modal-backdrop post-it-editor-backdrop" role="presentation">
           <section
             className="post-it-editor-modal"
@@ -15619,9 +15641,9 @@ export default function Home() {
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {settingsOpen && (
+      <SheetPresence>{settingsOpen && (
         <div className="modal-backdrop settings-backdrop" role="presentation">
           <section
             className="settings-modal"
@@ -15864,9 +15886,9 @@ export default function Home() {
             </div>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {habitEditorOpen && (
+      <SheetPresence>{habitEditorOpen && (
         <div className="modal-backdrop habit-editor-backdrop" role="presentation">
           <section
             className="class-editor-modal habit-editor-modal"
@@ -15960,9 +15982,9 @@ export default function Home() {
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {classEditorOpen && (
+      <SheetPresence>{classEditorOpen && (
         <div className="modal-backdrop class-editor-backdrop" role="presentation">
           <section
             className="class-editor-modal"
@@ -16053,7 +16075,7 @@ export default function Home() {
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
     </main>
   );
 }
@@ -16145,6 +16167,16 @@ function TodayScreen({
   const isNoirRest = themeId === "noirrest";
   const comingUpEvent = selectedIsToday
     ? findComingUpEvent(selectedDateEvents, now)
+    : null;
+  const comingUpTiming = comingUpEvent
+    ? isFootballVisualEvent(comingUpEvent) && footballMatchIsLive(comingUpEvent.footballMatch)
+      ? { active: true, label: "now", description: "Happening now" }
+      : eventCountdown(
+          comingUpEvent.repeat && comingUpEvent.repeat !== "Never"
+            ? calendarEventAtOccurrence(comingUpEvent, selectedDate)
+            : comingUpEvent,
+          now,
+        )
     : null;
   const selectedWeekday = selectedDateObject.toLocaleDateString("en", {
     weekday: "long",
@@ -16664,6 +16696,12 @@ function TodayScreen({
                 </small>
               ) : null}
             </div>
+            {comingUpTiming && (
+              <span className={`coming-up-timing ${comingUpTiming.active ? "is-now" : ""}`} aria-label={comingUpTiming.description}>
+                {comingUpTiming.active && <i aria-hidden="true">•</i>}
+                {comingUpTiming.label}
+              </span>
+            )}
             <LittleSheetScheduleDetails event={comingUpEvent} />
             <div className="mini-people">
               {isNoirRest ? "•••" : "✦"}
@@ -16874,7 +16912,7 @@ function TodayScreen({
         </div>
       </section>
 
-      {reminderDraft && (
+      <SheetPresence>{reminderDraft && (
         <div
           className="reminder-editor-backdrop"
           role="presentation"
@@ -17022,9 +17060,9 @@ function TodayScreen({
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
-      {timetableOpen && (
+      <SheetPresence>{timetableOpen && (
         <div
           className="timetable-backdrop"
           role="presentation"
@@ -17436,7 +17474,7 @@ function TodayScreen({
             )}
           </section>
         </div>
-      )}
+      )}</SheetPresence>
 
       <button className="calendar-mood-note" onClick={openCalendar}>
         <span>◡‿◡</span>
