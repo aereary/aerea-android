@@ -216,3 +216,32 @@ test("compact calendar markers change stacking without changing position", () =>
     /\.month-grid > button \.calendar-event-dots \{\s*z-index: 1 !important;\s*\}/,
   );
 });
+
+test("Coming up counts down in hours:minutes and stays now for the whole event", () => {
+  const event = { date: '2026-10-08', time: '17:00', endTime: '20:00' };
+  const at = time => new Date(`2026-10-08T${time}`);
+  assert.deepEqual(logic.eventCountdown(event, at('12:25:00')), {active:false,label:'in 4:35',description:'Starts in 4 hours and 35 minutes'});
+  assert.equal(logic.eventCountdown(event, at('16:59:59')).label, 'in 0:01');
+  for (const time of ['17:00:00','18:30:00','19:59:59']) assert.equal(logic.eventCountdown(event, at(time)).active, true);
+  assert.equal(logic.eventCountdown(event, at('20:00:00')), null);
+  assert.equal(logic.eventCountdown(event, at('21:00:00')), null);
+});
+
+test("Coming up handles midnight and multi-day ends using occurrence dates", () => {
+  const night = {date:'2026-10-08',time:'23:30',endTime:'01:00'};
+  assert.equal(logic.eventCountdown(night, new Date('2026-10-09T00:15:00')).active, true);
+  assert.equal(logic.eventCountdown(night, new Date('2026-10-09T01:00:00')), null);
+  const trip = {...night, time:'09:00',endDate:'2026-10-10',endTime:'18:00'};
+  assert.equal(logic.eventCountdown(trip, new Date('2026-10-09T12:00:00')).active, true);
+  assert.equal(logic.eventCountdown(trip, new Date('2026-10-10T18:00:00')), null);
+});
+
+test("Coming up leaves all-day, TBD, invalid and expired times without a badge", () => {
+  const base = {date:'2026-10-08',time:'17:00',endTime:'20:00'};
+  for (const change of [{allDay:true},{timePending:true},{time:'TBD'},{time:'25:00'},{date:'2026-02-30'},{endTime:'invalid'},{endDate:'2026-10-07'}]) {
+    assert.equal(logic.eventCountdown({...base,...change}, new Date('2026-10-08T17:00:00')), null);
+  }
+  const withoutEnd = {date:'2026-10-08',time:'17:00'};
+  assert.equal(logic.eventCountdown(withoutEnd, new Date('2026-10-08T17:59:00')).active, true);
+  assert.equal(logic.eventCountdown(withoutEnd, new Date('2026-10-08T18:00:00')), null);
+});
