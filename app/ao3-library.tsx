@@ -1,5 +1,7 @@
 "use client";
 
+
+import { SheetPresence } from "./components/sheet-presence";
 import {
   useCallback,
   useEffect,
@@ -1444,7 +1446,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
       {toast && <div className="ao3-toast">{toast}</div>}
 
-      {downloadTarget && (
+      <SheetPresence>{downloadTarget && (
         <div
           className="ao3-modal-backdrop"
           role="presentation"
@@ -1480,7 +1482,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
             </div>
           </div>
         </div>
-      )}
+      )}</SheetPresence>
       </div>
       )}
     </section>

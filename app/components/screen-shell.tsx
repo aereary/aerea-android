@@ -6,12 +6,14 @@ export function ScreenIntro({
   copy,
   sticker,
   onStickerClick,
+  hideSticker = false,
 }: {
   label: string;
   title: string;
   copy: string;
   sticker: string;
   onStickerClick?: () => void;
+  hideSticker?: boolean;
 }) {
   return (
     <header className="screen-intro">
@@ -20,7 +22,9 @@ export function ScreenIntro({
         <h2>{title}</h2>
         <p>{copy}</p>
       </div>
-      <span
+      {hideSticker && onStickerClick ? (
+        <button type="button" className="daily-care-trigger" onClick={onStickerClick}>Daily care</button>
+      ) : <span
         className="screen-sticker"
         role={onStickerClick ? "button" : undefined}
         tabIndex={onStickerClick ? 0 : undefined}
@@ -37,7 +41,7 @@ export function ScreenIntro({
         }}
       >
         {sticker}
-      </span>
+      </span>}
     </header>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { SheetPresence } from "./components/sheet-presence";
 import { registerPlugin } from "@capacitor/core";
 import { useEffect, useRef, useState } from "react";
 import assets from "./app-icon-assets.json";
@@ -93,7 +95,7 @@ export default function AppIconPicker() {
         </button>
         {!open && error && <p role="alert">{error}</p>}
       </section>
-      {open && (
+      <SheetPresence>{open && (
         <div
           className="app-icon-backdrop"
           onPointerDown={(event) => {
@@ -187,7 +189,7 @@ export default function AppIconPicker() {
             )}
           </section>
         </div>
-      )}
+      )}</SheetPresence>
     </>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { SheetPresence } from "./components/sheet-presence";
 import { useBackLayer } from "./use-back-layer";
 
 import {
@@ -902,7 +904,7 @@ export function StudyLibrary({
         </button>
       )}
 
-      {activeNoteEditor && (
+      <SheetPresence>{activeNoteEditor && (
         <div className="study-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeNoteEditor(); }}>
           <section className="study-editor-card study-note-editor" role="dialog" aria-modal="true" aria-label="Note editor">
             <header>
@@ -973,7 +975,7 @@ export function StudyLibrary({
             </footer>
           </section>
         </div>
-      )}
+      )}</SheetPresence>
     </section>
   );
 }

@@ -628,3 +628,67 @@ html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-them
 @media (max-width: 360px) {
   html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .football-match-detail .football-match-facts { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Closing uses the same layer and geometry as opening. Presence holds it for
+   this animation before unmounting, so background pages never replay entrance. */
+.sheet-presence { display: contents; }
+@keyframes one-sheet-scrim-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes one-sheet-lower { from { translate: 0 0; } to { translate: 0 calc(100% + 24px); } }
+@keyframes one-drawer-out { from { translate: 0 0; } to { translate: -100% 0; } }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .sheet-presence[data-sheet-state="closing"] > * {
+  animation: one-sheet-scrim-out 260ms ease-in both !important;
+  pointer-events: none !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .sheet-presence[data-sheet-state="closing"] > * > :is([role="dialog"],.agenda-v2-focus) {
+  animation: one-sheet-lower 260ms cubic-bezier(.4,0,.7,.2) both !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .sheet-presence[data-sheet-state="closing"] > .aerea-hub-backdrop > .aerea-hub-modal {
+  animation: one-drawer-out 260ms ease-in both !important;
+}
+
+/* Only title decorations disappear in the two dark minimalist palettes. */
+.app-shell:is([data-theme="samsungminimal"],[data-theme="samsungao3"])[data-color-mode="dark"] .screen-intro .screen-sticker {
+  display: none !important;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .screen-intro:has(.daily-care-trigger) { position: relative; padding-right: 0 !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .daily-care-trigger {
+  align-self: flex-end;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 20px;
+  color: var(--sheet-accent);
+  background: var(--sheet-raised);
+  font: inherit;
+  font-size: 13px;
+}
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .daily-care-trigger:focus-visible { outline: 2px solid var(--sheet-accent); outline-offset: 3px; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up .schedule-card { position: relative !important; padding-bottom: 34px !important; }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up .coming-up-timing {
+  position: absolute !important;
+  right: 16px !important;
+  bottom: 10px !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  color: var(--sheet-accent) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes coming-up-now-pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up-timing.is-now i { font-style: normal; animation: coming-up-now-pulse 1600ms ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .sheet-presence[data-sheet-state="closing"] > *,
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .sheet-presence[data-sheet-state="closing"] > * > [role="dialog"],
+html .app-shell[data-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .coming-up-timing.is-now i { animation: none !important; }
+}
+/* Portaled academic sheets live outside app-shell but share the exit lifecycle. */
+html .sheet-presence[data-sheet-state="closing"] > * { animation: one-sheet-scrim-out 260ms ease-in both !important; pointer-events: none !important; }
+html .sheet-presence[data-sheet-state="closing"] > * > :is([role="dialog"],form) { animation: one-sheet-lower 260ms cubic-bezier(.4,0,.7,.2) both !important; }
+@media (prefers-reduced-motion: reduce) {
+  html .sheet-presence[data-sheet-state="closing"] > *,
+  html .sheet-presence[data-sheet-state="closing"] > * > :is([role="dialog"],form) { animation: none !important; }
+}
