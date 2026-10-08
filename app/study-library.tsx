@@ -1,6 +1,7 @@
 "use client";
 
 
+import { classAudioSource } from "./use-class-recording";
 import { SheetPresence } from "./components/sheet-presence";
 import { useBackLayer } from "./use-back-layer";
 
@@ -39,6 +40,7 @@ export type StudyNote = {
 export type StudyRecordingItem = {
   id: number;
   className: string;
+  nativeSessionId?: string;
   name: string;
   notes: string;
   duration: number;
@@ -864,7 +866,7 @@ export function StudyLibrary({
                   <audio
                     controls
                     preload="metadata"
-                    src={recording.url}
+                    src={classAudioSource(recording)}
                     onPlay={() =>
                       onRecordingsChange(
                         recordings.map((item) =>
