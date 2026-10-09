@@ -70,6 +70,9 @@ for (const [theme, mode, width, reduced] of themeCases) {
   assert.ok((await textResult.textContent()).includes("Chapter One"));
   assert.ok((await textResult.textContent()).includes("prepared a nest"));
   assert.ok(!(await textResult.textContent()).includes("private fake instruction"));
+  await search("Busca mis fanfics de Oscar Piastri y Lando Norris terminados largos");
+  assert.equal(await page.locator(".ask-exchange").last().locator(".ask-result").count(), 1);
+  assert.ok((await page.locator(".ask-exchange").last().textContent()).includes("Chapter One"));
   await page.getByLabel("Search EPUB text available on this device").uncheck();
   await page.locator(".ask-permissions > summary").click();
   await search('Crea un evento "Repasar Termodinámica" mañana a las 5:45 PM');
