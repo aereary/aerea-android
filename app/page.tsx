@@ -2,6 +2,7 @@
 
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { CalendarMonthGrid } from "./components/calendar-month-grid";
+import { useClassRecording, acknowledgeClassRecordings, deleteClassAudio, classAudioSource } from "./use-class-recording";
 import { SheetPresence } from "./components/sheet-presence";
 import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
@@ -226,17 +227,12 @@ type AereaNavigationPlugin = {
   exitApp(): Promise<void>;
   showExitHint(options: { message: string }): Promise<void>;
 };
-type AereaMicrophonePlugin = {
-  status(): Promise<{ permission: "granted" | "denied" }>;
-  requestPermissions(): Promise<{ permission: "granted" | "denied" }>;
-};
 
 const AereaAuth = registerPlugin<AereaAuthPlugin>("AereaAuth");
 const AereaSportsNotifications =
   registerPlugin<AereaSportsNotificationsPlugin>("AereaSportsNotifications");
 const AereaEventNotifications = registerPlugin<AereaEventNotificationsPlugin>("AereaEventNotifications");
 const AereaNavigation = registerPlugin<AereaNavigationPlugin>("AereaNavigation");
-const AereaMicrophone = registerPlugin<AereaMicrophonePlugin>("AereaMicrophone");
 
 type AereaStoragePlugin = {
   getState(): Promise<{ state: string | null }>;
@@ -601,6 +597,7 @@ type JournalEntry = {
 
 type Recording = StudyRecordingItem & {
   classItemId?: string;
+  nativeSessionId?: string;
 };
 
 type ClassItem = {
@@ -2986,9 +2983,7 @@ export default function Home() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingName, setRecordingName] = useState("");
   const [recordingNotes, setRecordingNotes] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [recordingError, setRecordingError] = useState("");
+  const [recordingSaveRetry, setRecordingSaveRetry] = useState(0);
 
   // AEREA_FIX_015A: the semester timetable is also the source of truth for
   // automatic Class Library shelves. Repeated weekdays with the same subject
@@ -3078,9 +3073,6 @@ export default function Home() {
     name: "",
     notes: "",
   });
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const consumedAuthLinksRef = useRef(new Set<string>());
   const lastExitBackRef = useRef(0);
   const undoStackRef = useRef<AereaHistoryEntry[]>([]);
@@ -4092,6 +4084,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!stateReady) return;
+    let retry: number | undefined;
     const timeout = window.setTimeout(async () => {
       try {
         const state = {
@@ -4135,6 +4128,8 @@ export default function Home() {
         if (isNative()) {
           writeNativeLaunchState(state);
           await AereaStorage.putState({ state: JSON.stringify({ state }) });
+          // Acknowledge only after durable app-state save; pending audio remains recoverable on failure.
+          await acknowledgeClassRecordings(recordings).catch(() => {});
         } else {
           writeBrowserState({ state });
         }
@@ -4144,11 +4139,14 @@ export default function Home() {
           setSyncMessage("Private sync is up to date.");
         }
       } catch {
-        // Keep the interface responsive if a temporary save fails.
+        // The native audio outbox stays intact until putState succeeds.
+        if (recordings.some(recording => recording.nativeSessionId)) {
+          retry = window.setTimeout(() => setRecordingSaveRetry(value => value + 1), 5000);
+        }
       }
     }, 650);
 
-    return () => window.clearTimeout(timeout);
+    return () => { window.clearTimeout(timeout); window.clearTimeout(retry); };
   }, [
     calendarEvents,
     calendarCategories,
@@ -4173,6 +4171,7 @@ export default function Home() {
     reminderHistory,
     reminders,
     recordings,
+    recordingSaveRetry,
     sportsEvents,
     sportsSettings,
     studyNotebooks,
@@ -4205,14 +4204,6 @@ export default function Home() {
     return () => window.clearInterval(interval);
   }, [timerRunning, focusLength]);
 
-  useEffect(() => {
-    if (!isRecording) return;
-    const interval = window.setInterval(
-      () => setRecordingSeconds((current) => current + 1),
-      1000,
-    );
-    return () => window.clearInterval(interval);
-  }, [isRecording]);
 
   useEffect(() => {
     if (!sketchFullscreen) {
@@ -4312,6 +4303,12 @@ export default function Home() {
         recordingBelongsToClass(recording, selectedClassItem),
       )
     : [];
+  const { isRecording, recordingSeconds, recordingError, recordingBusy, startRecording, stopRecording } = useClassRecording({
+    ready: stateReady, className: selectedClass, classItemId: selectedClassItem?.id,
+    name: recordingName.trim() || `Class #${classRecordings.length + 1}`, notes: recordingNotes.trim(),
+    onSaved: (recording) => setRecordings(current => current.some(item => recording.nativeSessionId ? item.nativeSessionId === recording.nativeSessionId : item.id === recording.id) ? current : [recording, ...current]),
+    onFinished: () => { recordAction("Created class recording"); setRecordingName(""); setRecordingNotes(""); },
+  });
   const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
     if (!sportsSettings.addAutomatically) return [];
     return sportsEvents
@@ -7227,6 +7224,7 @@ export default function Home() {
     }
 
     recordAction("Deleted class");
+    recordings.filter(recording => recording.className === removed.name).forEach(recording => void deleteClassAudio(recording).catch(() => {}));
     const remaining = classItems.filter((item) => item.id !== editingClassId);
     setClassItems(remaining);
     setRecordings((current) =>
@@ -8033,85 +8031,6 @@ export default function Home() {
     setFocusSeconds(minutes * 60);
   };
 
-  const startRecording = async () => {
-    setRecordingError("");
-
-    // AEREA_RECOVERY_FIX_002
-    if (isNative()) {
-      try {
-        const current = await AereaMicrophone.status();
-        const permission =
-          current.permission === "granted"
-            ? current
-            : await AereaMicrophone.requestPermissions();
-        if (permission.permission !== "granted") {
-          setRecordingError(
-            "Please allow microphone access to record a class.",
-          );
-          return;
-        }
-      } catch (error) {
-        setRecordingError(
-          error instanceof Error
-            ? error.message
-            : "Please allow microphone access to record a class.",
-        );
-        return;
-      }
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      setRecordingError("Audio recording is not available in this browser.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      audioChunksRef.current = [];
-      mediaStreamRef.current = stream;
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-      recorder.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        const url = isNative() ? await blobAsDataUrl(blob) : URL.createObjectURL(blob);
-        recordAction("Created class recording");
-        setRecordings((current) => [
-          {
-            id: Date.now(),
-            className: selectedClass,
-            classItemId: selectedClassItem?.id,
-            name:
-              recordingName.trim() ||
-              `Class #${current.filter((item) => item.className === selectedClass).length + 1}`,
-            notes: recordingNotes.trim(),
-            duration: recordingSeconds,
-            url,
-          },
-          ...current,
-        ]);
-        setRecordingName("");
-        setRecordingNotes("");
-        setRecordingSeconds(0);
-        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      };
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true);
-    } catch {
-      setRecordingError("Please allow microphone access to record a class.");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current?.state !== "inactive") {
-      mediaRecorderRef.current?.stop();
-    }
-    setIsRecording(false);
-  };
-
   const openRecordingEditor = (recording: Recording) => {
     setEditingRecordingId(recording.id);
     setRecordingEditDraft({
@@ -8142,6 +8061,7 @@ export default function Home() {
   const deleteRecording = (recording: Recording) => {
     if (!window.confirm(`Delete “${recording.name}”?`)) return;
     recordAction("Deleted class recording");
+    void deleteClassAudio(recording).catch(() => {});
     if (recording.url?.startsWith("blob:")) {
       URL.revokeObjectURL(recording.url);
     }
@@ -10578,6 +10498,7 @@ export default function Home() {
                   }}
                   onRecordingsChange={(nextRecordings) => {
                     recordAction("Updated Library recordings");
+                    recordings.filter(recording => !nextRecordings.some(item => item.id === recording.id)).forEach(recording => void deleteClassAudio(recording).catch(() => {}));
                     setRecordings(nextRecordings);
                   }}
                   usedInForFile={fileUsedInLabels}
@@ -10846,12 +10767,14 @@ export default function Home() {
                         <div className="record-fields">
                           <input
                             value={recordingName}
+                            disabled={isRecording || recordingBusy}
                             onChange={(event) => setRecordingName(event.target.value)}
                             placeholder={`Class #${classRecordings.length + 1}`}
                             aria-label="Recording name"
                           />
                           <textarea
                             value={recordingNotes}
+                            disabled={isRecording || recordingBusy}
                             onChange={(event) =>
                               setRecordingNotes(event.target.value)
                             }
@@ -10862,6 +10785,7 @@ export default function Home() {
                           <button
                             className={isRecording ? "record-button active" : "record-button"}
                             onClick={isRecording ? stopRecording : startRecording}
+                            disabled={recordingBusy}
                           >
                             <span>{isRecording ? "■" : "●"}</span>
                             {isRecording ? "Stop & save" : "Start recording"}
@@ -11101,7 +11025,7 @@ export default function Home() {
                                       controls
                                       controlsList="nodownload noplaybackrate"
                                       preload="metadata"
-                                      src={recording.url}
+                                      src={classAudioSource(recording)}
                                     >
                                       <track kind="captions" />
                                     </audio>
