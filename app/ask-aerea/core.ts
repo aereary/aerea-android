@@ -14,6 +14,20 @@ export type AskContext = { filter?: AskFilter; hits: AskHit[]; topic?: string };
 export type AskEventDraft = { title: string; date: string; time: string; allDay: boolean };
 export type AskAnswer = { text: string; hits: AskHit[]; total: number; context: AskContext; open?: AskDocument; draft?: AskEventDraft; operation?: "search" };
 
+/** A chapter enriches a known work rather than becoming another copy of it. */
+export function mergeEpubHit(hits: AskHit[], chapter: AskHit, alreadyCounted: boolean) {
+  const workId = chapter.document.workId;
+  const existing = hits.findIndex(hit => workId !== undefined
+    ? hit.document.workId === workId
+    : hit.document.fileId === chapter.document.fileId);
+  if (existing >= 0) {
+    if (!hits[existing].document.chapter) hits[existing] = chapter;
+    return 0;
+  }
+  if (!alreadyCounted && hits.length < 40) hits.push(chapter);
+  return alreadyCounted ? 0 : 1;
+}
+
 export const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const STOP = new Set("busca buscar buscá buscame encuentra encontrar encuentrá muestrame muestra mostrar mis mi el la los las un una unos unas de del en entre todos todas que donde cuando cual cuales tengo tenemos me por para con sin quiero quisiera necesito puedes podria haz hola hay ese esa esto este estos esas algo solamente solo similares parecido parecidos parecido al a y o lo se le sus su es esta estan estaba eran sea sobre relacionada relacionados relacionado relacionado relacionado relacionada related find search show all my me i want need the a an of in for to with and or please books book fanfic fanfics historias historia libros libro obras obra biblioteca library fics fic notas nota apuntes apunte notes note documents documentos archivos archivo document files file calendario calendar schedule horario materias materia clases clase eventos evento event events terminados terminadas terminado terminada completas completo completa completos completed complete finished ongoing incompletos incompleto largas largos larga largo long cortos cortas corta corto short palabras words word pronto proximo proximos proxima proximas next upcoming manana hoy tomorrow today ayer yesterday solamentes have what when which ultima ultimo leido leyendo like those them same only ones ahora ahead recordar recuerdo remember recuerdó scene escena escená capitulos capitulo chapter within inside contenido texto fulltext drive google apuntes estudiar estudiaré examenes exams examen exam cuantos cuanto".split(/\s+/));
 const synonyms = [

@@ -3,7 +3,7 @@ import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { SheetPresence } from "../components/sheet-presence";
 import { useBackLayer } from "../use-back-layer";
 import { readLibraryCatalog } from "./library-connector";
-import { answerQuery, dateKey, shiftDay, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskSource } from "./core";
+import { answerQuery, dateKey, shiftDay, mergeEpubHit, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskSource } from "./core";
 import type { TextChapter } from "./epub-text";
 import "../styles/ask-aerea.css";
 
@@ -129,6 +129,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
       const result = await search(documents);
       if (fullText && enabled.includes("library")) {
         let failed = 0, searched = 0;
+        const contentWorks = new Set<number>();
         for (const file of epubFiles) {
           signal.throwIfAborted();
           setProgress(`Reading EPUB ${searched + failed + 1} of ${epubFiles.length} · ${file.name}`);
@@ -153,8 +154,10 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
             const content = await search(cached.chapters.map(chapter => ({ ...book, id: `epub:${file.id}:${chapter.id}`, source: "library" as const, kind: "EPUB chapter", title: book?.title ?? file.name, text: chapter.text, reference: `${file.name} · ${chapter.title}`, fileId: file.id, chapter: chapter.title })));
             // One best chapter per physical file. Keep only references/excerpts across files.
             if (content.answer.hits[0]) {
-              result.answer.total++;
-              if (result.answer.hits.length < 40) result.answer.hits.push(content.answer.hits[0]);
+            const workId = book?.workId;
+            const alreadyCounted = workId !== undefined && (contentWorks.has(workId) || answerQuery(request, [book!], context.current).total > 0);
+            result.answer.total += mergeEpubHit(result.answer.hits, content.answer.hits[0], alreadyCounted);
+            if (workId !== undefined) contentWorks.add(workId);
             }
             searched++;
           } catch (reason) { signal.throwIfAborted(); failed++; statuses.push(`${file.name}: ${reason instanceof Error ? reason.message : "Could not read this file."}`); }
