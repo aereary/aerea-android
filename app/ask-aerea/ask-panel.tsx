@@ -186,7 +186,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
         <p>Drive: synced catalog names only. Repeating events: yesterday through the next 90 days. Recording audio is not transcribed. General AI, remote EPUB text, full Drive search, and automatic writes are pending.</p>
       </details>
       <div className="ask-transcript" ref={transcript} tabIndex={0} aria-label="Conversation">
-        {!messages.length && <div className="ask-empty"><h3>Find something in your little day.</h3><p>Search your real books, events and notes. Try a name, a tag, or a date.</p><div className="ask-suggestions">{["Busca mis fanfics de Oscar Piastri y Lando Norris", "¿Qué tengo mañana?", "Busca todo lo relacionado con Termodinámica"].map(example => <button key={example} disabled={busy || !ready} type="button" onClick={() => { setQuery(example); input.current?.focus(); }}>{example}</button>)}</div></div>}
+        {!messages.length && <div className="ask-empty"><h3>Find something in your little day.</h3><p>Search your real books, events and notes. Try a name, a tag, or a date.</p><div className="ask-suggestions">{["Find my Oscar Piastri and Lando Norris fanfics", "Show my events tomorrow", "Find all related to Thermodynamics"].map(example => <button key={example} disabled={busy || !ready} type="button" onClick={() => { setQuery(example); input.current?.focus(); }}>{example}</button>)}</div></div>}
         {messages.map(message => <article className="ask-exchange" key={message.id}>
           <p className="ask-request">{message.request}</p><p className="ask-answer">{message.answer.text}</p>
           {message.answer.hits.map((hit, index) => <section className="ask-result" key={hit.document.id}>
