@@ -1,0 +1,65 @@
+/* Ask owns only its new sheet. All colors come from the active aérea theme. */
+html .app-shell[data-theme][data-color-mode]:has(.ask-backdrop) > .app-frame .bottom-nav { visibility: hidden; }
+html .app-shell[data-theme][data-color-mode] .ask-backdrop {
+  position: fixed; inset: 0; z-index: 24000; display: flex; align-items: flex-end;
+  justify-content: center; padding-top: calc(12px + var(--aerea-safe-area-top, env(safe-area-inset-top, 0px)));
+  background: rgba(0,0,0,.52); animation: one-sheet-scrim 180ms ease-out both;
+}
+html .app-shell[data-theme][data-color-mode] .ask-panel {
+  display: flex; flex-direction: column; width: min(100%, 680px); height: min(92dvh, 100%);
+  min-height: 0; max-height: 100%; box-sizing: border-box; margin: 0;
+  padding: 12px 20px calc(16px + var(--aerea-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  border: 0; border-radius: 28px 28px 0 0; color: var(--sheet-ink); background: var(--sheet-panel);
+  font-family: var(--sheet-font); box-shadow: 0 -12px 40px rgba(0,0,0,.2);
+  animation: one-sheet-rise 360ms cubic-bezier(.22,.9,.25,1) both; overflow: hidden;
+}
+html .app-shell[data-theme][data-color-mode] .ask-handle { width: 32px; height: 4px; flex-shrink: 0; border-radius: 4px; background: var(--sheet-muted); opacity: .5; margin: 0 auto 16px; }
+html .app-shell[data-theme][data-color-mode] .ask-header { display:flex; justify-content: space-between; align-items:center; flex-shrink:0; gap:12px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel h2 { font-family: inherit; font-size: 27px; line-height: 1.2; margin: 4px 0 10px; color: var(--sheet-ink); }
+html .app-shell[data-theme][data-color-mode] .ask-panel h3 { font-family: inherit; font-size: 18px; line-height: 1.35; margin: 7px 0; color: var(--sheet-ink); overflow-wrap:anywhere; }
+html .app-shell[data-theme][data-color-mode] .ask-panel small { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--sheet-muted); }
+html .app-shell[data-theme][data-color-mode] .ask-panel p { margin: 8px 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+html .app-shell[data-theme][data-color-mode] .ask-panel button,
+html .app-shell[data-theme][data-color-mode] .ask-panel a { font: inherit; font-size: 13px; color: var(--sheet-accent); background: var(--sheet-raised); border: 1px solid var(--sheet-line); border-radius: 14px; padding: 10px 14px; min-height: 44px; text-decoration: none; cursor: pointer; box-shadow: none; }
+html .app-shell[data-theme][data-color-mode] .ask-panel button:disabled { opacity: .45; cursor: default; }
+html .app-shell[data-theme][data-color-mode] .ask-panel button:focus-visible,
+html .app-shell[data-theme][data-color-mode] .ask-panel a:focus-visible,
+html .app-shell[data-theme][data-color-mode] .ask-panel textarea:focus-visible { outline: 2px solid var(--sheet-accent); outline-offset: 2px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel .ask-close { border-radius: 50%; width: 44px; flex-shrink:0; font-size: 23px; color: var(--sheet-ink); }
+html .app-shell[data-theme][data-color-mode] .ask-toolbar { display:flex; gap:8px; flex-wrap:wrap; margin: 6px 0 12px; flex-shrink:0; }
+html .app-shell[data-theme][data-color-mode] .ask-permissions { flex-shrink:0; max-height: 32%; overflow:auto; border-bottom:1px solid var(--sheet-line); padding-bottom:12px; color:var(--sheet-muted); }
+html .app-shell[data-theme][data-color-mode] .ask-panel summary { cursor:pointer; font-size:12px; padding: 6px 0; }
+html .app-shell[data-theme][data-color-mode] .ask-panel fieldset { display:grid; gap: 4px; border:0; padding: 6px 0; margin:0; }
+html .app-shell[data-theme][data-color-mode] .ask-panel legend { font-size: 13px; font-weight:600; }
+html .app-shell[data-theme][data-color-mode] .ask-panel label:not(.sr-only) { display:flex; align-items:center; gap: 9px; font-size:13px; color: var(--sheet-ink); min-height:32px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel input[type=checkbox] { width:18px; height:18px; appearance:auto; accent-color:var(--sheet-accent); flex-shrink:0; }
+html .app-shell[data-theme][data-color-mode] .ask-transcript { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:14px 2px; scrollbar-width:thin; }
+html .app-shell[data-theme][data-color-mode] .ask-empty { padding: 22px 4px; }
+html .app-shell[data-theme][data-color-mode] .ask-suggestions { display:grid; gap:10px; margin-top:20px; }
+html .app-shell[data-theme][data-color-mode] .ask-suggestions button { text-align:left; }
+html .app-shell[data-theme][data-color-mode] .ask-exchange { margin-bottom:22px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel .ask-request { margin-left: 15%; padding:12px 16px; border-radius:18px 18px 4px 18px; background:var(--sheet-selected); color:var(--sheet-ink); }
+html .app-shell[data-theme][data-color-mode] .ask-answer { padding:6px 0; }
+html .app-shell[data-theme][data-color-mode] .ask-result { padding:14px; margin:10px 0; border:1px solid var(--sheet-line); border-radius:18px; background:var(--sheet-raised); }
+html .app-shell[data-theme][data-color-mode] .ask-reference { color:var(--sheet-muted); font-size:12px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel blockquote { margin:12px 0; padding:6px 0 6px 12px; border-left:2px solid var(--sheet-accent); font-size:14px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+html .app-shell[data-theme][data-color-mode] .ask-result-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel ul { margin:0; padding-left:20px; font-size:12px; }
+html .app-shell[data-theme][data-color-mode] .ask-panel .ask-coverage { color:var(--sheet-muted); }
+html .app-shell[data-theme][data-color-mode] .ask-event-draft { padding:14px; border-radius:18px; background:var(--sheet-selected); }
+html .app-shell[data-theme][data-color-mode] .ask-compose { display:flex; flex-shrink:0; align-items:flex-end; gap:8px; margin:10px 0 0; }
+html .app-shell[data-theme][data-color-mode] .ask-compose textarea { width:100%; min-width:0; resize:none; max-height:100px; min-height:64px; padding:12px; font:inherit; font-size:14px; border:1px solid var(--sheet-line); border-radius:16px; color:var(--sheet-ink); background:var(--sheet-raised); box-sizing:border-box; }
+html .app-shell[data-theme][data-color-mode] .ask-compose textarea::placeholder { color:var(--sheet-muted); }
+html .app-shell[data-theme][data-color-mode] .ask-compose button { background:var(--sheet-accent); color:var(--sheet-on-accent); font-weight:600; flex-shrink:0; }
+html .app-shell[data-theme][data-color-mode] .ask-live { flex-shrink:0; color:var(--sheet-muted); font-size:12px; overflow-wrap:anywhere; }
+html .app-shell[data-theme][data-color-mode] .ask-error { color:var(--sheet-ink); padding:8px; border-left:3px solid var(--sheet-accent); flex-shrink:0; }
+html .app-shell[data-theme][data-color-mode] .ask-panel .ask-refresh { padding:2px 0; min-height:30px; background:none; border:0; flex-shrink:0; margin-top:6px; font-size:12px; }
+html .app-shell[data-theme][data-color-mode] .sheet-presence[data-sheet-state=closing] .ask-backdrop { animation:one-sheet-scrim-out 240ms ease-in both; pointer-events:none; }
+html .app-shell[data-theme][data-color-mode] .sheet-presence[data-sheet-state=closing] .ask-panel { animation:one-sheet-lower 260ms cubic-bezier(.4,0,.65,.5) both; }
+@media (prefers-reduced-motion:reduce) {
+  html .app-shell[data-theme][data-color-mode] .ask-backdrop,
+  html .app-shell[data-theme][data-color-mode] .ask-panel { animation:none !important; }
+}
+@media (max-width:360px) { html .app-shell[data-theme][data-color-mode] .ask-panel { padding-inline:14px; } }
+
+html .app-shell[data-theme][data-color-mode] .ask-loading { position:fixed; inset:0; z-index:24000; display:flex; align-items:center; justify-content:center; gap:12px; background:var(--sheet-panel); color:var(--sheet-ink); }
