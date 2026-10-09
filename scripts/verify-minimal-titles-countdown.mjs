@@ -74,8 +74,11 @@ try {
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await page.waitForFunction(()=>document.querySelector('.coming-up-timing')?.classList.contains('is-now'));
   assert(Math.abs((await card.boundingBox()).height-bounds.height)<1,'Now keeps the same height');
-  assert.equal(await next.locator('.is-now i').evaluate(e=>getComputedStyle(e).animationName),'coming-up-now-pulse');
+  assert.equal(await next.locator('.is-now').evaluate(e=>getComputedStyle(e).animationName),'coming-up-now-pulse');
+  assert.equal(await next.locator('.is-now i').evaluate(e=>getComputedStyle(e).animationName),'none','The dot inherits the badge pulse without a second animation');
   if(theme==='samsungao3'&&mode==='dark'&&width===393)await page.screenshot({path:path.join(output,'compact-now.png')});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await next.locator('.is-now').evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion disables the entire pulse');
   results.push({theme,mode,width,titleEmojisHidden:hidden,countdownHeight:bounds.height,originalHeight:original.height});
   console.log('PASS',results.at(-1));
   await context.close();await browser.close();
