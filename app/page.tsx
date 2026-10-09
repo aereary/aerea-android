@@ -138,7 +138,16 @@ const Ao3LibraryOpening = lazy(() =>
 );
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
 const AppIconPicker = lazy(() => import("./app-icon-picker"));
-const AskPanel = lazy(() => import("./ask-aerea/ask-panel"));
+function AskLoadFailure({ open, onClose, onCapture }: { open: boolean; onClose: () => void; onCapture: () => void }) {
+  return <SheetPresence>{open && <div className="modal-backdrop quick-capture-backdrop" onClick={onClose}>
+    <section className="quick-capture-modal" role="dialog" aria-modal="true" aria-label="Ask aérea unavailable" onClick={event => event.stopPropagation()}>
+      <header><h2>Ask aérea is unavailable</h2><button type="button" aria-label="Close Ask aérea" onClick={onClose}>×</button></header>
+      <p>The assistant could not load. Your other app sections are still available.</p>
+      <footer><button type="button" onClick={() => { onClose(); onCapture(); }}>Quick Capture</button><button type="button" onClick={onClose}>Close</button></footer>
+    </section>
+  </div>}</SheetPresence>;
+}
+const AskPanel = lazy(() => import("./ask-aerea/ask-panel").catch(() => ({ default: AskLoadFailure })));
 const PdfStudyReader = lazy(() =>
   loadStudyReaderModule().then((module) => ({ default: module.PdfStudyReader })),
 );
