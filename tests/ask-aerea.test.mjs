@@ -7,11 +7,25 @@ async function moduleAt(path) {
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
   return import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
 }
-const { answerQuery, parseFilter, searchDocuments, queryDate, dateKey, parseEventRequest } = await moduleAt("../app/ask-aerea/core.ts");
+const { answerQuery, parseFilter, searchDocuments, queryDate, dateKey, parseEventRequest, mergeEpubHit } = await moduleAt("../app/ask-aerea/core.ts");
 const { extractEpubText, plainText } = await moduleAt("../app/ask-aerea/epub-text.ts");
 const now = new Date("2026-10-09T07:55:00Z");
 const book = (id, overrides = {}) => ({ id, source: "library", kind: "AO3 work", title: id, author: "Author", text: "", reference: id, relationships: ["Oscar Piastri/Lando Norris"], fandoms: ["Formula 1"], complete: true, words: 70000, tags: ["Omegaverse", "Happy Ending", "Protective Oscar Piastri", "Explicit"], ...overrides });
 const books = [book("one"), book("two", { complete: false }), book("three", { words: 12000 }), book("four", { relationships: ["Other ship"] }), book("five", { complete: null })];
+test("EPUB chapters enrich registered works without duplicating metadata or alternative versions", () => {
+  const hit = document => ({ document, match: "exact", reasons: [], excerpt: "matched scene" });
+  const hits = [hit(book("ao3:1", { workId: 1 }))];
+  const first = hit(book("epub:first", { workId: 1, fileId: "first", chapter: "Chapter One" }));
+  assert.equal(mergeEpubHit(hits, first, true), 0);
+  assert.equal(hits.length, 1); assert.equal(hits[0].document.fileId, "first");
+  assert.equal(mergeEpubHit(hits, hit(book("epub:alternate", { workId: 1, fileId: "alternate", chapter: "Chapter Two" })), true), 0);
+  assert.equal(hits.length, 1); assert.equal(hits[0].document.fileId, "first");
+  assert.equal(mergeEpubHit(hits, hit(book("epub:2", { workId: 2, fileId: "second", chapter: "One" })), false), 1);
+  assert.equal(hits.length, 2);
+  // Metadata beyond the 40 displayed results has already contributed to total.
+  assert.equal(mergeEpubHit(hits, hit(book("epub:3", { workId: 3, fileId: "third", chapter: "One" })), true), 0);
+  assert.equal(hits.length, 2);
+});
 test("all names, completion and length restrictions remain mandatory", () => {
   const result = answerQuery("Busca mis fanfics de Oscar Piastri y Lando Norris terminados largos", books, undefined, now);
   assert.deepEqual(result.hits.map(h => h.document.id), ["one"]);
