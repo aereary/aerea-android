@@ -46,6 +46,17 @@ for (const [theme, mode, width, reduced] of themeCases) {
   });
   await page.goto("https://qa.local/");
   await page.waitForSelector(`[data-theme="${theme}"]`); await page.waitForTimeout(700);
+  if (theme === "samsungao3" && width === 393) {
+    const failurePage = await context.newPage();
+    await failurePage.route("**/assets/ask-panel-*.js", route => route.abort());
+    await failurePage.goto("https://qa.local/");
+    await failurePage.getByRole("button", { name: "Open Ask aérea", exact: true }).first().click();
+    await failurePage.getByRole("dialog", { name: "Ask aérea unavailable", exact: true }).waitFor();
+    await failurePage.getByRole("button", { name: "Quick Capture", exact: true }).click();
+    await failurePage.locator(".quick-capture-modal textarea").waitFor();
+    await failurePage.close();
+    console.log("Passed unavailable assistant module: original Quick Capture still opens.");
+  }
   await page.evaluate(() => document.documentElement.dataset.native = "true");
   await page.getByRole("button", { name: "Open Ask aérea", exact: true }).first().click();
   await page.getByRole("dialog", { name: "Ask aérea", exact: true }).waitFor(); await page.waitForTimeout(450);
