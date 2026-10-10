@@ -7,6 +7,7 @@ import { SheetPresence } from "./components/sheet-presence";
 import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
 import { useAppUpdates } from "./use-app-updates";
+import { timetableExceptionLabels, timetableMeetingSkipped, type TimetableDayException } from "./timetable-day-exceptions";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
 import type { AskDocument, AskEventDraft } from "./ask-aerea/core";
 import {
@@ -663,6 +664,7 @@ type ClassTimetable = {
   termStart: string;
   termEnd: string;
   classes: TimetableClass[];
+  dayExceptions?: TimetableDayException[];
 };
 
 const timetableDays: { id: TimetableDay; label: string }[] = [
@@ -735,6 +737,12 @@ function normalizeClassTimetable(value: Partial<ClassTimetable>): ClassTimetable
     ...value,
     classes: Array.isArray(value.classes)
       ? value.classes.map((classItem) => normalizeTimetableClass(classItem))
+      : [],
+    dayExceptions: Array.isArray(value.dayExceptions)
+      ? value.dayExceptions.filter((exception) =>
+          /^\d{4}-\d{2}-\d{2}$/.test(exception.date) &&
+          ["no-classes", "day-off", "exam-day", "vacation"].includes(exception.kind),
+        )
       : [],
   };
 }
@@ -1003,12 +1011,36 @@ function timetableClassCalendarEvent(
     reminder: "30 minutes before",
     repeat: "Weekly",
     repeatUntil: timetable.termEnd,
-    excludedDates: [],
+    excludedDates: (timetable.dayExceptions ?? [])
+      .filter((exception) =>
+        timetableMeetingSkipped(exception, classItem.id, meeting.id),
+      )
+      .map((exception) => exception.date),
     note: `Synced from ${timetable.termName}`,
     location: meeting.room,
     sourceType: "timetable",
     timetableClassId: classItem.id,
     timetableTermName: timetable.termName,
+  };
+}
+
+function timetableExceptionCalendarEvent(exception: TimetableDayException): CalendarEvent {
+  return {
+    id: `timetable-exception:${exception.date}`,
+    date: exception.date,
+    endDate: exception.date,
+    title: exception.kind === "no-classes" && exception.meetingIds?.length
+      ? "Class canceled"
+      : timetableExceptionLabels[exception.kind],
+    time: "00:00",
+    allDay: true,
+    calendar: "Classes",
+    color: exception.kind === "exam-day" ? "yellow" : "lilac",
+    reminder: "None",
+    repeat: "Never",
+    sourceType: "timetable",
+    timetableClassId: `day-exception:${exception.date}`,
+    timetableTermName: "Day exception",
   };
 }
 
@@ -2958,11 +2990,14 @@ export default function Home() {
   useEffect(() => {
     if (!stateReady) return;
 
-    const generated = classTimetable.classes.flatMap((classItem) =>
-      classItem.meetings
-        .map((meeting) => timetableClassCalendarEvent(classTimetable, classItem, meeting))
-        .filter((event): event is CalendarEvent => Boolean(event)),
-    );
+    const generated = [
+      ...classTimetable.classes.flatMap((classItem) =>
+        classItem.meetings
+          .map((meeting) => timetableClassCalendarEvent(classTimetable, classItem, meeting))
+          .filter((event): event is CalendarEvent => Boolean(event)),
+      ),
+      ...(classTimetable.dayExceptions ?? []).map(timetableExceptionCalendarEvent),
+    ];
 
     setCalendarEvents((current) => {
       const manualEvents = current.filter(
@@ -3465,9 +3500,7 @@ export default function Home() {
         Array.isArray(state.classTimetable.classes)
       ) {
         setClassTimetable({
-          ...defaultClassTimetable,
-          ...state.classTimetable,
-          classes: normalizeClassTimetable(state.classTimetable).classes,
+          ...normalizeClassTimetable(state.classTimetable),
         });
       }
       if (Array.isArray(state.recordings)) {
@@ -4512,6 +4545,8 @@ export default function Home() {
   const eventDraftIsTimetableClass =
     eventDraft.sourceType === "timetable" &&
     Boolean(eventDraft.timetableClassId);
+  const eventDraftIsDayException =
+    eventDraft.timetableClassId?.startsWith("day-exception:") ?? false;
   const eventTitleSuggestions = useMemo(() => {
     const query = normalizeCalendarSearch(eventDraft.title);
     if (editingEventId || eventTemplateSuggestionsDismissed || query.length < 2) {
@@ -12616,14 +12651,16 @@ export default function Home() {
                       </span>
                       <div>
                         <small>
-                          Class · {eventDraft.title} ·{" "}
-                          {eventDraft.timetableTermName ?? classTimetable.termName}
+                          {eventDraftIsDayException ? "DAY EXCEPTION" : <>
+                            Class · {eventDraft.title} ·{" "}
+                            {eventDraft.timetableTermName ?? classTimetable.termName}
+                          </>}
                         </small>
                         <strong>{eventDraft.title}</strong>
                         <p>
-                          This weekly class is managed by your semester timetable.
-                          Change its day, time, dates or delete the class there so
-                          the whole series stays together.
+                          {eventDraftIsDayException
+                            ? "This date is marked separately from your weekly classes. Edit or remove it in the week map."
+                            : "This weekly class is managed by your semester timetable. Change its day, time, dates or delete the class there so the whole series stays together."}
                         </p>
                         <span className="timetable-linked-range">
                           {timetableTermDateLabel(classTimetable)}
@@ -12633,7 +12670,9 @@ export default function Home() {
                         type="button"
                         onClick={editTimetableClassFromCalendar}
                       >
-                        Edit class schedule
+                        {eventDraftIsDayException ? "Edit this day" : <>
+                          Edit class schedule
+                        </>}
                       </button>
                     </section>
                   )}
@@ -16205,6 +16244,8 @@ function TodayScreen({
     useState<ClassTimetable>(classTimetable);
   const [timetableClassDraft, setTimetableClassDraft] =
     useState<TimetableClass | null>(null);
+  const [exceptionDraft, setExceptionDraft] = useState<TimetableDayException | null>(null);
+  const [exceptionScope, setExceptionScope] = useState<"all" | "selected">("all");
   const scheduleLongPressTimerRef = useRef<number | null>(null);
   const scheduleLongPressedRef = useRef(false);
   const schedulePressStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -16213,6 +16254,7 @@ function TodayScreen({
   const timetableLongPressedRef = useRef(false);
   useBackLayer(Boolean(reminderDraft) || timetableOpen, () => {
     if (reminderDraft) { setReminderDraft(null); return; }
+    if (exceptionDraft) { setExceptionDraft(null); return; }
     if (timetableClassDraft) { setTimetableClassDraft(null); return; }
     if (timetableEditing) { setTimetableEditing(false); return; }
     setTimetableOpen(false);
@@ -16242,19 +16284,29 @@ function TodayScreen({
   const timetableSelectedDay = (
     ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
   )[dateFromKey(timetableSelectedDate).getDay()];
+  const timetableSelectedException = (classTimetable.dayExceptions ?? [])
+    .find((exception) => exception.date === timetableSelectedDate);
   const timetableAgenda = timetableSelectedDay === "sun"
     ? []
     : timetableMeetings
         .filter((meeting) => meeting.day === timetableSelectedDay)
+        .filter((meeting) =>
+          (!classTimetable.termStart || timetableSelectedDate >= classTimetable.termStart) &&
+          (!classTimetable.termEnd || timetableSelectedDate <= classTimetable.termEnd) &&
+          (!timetableSelectedException || !timetableMeetingSkipped(
+            timetableSelectedException, meeting.classItem.id, meeting.id,
+          )),
+        )
         .sort((first, second) => first.start.localeCompare(second.start));
   const timetableSelectedDayName = dateFromKey(
     timetableSelectedDate,
   ).toLocaleDateString("en", { weekday: "long" });
-  const timetableWeekRange = weekDays.length
-    ? `${dateFromKey(weekDays[0].key).toLocaleDateString("en", {
+  const timetableVisibleWeek = weekForDate(timetableSelectedDate);
+  const timetableWeekRange = timetableVisibleWeek.length
+    ? `${dateFromKey(timetableVisibleWeek[0].key).toLocaleDateString("en", {
         month: "short",
         day: "numeric",
-      })} — ${dateFromKey(weekDays[weekDays.length - 1].key).toLocaleDateString(
+      })} — ${dateFromKey(timetableVisibleWeek[timetableVisibleWeek.length - 1].key).toLocaleDateString(
         "en",
         { month: "short", day: "numeric" },
       )}`
@@ -16276,6 +16328,7 @@ function TodayScreen({
     });
     setTimetableEditing(false);
     setTimetableClassDraft(null);
+    setExceptionDraft(null);
     setTimetableSelectedDate(selectedDate);
     setTimetableOpen(true);
   };
@@ -16317,6 +16370,33 @@ function TodayScreen({
     setTimetableOpen(false);
     setTimetableEditing(false);
     setTimetableClassDraft(null);
+    setExceptionDraft(null);
+  };
+
+  const openDayException = () => {
+    const existing = (classTimetable.dayExceptions ?? [])
+      .find((exception) => exception.date === timetableSelectedDate);
+    setExceptionDraft(existing
+      ? { ...existing, meetingIds: [...(existing.meetingIds ?? [])] }
+      : { date: timetableSelectedDate, kind: "no-classes", meetingIds: [] });
+    setExceptionScope(existing?.meetingIds?.length ? "selected" : "all");
+  };
+
+  const saveDayException = () => {
+    if (!exceptionDraft || (exceptionDraft.kind === "no-classes" && exceptionScope === "selected" && !exceptionDraft.meetingIds?.length)) return;
+    const next = {
+      ...exceptionDraft,
+      meetingIds: exceptionDraft.kind === "no-classes" && exceptionScope === "selected"
+        ? exceptionDraft.meetingIds : [],
+    };
+    setClassTimetable((current) => ({
+      ...current,
+      dayExceptions: [...(current.dayExceptions ?? [])
+        .filter((exception) => exception.date !== next.date), next]
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }));
+    setTimetableSelectedDate(next.date);
+    setExceptionDraft(null);
   };
 
   const beginNewTimetableClass = () => {
@@ -16364,6 +16444,13 @@ function TodayScreen({
           }
         : null,
     );
+    if (requestedTimetableClassId.startsWith("day-exception:")) {
+      const date = requestedTimetableClassId.slice("day-exception:".length);
+      const existing = classTimetable.dayExceptions?.find((item) => item.date === date);
+      setTimetableSelectedDate(date);
+      setExceptionDraft(existing ? { ...existing, meetingIds: [...(existing.meetingIds ?? [])] } : null);
+      setExceptionScope(existing?.meetingIds?.length ? "selected" : "all");
+    }
     onTimetableRequestHandled();
   }, [
     classTimetable,
@@ -17137,7 +17224,7 @@ function TodayScreen({
                   {timetableEditing ? "SEMESTER SETTINGS" : "STUDY · WEEK MAP"}
                 </p>
                 <h2>
-                  {timetableEditing ? "Edit your semester" : "This week’s map"}
+                  {timetableEditing ? "Edit your semester" : exceptionDraft ? "A different kind of day" : "This week’s map"}
                 </h2>
                 {timetableEditing ? (
                   <div className="timetable-term-fields">
@@ -17182,7 +17269,7 @@ function TodayScreen({
                       />
                     </label>
                   </div>
-                ) : (
+                ) : !exceptionDraft ? (
                   <p className="timetable-term-meta">
                     <i aria-hidden="true" />
                     {timetableWeekRange}
@@ -17203,7 +17290,7 @@ function TodayScreen({
                       Edit semester
                     </button>
                   </p>
-                )}
+                ) : <p className="timetable-term-meta">One date only · Your weekly schedule stays the same</p>}
               </div>
               <div className="timetable-heading-actions">
                 <button
@@ -17217,13 +17304,79 @@ function TodayScreen({
               </div>
             </header>
 
-            {!timetableEditing ? (
+            {exceptionDraft ? (
+              <div className="timetable-day-exception-editor">
+                <p>Choose what changes on this date. Next week stays normal.</p>
+                <label className="timetable-exception-date">
+                  <span>Date</span>
+                  <input type="date" value={exceptionDraft.date}
+                    onChange={(event) => setExceptionDraft((current) => current ? {
+                      ...current, date: event.target.value, meetingIds: [],
+                    } : current)} />
+                </label>
+                <div className="timetable-exception-kinds" role="group" aria-label="Kind of day">
+                  {(["no-classes", "day-off", "exam-day", "vacation"] as const).map((kind) => (
+                    <button key={kind} type="button" className={exceptionDraft.kind === kind ? "active" : ""}
+                      aria-pressed={exceptionDraft.kind === kind}
+                      onClick={() => { setExceptionDraft((current) => current ? { ...current, kind, meetingIds: [] } : current); setExceptionScope("all"); }}>
+                      {timetableExceptionLabels[kind]}
+                    </button>
+                  ))}
+                </div>
+                {exceptionDraft.kind === "no-classes" && (
+                  <div className="timetable-exception-scope">
+                    <p>Which classes are canceled?</p>
+                    <label><input type="radio" name="exception-scope" checked={exceptionScope === "all"}
+                      onChange={() => setExceptionScope("all")} /> All classes that day</label>
+                    <label><input type="radio" name="exception-scope" checked={exceptionScope === "selected"}
+                      onChange={() => setExceptionScope("selected")} /> Only selected classes</label>
+                    {exceptionScope === "selected" && classTimetable.classes.flatMap((classItem) =>
+                      classItem.meetings
+                        .filter((meeting) => meeting.day === (["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const)[dateFromKey(exceptionDraft.date).getDay()])
+                        .map((meeting) => {
+                          const id = `${classItem.id}:${meeting.id}`;
+                          return <label key={id} className="timetable-exception-meeting">
+                            <input type="checkbox" checked={exceptionDraft.meetingIds?.includes(id) ?? false}
+                              onChange={(event) => setExceptionDraft((current) => current ? {
+                                ...current,
+                                meetingIds: event.target.checked
+                                  ? [...(current.meetingIds ?? []), id]
+                                  : (current.meetingIds ?? []).filter((item) => item !== id),
+                              } : current)} />
+                            {classItem.name} · {formatTimeBlock(meeting.start).primary} {formatTimeBlock(meeting.start).secondary}
+                          </label>;
+                        }),
+                    )}
+                  </div>
+                )}
+                <small>{exceptionDraft.kind === "exam-day"
+                  ? "Marks the day as an exam day; scheduled classes stay visible."
+                  : "Canceled classes disappear from Today and Calendar for this date, including their reminders."}</small>
+                <footer>
+                  {(classTimetable.dayExceptions ?? []).some((item) => item.date === exceptionDraft.date) && (
+                    <button type="button" onClick={() => {
+                      setClassTimetable((current) => ({ ...current,
+                        dayExceptions: (current.dayExceptions ?? []).filter((item) => item.date !== exceptionDraft.date),
+                      }));
+                      setExceptionDraft(null);
+                    }}>Remove exception</button>
+                  )}
+                  <button type="button" onClick={() => setExceptionDraft(null)}>Cancel</button>
+                  <button type="button" onClick={saveDayException}
+                    disabled={!exceptionDraft.date || (exceptionDraft.kind === "no-classes" && exceptionScope === "selected" && !exceptionDraft.meetingIds?.length)}>
+                    Save day
+                  </button>
+                </footer>
+              </div>
+            ) : !timetableEditing ? (
               <div className="timetable-week-map">
                 <div
                   className="timetable-week-map-days"
-                  aria-label="Current week, Sunday through Saturday"
+                  aria-label="Selected week, Sunday through Saturday"
                 >
-                  {weekDays.map((day) => (
+                  {timetableVisibleWeek.map((day) => {
+                    const dayException = classTimetable.dayExceptions?.find((item) => item.date === day.key);
+                    return (
                     <button
                       type="button"
                       className={
@@ -17232,12 +17385,24 @@ function TodayScreen({
                       key={`map-${day.key}`}
                       onClick={() => setTimetableSelectedDate(day.key)}
                       aria-pressed={timetableSelectedDate === day.key}
-                      aria-label={`Show ${day.day}'s classes`}
+                      aria-label={`Show ${day.day}'s classes${dayException ? `, ${timetableExceptionLabels[dayException.kind]}` : ""}`}
                     >
                       <small>{day.day.slice(0, 1)}</small>
                       <strong>{day.date}</strong>
+                      {dayException &&
+                        <i className="timetable-day-exception-dot" aria-hidden="true" />}
                     </button>
-                  ))}
+                    );
+                  })}
+                </div>
+
+                <div className="timetable-exception-action">
+                  <span>{timetableSelectedException
+                    ? `${timetableExceptionLabels[timetableSelectedException.kind]} · only this date`
+                    : "A day outside your usual routine?"}</span>
+                  <button type="button" onClick={openDayException}>
+                    {timetableSelectedException ? "Edit this day" : "Mark this day"}
+                  </button>
                 </div>
 
                 <div
@@ -17249,8 +17414,12 @@ function TodayScreen({
                   {timetableAgenda.length === 0 ? (
                     <div className="timetable-week-map-empty">
                       <span aria-hidden="true">🎓</span>
-                      <strong>No classes on {timetableSelectedDayName}</strong>
-                      <small>Choose another day or edit your semester.</small>
+                      <strong>{timetableSelectedException && timetableSelectedException.kind !== "exam-day"
+                        ? timetableExceptionLabels[timetableSelectedException.kind]
+                        : `No classes on ${timetableSelectedDayName}`}</strong>
+                      <small>{timetableSelectedException
+                        ? "Only this date is different. Your weekly schedule stays the same."
+                        : "Choose another day or edit your semester."}</small>
                     </div>
                   ) : (
                     timetableAgenda.map(({ classItem, ...meeting }) => {
