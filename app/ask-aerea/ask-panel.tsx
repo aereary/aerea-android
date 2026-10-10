@@ -62,7 +62,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
   const generation = useRef(0), serial = useRef(0);
   const catalog = useRef<AskDocument[] | null>(null);
   const textCache = useRef(new Map<string, { chapters: TextChapter[]; bytes: number }>());
-  const transcript = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
+  const transcript = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null), panel = useRef<HTMLElement>(null);
   const cancel = () => { generation.current++; controller.current?.abort(); controller.current = null; setBusy(false); setProgress(""); };
   const close = () => { cancel(); onClose(); };
   useBackLayer(open, close, 100);
@@ -76,7 +76,8 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const frame = requestAnimationFrame(() => { setBusy(false); setProgress(""); input.current?.focus(); });
+    // Keep focus inside the dialog without opening the Android keyboard.
+    const frame = requestAnimationFrame(() => { setBusy(false); setProgress(""); panel.current?.focus({ preventScroll: true }); });
     const trap = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
       const panel = input.current?.closest(".ask-panel");
@@ -88,6 +89,19 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
     document.addEventListener("keydown", trap);
     return () => { cancelAnimationFrame(frame); document.removeEventListener("keydown", trap); if (document.activeElement?.closest(".ask-panel")) previous?.focus(); };
   }, [open]);
+  useEffect(() => {
+    const resize = () => {
+      const field = input.current;
+      if (!field) return;
+      field.style.height = "auto";
+      const limit = Math.min(180, Math.max(96, window.innerHeight * .24));
+      field.style.height = `${Math.min(field.scrollHeight, limit)}px`;
+      field.style.overflowY = field.scrollHeight > limit ? "auto" : "hidden";
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, [query, open]);
   useEffect(() => { transcript.current?.scrollTo({ top: transcript.current.scrollHeight, behavior: "auto" }); }, [messages, progress]);
   const clear = () => { cancel(); setMessages([]); context.current = { hits: [] }; catalog.current = null; textCache.current.clear(); setError(""); };
   const openResult = async (document: AskDocument) => {
@@ -182,7 +196,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
     } finally { if (generation.current === runId) { setBusy(false); setProgress(""); controller.current = null; } }
   };
   return <SheetPresence>{open && <div className="ask-backdrop" onClick={close}>
-    <section className="ask-panel" role="dialog" aria-modal="true" aria-labelledby="ask-title" onClick={event => event.stopPropagation()}>
+    <section className="ask-panel" ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="ask-title" onClick={event => event.stopPropagation()}>
       <div className="ask-handle" aria-hidden="true" />
       <header className="ask-header"><div><small>YOUR LITTLE ASSISTANT</small><h2 id="ask-title">Ask aérea <span aria-hidden="true">✧</span></h2></div><button className="ask-close" type="button" aria-label="Close Ask aérea" onClick={close}>×</button></header>
       <div className="ask-toolbar"><button type="button" onClick={() => { close(); onCapture(); }}>＋ Quick Capture</button><button type="button" onClick={clear}>Clear conversation</button></div>
@@ -214,7 +228,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
       </div>
       <div className="ask-live" role="status" aria-live="polite">{busy ? progress : !ready ? "Waiting for your saved data…" : ""}</div>
       {error && <p className="ask-error" role="alert">{error}</p>}
-      <form className="ask-compose" onSubmit={event => { event.preventDefault(); void run(); }}><label className="sr-only" htmlFor="ask-query">Ask about your books, events or notes</label><textarea ref={input} id="ask-query" value={query} onChange={event => setQuery(event.target.value)} maxLength={2000} rows={2} placeholder="Find a book, an event, a note…" disabled={busy || !ready} /><button type={busy ? "button" : "submit"} onClick={busy ? cancel : undefined} disabled={!busy && (!query.trim() || !ready || !enabled.length)}>{busy ? "Stop" : "Search"}</button></form>
+      <form className="ask-compose" onSubmit={event => { event.preventDefault(); void run(); }}><label className="sr-only" htmlFor="ask-query">Ask about your books, events or notes</label><textarea ref={input} id="ask-query" value={query} onChange={event => setQuery(event.target.value)} maxLength={2000} rows={1} placeholder="Find a book, an event, a note…" disabled={busy || !ready} /><button type={busy ? "button" : "submit"} onClick={busy ? cancel : undefined} disabled={!busy && (!query.trim() || !ready || !enabled.length)}>{busy ? "Stop" : "Search"}</button></form>
       {messages.length > 0 && <button className="ask-refresh" type="button" disabled={busy} onClick={() => void run(messages.at(-1)!.request, true)}>Refresh last search</button>}
     </section>
   </div>}</SheetPresence>;
