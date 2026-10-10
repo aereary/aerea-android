@@ -8,6 +8,7 @@ import { NativeIcon } from "./components/native-icon";
 import { consumeBackLayer, useBackLayer } from "./use-back-layer";
 import { useAppUpdates } from "./use-app-updates";
 import type { Ao3EpubDownloadTarget } from "./ao3-library";
+import type { AskDocument, AskEventDraft } from "./ask-aerea/core";
 import {
   Capacitor,
   registerPlugin,
@@ -137,6 +138,16 @@ const Ao3LibraryOpening = lazy(() =>
 );
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
 const AppIconPicker = lazy(() => import("./app-icon-picker"));
+function AskLoadFailure({ open, onClose, onCapture }: { open: boolean; onClose: () => void; onCapture: () => void }) {
+  return <SheetPresence>{open && <div className="modal-backdrop quick-capture-backdrop" onClick={onClose}>
+    <section className="quick-capture-modal" role="dialog" aria-modal="true" aria-label="Ask aérea unavailable" onClick={event => event.stopPropagation()}>
+      <header><h2>Ask aérea is unavailable</h2><button type="button" aria-label="Close Ask aérea" onClick={onClose}>×</button></header>
+      <p>The assistant could not load. Your other app sections are still available.</p>
+      <footer><button type="button" onClick={() => { onClose(); onCapture(); }}>Quick Capture</button><button type="button" onClick={onClose}>Close</button></footer>
+    </section>
+  </div>}</SheetPresence>;
+}
+const AskPanel = lazy(() => import("./ask-aerea/ask-panel").catch(() => ({ default: AskLoadFailure })));
 const PdfStudyReader = lazy(() =>
   loadStudyReaderModule().then((module) => ({ default: module.PdfStudyReader })),
 );
@@ -2793,6 +2804,12 @@ export default function Home() {
   });
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const [askMounted, setAskMounted] = useState(false);
+  const [askAo3Requested, setAskAo3Requested] = useState(false);
+  const openAsk = () => { setAskMounted(true); setAskOpen(true); };
+  // Covers the lazy loading/error state before Ask's own layer has mounted.
+  useBackLayer(askOpen, () => setAskOpen(false), 90);
   const [quickCaptureText, setQuickCaptureText] = useState("");
   const [quickCaptureFile, setQuickCaptureFile] = useState<File | null>(null);
   const [quickCaptureSaving, setQuickCaptureSaving] = useState(false);
@@ -6062,6 +6079,12 @@ export default function Home() {
     }
   }, [ao3LibraryLaunching, ao3LibraryOpen, brandOpensAo3]);
 
+  useEffect(() => {
+    if (!askAo3Requested || !brandOpensAo3) return;
+    setAskAo3Requested(false);
+    openAereaFromBrand();
+  }, [askAo3Requested, brandOpensAo3, openAereaFromBrand]);
+
   const changeTab = (tab: Tab) => {
     if (tab !== activeTab) setTabHistory((current) => [...current, activeTab]);
     setActiveTab(tab);
@@ -9316,9 +9339,110 @@ export default function Home() {
 
   const signOutOfSync = async () => {
     await supabase.auth.signOut();
+    setAskOpen(false);
+    setAskMounted(false);
     setSyncEmail(null);
     setSyncCodeSent(false);
     setSyncMessage("Signed out. Your local copy is still safe on this device.");
+  };
+
+  // Independent Ask adapter. These snapshots never write to the original stores.
+  const askSnapshot = (start: string, end: string, sources: string[]): AskDocument[] => {
+    const result: AskDocument[] = [];
+    if (sources.includes("calendar")) {
+      const occurrenceKeys = new Set<string>();
+      const addEvent = (event: CalendarEvent, date: string) => {
+        const id = `event:${event.id}:${date}`;
+        if (occurrenceKeys.has(id)) return;
+        occurrenceKeys.add(id);
+        result.push({ id, source: "calendar", kind: "Calendar event", title: event.title,
+          text: [event.note, event.location, event.calendar, ...(event.tags ?? []), ...(event.todos ?? [])].filter(Boolean).join(" · "),
+          reference: event.calendar ?? "Calendar", date, time: event.allDay ? undefined : event.time });
+      };
+      for (const event of calendarEvents) {
+        if (!event.excludedDates?.includes(event.date)) addEvent(event, event.date);
+      }
+      let day = dateFromKey(start);
+      while (localDateKey(day) <= end) {
+        const date = localDateKey(day);
+        for (const event of calendarEvents) if (eventOccursOn(event, date)) addEvent(calendarEventAtOccurrence(event, date), date);
+        day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+      }
+    }
+    if (sources.includes("notes")) {
+      result.push(...studyNotes.map(note => ({ id: `note:${note.id}`, source: "notes" as const, kind: "Study note", title: note.title, text: note.body, reference: "Notes · Your Library" })));
+      result.push(...tasks.map(task => ({ id: `task:${task.id}`, source: "notes" as const, kind: "Task", title: task.title, text: [task.notes, ...(task.tags ?? [])].filter(Boolean).join(" · "), reference: task.completed ? "Tasks · Completed" : "Tasks · Pending", date: task.dueDate })));
+      result.push(...inboxItems.filter(item => !item.dismissedAt).map(item => ({ id: `inbox:${item.id}`, source: "notes" as const, kind: "Inbox item", title: item.originalName || item.text.slice(0, 80) || "Inbox item", text: item.text, reference: "Inbox" })));
+      result.push(...postIts.filter(item => !item.archived).map(item => ({ id: `postit:${item.id}`, source: "notes" as const, kind: "Post-it", title: item.text.slice(0, 80), text: item.text, reference: "Post-its" })));
+    }
+    if (sources.includes("journal")) result.push(...entries.map(entry => ({ id: `journal:${entry.id}`, source: "journal" as const, kind: "Journal entry", title: `Journal · ${entry.date}`, text: entry.text, reference: `Quick journal · ${entry.date}` })));
+    if (sources.includes("recordings")) result.push(...recordings.map(recording => ({ id: `recording:${recording.id}`, source: "recordings" as const, kind: "Recording", title: recording.name, text: `${recording.className} · ${recording.notes}`, reference: `${recording.className} · ${recording.duration}` })));
+    if (sources.includes("library")) result.push(...studyFiles.map(file => ({ id: `file:${file.id}`, source: "library" as const, kind: file.kind === "epub" ? "Downloaded EPUB" : "Private file", title: file.name, text: file.name, reference: "Your Library · filename only", fileId: file.id })));
+    return result;
+  };
+  const askReadEpubFile = async (id: string, signal: AbortSignal) => {
+    const file = studyFiles.find(item => item.id === id && item.kind === "epub");
+    if (!file) throw new Error("This EPUB is no longer in Your Library.");
+    signal.throwIfAborted();
+    let source = file.dataUrl;
+    if (!source && isNative()) source = (await AereaStorage.getDocument({ id })).dataUrl;
+    signal.throwIfAborted();
+    if (!source && file.cloudPath) {
+      // Read the existing private mirror without restoring/importing a file.
+      const blob = await downloadAereaLibraryFile(file.cloudPath);
+      signal.throwIfAborted();
+      return blob;
+    }
+    if (!source) source = studyFileSource(file);
+    const response = await fetch(source, { signal });
+    if (!response.ok) throw new Error("This EPUB is not available on this device.");
+    return response.blob();
+  };
+  const askOpenResult = async (document: AskDocument) => {
+    if (document.fileId) {
+      const file = studyFiles.find(item => item.id === document.fileId);
+      if (!file) throw new Error("This file is no longer in Your Library.");
+      await openStudyFile(file); return;
+    }
+    if (document.workId || document.driveId) {
+      setCalendarOpen(false); changeTab("spaces"); setSpace("library"); setAskAo3Requested(true); return;
+    }
+    const [, id, date] = document.id.split(":");
+    if (document.kind === "Calendar event") {
+      const event = calendarEvents.find(item => item.id === id);
+      if (!event) throw new Error("This event is no longer in Calendar.");
+      setSelectedEventDetail(calendarEventAtOccurrence(event, date ?? event.date)); return;
+    }
+    if (document.kind === "Study note") { changeTab("spaces"); setSpace("library"); setRequestedStudyNoteId(id); return; }
+    if (document.kind === "Journal entry") {
+      const entry = entries.find(item => item.id === Number(id));
+      if (!entry) throw new Error("This journal entry is no longer available.");
+      setSelectedJournalEntry(entry); return;
+    }
+    if (document.kind === "Task") {
+      const task = tasks.find(item => item.id === id);
+      if (!task) throw new Error("This task is no longer available.");
+      changeTab("today"); openTaskEditor(task); return;
+    }
+    if (document.kind === "Post-it") {
+      const note = postIts.find(item => item.id === id);
+      if (!note) throw new Error("This post-it is no longer available.");
+      changeTab("today"); openPostItEditor(note); return;
+    }
+    if (document.kind === "Recording") {
+      const recording = recordings.find(item => item.id === Number(id));
+      if (!recording) throw new Error("This recording is no longer available.");
+      changeTab("spaces"); setSpace("classes"); setSelectedClass(recording.className); return;
+    }
+    changeTab("spaces"); setSpace("inbox");
+  };
+  const askReviewEvent = (draft: AskEventDraft) => {
+    openNewEvent(draft.date);
+    setSelectedCalendarDate(draft.date);
+    setCalendarOpen(true);
+    // The request has no duration yet. Leave the end time empty for review;
+    // do not invent an hour or persist a zero-length event.
+    setEventDraft(current => ({ ...current, title: draft.title, date: draft.date, endDate: draft.date, time: draft.time || "09:00", endTime: draft.allDay ? "10:00" : "", allDay: draft.allDay }));
   };
 
   return (
@@ -11724,12 +11848,12 @@ export default function Home() {
                 aria-current={activeTab === tab.id ? "page" : undefined}
                 aria-label={
                   tab.id === "add"
-                    ? "Open Quick Capture"
+                    ? "Open Ask aérea"
                     : tab.label
                 }
                 onClick={() => {
                   if (tab.id === "add") {
-                    setQuickCaptureOpen(true);
+                    openAsk();
                     return;
                   }
                   changeTab(tab.id);
@@ -11744,6 +11868,13 @@ export default function Home() {
           </nav>
         )}
       </section>
+
+      {askMounted && <Suspense fallback={askOpen ? <div className="ask-loading" role="status">Opening Ask aérea… <button onClick={() => setAskOpen(false)}>Close</button></div> : null}>
+        <AskPanel open={askOpen} ready={stateReady} onClose={() => setAskOpen(false)}
+          onCapture={() => setQuickCaptureOpen(true)} snapshot={askSnapshot}
+          epubFiles={studyFiles.filter(file => file.kind === "epub")}
+          readEpubFile={askReadEpubFile} onOpen={askOpenResult} onEventDraft={askReviewEvent} />
+      </Suspense>}
 
       {ao3LibraryLaunching && !ao3LibraryOpen && (
         <Suspense fallback={null}>
@@ -13961,10 +14092,10 @@ export default function Home() {
                             tab.id === "add" ? "quick-capture-nav" : "",
                           ].filter(Boolean).join(" ")}
                           type="button"
-                          aria-label={tab.id === "add" ? "Open Quick Capture" : tab.label}
+                          aria-label={tab.id === "add" ? "Open Ask aérea" : tab.label}
                           onClick={() => {
                             if (tab.id === "add") {
-                              setQuickCaptureOpen(true);
+                              openAsk();
                               return;
                             }
                             setCalendarScheduleOpen(false);

@@ -269,10 +269,11 @@ test("moves Library into Spaces and reserves the center action for Quick Capture
   assert.match(pageSource, /title="Library"[\s\S]*onClick=\{\(\) => setSpace\("library"\)\}/);
   assert.match(pageSource, /space === "library"[\s\S]*<StudyLibrary/);
   assert.match(pageSource, /tab\.id === "add" \? "quick-capture-nav" : ""/);
-  assert.match(pageSource, /tab\.id === "add"[\s\S]*setQuickCaptureOpen\(true\)/);
+  assert.match(pageSource, /tab\.id === "add"[\s\S]*openAsk\(\)/);
+  assert.match(pageSource, /onCapture=\{\(\) => setQuickCaptureOpen\(true\)\}/);
   assert.match(pageSource, /Focus clock/);
   assert.doesNotMatch(pageSource, /Back to Sketchbook/);
-  assert.match(cssSource, /Library belongs to Spaces; the center action opens Quick Capture/);
+  assert.match(cssSource, /\.quick-capture-nav/);
 });
 
 test("keeps notes, searchable readers, pastel highlights, and private files in Library", () => {
