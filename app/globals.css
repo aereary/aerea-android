@@ -33633,6 +33633,81 @@ html[data-native="true"] :where(
   outline:3px solid color-mix(in srgb,#8f7af0 55%,white);
   outline-offset:2px;
 }
+.timetable-day-exception-dot {
+  background:var(--sheet-accent,#8f7af0);
+  border-radius:50%;
+  height:5px;
+  width:5px;
+}
+
+.timetable-exception-action {
+  align-items:center;
+  background:var(--sheet-raised,#f3f0fb);
+  border-radius:18px;
+  color:var(--sheet-ink,#474263);
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:space-between;
+  padding:12px 14px;
+}
+.timetable-exception-action span { font-size:13px; }
+.timetable-exception-action button,
+.timetable-day-exception-editor footer button:last-child {
+  background:var(--sheet-accent,#b7a7ff);
+  border:0;
+  border-radius:13px;
+  color:var(--sheet-on-accent,#302645);
+  padding:10px 13px;
+}
+.timetable-day-exception-editor {
+  color:var(--sheet-ink,#474263);
+  display:grid;
+  gap:18px;
+  padding:8px 2px 14px;
+}
+.timetable-day-exception-editor p { margin:0; }
+.timetable-exception-date,
+.timetable-exception-scope { display:grid; gap:9px; }
+.timetable-exception-date input {
+  background:var(--sheet-raised,#f3f0fb);
+  border:1px solid var(--sheet-line,#ded8ee);
+  border-radius:13px;
+  color:var(--sheet-ink,#474263);
+  padding:11px;
+  width:100%;
+}
+.timetable-exception-kinds { display:grid; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.timetable-exception-kinds button {
+  background:var(--sheet-raised,#f3f0fb);
+  border:1px solid var(--sheet-line,#ded8ee);
+  border-radius:15px;
+  color:var(--sheet-ink,#474263);
+  min-height:48px;
+  padding:10px;
+}
+.timetable-exception-kinds button.active {
+  background:var(--sheet-selected,#e6ddff);
+  border-color:var(--sheet-accent,#b7a7ff);
+  box-shadow:inset 0 0 0 1px var(--sheet-accent,#b7a7ff);
+}
+.timetable-exception-scope {
+  background:var(--sheet-raised,#f3f0fb);
+  border-radius:16px;
+  padding:14px;
+}
+.timetable-exception-scope label { align-items:center; display:flex; gap:9px; font-size:14px; }
+.timetable-exception-scope input { accent-color:var(--sheet-accent,#8f7af0); }
+.timetable-day-exception-editor > small { color:var(--sheet-muted,#736d86); line-height:1.5; }
+.timetable-day-exception-editor footer { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+.timetable-day-exception-editor footer button:not(:last-child) {
+  background:var(--sheet-raised,#f3f0fb);
+  border:0;
+  border-radius:13px;
+  color:var(--sheet-ink,#474263);
+  padding:10px 13px;
+}
+.timetable-day-exception-editor footer button:disabled { opacity:.45; }
 
 .timetable-week-map-list {
   align-content:start;
