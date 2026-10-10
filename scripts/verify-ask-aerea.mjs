@@ -81,6 +81,11 @@ for (const [theme, mode, width, reduced] of themeCases) {
   assert.ok((await textResult.textContent()).includes("Chapter One"));
   assert.ok((await textResult.textContent()).includes("prepared a nest"));
   assert.ok(!(await textResult.textContent()).includes("private fake instruction"));
+  await search("Recuerdo un fanfic donde Oscar prepara un nido durante un viaje");
+  const possible = page.locator(".ask-exchange").last();
+  assert.equal(await possible.locator(".ask-result").count(), 1);
+  assert.ok((await possible.textContent()).includes("Possible passage"));
+  assert.ok((await possible.textContent()).includes("prepared a nest"));
   await search("Busca mis fanfics de Oscar Piastri y Lando Norris terminados largos");
   assert.equal(await page.locator(".ask-exchange").last().locator(".ask-result").count(), 1);
   assert.ok((await page.locator(".ask-exchange").last().textContent()).includes("Chapter One"));
@@ -106,7 +111,7 @@ for (const [theme, mode, width, reduced] of themeCases) {
   await page.getByRole("button", { name: "＋ Quick Capture" }).click();
   await page.locator(".quick-capture-modal").waitFor();
   assert.ok(!networkWrites.some(write => /ao3_|library_items|library_item_versions|storage\//.test(write.path)), JSON.stringify(networkWrites)); assert.deepEqual(errors, []);
-  facts.push({ theme, width, reduced, bounds, tests: "retrieval, metadata, private journal opt-out, real EPUB worker, event review/save, original capture, no catalog writes" });
+  facts.push({ theme, width, reduced, bounds, tests: "retrieval, metadata, approximate local passage, private journal opt-out, real EPUB worker, event review/save, original capture, no catalog writes" });
   console.log(`Passed ${theme} · ${width}px · reduced motion ${reduced}`);
   await browser.close();
 }
