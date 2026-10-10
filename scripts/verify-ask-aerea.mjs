@@ -63,6 +63,18 @@ for (const [theme, mode, width, reduced] of themeCases) {
   const bounds = await page.locator(".ask-panel").evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, width: r.width, viewport: innerWidth, overflow: el.scrollWidth > el.clientWidth + 1, animation: getComputedStyle(el).animationName }; });
   assert.ok(bounds.top >= 0 && !bounds.overflow); assert.ok(bounds.width <= width);
   if (reduced) assert.equal(bounds.animation, "none");
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "", "Opening Ask must not focus the keyboard input");
+  if (width < 600) {
+    const initial = await page.locator(".ask-panel").evaluate(el => el.getBoundingClientRect().height);
+    const field = page.locator("#ask-query");
+    const inputHeight = await field.evaluate(el => el.getBoundingClientRect().height);
+    assert.ok(initial < 720, `Empty sheet should fit its content: ${initial}px`);
+    await field.fill("Describe the scene in my book where ".repeat(20));
+    const expanded = await field.evaluate(el => el.getBoundingClientRect().height);
+    assert.ok(expanded > inputHeight && expanded <= 181, `Composer should grow with a cap: ${inputHeight} -> ${expanded}px`);
+    assert.ok((await page.locator(".ask-panel").evaluate(el => el.getBoundingClientRect().height)) <= 852 * .92 + 1);
+    await field.fill("");
+  }
   const search = async query => { await page.locator("#ask-query").fill(query); await page.getByRole("button", { name: "Search", exact: true }).click(); await page.getByRole("button", { name: "Stop", exact: true }).waitFor({ state: "hidden" }); await page.waitForTimeout(100); };
   await search("Busca todo lo relacionado con Termodinámica");
   assert.equal(await page.locator(".ask-exchange").last().locator(".ask-result").count(), 2);
