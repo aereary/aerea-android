@@ -9,7 +9,7 @@ export type AskDocument = {
   versionCount?: number; archived?: boolean; fileNames?: string[];
 };
 export type AskFilter = { terms: string[]; complete?: boolean; minWords?: number; maxWords?: number; source?: AskSource; day?: string; upcoming?: boolean };
-export type AskHit = { document: AskDocument; match: "exact" | "related"; reasons: string[]; excerpt: string };
+export type AskHit = { document: AskDocument; match: "exact" | "related" | "approximate"; reasons: string[]; excerpt: string };
 export type AskContext = { filter?: AskFilter; hits: AskHit[]; topic?: string };
 export type AskEventDraft = { title: string; date: string; time: string; allDay: boolean };
 export type AskAnswer = { text: string; hits: AskHit[]; total: number; context: AskContext; open?: AskDocument; draft?: AskEventDraft; operation?: "search" };
@@ -38,10 +38,14 @@ const synonyms = [
   ["omegaverse", "alpha/beta/omega dynamics", "a/b/o"], ["protector", "protective"],
   ["nido", "nest", "nesting"], ["reconciliacion", "reconcile", "reconciliation"],
   ["viaje", "trip", "travel"], ["hospital", "hospitalization"],
+  ["prepara", "preparo", "preparan", "prepare", "prepared", "preparing"],
+  ["discuten", "discutieron", "argue", "argued", "argument", "fight", "fought"],
+  ["reconcilian", "reconciliaron", "reconcile", "reconciled", "make up", "made up"],
   ["termodinamica", "thermodynamics"], ["energia cinetica", "kinetic energy"],
   ["primera ley", "first law"], ["examen", "exam", "examination", "parcial"],
 ];
 for (const word of "todo algo information informacion material materiales tema temas about related relacion relacionar encuentra muestre dame porfavor please como del donde buscar uno una tienen que quiero seria sera podria puedes finished buscar relacionados everything related".split(/\s+/)) STOP.add(word);
+for (const word of "recuerdo recordaba remember remembered escena scene escenas scenes donde where alguien someone pero but no not se the titulo title nombre name protagonista protagonistas protagonist protagonists durante during luego later despues after mas more porque because habia había habia uno alguna algun algunos parece parecido similar".split(/\s+/)) STOP.add(word);
 
 export function dateKey(now = new Date(), zone = "America/Panama") {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -142,6 +146,46 @@ export function searchDocuments(documents: AskDocument[], filter: AskFilter, now
   }
   found.sort((a, b) => filter.upcoming || filter.day ? (a.document.date ?? "").localeCompare(b.document.date ?? "") || (a.document.time ?? "").localeCompare(b.document.time ?? "") : b.rank - a.rank || a.document.title.localeCompare(b.document.title));
   return found.map(hit => ({ document: hit.document, match: hit.match, reasons: hit.reasons, excerpt: hit.excerpt }));
+}
+
+/** Explicit memory searches can show plausible passages even when one descriptive word is missing.
+ * This is local lexical retrieval, not an embedding model or proof of the remembered scene. */
+export function sceneRecall(query: string) {
+  return /\b(recuerdo|recordaba|remember|remembered|escena|scene)\b/.test(normalize(query));
+}
+export function searchRememberedPassages(documents: AskDocument[], query: string, filter: AskFilter): AskHit[] {
+  if (!sceneRecall(query) || filter.source && filter.source !== "library" || filter.terms.length < 2) return [];
+  const names = [...query.matchAll(/\b[A-Z][a-zÀ-ÿ]{2,}\b/g)].map(match => normalize(match[0])).filter(name => !STOP.has(name));
+  const descriptive = filter.terms.filter(term => !names.includes(term));
+  if (!descriptive.length || descriptive.length > 12) return [];
+  const minimum = Math.max(names.length ? 1 : 2, Math.ceil(descriptive.length * 0.6));
+  const matches: Array<AskHit & { score: number }> = [];
+  for (const document of documents) {
+    if (document.source !== "library" || !document.chapter) continue;
+    if (filter.complete !== undefined && document.complete !== filter.complete) continue;
+    if (filter.minWords !== undefined && (document.words == null || document.words < filter.minWords)) continue;
+    if (filter.maxWords !== undefined && (document.words == null || document.words > filter.maxWords)) continue;
+    if (filter.day || filter.upcoming) continue;
+    const identity = normalize([document.title, document.author, ...(document.fandoms ?? []), ...(document.relationships ?? []), document.text].join(" "));
+    if (names.some(name => !identity.includes(name))) continue;
+    let best: { passage: string; found: string[]; score: number } | undefined;
+    const paragraphs = document.text.split(/\n+/);
+    for (const paragraph of paragraphs) {
+      for (let start = 0; start < paragraph.length; start += 900) {
+        const passage = paragraph.slice(start, start + 1200), normalized = normalize(passage);
+        const found = descriptive.filter(term => aliases(term).some(alias => normalized.includes(alias)));
+        if (found.length < minimum) continue;
+        const score = found.length / descriptive.length + found.length * 0.01;
+        if (!best || score > best.score) best = { passage, found, score };
+      }
+    }
+    if (!best) continue;
+    matches.push({ document: { ...document, text: "" }, match: "approximate",
+      reasons: [`Possible passage: ${best.found.length} of ${descriptive.length} descriptive terms have matching or related wording in this excerpt.`, ...(names.length ? [`Names found in the registered work or chapter: ${names.join(", ")}.`] : [])],
+      excerpt: excerptOf(best.passage, best.found), score: best.score });
+  }
+  matches.sort((a, b) => b.score - a.score || a.document.title.localeCompare(b.document.title));
+  return matches.slice(0, 40).map(hit => ({ document: hit.document, match: hit.match, reasons: hit.reasons, excerpt: hit.excerpt }));
 }
 
 export function parseEventRequest(query: string, now = new Date()): { draft?: AskEventDraft; clarification?: string } | undefined {

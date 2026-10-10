@@ -3,7 +3,7 @@ import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { SheetPresence } from "../components/sheet-presence";
 import { useBackLayer } from "../use-back-layer";
 import { readLibraryCatalog } from "./library-connector";
-import { answerQuery, dateKey, shiftDay, mergeEpubHit, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskSource } from "./core";
+import { answerQuery, dateKey, shiftDay, mergeEpubHit, sceneRecall, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskHit, type AskSource } from "./core";
 import type { TextChapter } from "./epub-text";
 import "../styles/ask-aerea.css";
 
@@ -151,19 +151,25 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
             }
             const metadata = (catalog.current ?? []).filter(document => document.fileNames?.includes(file.name));
             const book = metadata.length === 1 ? metadata[0] : undefined;
-            const content = await search(cached.chapters.map(chapter => ({ ...book, id: `epub:${file.id}:${chapter.id}`, source: "library" as const, kind: "EPUB chapter", title: book?.title ?? file.name, text: chapter.text, reference: `${file.name} · ${chapter.title}`, fileId: file.id, chapter: chapter.title })));
+            const chapters: AskDocument[] = cached.chapters.map(chapter => ({ ...book, id: `epub:${file.id}:${chapter.id}`, source: "library", kind: "EPUB chapter", title: book?.title ?? file.name, text: chapter.text, reference: `${file.name} · ${chapter.title}`, fileId: file.id, chapter: chapter.title }));
+            const content = await search(chapters);
+            let best = content.answer.hits[0];
+            if (!best && sceneRecall(request)) {
+              const passages = await workerRequest<{ hits: AskHit[] }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { mode: "passage", query: request, documents: chapters, context: context.current, now: new Date().toISOString() }, signal);
+              best = passages.hits[0];
+            }
             // One best chapter per physical file. Keep only references/excerpts across files.
-            if (content.answer.hits[0]) {
-            const workId = book?.workId;
-            const alreadyCounted = workId !== undefined && (contentWorks.has(workId) || answerQuery(request, [book!], context.current).total > 0);
-            result.answer.total += mergeEpubHit(result.answer.hits, content.answer.hits[0], alreadyCounted);
-            if (workId !== undefined) contentWorks.add(workId);
+            if (best) {
+              const workId = book?.workId;
+              const alreadyCounted = workId !== undefined && (contentWorks.has(workId) || answerQuery(request, [book!], context.current).total > 0);
+              result.answer.total += mergeEpubHit(result.answer.hits, best, alreadyCounted);
+              if (workId !== undefined) contentWorks.add(workId);
             }
             searched++;
           } catch (reason) { signal.throwIfAborted(); failed++; statuses.push(`${file.name}: ${reason instanceof Error ? reason.message : "Could not read this file."}`); }
         }
         statuses.push(`EPUB content coverage: ${searched} readable files; ${failed} unavailable. Remote AO3 EPUBs not downloaded on this device were not searched. Opening preserves your current reader position.`);
-        result.answer.text = result.answer.total ? `${result.answer.total} matching catalog, local or EPUB results. EPUB results include one matching chapter per file. Semantic AI is not enabled.` : "No matches in the selected metadata, local data or readable EPUB files. Remote EPUBs and unreadable files are outside this search's coverage.";
+        result.answer.text = result.answer.total ? `${result.answer.total} catalog, local or EPUB results. A possible passage matches some remembered details but must be checked in the book. Search runs locally without a paid AI service.` : "No matches in the selected metadata, local data or readable EPUB files. Remote EPUBs and unreadable files are outside this search's coverage.";
         result.answer.context.hits = result.answer.hits;
       }
       signal.throwIfAborted();
@@ -190,7 +196,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
         {messages.map(message => <article className="ask-exchange" key={message.id}>
           <p className="ask-request">{message.request}</p><p className="ask-answer">{message.answer.text}</p>
           {message.answer.hits.map((hit, index) => <section className="ask-result" key={hit.document.id}>
-            <small>{index + 1} · {hit.document.kind} · {hit.match === "exact" ? "Matching terms" : "Related wording"}{hit.document.archived ? " · Archived" : ""}</small>
+            <small>{index + 1} · {hit.document.kind} · {hit.match === "exact" ? "Matching terms" : hit.match === "approximate" ? "Possible passage" : "Related wording"}{hit.document.archived ? " · Archived" : ""}</small>
             <h3>{hit.document.title}</h3>{hit.document.author && <p>{hit.document.author}</p>}
             {hit.document.relationships?.length ? <p>{hit.document.relationships.join(" · ")}</p> : null}
             {hit.document.fandoms?.length ? <p>{hit.document.fandoms.join(" · ")}</p> : null}
