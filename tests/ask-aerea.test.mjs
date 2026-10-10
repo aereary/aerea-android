@@ -7,7 +7,7 @@ async function moduleAt(path) {
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
   return import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
 }
-const { answerQuery, parseFilter, searchDocuments, queryDate, dateKey, parseEventRequest, mergeEpubHit } = await moduleAt("../app/ask-aerea/core.ts");
+const { answerQuery, parseFilter, searchDocuments, searchRememberedPassages, queryDate, dateKey, parseEventRequest, mergeEpubHit } = await moduleAt("../app/ask-aerea/core.ts");
 const { extractEpubText, plainText } = await moduleAt("../app/ask-aerea/epub-text.ts");
 const now = new Date("2026-10-09T07:55:00Z");
 const book = (id, overrides = {}) => ({ id, source: "library", kind: "AO3 work", title: id, author: "Author", text: "", reference: id, relationships: ["Oscar Piastri/Lando Norris"], fandoms: ["Formula 1"], complete: true, words: 70000, tags: ["Omegaverse", "Happy Ending", "Protective Oscar Piastri", "Explicit"], ...overrides });
@@ -37,6 +37,28 @@ test("bilingual related wording finds real metadata without inventing confidence
   assert.equal(result.hits.length, 1); assert.equal(result.hits[0].document.id, "actual");
   assert.equal(result.hits[0].match, "related");
   assert.equal("probability" in result.hits[0], false);
+});
+test("remembered scene search suggests a local passage with incomplete wording and keeps its source", () => {
+  const query = "Recuerdo un fanfic donde Oscar prepara un nido durante un viaje";
+  const documents = [book("epub:one", { title: "A real work", chapter: "Chapter One", fileId: "local-epub", text: "He prepared a nest in the quiet room.", reference: "QA.epub · Chapter One" })];
+  assert.equal(searchDocuments(documents, parseFilter(query), now).length, 0);
+  const hits = searchRememberedPassages(documents, query, parseFilter(query));
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].match, "approximate");
+  assert.equal(hits[0].document.reference, "QA.epub · Chapter One");
+  assert.match(hits[0].excerpt, /prepared a nest/);
+  assert.match(hits[0].reasons[0], /2 of 3/);
+  assert.equal(hits[0].document.text, "");
+  assert.equal(searchRememberedPassages(documents, "Busca fanfic nido viaje", parseFilter("Busca fanfic nido viaje")).length, 0);
+});
+test("approximate scene retrieval respects named works and completion constraints", () => {
+  const query = "Recuerdo fanfics de Oscar Piastri y Lando Norris terminados: prepara un nido durante un viaje";
+  const filter = parseFilter(query);
+  const chapter = book("epub:chapter", { title: "A real work", chapter: "One", text: "He prepared a nest in the quiet room." });
+  assert.equal(searchRememberedPassages([chapter], query, filter).length, 1);
+  assert.equal(searchRememberedPassages([{ ...chapter, complete: false }], query, filter).length, 0);
+  assert.equal(searchRememberedPassages([{ ...chapter, relationships: [] }], query, filter).length, 0);
+  assert.equal(searchRememberedPassages([{ ...chapter, text: "A nest." }], query, filter).length, 0);
 });
 test("follow-up filters retain the original ship, then open the displayed ordinal", () => {
   const first = answerQuery("Busca mis fanfics de Oscar Piastri y Lando Norris", books, undefined, now);
