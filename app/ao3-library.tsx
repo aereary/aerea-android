@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
 import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
+import { newAo3WorkIds, nextAo3BadgeExpiry } from "./ao3-recency";
 import type { StudyFileItem } from "./study-library";
 
 type SeriesMembership = {
@@ -41,6 +42,7 @@ type Ao3Work = {
   archived: boolean;
   categories: string[];
   bookmarker_tags: string[];
+  created_at?: string | null;
 };
 
 type EpubVersion = {
@@ -226,7 +228,8 @@ export function validAo3Works(value: unknown): Ao3Work[] | null {
       (typeof work.updated_on !== "string" && work.updated_on !== null) ||
       (typeof work.bookmarked_on !== "string" && work.bookmarked_on !== null) ||
       (typeof work.source_url !== "string" && work.source_url !== null) ||
-      typeof work.archived !== "boolean"
+      typeof work.archived !== "boolean" ||
+      (work.created_at != null && typeof work.created_at !== "string")
     ) {
       return null;
     }
@@ -302,7 +305,7 @@ async function fetchLibrary() {
       const { data, error } = await supabase
         .from("ao3_works")
         .select(
-          "work_id,title,author,summary,fandoms,warnings,characters,relationships,tags,words,rating,chapters,complete,series,updated_on,bookmarked_on,source_url,archived,categories,bookmarker_tags",
+          "work_id,title,author,summary,fandoms,warnings,characters,relationships,tags,words,rating,chapters,complete,series,updated_on,bookmarked_on,source_url,archived,categories,bookmarker_tags,created_at",
         )
         .order("updated_on", { ascending: false, nullsFirst: false })
         .order("work_id", { ascending: true })
@@ -662,6 +665,12 @@ function WorkDetails({
   );
 }
 
+function NewWorkBadge({ count = 1 }: { count?: number }) {
+  return <span className="ao3-new-badge" title="Added to your library in the last 48 hours">
+    {count === 1 ? "New" : `${count} new`}
+  </span>;
+}
+
 function FicCard({
   work,
   versions,
@@ -670,6 +679,7 @@ function FicCard({
   query,
   activeTag,
   onTagSearch,
+  isNew,
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
@@ -678,13 +688,17 @@ function FicCard({
   query: string;
   activeTag: string | null;
   onTagSearch: (tag: string) => void;
+  isNew: boolean;
 }) {
   return (
-    <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""}`}>
+    <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""} ${isNew ? "ao3-card-new" : ""}`}>
       <header className="ao3-card-header">
-        <span className="ao3-eyebrow">
-          FIC{work.archived ? " · ARCHIVED" : ""}
-        </span>
+        <div className="ao3-card-kicker">
+          <span className="ao3-eyebrow">
+            FIC{work.archived ? " · ARCHIVED" : ""}
+          </span>
+          {isNew && <NewWorkBadge />}
+        </div>
         <button
           className="ao3-copy-title"
           type="button"
@@ -764,6 +778,7 @@ function SeriesPart({
   query,
   activeTag,
   onTagSearch,
+  isNew,
 }: {
   work: Ao3Work;
   versions: EpubVersion[];
@@ -771,6 +786,7 @@ function SeriesPart({
   query: string;
   activeTag: string | null;
   onTagSearch: (tag: string) => void;
+  isNew: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -780,9 +796,12 @@ function SeriesPart({
       onToggle={(event) => setExpanded(event.currentTarget.open)}
     >
       <summary>
-        <strong>
-          <HighlightText text={work.title} query={query} />
-        </strong>
+        <span className="ao3-part-title">
+          <strong>
+            <HighlightText text={work.title} query={query} />
+          </strong>
+          {isNew && <NewWorkBadge />}
+        </span>
         <small>
           {work.series?.[0]?.part ? `Part ${work.series[0].part} · ` : ""}
           {work.chapters || "? chapters"} · {formatNumber(work.words)}
@@ -811,6 +830,7 @@ function SeriesCard({
   query,
   activeTag,
   onTagSearch,
+  newWorkIds,
 }: {
   entry: SeriesGroup;
   versionsByWork: Map<number, EpubVersion[]>;
@@ -819,6 +839,7 @@ function SeriesCard({
   query: string;
   activeTag: string | null;
   onTagSearch: (tag: string) => void;
+  newWorkIds: ReadonlySet<number>;
 }) {
   const first = entry.works[0];
   const authors = compactUnique(entry.works.map((work) => work.author));
@@ -826,11 +847,15 @@ function SeriesCard({
     entry.works.flatMap((work) => work.relationships || []),
   );
   const tags = compactUnique(entry.works.flatMap((work) => work.tags || []));
+  const newCount = entry.works.filter((work) => newWorkIds.has(work.work_id)).length;
 
   return (
-    <article className="ao3-card ao3-card-series">
+    <article className={`ao3-card ao3-card-series ${newCount ? "ao3-card-new" : ""}`}>
       <header className="ao3-card-header">
-        <span className="ao3-eyebrow">SERIES</span>
+        <div className="ao3-card-kicker">
+          <span className="ao3-eyebrow">SERIES</span>
+          {newCount > 0 && <NewWorkBadge count={newCount} />}
+        </div>
         <button
           className="ao3-copy-title"
           type="button"
@@ -903,6 +928,7 @@ function SeriesCard({
             <li key={work.work_id}>
               <SeriesPart
                 work={work}
+                isNew={newWorkIds.has(work.work_id)}
                 versions={versionsByWork.get(work.work_id) || []}
                 onDownload={onDownload}
                 query={query}
@@ -1010,6 +1036,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const [epubs, setEpubs] = useState<EpubVersion[]>(
     () => initialCache?.epubs || [],
   );
+  const [badgeNow, setBadgeNow] = useState(() => Date.now());
+  const newWorkIds = useMemo(() => newAo3WorkIds(works, badgeNow), [works, badgeNow]);
   const [loading, setLoading] = useState(() => !initialCache);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1025,6 +1053,26 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const [downloadTarget, setDownloadTarget] = useState<Ao3EpubDownloadTarget | null>(null);
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+
+  useEffect(() => {
+    let timer: number;
+    const updateBadges = () => {
+      window.clearTimeout(timer);
+      const now = Date.now();
+      setBadgeNow(now);
+      const next = nextAo3BadgeExpiry(works, now);
+      if (next !== null) timer = window.setTimeout(updateBadges, Math.max(1, next - now));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") updateBadges();
+    };
+    timer = window.setTimeout(updateBadges, 0);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [works]);
 
   const refresh = useCallback((showSpinner = true) => {
     if (showSpinner) setRefreshing(true);
@@ -1407,6 +1455,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           entry.kind === "fic" ? (
             <FicCard
               key={`fic-${entry.work.work_id}`}
+              isNew={newWorkIds.has(entry.work.work_id)}
               work={entry.work}
               versions={versionsByWork.get(entry.work.work_id) || []}
               onCopy={onCopy}
@@ -1421,6 +1470,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           ) : (
             <SeriesCard
               key={`series-${entry.name}`}
+              newWorkIds={newWorkIds}
               entry={entry}
               versionsByWork={versionsByWork}
               onCopy={onCopy}
@@ -1624,6 +1674,12 @@ html[data-native="true"] .ao3-library-tools {
 .ao3-card-series .ao3-card-header { background: var(--ao3-plum); }
 .ao3-card-archive .ao3-card-header { background: #725a74; }
 .ao3-eyebrow { display: block; margin-bottom: 3px; font-size: .69rem; font-weight: 850; letter-spacing: .12em; opacity: .84; }
+.ao3-card-kicker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 3px; }
+.ao3-card-kicker .ao3-eyebrow { margin-bottom: 0; }
+.ao3-new-badge { display: inline-flex; flex: 0 0 auto; align-items: center; border: 1px solid #badac7; border-radius: 999px; padding: 2px 7px; background: #e4f4e9; color: #24583c; font-size: .65rem; font-weight: 850; line-height: 1.2; letter-spacing: .025em; white-space: nowrap; }
+.ao3-card-new { border-color: #88b99a; }
+.ao3-part-title { display: flex; align-items: flex-start; gap: 8px; }
+.ao3-part-title strong { flex: 1; min-width: 0; }
 .ao3-copy-title {
   display: block;
   width: 100%;
@@ -1752,6 +1808,8 @@ html[data-native="true"] .ao3-library-tools {
 .app-shell[data-color-mode="dark"] .ao3-filter-row select,
 .app-shell[data-color-mode="dark"] .ao3-refresh { background: rgba(44,39,48,.94); }
 .app-shell[data-color-mode="dark"] .ao3-card { box-shadow: none; }
+.app-shell[data-color-mode="dark"] .ao3-new-badge { background: #243b30; border-color: #537962; color: #c0edcf; }
+.app-shell[data-color-mode="dark"] .ao3-card-new { border-color: #537962; }
 .app-shell[data-color-mode="dark"] .ao3-series-parts { background: #302a35; }
 .app-shell[data-color-mode="dark"] .ao3-part { background: rgba(40,36,44,.72); }
 .app-shell[data-color-mode="dark"] .ao3-part[open] > summary { background: rgba(54,47,59,.72); }
