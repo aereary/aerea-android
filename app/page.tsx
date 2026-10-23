@@ -17271,36 +17271,37 @@ function TodayScreen({
                   </div>
                 ) : !exceptionDraft ? (
                   <p className="timetable-term-meta">
-                    <i aria-hidden="true" />
-                    {timetableWeekRange}
-                    <span>{classTimetable.termName}</span>
-                    <button
-                      className="timetable-inline-edit"
-                      type="button"
-                      onClick={() => {
-                        setTimetableDraft({
-                          ...classTimetable,
-                          classes: classTimetable.classes.map((classItem) => ({
-                            ...classItem,
-                          })),
-                        });
-                        setTimetableEditing(true);
-                      }}
-                    >
-                      Edit semester
-                    </button>
+                    <span className="timetable-week-range">
+                      <i aria-hidden="true" />
+                      {timetableWeekRange}
+                      <span>{classTimetable.termName}</span>
+                      {timetableSelectedException &&
+                        <span className="timetable-selected-kind">
+                          {timetableExceptionLabels[timetableSelectedException.kind]}
+                        </span>}
+                    </span>
+                    <span className="timetable-meta-buttons">
+                      <button
+                        className="timetable-inline-edit"
+                        type="button"
+                        onClick={() => {
+                          setTimetableDraft({
+                            ...classTimetable,
+                            classes: classTimetable.classes.map((classItem) => ({
+                              ...classItem,
+                            })),
+                          });
+                          setTimetableEditing(true);
+                        }}
+                      >
+                        Edit semester
+                      </button>
+                      <button className="timetable-inline-edit" type="button" onClick={openDayException}>
+                        {timetableSelectedException ? "Edit this day" : "Mark this day"}
+                      </button>
+                    </span>
                   </p>
                 ) : <p className="timetable-term-meta">One date only · Your weekly schedule stays the same</p>}
-              </div>
-              <div className="timetable-heading-actions">
-                <button
-                  className="timetable-close-button"
-                  type="button"
-                  onClick={closeClassTimetable}
-                  aria-label="Close class schedule"
-                >
-                  ×
-                </button>
               </div>
             </header>
 
@@ -17394,15 +17395,6 @@ function TodayScreen({
                     </button>
                     );
                   })}
-                </div>
-
-                <div className="timetable-exception-action">
-                  <span>{timetableSelectedException
-                    ? `${timetableExceptionLabels[timetableSelectedException.kind]} · only this date`
-                    : "A day outside your usual routine?"}</span>
-                  <button type="button" onClick={openDayException}>
-                    {timetableSelectedException ? "Edit this day" : "Mark this day"}
-                  </button>
                 </div>
 
                 <div
