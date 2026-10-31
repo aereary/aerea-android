@@ -3,7 +3,9 @@ import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { SheetPresence } from "../components/sheet-presence";
 import { useBackLayer } from "../use-back-layer";
 import { readLibraryCatalog } from "./library-connector";
-import { answerQuery, dateKey, shiftDay, mergeEpubHit, sceneRecall, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskHit, type AskSource } from "./core";
+import { answerQuery, dateKey, shiftDay, mergeEpubHit, sceneRecall, isMoreRequest, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskHit, type AskSource } from "./core";
+import { meaningQuery } from "./semantic-core";
+import type { LocalMeaningSearch } from "./semantic-client";
 import type { TextChapter } from "./epub-text";
 import "../styles/ask-aerea.css";
 
@@ -55,6 +57,8 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
   const [messages, setMessages] = useState<Message[]>([]);
   const [enabled, setEnabled] = useState<AskSource[]>(["library", "calendar", "notes"]);
   const [fullText, setFullText] = useState(false);
+  const [meaningEnabled, setMeaningEnabled] = useState(false);
+  const meaningEngine = useRef<LocalMeaningSearch | null>(null);
   const [busy, setBusy] = useState(false), [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const context = useRef<AskContext>({ hits: [] });
@@ -64,14 +68,14 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
   const textCache = useRef(new Map<string, { chapters: TextChapter[]; bytes: number }>());
   const transcript = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null), panel = useRef<HTMLElement>(null);
   const cancel = () => { generation.current++; controller.current?.abort(); controller.current = null; setBusy(false); setProgress(""); };
-  const close = () => { cancel(); onClose(); };
+  const close = () => { cancel(); meaningEngine.current?.dispose(); onClose(); };
   useBackLayer(open, close, 100);
   useEffect(() => {
     // This is an operation holder, not a DOM ref: cleanup deliberately cancels
     // the latest operation, including one started after this effect mounted.
     const operations = controller;
     if (!open) operations.current?.abort();
-    return () => { operations.current?.abort(); };
+    return () => { operations.current?.abort(); meaningEngine.current?.dispose(); };
   }, [open]);
   useEffect(() => {
     if (!open) return;
@@ -102,7 +106,14 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, [query, open]);
-  useEffect(() => { transcript.current?.scrollTo({ top: transcript.current.scrollHeight, behavior: "auto" }); }, [messages, progress]);
+  useEffect(() => {
+    const view = transcript.current;
+    const latest = view?.querySelector<HTMLElement>(".ask-exchange:last-child");
+    if (view && latest) {
+      // Start at the answer, not the bottom of forty result cards.
+      view.scrollTop += latest.getBoundingClientRect().top - view.getBoundingClientRect().top;
+    }
+  }, [messages]);
   const clear = () => { cancel(); setMessages([]); context.current = { hits: [] }; catalog.current = null; textCache.current.clear(); setError(""); };
   const openResult = async (document: AskDocument) => {
     if (!enabled.includes(document.source)) { setError("Enable this source before opening its results."); return; }
@@ -110,15 +121,54 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
     try { await onOpen(document); close(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "This result could not be opened."); }
   };
+  const getMeaningEngine = async () => {
+    if (!meaningEngine.current) {
+      const { LocalMeaningSearch } = await import("./semantic-client");
+      meaningEngine.current = new LocalMeaningSearch();
+    }
+    return meaningEngine.current;
+  };
+  const enableMeaning = async () => {
+    if (busy) return;
+    cancel();
+    const operation = new AbortController();
+    controller.current = operation;
+    setBusy(true); setError(""); setProgress("Preparing free local AI…");
+    try {
+      const engine = await getMeaningEngine();
+      await engine.request({ mode: "prepare" }, operation.signal, setProgress);
+      operation.signal.throwIfAborted();
+      setMeaningEnabled(true);
+    } catch (reason) {
+      if (!operation.signal.aborted) setError(reason instanceof Error ? reason.message : "Local AI is unavailable. Exact search still works.");
+    } finally {
+      if (controller.current === operation) { controller.current = null; setBusy(false); setProgress(""); }
+    }
+  };
+  const removeMeaning = async () => {
+    if (busy) return;
+    cancel(); setMeaningEnabled(false); setBusy(true); setError("");
+    setProgress("Removing the local model and meaning index…");
+    try { await (await getMeaningEngine()).erase(); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove local AI."); }
+    finally { setBusy(false); setProgress(""); }
+  };
   const run = async (request = query, refresh = false) => {
     if (busy || !ready || !request.trim() || !enabled.length) return;
+    if (fullText && isMoreRequest(request)) {
+      setError("For EPUB text searches, add a name or tag to narrow the results. More pages are available for catalog searches.");
+      return;
+    }
     cancel();
     const runId = generation.current, operation = new AbortController();
     controller.current = operation;
     setBusy(true); setError(""); setQuery(""); setProgress("Searching your selected sources…");
     const statuses: string[] = [], signal = operation.signal;
     try {
-      const probe = answerQuery(request, [], context.current);
+      const searchContext = refresh && isMoreRequest(request)
+        ? { ...context.current, offset: Math.max(0, (context.current.offset ?? 0) - context.current.hits.length) }
+        : context.current;
+      const probe = answerQuery(request, [], searchContext);
       if (probe.operation !== "search") {
         setMessages(previous => [...previous.slice(-11), { id: ++serial.current, request, answer: probe, status: [] }]);
         context.current = probe.context;
@@ -139,8 +189,20 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
           statuses.push(reason instanceof Error ? reason.message : "The library is unavailable; other selected sources were searched.");
         }
       }
-      const search = (data: AskDocument[]) => workerRequest<{ answer: AskAnswer }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { query: request, documents: data, context: context.current, now: new Date().toISOString() }, signal);
+      const search = (data: AskDocument[]) => workerRequest<{ answer: AskAnswer }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { query: request, documents: data, context: searchContext, now: new Date().toISOString() }, signal);
       const result = await search(documents);
+      if (meaningEnabled) {
+        if (result.answer.context.filter) result.answer.context.meaningQuery = meaningQuery(request, result.answer.context.filter, searchContext);
+        try {
+          const engine = await getMeaningEngine();
+          const response = await engine.request({ mode: "search", query: request, documents, context: searchContext, now: new Date().toISOString(), pruneLibrary: enabled.includes("library") && catalog.current !== null }, signal, setProgress);
+          if (response.answer) result.answer = response.answer;
+          statuses.push("Meaning search ran on this device. Suggested matches are not proof of a scene. The first 1,200 characters of each entry and a short metadata passage were considered; remote EPUB content was not read by the model.");
+        } catch (reason) {
+          signal.throwIfAborted();
+          statuses.push(`${reason instanceof Error ? reason.message : "Local AI is unavailable."} Showing exact and dictionary matches instead.`);
+        }
+      }
       if (fullText && enabled.includes("library")) {
         let failed = 0, searched = 0;
         const contentWorks = new Set<number>();
@@ -200,17 +262,24 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
       <div className="ask-handle" aria-hidden="true" />
       <header className="ask-header"><div><small>YOUR LITTLE ASSISTANT</small><h2 id="ask-title">Ask aérea <span aria-hidden="true">✧</span></h2></div><button className="ask-close" type="button" aria-label="Close Ask aérea" onClick={close}>×</button></header>
       <div className="ask-toolbar"><button type="button" onClick={() => { close(); onCapture(); }}>＋ Quick Capture</button><button type="button" onClick={clear}>Clear conversation</button></div>
-      <details className="ask-permissions"><summary>Sources & privacy · local search preview</summary><p>Queries and fragments stay in this app. No AI provider is connected. Conversation and extracted text are kept only in memory until you clear them or restart the app.</p>
+      <details className="ask-permissions"><summary>Sources, privacy & free local AI</summary><p>Queries and fragments stay in this app. Optional meaning search runs on your device, with no paid API or account. Messages and extracted EPUB text stay in memory until you clear them or restart the app.</p>
+        <div className="ask-local-ai">
+          <strong>Meaning search · free, on this device</strong>
+          <p>Understands related ideas in Spanish and English. First use downloads about 140 MB from Hugging Face; the saved model works offline while its cache remains available. Queries and your documents are not uploaded. Initial indexing may take several minutes and can be stopped.</p>
+          <p>A separate, local index of derived library vectors speeds up later searches. Original books stay untouched. Notes and journal vectors are not saved. Clear conversation removes messages; Remove local AI deletes the model and this index.</p>
+          {meaningEnabled ? <button type="button" disabled={busy} onClick={() => { meaningEngine.current?.dispose(); setMeaningEnabled(false); }}>Use exact search only</button> : <button type="button" disabled={busy} onClick={() => void enableMeaning()}>Enable local AI · download if needed</button>}
+          <button type="button" disabled={busy} onClick={() => void removeMeaning()}>Remove local AI & index</button>
+        </div>
         <fieldset disabled={busy}><legend>Allow Ask to read</legend>{SOURCES.map(source => <label key={source.id}><input type="checkbox" checked={enabled.includes(source.id)} onChange={() => { clear(); setEnabled(current => current.includes(source.id) ? current.filter(id => id !== source.id) : [...current, source.id]); }} />{source.label}</label>)}
           <label><input type="checkbox" checked={fullText} disabled={!enabled.includes("library")} onChange={event => { clear(); setFullText(event.target.checked); }} />Search EPUB text available on this device</label></fieldset>
-        <p>Drive: synced catalog names only. Repeating events: yesterday through the next 90 days. Recording audio is not transcribed. General AI, remote EPUB text, full Drive search, and automatic writes are pending.</p>
+        <p>Drive: synced catalog names only. Repeating events: yesterday through the next 90 days. Recording audio is not transcribed. Generative chat, remote EPUB text, full Drive search, and automatic writes are pending. Meaning search uses recorded metadata and short text passages; it does not read every page of a book.</p>
       </details>
       <div className="ask-transcript" ref={transcript} tabIndex={0} aria-label="Conversation">
         {!messages.length && <div className="ask-empty"><h3>Find something in your little day.</h3><p>Search your real books, events and notes. Try a name, a tag, or a date.</p><div className="ask-suggestions">{["Find my Oscar Piastri and Lando Norris fanfics", "Show my events tomorrow", "Find all related to Thermodynamics"].map(example => <button key={example} disabled={busy || !ready} type="button" onClick={() => { setQuery(example); input.current?.focus(); }}>{example}</button>)}</div></div>}
-        {messages.map(message => <article className="ask-exchange" key={message.id}>
+        {messages.map((message, messageIndex) => <article className="ask-exchange" key={message.id}>
           <p className="ask-request">{message.request}</p><p className="ask-answer">{message.answer.text}</p>
           {message.answer.hits.map((hit, index) => <section className="ask-result" key={hit.document.id}>
-            <small>{index + 1} · {hit.document.kind} · {hit.match === "exact" ? "Matching terms" : hit.match === "approximate" ? "Possible passage" : "Related wording"}{hit.document.archived ? " · Archived" : ""}</small>
+            <small>{(message.answer.offset ?? 0) + index + 1} · {hit.document.kind} · {hit.match === "exact" ? "Matching terms" : hit.match === "approximate" ? "Possible passage" : hit.match === "semantic" ? "Meaning suggestion" : "Related wording"}{hit.document.archived ? " · Archived" : ""}</small>
             <h3>{hit.document.title}</h3>{hit.document.author && <p>{hit.document.author}</p>}
             {hit.document.relationships?.length ? <p>{hit.document.relationships.join(" · ")}</p> : null}
             {hit.document.fandoms?.length ? <p>{hit.document.fandoms.join(" · ")}</p> : null}
@@ -221,7 +290,8 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
             <div className="ask-result-actions"><button type="button" onClick={() => void openResult(hit.document)}>{hit.document.kind === "Recording" ? "Open class recordings" : hit.document.workId && !hit.document.fileId ? "Open My AO3 Library" : "Open"}</button>
               {hit.document.driveId && /^[A-Za-z0-9_-]+$/.test(hit.document.driveId) && <a href={`https://drive.google.com/file/d/${encodeURIComponent(hit.document.driveId)}/view`} target="_blank" rel="noopener noreferrer">Open original in Drive ↗</a>}</div>
           </section>)}
-          {message.answer.total > message.answer.hits.length && <p>Showing the first {message.answer.hits.length} of {message.answer.total}. Add filters to narrow your search.</p>}
+          {message.answer.hits.length > 0 && <p className="ask-result-range">Showing {(message.answer.offset ?? 0) + 1}–{(message.answer.offset ?? 0) + message.answer.hits.length} of {message.answer.total}.</p>}
+          {messageIndex === messages.length - 1 && !fullText && message.answer.operation === "search" && (message.answer.offset ?? 0) + message.answer.hits.length < message.answer.total && <button className="ask-more" type="button" disabled={busy} onClick={() => void run("Show more")}>Show more results</button>}
           {message.answer.draft && <div className="ask-event-draft"><strong>{message.answer.draft.title}</strong><p>{message.answer.draft.date} · {message.answer.draft.allDay ? "All day" : timeLabel(message.answer.draft.time)} · America/Panama</p><button onClick={() => { onEventDraft(message.answer.draft!); close(); }}>Review in Calendar</button></div>}
           {message.status.length > 0 && <details className="ask-coverage"><summary>Search coverage</summary>{message.status.map((status, i) => <p key={i}>{status}</p>)}</details>}
         </article>)}

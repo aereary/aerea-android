@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
 import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
+import { advanceLibraryScroll, initialLibraryScroll } from "./library-scroll";
 import { libraryAddedAt, libraryCardOrder } from "./library-recency";
 import { newAo3WorkIds, nextAo3BadgeExpiry } from "./ao3-recency";
 import type { StudyFileItem } from "./study-library";
@@ -1029,7 +1030,7 @@ export function Ao3LibraryOpening({ onBack }: Ao3LibraryOpeningProps) {
 
 export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const libraryLayerRef = useRef<HTMLElement | null>(null);
-  const lastScrollTopRef = useRef(0);
+  const scrollMotionRef = useRef(initialLibraryScroll());
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
   const refreshQueuedRef = useRef(false);
   const [initialCache] = useState<LibraryCache | null>(readCache);
@@ -1278,21 +1279,13 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
   const handleLibraryScroll = useCallback(
     (event: ReactUIEvent<HTMLElement>) => {
-      const nextScrollTop = event.currentTarget.scrollTop;
-      if (nextScrollTop <= 72) {
-        lastScrollTopRef.current = nextScrollTop;
-        setSearchToolsHidden(false);
-        return;
-      }
-
-      const delta = nextScrollTop - lastScrollTopRef.current;
-      if (delta >= 8) {
-        lastScrollTopRef.current = nextScrollTop;
-        setSearchToolsHidden(true);
-      } else if (delta <= -8) {
-        lastScrollTopRef.current = nextScrollTop;
-        setSearchToolsHidden(false);
-      }
+      const layer = event.currentTarget;
+      const next = advanceLibraryScroll(
+        scrollMotionRef.current, layer.scrollTop, layer.scrollHeight - layer.clientHeight,
+      );
+      scrollMotionRef.current = next;
+      // State changes only after a deliberate distance in either direction.
+      setSearchToolsHidden(current => current === next.hidden ? current : next.hidden);
     },
     [],
   );
@@ -1360,7 +1353,10 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       ) : (
       <div className="ao3-library">
 
-      <div className="ao3-library-tools">
+      <div className="ao3-library-tools" onFocusCapture={() => {
+        scrollMotionRef.current = { ...scrollMotionRef.current, distance: 0, hidden: false };
+        setSearchToolsHidden(false);
+      }}>
         <div className="ao3-library-intro">
           <div>
             <h2>My AO3 Library</h2>
@@ -1612,7 +1608,7 @@ const AO3_LIBRARY_CSS = String.raw`
   backdrop-filter: blur(14px);
   transform: translateY(0);
   transform-origin: top center;
-  transition: transform .22s ease, opacity .18s ease;
+  transition: transform .28s cubic-bezier(.22,.8,.25,1), opacity .2s ease;
   will-change: transform;
 }
 .ao3-library-layer.ao3-search-tools-hidden .ao3-library-tools {
@@ -1778,6 +1774,9 @@ html[data-native="true"] .ao3-library-tools {
 .ao3-modal-actions button { min-height: 45px; border: 1px solid var(--ao3-border); border-radius: 12px; background: white; color: var(--ao3-ink); font: inherit; font-weight: 800; cursor: pointer; }
 .ao3-modal-actions .ao3-modal-primary { border-color: var(--ao3-plum); background: var(--ao3-plum); color: white; }
 .ao3-modal-actions button:disabled { cursor: wait; opacity: .62; }
+@media (prefers-reduced-motion: reduce) {
+  .ao3-library-tools { transition: none; }
+}
 @keyframes ao3-spin { to { transform: rotate(360deg); } }
 @media (min-width: 720px) {
   .ao3-library { padding-left: 18px; padding-right: 18px; }
