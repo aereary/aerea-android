@@ -64,3 +64,17 @@ html .app-shell[data-theme][data-color-mode] .sheet-presence[data-sheet-state=cl
 @media (max-width:360px) { html .app-shell[data-theme][data-color-mode] .ask-panel { padding-inline:14px; } }
 
 html .app-shell[data-theme][data-color-mode] .ask-loading { position:fixed; inset:0; z-index:24000; display:flex; align-items:center; justify-content:center; gap:12px; background:var(--sheet-panel); color:var(--sheet-ink); }
+
+.ask-more {
+  min-height: 44px; width: 100%; margin-block: 8px 14px;
+  border: 1px solid var(--sheet-line); border-radius: 14px;
+  background: var(--sheet-selected); color: var(--sheet-ink);
+  font: inherit; font-weight: 700; cursor: pointer;
+}
+.ask-result-range { color: var(--sheet-muted); font-size: .85rem; }
+
+html .app-shell[data-theme][data-color-mode] .ask-local-ai {
+  padding: 12px; margin-block: 8px 14px; border: 1px solid var(--sheet-line);
+  border-radius: 16px; background: var(--sheet-raised); color: var(--sheet-ink);
+}
+html .app-shell[data-theme][data-color-mode] .ask-local-ai button { margin: 4px 6px 4px 0; }
