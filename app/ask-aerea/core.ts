@@ -8,11 +8,11 @@ export type AskDocument = {
   workId?: number; driveId?: string; fileId?: string; chapter?: string;
   versionCount?: number; archived?: boolean; fileNames?: string[];
 };
-export type AskFilter = { terms: string[]; complete?: boolean; minWords?: number; maxWords?: number; source?: AskSource; day?: string; upcoming?: boolean };
-export type AskHit = { document: AskDocument; match: "exact" | "related" | "approximate"; reasons: string[]; excerpt: string };
-export type AskContext = { filter?: AskFilter; hits: AskHit[]; topic?: string };
+export type AskFilter = { terms: string[]; complete?: boolean; minWords?: number; maxWords?: number; source?: AskSource; day?: string; upcoming?: boolean; ship?: "landoscar"; pureFluff?: boolean; excludedTerms?: string[] };
+export type AskHit = { document: AskDocument; match: "exact" | "related" | "approximate" | "semantic"; reasons: string[]; excerpt: string };
+export type AskContext = { filter?: AskFilter; hits: AskHit[]; offset?: number; meaningQuery?: string; topic?: string };
 export type AskEventDraft = { title: string; date: string; time: string; allDay: boolean };
-export type AskAnswer = { text: string; hits: AskHit[]; total: number; context: AskContext; open?: AskDocument; draft?: AskEventDraft; operation?: "search" };
+export type AskAnswer = { text: string; hits: AskHit[]; total: number; context: AskContext; open?: AskDocument; draft?: AskEventDraft; operation?: "search"; offset?: number };
 
 /** A chapter enriches a known work rather than becoming another copy of it. */
 export function mergeEpubHit(hits: AskHit[], chapter: AskHit, alreadyCounted: boolean) {
@@ -32,6 +32,7 @@ export const normalize = (text: string) => text.normalize("NFD").replace(/[\u030
 const STOP = new Set("busca buscar buscá buscame encuentra encontrar encuentrá muestrame muestra mostrar mis mi el la los las un una unos unas de del en entre todos todas que donde cuando cual cuales tengo tenemos me por para con sin quiero quisiera necesito puedes podria haz hola hay ese esa esto este estos esas algo solamente solo similares parecido parecidos parecido al a y o lo se le sus su es esta estan estaba eran sea sobre relacionada relacionados relacionado relacionado relacionado relacionada related find search show all my me i want need the a an of in for to with and or please books book fanfic fanfics historias historia libros libro obras obra biblioteca library fics fic notas nota apuntes apunte notes note documents documentos archivos archivo document files file calendario calendar schedule horario materias materia clases clase eventos evento event events terminados terminadas terminado terminada completas completo completa completos completed complete finished ongoing incompletos incompleto largas largos larga largo long cortos cortas corta corto short palabras words word pronto proximo proximos proxima proximas next upcoming manana hoy tomorrow today ayer yesterday solamentes have what when which ultima ultimo leido leyendo like those them same only ones ahora ahead recordar recuerdo remember recuerdó scene escena escená capitulos capitulo chapter within inside contenido texto fulltext drive google apuntes estudiar estudiaré examenes exams examen exam cuantos cuanto".split(/\s+/));
 const synonyms = [
   ["f1", "formula 1", "formula one"],
+  ["fluff", "fluffy", "ternura"],
   ["final feliz", "happy ending", "happy endings"], ["celos", "jealousy", "jealous"],
   ["fin del mundo", "apocalipsis", "apocalypse", "apocalyptic", "post-apocalyptic"],
   ["hurt/comfort", "hurt comfort", "consuelo"], ["relacion establecida", "established relationship"],
@@ -46,6 +47,9 @@ const synonyms = [
 ];
 for (const word of "todo algo information informacion material materiales tema temas about related relacion relacionar encuentra muestre dame porfavor please como del donde buscar uno una tienen que quiero seria sera podria puedes finished buscar relacionados everything related".split(/\s+/)) STOP.add(word);
 for (const word of "recuerdo recordaba remember remembered escena scene escenas scenes donde where alguien someone pero but no not se the titulo title nombre name protagonista protagonistas protagonist protagonists durante during luego later despues after mas more porque because habia había habia uno alguna algun algunos parece parecido similar".split(/\s+/)) STOP.add(word);
+
+// Common English request grammar must not become mandatory catalog terms.
+for (const word of "some look looking can could would you from that are is get give these those ones results".split(" ")) STOP.add(word);
 
 export function dateKey(now = new Date(), zone = "America/Panama") {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -88,6 +92,32 @@ function termsOf(query: string) {
   });
   return [...new Set(terms)];
 }
+/** These are query instructions, not words that must occur in a book. */
+function searchWording(query: string) {
+  return query.split(/("[^"]*"|“[^”]*”)/g).map((part, index) => index % 2 ? part : part
+    .replace(/\b(?:you are|you're) only showing me \d+\b/g, " ")
+    .replace(/\b(?:solo me (?:muestras|ensenaste|mostraste)|me muestras solo) \d+\b/g, " ")
+    .replace(/\b(?:the rest of (?:them|the results)|el resto(?: de (?:ellos|los resultados))?)\b/g, " ")
+    .replace(/\b(?:look(?:ing)? for|that are|which are|show me|only show me|los que sean|que sean|que son)\b/g, " ")
+    .replace(/\b(?:pure|puro|pura|puros|puras)\s+(?=fluff|ternura)/g, " ")
+    .replace(/\b(?:ones|results|resultados|that|are)\b/g, " ")).join("");
+}
+
+export function isMoreRequest(query: string) {
+  return /^(?:(?:show|give)(?: me)? |muestra(?:me)? |dame )?(?:more(?: results)?|the rest(?: of them| of the results)?|next(?: page| results)|mas(?: resultados)?|el resto(?: de los resultados)?|siguientes(?: resultados)?)[.!?]*$/.test(normalize(query).trim());
+}
+
+function matchesLibraryConstraints(document: AskDocument, filter: AskFilter) {
+  const tags = normalize((document.tags ?? []).join(" "));
+  if (filter.ship === "landoscar" && !(document.relationships ?? []).some(relationship => {
+    const names = normalize(relationship).split("/");
+    return names.some(name => /\blando(?: norris)?\b/.test(name)) && names.some(name => /\boscar(?: piastri)?\b/.test(name));
+  })) return false;
+  if (filter.pureFluff && /\b(?:angst|smut|porn|sexual content|explicit sexual content)\b/.test(tags)) return false;
+  if (filter.excludedTerms?.some(term => aliases(term).some(alias => tags.includes(alias)))) return false;
+  return true;
+}
+
 export function parseFilter(query: string, previous?: AskFilter, now = new Date()): AskFilter {
   const q = normalize(query);
   const follow = /\b(solo|solamente|only|filtra|filter)\b/.test(q) && previous;
@@ -109,7 +139,13 @@ export function parseFilter(query: string, previous?: AskFilter, now = new Date(
   else if (/\b(calendario|calendar|eventos?|events?|materias?|clases?|schedule)\b/.test(q) || date || /\b(proximos examenes|next exam)\b/.test(q)) filter.source = "calendar";
   else if (/\b(notas?|notes?|apuntes?)\b/.test(q) && !/\b(todo|all|relacion|examen|exam)\b/.test(q)) filter.source = "notes";
   if (/\b(todo lo relacionado|todo.*examen|all.*related|para estudiar|to study)\b/.test(q)) { delete filter.source; delete filter.day; }
-  const stripped = q.replace(/\b20\d{2}-\d{2}-\d{2}\b/g, " ").replace(/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|pasado manana|proxima semana|next week|mas de|menos de|at least|more than|less than)\b/g, " ");
+  if (/\b(?:landoscar|lando[ /-]*oscar|oscar[ /-]*lando)\b/.test(q)) filter.ship = "landoscar";
+  if (/\b(?:pure|puro|pura|puros|puras)\s+(?:fluff|ternura)\b/.test(q)) filter.pureFluff = true;
+  const exclusions = [...q.matchAll(/\b(?:without|exclude|excluding|no|sin)\s+(angst|smut)\b/g)].map(match => match[1]);
+  if (exclusions.length) filter.excludedTerms = [...new Set([...(filter.excludedTerms ?? []), ...exclusions])];
+  const stripped = searchWording(q)
+    .replace(/\b(?:landoscar|lando[ /-]*oscar|oscar[ /-]*lando)\b/g, " ")
+    .replace(/\b(?:without|exclude|excluding|no|sin)\s+(?:angst|smut)\b/g, " ").replace(/\b20\d{2}-\d{2}-\d{2}\b/g, " ").replace(/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday|pasado manana|proxima semana|next week|mas de|menos de|at least|more than|less than)\b/g, " ");
   const newTerms = termsOf(stripped);
   // Examinations are a searchable category even when other search verbs are discarded.
   if (/\b(examenes?|exams?|parcial)\b/.test(q) && !/para estudiar|to study/.test(q)) newTerms.push("examen");
@@ -127,6 +163,7 @@ export function searchDocuments(documents: AskDocument[], filter: AskFilter, now
   const found: Array<AskHit & { rank: number }> = [];
   for (const document of documents) {
     if (filter.source && document.source !== filter.source) continue;
+    if (!matchesLibraryConstraints(document, filter)) continue;
     if (filter.complete !== undefined && document.complete !== filter.complete) continue;
     if (filter.minWords !== undefined && (document.words == null || document.words < filter.minWords)) continue;
     if (filter.maxWords !== undefined && (document.words == null || document.words > filter.maxWords)) continue;
@@ -141,6 +178,9 @@ export function searchDocuments(documents: AskDocument[], filter: AskFilter, now
     if (filter.complete !== undefined) reasons.push(filter.complete ? "Recorded as complete" : "Recorded as ongoing");
     if (filter.minWords !== undefined) reasons.push(`${document.words?.toLocaleString("en-US")} words · minimum ${filter.minWords.toLocaleString("en-US")}`);
     if (filter.maxWords !== undefined) reasons.push(`${document.words?.toLocaleString("en-US")} words · maximum ${filter.maxWords.toLocaleString("en-US")}`);
+    if (filter.ship) reasons.push("Lando Norris/Oscar Piastri in the recorded relationships");
+    if (filter.pureFluff) reasons.push("Fluff matches, without recorded angst or smut tags; untagged content is not verified");
+    if (filter.excludedTerms?.length) reasons.push(`Excluded tags: ${filter.excludedTerms.join(", ")}`);
     if (!reasons.length) reasons.push("In the selected source");
     found.push({ document: { ...document, text: "" }, match: related ? "related" : "exact", reasons, excerpt: excerptOf(document.text, filter.terms), rank: matched.reduce((score, t) => score + (normalize(document.title).includes(t.alias!) ? 3 : 1), 0) });
   }
@@ -162,6 +202,7 @@ export function searchRememberedPassages(documents: AskDocument[], query: string
   const matches: Array<AskHit & { score: number }> = [];
   for (const document of documents) {
     if (document.source !== "library" || !document.chapter) continue;
+    if (!matchesLibraryConstraints(document, filter)) continue;
     if (filter.complete !== undefined && document.complete !== filter.complete) continue;
     if (filter.minWords !== undefined && (document.words == null || document.words < filter.minWords)) continue;
     if (filter.maxWords !== undefined && (document.words == null || document.words > filter.maxWords)) continue;
@@ -220,19 +261,28 @@ export function answerQuery(query: string, documents: AskDocument[], context: As
   if (/\b(abre|abrir|open)\b/.test(q)) {
     const number = q.match(/\b(\d+)\b/)?.[1];
     const ordinal = /segundo|second/.test(q) ? 2 : /tercero|third/.test(q) ? 3 : /primero|first/.test(q) ? 1 : undefined;
-    const selected = context.hits[(Number(number) || ordinal || 0) - 1];
+    const selectedIndex = number ? Number(number) - (context.offset ?? 0) - 1 : (ordinal ?? 0) - 1;
+    const selected = context.hits[selectedIndex];
     return { text: selected ? "Opening the selected result." : "Which result? Say open 1, or use an Open button.", hits: [], total: 0, context, open: selected?.document };
   }
   // No silent modifications; this stage hands off edits/deletions to existing editors.
   if (/^(cambia|modifica|elimina|borra|delete|remove|edit|change)\b/.test(q)) return { text: "Open the matching result to edit it using the existing controls. Ask does not change or delete records in this stage.", hits: [], total: 0, context };
-  const filter = parseFilter(query, context.filter, now);
+  const more = isMoreRequest(query);
+  if (more && !context.filter) return { text: "Search first, then ask for more results.", hits: [], total: 0, context };
+  const filter = more ? context.filter! : parseFilter(query, context.filter, now);
+  const offset = more ? (context.offset ?? 0) + context.hits.length : 0;
   if (/\b(para estudiar|to study|relacionado con ese|related to that)\b/.test(q) && context.topic && !filter.terms.length) filter.terms = termsOf(context.topic).filter(t => !aliases("examen").includes(t));
   const found = searchDocuments(documents, filter, now);
-  const hits = found.slice(0, 40);
-  const constraints = filter.minWords === 50000 ? " Long means at least 50,000 words." : filter.maxWords === 20000 ? " Short means at most 20,000 words." : "";
+  const hits = found.slice(offset, offset + 40);
+  const constraints = [
+    filter.minWords === 50000 ? " Long means at least 50,000 words." : "",
+    filter.maxWords === 20000 ? " Short means at most 20,000 words." : "",
+    filter.ship ? " Lando Norris/Oscar Piastri relationships only." : "",
+    filter.pureFluff ? " Pure fluff excludes recorded angst or smut tags; untagged content is not verified." : "",
+  ].join("");
   return {
-    operation: "search",
-    text: found.length ? `${found.length} matching ${found.length === 1 ? "result" : "results"} in the selected sources.${constraints} Related wording uses a small bilingual dictionary; semantic AI is not enabled.` : "No matching results in the selected sources. Try a name, tag, shorter phrase, or enable another source. This is a local search, not a semantic AI answer.",
-    hits, total: found.length, context: { filter, hits, topic: hits.length === 1 ? hits[0].document.title : context.topic },
+    operation: "search", offset,
+    text: more && !hits.length ? "You have reached the end of the matching results." : found.length ? `${found.length} matching ${found.length === 1 ? "result" : "results"} in the selected sources.${constraints}` : "No matching results in the selected sources. Try a name, tag, shorter phrase, or enable another source. This is a local search, not a semantic AI answer.",
+    hits, total: found.length, context: { filter, hits, offset, topic: hits.length === 1 ? hits[0].document.title : context.topic },
   };
 }
