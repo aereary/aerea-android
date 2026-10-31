@@ -33640,25 +33640,27 @@ html[data-native="true"] :where(
   width:5px;
 }
 
-.timetable-exception-action {
-  align-items:center;
-  background:var(--sheet-raised,#f3f0fb);
-  border-radius:18px;
-  color:var(--sheet-ink,#474263);
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  justify-content:space-between;
-  padding:12px 14px;
-}
-.timetable-exception-action span { font-size:13px; }
-.timetable-exception-action button,
 .timetable-day-exception-editor footer button:last-child {
   background:var(--sheet-accent,#b7a7ff);
   border:0;
   border-radius:13px;
   color:var(--sheet-on-accent,#302645);
   padding:10px 13px;
+}
+.timetable-heading > div:first-child { min-width:0; width:100%; }
+.timetable-term-meta { flex-wrap:wrap; }
+.timetable-week-range,
+.timetable-meta-buttons { align-items:center; display:flex; flex-wrap:wrap; gap:8px; }
+.timetable-week-range { min-width:0; }
+.timetable-meta-buttons { width:100%; }
+.timetable-meta-buttons .timetable-inline-edit {
+  font-size:12px;
+  min-height:36px;
+  padding:7px 12px;
+}
+.timetable-selected-kind {
+  color:var(--sheet-accent,#b7a7ff);
+  font-weight:800;
 }
 .timetable-day-exception-editor {
   color:var(--sheet-ink,#474263);
