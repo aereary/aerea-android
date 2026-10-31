@@ -148,3 +148,50 @@ test("connector is read-only, assistant is lazy, and original capture remains ac
   assert.match(page, /onCapture=\{\(\) => setQuickCaptureOpen\(true\)\}/);
   assert.match(page, /sources\.includes\("journal"\)/);
 });
+
+test("natural requests in the video search for fluff instead of command words", () => {
+  const docs = [book("soft", { tags: ["Fluff"] }), book("mixed", { tags: ["Fluff and Angst"] }), book("smut", { tags: ["Fluff", "Smut"] }), book("other", { tags: ["Action"] })];
+  const result = answerQuery("Look for fanfics that are pure fluff", docs, undefined, now);
+  assert.deepEqual(result.hits.map(hit => hit.document.id), ["soft"]);
+  assert.equal(result.context.filter.pureFluff, true);
+  assert.deepEqual(result.context.filter.terms, ["fluff"]);
+  assert.match(result.hits[0].reasons.join(" "), /untagged content is not verified/);
+  assert.equal(answerQuery("Fluff", docs, undefined, now).total, 3);
+});
+
+test("the video's Landoscar follow-up keeps fluff and filters recorded ships", () => {
+  const docs = [book("landoscar", { tags: ["Fluff"] }), book("reverse", { tags: ["Fluff"], relationships: ["Lando Norris/Oscar Piastri"] }), book("lestappen", { tags: ["Fluff"], relationships: ["Charles Leclerc/Max Verstappen"], text: "Lando Oscar" }), book("dramatic", { tags: ["Angst"] })];
+  const first = answerQuery("Fluff", docs, undefined, now);
+  const next = answerQuery("The rest of them, you are only showing me 40. And only show me the ones landoscar", docs, first.context, now);
+  assert.deepEqual(next.hits.map(hit => hit.document.id), ["landoscar", "reverse"]);
+  assert.deepEqual(next.context.filter.terms, ["fluff"]);
+  assert.equal(next.context.filter.ship, "landoscar");
+  assert.equal(next.context.offset, 0);
+});
+
+test("all catalog results have reachable pages, stable filters and correct opening numbers", () => {
+  const docs = Array.from({ length: 95 }, (_, i) => book(`soft-${String(i).padStart(3, "0")}`, { tags: ["Fluff"] }));
+  const first = answerQuery("Find fluff fanfics", docs, undefined, now);
+  const second = answerQuery("Show more", docs, first.context, now);
+  const third = answerQuery("el resto", docs, second.context, now);
+  assert.equal(first.total, 95); assert.equal(second.offset, 40); assert.equal(third.offset, 80);
+  assert.equal(second.hits.length, 40); assert.equal(third.hits.length, 15);
+  const ids = [...first.hits, ...second.hits, ...third.hits].map(hit => hit.document.id);
+  assert.equal(new Set(ids).size, 95);
+  assert.equal(answerQuery("Open 41", [], second.context, now).open.id, "soft-040");
+  assert.equal(answerQuery("Open the second", [], second.context, now).open.id, "soft-041");
+  assert.equal(answerQuery("Show more", docs, third.context, now).hits.length, 0);
+  const narrowed = answerQuery("Only landoscar", docs, second.context, now);
+  assert.equal(narrowed.offset, 0); assert.deepEqual(narrowed.context.filter.terms, ["fluff"]);
+});
+
+test("negative tag requests do not require the excluded tag", () => {
+  const docs = [book("soft", { tags: ["Fluff"] }), book("mixed", { tags: ["Fluff", "Angst"] })];
+  assert.deepEqual(answerQuery("Find fluff without angst", docs, undefined, now).hits.map(hit => hit.document.id), ["soft"]);
+});
+
+test("ordinary request grammar is ignored without changing quoted titles", () => {
+  const docs = [book("soft", { tags: ["Fluff"] }), book("quoted", { title: "Things That Are", tags: [] })];
+  assert.equal(answerQuery("Could you look for some fluff fanfics", docs, undefined, now).total, 1);
+  assert.equal(answerQuery('Find "Things That Are"', docs, undefined, now).hits[0].document.id, "quoted");
+});
