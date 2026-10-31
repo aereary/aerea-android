@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import { createPortal } from "react-dom";
+import { libraryAddedAt, libraryCardOrder } from "./library-recency";
 import { supabase } from "./supabase-sync";
 
 type GenericLibraryKind = "epub" | "pdf" | "document" | "file";
@@ -25,6 +26,7 @@ type GenericLibraryItem = {
   size_bytes: number | null;
   sha256: string;
   source_modified_at: string | null;
+  created_at?: string | null;
   archived: boolean;
 };
 
@@ -224,7 +226,8 @@ function GenericLibraryCard({
   const extension = (item.extension || item.kind).toUpperCase();
 
   return (
-    <article className="ao3-card aerea-generic-library-card">
+    <article className="ao3-card aerea-generic-library-card"
+      style={{ order: libraryCardOrder(libraryAddedAt(item.created_at, item.source_modified_at)) }}>
       <header className="ao3-card-header">
         <span className="ao3-eyebrow">{kindLabel(item)}</span>
         <button
@@ -332,7 +335,7 @@ export default function GenericLibraryBridge() {
       supabase
         .from("library_items")
         .select(
-          "id,drive_file_id,filename,title,author,kind,mime_type,extension,size_bytes,sha256,source_modified_at,archived",
+          "id,drive_file_id,filename,title,author,kind,mime_type,extension,size_bytes,sha256,source_modified_at,created_at,archived",
         )
         .eq("archived", false)
         .order("source_modified_at", { ascending: false, nullsFirst: false })
@@ -553,7 +556,7 @@ export default function GenericLibraryBridge() {
 }
 
 const GENERIC_LIBRARY_CSS = String.raw`
-.aerea-generic-library-card { order: -1; }
+/* Every card uses the same date order, regardless of its source. */
 .aerea-generic-library-card .ao3-card-header { background: var(--ao3-plum); }
 .aerea-generic-library-card .ao3-card-meta { background: var(--ao3-sage); }
 .aerea-generic-library-card .aerea-generic-actions {
