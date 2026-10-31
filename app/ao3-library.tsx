@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ChangeEvent, MouseEvent, UIEvent as ReactUIEvent } from "react";
 import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
+import { libraryAddedAt, libraryCardOrder } from "./library-recency";
 import { newAo3WorkIds, nextAo3BadgeExpiry } from "./ao3-recency";
 import type { StudyFileItem } from "./study-library";
 
@@ -390,7 +391,10 @@ function buildEntries(works: Ao3Work[]): LibraryEntry[] {
   );
 
   return [...seriesEntries, ...singles].sort((a, b) => {
-    const dateCompare = (b.updatedOn || "").localeCompare(a.updatedOn || "");
+    const addedAt = (entry: LibraryEntry) => entry.kind === "series"
+      ? Math.max(...entry.works.map(work => libraryAddedAt(work.created_at, work.updated_on)))
+      : libraryAddedAt(entry.work.created_at, entry.work.updated_on);
+    const dateCompare = addedAt(b) - addedAt(a);
     if (dateCompare) return dateCompare;
     const aTitle = a.kind === "series" ? a.name : a.work.title;
     const bTitle = b.kind === "series" ? b.name : b.work.title;
@@ -691,7 +695,7 @@ function FicCard({
   isNew: boolean;
 }) {
   return (
-    <article className={`ao3-card ${work.archived ? "ao3-card-archive" : ""} ${isNew ? "ao3-card-new" : ""}`}>
+    <article style={{ order: libraryCardOrder(libraryAddedAt(work.created_at, work.updated_on)) }} className={`ao3-card ${work.archived ? "ao3-card-archive" : ""} ${isNew ? "ao3-card-new" : ""}`}>
       <header className="ao3-card-header">
         <div className="ao3-card-kicker">
           <span className="ao3-eyebrow">
@@ -850,7 +854,7 @@ function SeriesCard({
   const newCount = entry.works.filter((work) => newWorkIds.has(work.work_id)).length;
 
   return (
-    <article className={`ao3-card ao3-card-series ${newCount ? "ao3-card-new" : ""}`}>
+    <article style={{ order: libraryCardOrder(Math.max(...entry.works.map(work => libraryAddedAt(work.created_at, work.updated_on)))) }} className={`ao3-card ao3-card-series ${newCount ? "ao3-card-new" : ""}`}>
       <header className="ao3-card-header">
         <div className="ao3-card-kicker">
           <span className="ao3-eyebrow">SERIES</span>
@@ -1331,6 +1335,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   };
 
   return (
+    <>
     <section
       ref={libraryLayerRef}
       className={`ao3-library-layer ${searchToolsHidden ? "ao3-search-tools-hidden" : ""}`}
@@ -1494,7 +1499,12 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         </div>
       )}
 
-      {toast && <div className="ao3-toast">{toast}</div>}
+      </div>
+      )}
+    </section>
+    {/* Viewport overlays must stay outside the animated, scrollable layer. */}
+    <div className="ao3-library ao3-overlay-host">
+      {toast && <div className="ao3-toast" role="status">{toast}</div>}
 
       <SheetPresence>{downloadTarget && (
         <div
@@ -1533,9 +1543,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           </div>
         </div>
       )}</SheetPresence>
-      </div>
-      )}
-    </section>
+    </div>
+    </>
   );
 }
 
@@ -1591,6 +1600,8 @@ const AO3_LIBRARY_CSS = String.raw`
   padding: 0 10px 72px;
 }
 .ao3-library * { box-sizing: border-box; }
+.ao3-overlay-host { display: contents; }
+.ao3-overlay-host .ao3-toast { z-index: 22001; }
 .ao3-library-tools {
   position: sticky;
   top: 0;
@@ -1757,7 +1768,7 @@ html[data-native="true"] .ao3-library-tools {
 .ao3-empty strong { color: var(--ao3-ink); }
 .ao3-empty p { margin: 0; font-size: .87rem; }
 .ao3-toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 100; transform: translateX(-50%); padding: 9px 13px; border-radius: 999px; background: #4e4057; color: white; font-size: .82rem; font-weight: 800; box-shadow: 0 8px 28px rgba(35,28,41,.2); white-space: nowrap; }
-.ao3-modal-backdrop { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; padding: 20px; background: rgba(40,31,46,.34); backdrop-filter: blur(4px); }
+.ao3-modal-backdrop { position: fixed; inset: 0; z-index: 21000; display: grid; place-items: center; padding: 20px; background: rgba(40,31,46,.34); backdrop-filter: blur(4px); }
 .ao3-modal { width: min(100%, 420px); padding: 20px; border: 1px solid var(--ao3-border); border-radius: 20px; background: #fffdfc; color: var(--ao3-ink); box-shadow: 0 24px 70px rgba(40,31,46,.23); }
 .ao3-modal-kicker { color: var(--ao3-plum); font-size: .7rem; font-weight: 900; letter-spacing: .13em; }
 .ao3-modal h3 { margin: 5px 0 7px; font-size: 1.2rem; }

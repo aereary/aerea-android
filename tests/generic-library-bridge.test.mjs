@@ -45,7 +45,7 @@ test("restores generic Drive books inside the AO3 Library without replacing AO3"
 test("generic books remain visually distinct but use the AO3 card language", () => {
   assert.match(
     bridge,
-    /\.aerea-generic-library-card \{ order: -1; \}/,
+    /order: libraryCardOrder\(libraryAddedAt\(item.created_at, item.source_modified_at\)\)/,
   );
   assert.match(
     bridge,
