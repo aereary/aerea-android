@@ -111,7 +111,11 @@ test("a clean install has exactly one launcher and keeps MainActivity, auth and 
   const notifications = read("android/app/src/main/java/com/aereaary/aerea/AereaEventNotificationReceiver.java");
   assert.match(notifications, /new Intent\(context, MainActivity\.class\)/);
   assert.doesNotMatch(notifications, /getLaunchIntentForPackage/);
-  assert.doesNotMatch(plugin, /MainActivity\.class|delete|clear\(|AereaStorage/);
+  assert.doesNotMatch(plugin.slice(plugin.indexOf("public void setIcon"), plugin.indexOf("public void pickCustomImage")), /MainActivity\.class|delete|clear\(|AereaStorage/);
+  assert.match(plugin, /new Intent\(getContext\(\), MainActivity\.class\)/);
+  assert.match(plugin, /requestPinShortcut\(shortcut, null\)/);
+  assert.match(plugin, /updateShortcuts\(Collections.singletonList\(shortcut\)\)/);
+  assert.match(plugin, /bounds.outWidth != 512 \|\| bounds.outHeight != 512/);
 });
 
 test("Android 12 uses the launching alias icon on the requested charcoal splash", () => {

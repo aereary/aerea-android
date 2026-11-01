@@ -1,5 +1,6 @@
 "use client";
 
+import { paperOpacity, restoreUnique } from "./minor-updates";
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { CalendarMonthGrid } from "./components/calendar-month-grid";
 import { useClassRecording, acknowledgeClassRecordings, deleteClassAudio, classAudioSource } from "./use-class-recording";
@@ -1078,7 +1079,8 @@ type PostItColor =
   | "forest"
   | "tangerine"
   | "brick"
-  | "cocoa";
+  | "cocoa"
+  | "dusk-plum" | "dusk-rose" | "dusk-slate" | "dusk-sage";
 type PostItPage =
   | "today"
   | "habits"
@@ -1094,6 +1096,7 @@ type PostItPage =
   | "spaces:trash";
 
 type PostItNote = {
+  paperOpacity?: number;
   id: string;
   sourceInboxId?: string;
   text: string;
@@ -1114,7 +1117,7 @@ type PostItNote = {
   updatedAt?: string;
 };
 
-type PostItDraft = Pick<PostItNote, "text" | "color">;
+type PostItDraft = Pick<PostItNote, "text" | "color" | "paperOpacity">;
 
 type SketchPage = {
   id: string;
@@ -1622,7 +1625,19 @@ const postItColorPalettes: PostItColorOption[][] = [
   ],
 ];
 
+postItColorPalettes.push([
+  { value: "dusk-plum", label: "Evening plum", hex: "#52435f" },
+  { value: "dusk-rose", label: "Muted rose", hex: "#684653" },
+  { value: "dusk-slate", label: "Midnight slate", hex: "#3e5268" },
+  { value: "dusk-sage", label: "Evening sage", hex: "#41594d" },
+]);
 const postItColors = postItColorPalettes.flat();
+function paperAppearance(note: { color: PostItColor; paperOpacity?: number }): CSSProperties {
+  return {
+    "--paper-opacity": `${Math.round(paperOpacity(note.paperOpacity) * 100)}%`,
+    "--paper-ink": note.color.startsWith("dusk-") ? "#f5eef5" : "#282337",
+  } as CSSProperties;
+}
 
 function postItVisualStyle(text: string): CSSProperties {
   const length = text.trim().length;
@@ -2885,6 +2900,12 @@ export default function Home() {
     minute: number;
   } | null>(null);
   const [historyMessage, setHistoryMessage] = useState("");
+  const [undoDeletions, setUndoDeletions] = useState<{ item: TrashItem; expires: number }[]>([]);
+  useEffect(() => {
+    if (!undoDeletions.length) return;
+    const timer = window.setTimeout(() => setUndoDeletions((items) => items.filter((entry) => entry.expires > Date.now())), Math.max(0, Math.min(...undoDeletions.map((entry) => entry.expires)) - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [undoDeletions]);
   const [studyNotebooks, setStudyNotebooks] = useState<StudyNotebook[]>([]);
   const [studyNotes, setStudyNotes] = useState<StudyNote[]>([]);
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
@@ -5730,7 +5751,9 @@ export default function Home() {
     payload: unknown,
   ) => {
     recordAction(`Moved ${label} to Trash`);
-    setTrashItems((current) => [createTrashItem(kind, label, payload), ...current]);
+    const deleted = createTrashItem(kind, label, payload);
+    setTrashItems((current) => [deleted, ...current]);
+    if (kind === "note" || kind === "post-it") setUndoDeletions((current) => [...current, { item: deleted, expires: Date.now() + 8000 }]);
     const id = (payload as { id?: string | number })?.id;
     if (kind === "event") {
       setCalendarEvents((current) => current.filter((item) => item.id !== id));
@@ -5752,6 +5775,7 @@ export default function Home() {
 
   const restoreTrashItem = (trashItem: TrashItem) => {
     recordAction(`Restored ${trashItem.label}`);
+    setUndoDeletions((current) => current.filter((entry) => entry.item.id !== trashItem.id));
     if (trashItem.kind === "event") {
       setCalendarEvents((current) => [...current, trashItem.payload as CalendarEvent]);
     } else if (trashItem.kind === "task") {
@@ -5774,7 +5798,7 @@ export default function Home() {
         },
       ]);
     } else if (trashItem.kind === "post-it") {
-      setPostIts((current) => [...current, trashItem.payload as PostItNote]);
+      setPostIts((current) => restoreUnique(current, trashItem.payload as PostItNote));
     } else if (trashItem.kind === "file") {
       const file = trashItem.payload as LibraryItem | StudyFileItem;
       if ("mediaType" in file) {
@@ -5785,9 +5809,9 @@ export default function Home() {
     } else if (trashItem.kind === "note") {
       const note = trashItem.payload as JournalEntry | StudyNote;
       if (typeof note.id === "number") {
-        setEntries((current) => [...current, note as JournalEntry]);
+        setEntries((current) => restoreUnique(current, note as JournalEntry));
       } else {
-        setStudyNotes((current) => [...current, note as StudyNote]);
+        setStudyNotes((current) => restoreUnique(current, note as StudyNote));
       }
     }
     setTrashItems((current) => current.filter((item) => item.id !== trashItem.id));
@@ -6548,6 +6572,7 @@ export default function Home() {
       setPostItDraft({
         text: postIt.text,
         color: postIt.color,
+        paperOpacity: postIt.paperOpacity ?? 1,
       });
     } else {
       const color = postItColors[visiblePostIts.length % postItColors.length];
@@ -6619,6 +6644,7 @@ export default function Home() {
         id,
         text,
         color: postItDraft.color,
+        paperOpacity: postItDraft.paperOpacity ?? 1,
         page: currentPostItPage,
         x: [24, 73, 68, 31][slot],
         y: [16, 26, 58, 77][slot],
@@ -9847,6 +9873,16 @@ export default function Home() {
                   </section>
                 </div>
               )}</SheetPresence>
+      {undoDeletions.some((entry) => trashItems.some((item) => item.id === entry.item.id)) && (
+        <div className="deletion-undo" role="status">
+          <span>Moved to Trash</span>
+          <button onClick={() => {
+            undoDeletions.filter((entry) => entry.expires > Date.now() && trashItems.some((item) => item.id === entry.item.id)).forEach((entry) => restoreTrashItem(entry.item));
+            setUndoDeletions([]);
+          }}>Undo{undoDeletions.length > 1 ? " all" : ""}</button>
+        </div>
+      )}
+
       <span className="visually-hidden" aria-live="polite">
         {historyMessage}
       </span>
@@ -11821,6 +11857,7 @@ export default function Home() {
           >
             {visiblePostIts.map((postIt) => (
               <article
+                data-paper-opacity="true"
                 data-post-it-id={postIt.id}
                 className={`movable-post-it ${postIt.color} ${
                   selectedPostItIds.includes(postIt.id) ? "multi-selected" : ""
@@ -11829,6 +11866,7 @@ export default function Home() {
                 style={
                   {
                     ...postItVisualStyle(postIt.text),
+                    ...paperAppearance(postIt),
                     "--native-post-it-paper": postItColors.find((color) => color.value === postIt.color)?.hex ?? "#d8d0f0",
                     "--post-it-x": `${postIt.x}%`,
                     "--post-it-y": `${postIt.y}%`,
@@ -14707,6 +14745,7 @@ export default function Home() {
 
       <SheetPresence>{selectedJournalEntry && (
         <NoteDetailDialog
+          key={selectedJournalEntry.id}
           date={selectedJournalEntry.date}
           face={selectedJournalEntry.mood || "♡"}
           label="A FULL LITTLE MOMENT"
@@ -15628,8 +15667,9 @@ export default function Home() {
             </header>
 
             <div
+              data-paper-opacity="true"
               className={`post-it-editor-preview ${postItDraft.color}`}
-              style={{ ...postItVisualStyle(postItDraft.text), "--native-post-it-paper": postItColors.find((color) => color.value === postItDraft.color)?.hex ?? "#d8d0f0" } as CSSProperties}
+              style={{ ...postItVisualStyle(postItDraft.text), "--native-post-it-paper": postItColors.find((color) => color.value === postItDraft.color)?.hex ?? "#d8d0f0", ...paperAppearance(postItDraft) } as CSSProperties}
             >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
@@ -15691,6 +15731,11 @@ export default function Home() {
                   Palette {postItPaletteIndex + 1} of {postItColorPalettes.length}
                 </small>
               </fieldset>
+              <label className="paper-opacity-control">
+                <span>Paper opacity · {Math.round((postItDraft.paperOpacity ?? 1) * 100)}%</span>
+                <input type="range" min="25" max="100" step="5" value={Math.round((postItDraft.paperOpacity ?? 1) * 100)}
+                  onChange={(event) => setPostItDraft((current) => ({ ...current, paperOpacity: Number(event.target.value) / 100 }))} />
+              </label>
             </div>
 
             {editingPostItId && (
@@ -16878,6 +16923,7 @@ function TodayScreen({
                 type="button"
                 className={[
                   "schedule-card",
+                  isHealthCompletionEvent(event) && isHealthCompletedOn(event, selectedDate) ? "health-done" : "",
                   `${eventDisplayColor(event, selectedDate)}-card`,
                   event.sportsCardStyle ? "match-day-schedule-card" : "",
                   isFootballVisualEvent(event) ? "canonical-boca-match" : "",
@@ -16902,7 +16948,7 @@ function TodayScreen({
                 onPointerCancel={cancelScheduleLongPress}
                 onContextMenu={(contextEvent) => contextEvent.preventDefault()}
                 onClick={() => openScheduleEvent(event)}
-                aria-label={`Open details for ${scheduleEventTitle(event)}`}
+                aria-label={`Open details for ${scheduleEventTitle(event)}${isHealthCompletionEvent(event) && isHealthCompletedOn(event, selectedDate) ? ", completed" : ""}`}
                 title="Hold to preview event"
               >
                 <div
@@ -16949,7 +16995,7 @@ function TodayScreen({
                 </div>
                 <LittleSheetScheduleDetails event={event} />
                 <div className="mini-people">
-                  {isNoirRest ? "•••" : "✦"}
+                  {isHealthCompletionEvent(event) && isHealthCompletedOn(event, selectedDate) ? "✓" : isNoirRest ? "•••" : "✦"}
                 </div>
               </button>
             ))
@@ -17860,12 +17906,17 @@ function NoteDetailDialog({
         {editing ? (
           <textarea
             className="note-detail-editor"
+            aria-label="Note text"
+            ref={(node) => { node?.focus(); }}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
 
           />
         ) : (
-          <p className="note-detail-text">{draft}</p>
+          <p className="note-detail-text" role={onSave ? "button" : undefined} tabIndex={onSave ? 0 : undefined}
+            aria-label={onSave ? "Edit note" : undefined}
+            onClick={() => onSave && setEditing(true)}
+            onKeyDown={(event) => { if (onSave && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setEditing(true); } }}>{draft}</p>
         )}
         {usedIn.length > 0 && (
           <aside className="note-used-in">
@@ -17881,7 +17932,10 @@ function NoteDetailDialog({
         )}
         <footer>
           <small>Your words, fully here.</small>
-          <button onClick={onDelete}>Delete note</button>
+          {editing ? <div className="note-edit-actions">
+            <button onClick={() => { setDraft(text); setEditing(false); }}>Cancel</button>
+            <button disabled={!draft.trim()} onClick={() => { if (draft.trim()) { onSave?.(draft.trim()); setDraft(draft.trim()); setEditing(false); } }}>Save changes</button>
+          </div> : <button onClick={onDelete}>Delete note</button>}
         </footer>
       </section>
     </div>

@@ -1,0 +1,44 @@
+/* Minor updates: keep the paper translucent without fading its writing. */
+html .app-shell[data-theme][data-color-mode] [data-paper-opacity],
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-paper-opacity] {
+  --post-it-paper: var(--native-post-it-paper);
+  background: color-mix(in srgb, var(--native-post-it-paper) var(--paper-opacity, 100%), transparent) !important;
+  color: var(--paper-ink) !important;
+}
+html .app-shell [data-paper-opacity] :is(p,textarea),
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-paper-opacity] :is(p,textarea) {
+  color: var(--paper-ink) !important;
+  background: transparent !important;
+}
+html .app-shell [data-paper-opacity]::after { opacity: var(--paper-opacity, 100%); }
+html .app-shell[data-color-mode="dark"] .post-it-palette-fieldset,
+html .app-shell[data-color-mode="dark"] .post-it-palette-fieldset legend {
+  background: var(--one-raised, #2a2830) !important;
+  color: var(--one-ink, #e7e1ec) !important;
+  border-color: var(--one-line, #45414d) !important;
+}
+html .app-shell[data-color-mode="dark"] .post-it-palette-fieldset :is(button,small) { color: inherit; }
+.paper-opacity-control { display: grid; gap: 10px; margin: 16px 0; font-size: 14px; }
+.paper-opacity-control input { width: 100%; accent-color: var(--one-accent, var(--accent, #b984a3)); }
+.note-detail-text[role="button"] { cursor: text; }
+.note-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.deletion-undo { position: fixed; z-index: 100000; bottom: calc(100px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 24px; max-width: calc(100vw - 32px); padding: 10px 18px; border-radius: 16px; background: var(--one-panel, #29262e); color: var(--one-ink, #f5eff7); box-shadow: 0 6px 24px #0004; }
+.deletion-undo button { min-height: 44px; background: transparent; border: 0; color: var(--one-accent, #f1bfd5); font-weight: 700; white-space: nowrap; }
+html .app-shell[data-theme] .schedule-card.health-done .mini-people { color: var(--one-accent, var(--accent, currentColor)) !important; font-weight: 700; }
+html .app-shell[data-theme] .schedule-card.health-done .mini-people::after { content: none !important; }
+.custom-icon-editor { display: grid; gap: 12px; margin: 20px 0; }
+.custom-icon-editor canvas { width: 140px; height: 140px; border-radius: 30px; justify-self: center; }
+.custom-icon-editor label { display: grid; gap: 6px; }
+.custom-icon-editor input { width: 100%; }
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode="dark"] .post-it-editor-options .post-it-palette-fieldset,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode="dark"] .post-it-editor-options .post-it-palette-fieldset legend {
+  background: var(--one-raised) !important;
+  color: var(--one-ink) !important;
+}
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode="dark"] .post-it-editor-options .post-it-palette-fieldset :is(button,small) { color: var(--one-ink) !important; }
+html .app-shell[data-theme] .schedule-card.health-done { position: relative; }
+html .app-shell[data-theme] .schedule-card.health-done .mini-people,
+html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] .schedule-card.health-done .mini-people {
+  display: flex !important; position: absolute; right: 16px; bottom: 12px; width: 24px; height: 24px; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: var(--one-accent, var(--leaf-deep, currentColor)) !important; font-size: 19px; line-height: 1;
+}
