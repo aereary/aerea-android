@@ -39,38 +39,6 @@ html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mod
   border: 0; background: transparent; color: var(--one-accent, var(--leaf-deep, currentColor)) !important; font-size: 19px; line-height: 1;
 }
 
-/* Keep the actual-icon chooser compact; scroll only its choices, not the close button. */
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"],
-html[data-native-theme] .app-shell[data-native-theme][data-theme][data-color-mode] [data-icon-picker="compact"] {
-  display: flex !important; flex-direction: column; gap: 0; width: min(100%, 440px);
-  max-height: min(620px, calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
-  overflow: hidden; padding: 18px 16px 14px !important; border-radius: 24px !important;
-  background: var(--one-panel, var(--paper)) !important; color: var(--one-ink, var(--ink)) !important;
-}
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] > header { flex-shrink: 0; padding: 0 !important; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] h2 { font-size: 22px !important; line-height: 1.25; margin: 0 !important; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] > header button { width: 40px !important; height: 40px !important; min-height: 40px !important; flex-basis: 40px; padding: 0 !important; border: 0 !important; border-radius: 50% !important; font-size: 24px !important; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] > p { font-size: 13px !important; margin: 8px 0 12px; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 4px; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px 4px; margin: 0; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid button {
-  position: relative; padding: 4px !important; gap: 7px; border: 0 !important; border-radius: 12px !important;
-  background: transparent !important; color: inherit !important; min-height: 0 !important;
-  box-shadow: none !important; font-size: 11px !important; font-weight: 500 !important; line-height: 1.25;
-}
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid button > span:not(.app-icon-check) { font-size: 11px !important; max-width: 100%; overflow-wrap: anywhere; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid img { width: min(100%,64px); border-radius: 23%; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid button[aria-pressed="true"] img { outline: 2px solid var(--one-accent,var(--leaf-deep)); outline-offset: 3px; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-check {
-  display: grid; place-items: center; position: absolute; top: 0; right: 0; width: 19px; height: 19px;
-  border-radius: 50%; background: var(--one-accent,var(--leaf-deep)) !important; color: var(--one-on-accent,var(--paper)) !important; font-size: 12px !important;
-}
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-footer { flex-shrink: 0; display: block !important; padding: 12px 0 0 !important; margin-top: 10px; border-top: 1px solid var(--one-line,var(--line)); }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-footer small { display: block; font-size: 11px !important; line-height: 1.45; color: var(--one-muted,var(--ink-soft)); }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-footer p { font-size: 12px !important; margin: 6px 0 0; }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-footer p:empty { display: none; }
-@media(max-width: 340px) { html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-
 html .app-shell[data-theme][data-color-mode][data-theme] .deletion-undo {
   width: min(360px, calc(100vw - 32px)); justify-content: space-between; box-sizing: border-box;
   background: var(--one-panel,var(--paper)); color: var(--one-ink,var(--ink));
@@ -80,4 +48,3 @@ html .app-shell[data-theme][data-color-mode][data-theme] .deletion-undo button {
   background: transparent !important; border: 0 !important; color: var(--one-accent,var(--leaf-deep)) !important;
   padding: 4px 8px !important; min-height: 40px !important; font-size: 14px !important;
 }
-html .app-shell[data-theme][data-color-mode][data-theme][data-color-mode][data-theme] [data-icon-picker="compact"] .app-icon-footer:not(:has(p:not(:empty))) { display: none !important; }
