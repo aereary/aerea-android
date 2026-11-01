@@ -104,7 +104,6 @@ export default function AppIconPicker() {
         >
           <section
             className="app-icon-dialog"
-            data-icon-picker="compact"
             role="dialog"
             aria-modal="true"
             aria-labelledby="app-icon-title"
@@ -114,8 +113,8 @@ export default function AppIconPicker() {
             onKeyDown={(event) => {
               if (event.key !== "Tab") return;
               const buttons = Array.from(
-                dialog.current?.querySelectorAll<HTMLElement>(
-                  "button:not(:disabled), input:not(:disabled)",
+                dialog.current?.querySelectorAll<HTMLButtonElement>(
+                  "button:not(:disabled)",
                 ) ?? [],
               );
               const first = buttons[0],
@@ -139,7 +138,8 @@ export default function AppIconPicker() {
           >
             <header>
               <div>
-                <h2 id="app-icon-title">App icon</h2>
+                <p className="tiny-label">MAKE IT YOURS</p>
+                <h2 id="app-icon-title">Choose your app icon</h2>
               </div>
               <button
                 type="button"
@@ -150,9 +150,9 @@ export default function AppIconPicker() {
               </button>
             </header>
             <p id="app-icon-description">
-              Tap an icon to use it on this device.
+              A tiny favorite for your home screen and the next time you open
+              aérea.
             </p>
-            <div className="app-icon-scroll">
             <div
               className="app-icon-grid"
               aria-label="Available app icons"
@@ -175,12 +175,10 @@ export default function AppIconPicker() {
                     </span>
                   )}
                   <span>{icon.label}</span>
-                  {icon.id === selected && <span className="app-icon-check" aria-label="Selected">✓</span>}
+                  <small>{icon.id === selected ? "Selected" : "Choose"}</small>
                 </button>
               ))}
             </div>
-            </div>
-            <footer className="app-icon-footer">
             <p role="status" aria-live="polite">
               {busy ? "Changing app icon…" : message}
             </p>
@@ -189,7 +187,6 @@ export default function AppIconPicker() {
                 {error}
               </p>
             )}
-            </footer>
           </section>
         </div>
       )}</SheetPresence>
