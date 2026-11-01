@@ -17,14 +17,15 @@ import java.util.List;
 public class AereaAppIconsPlugin extends Plugin {
     private static final String[] IDS = {
         "original", "pocket_heart", "bunny_cloud", "sunrise", "feather_orbit",
-        "heart_planet", "little_pocket", "orbit_star", "moon_cloud", "orbital_a"
+        "heart_planet", "little_pocket", "orbit_star", "moon_cloud", "orbital_a", "sleepy_bunny", "reading_bunny"
     };
     private static final int[] THEMES = {
         R.style.AppTheme_Starting, R.style.AppTheme_Starting_pocket_heart,
         R.style.AppTheme_Starting_bunny_cloud, R.style.AppTheme_Starting_sunrise,
         R.style.AppTheme_Starting_feather_orbit, R.style.AppTheme_Starting_heart_planet,
         R.style.AppTheme_Starting_little_pocket, R.style.AppTheme_Starting_orbit_star,
-        R.style.AppTheme_Starting_moon_cloud, R.style.AppTheme_Starting_orbital_a
+        R.style.AppTheme_Starting_moon_cloud, R.style.AppTheme_Starting_orbital_a,
+        R.style.AppTheme_Starting_sleepy_bunny, R.style.AppTheme_Starting_reading_bunny
     };
 
     private static ComponentName component(Context context, String id) {

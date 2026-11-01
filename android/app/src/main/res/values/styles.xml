@@ -54,6 +54,12 @@
     <style name="AppTheme.Starting.orbital_a" parent="AppTheme.Starting">
         <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_orbital_a</item>
     </style>
+    <style name="AppTheme.Starting.sleepy_bunny" parent="AppTheme.Starting">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_sleepy_bunny</item>
+    </style>
+    <style name="AppTheme.Starting.reading_bunny" parent="AppTheme.Starting">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/aerea_splash_reading_bunny</item>
+    </style>
     <style name="AereaWidgetWeekday">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
