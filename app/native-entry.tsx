@@ -7,6 +7,7 @@ import "./timetable-agenda.css";
 import "./styles/native-themes.css";
 import "./styles/native-sheet-polish.css";
 import "./styles/native-calendar-polish.css";
+import "./styles/minor-updates.css";
 
 const CareerPlanBridge = lazy(() => import("./career-plan-bridge"));
 const TimetableAgendaBridge = lazy(() => import("./timetable-agenda-bridge"));
