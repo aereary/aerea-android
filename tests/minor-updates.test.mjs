@@ -21,7 +21,7 @@ test('the Android artifact ships the visual fixes instead of only the web layout
   const { readFile, readdir } = await import('node:fs/promises');
   const cssFiles = (await readdir('native-shell/assets')).filter((file) => file.endsWith('.css'));
   const styles = (await Promise.all(cssFiles.map((file) => readFile(`native-shell/assets/${file}`, 'utf8')))).join('\n');
-  for (const selector of ['.deletion-undo', '[data-paper-opacity]', '.health-done', '[data-icon-picker=compact]']) assert.ok(styles.includes(selector), `${selector} must reach the Android bundle`);
+  for (const selector of ['.deletion-undo', '[data-paper-opacity]', '.health-done']) assert.ok(styles.includes(selector), `${selector} must reach the Android bundle`);
   const nativeEntry = await readFile('app/native-entry.tsx', 'utf8');
   const layout = await readFile('app/layout.tsx', 'utf8');
   for (const source of [nativeEntry, layout]) assert.match(source, /import "\.\/styles\/minor-updates\.css"/);

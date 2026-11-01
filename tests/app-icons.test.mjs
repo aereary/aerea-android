@@ -61,7 +61,8 @@ test("generated adaptive icons fill the launcher viewport and retain the complet
       for (const [x, y] of [[192, 0], [0, 192], [383, 192], [192, 383]]) {
         assert.equal(tile.pixel(x, y)[3], 255, `${id}: tile reaches its canvas edges without a border`);
         const rgb = background.pixel(x + 96, y + 96);
-        assert.ok(Math.max(...rgb) < 80, `${id}: no white frame`);
+        if (!["sleepy_bunny", "reading_bunny"].includes(id)) assert.ok(Math.max(...rgb) < 80, `${id}: no white frame`);
+        else assert.deepEqual(rgb, tile.pixel(x,y).subarray(0,3), `${id}: original photo reaches the edge without a frame`);
       }
       const colors = new Set();
       for (let y = 0; y < 384; y += 7) for (let x = 0; x < 384; x += 7) {
@@ -80,8 +81,8 @@ test("generated adaptive icons fill the launcher viewport and retain the complet
 });
 
 test("each supplied icon has a matching launcher alias, compat splash and embedded image", () => {
-  assert.equal(assets.options.length, 9);
-  assert.equal(new Set(assets.options.map((icon) => icon.id)).size, 9);
+  assert.equal(assets.options.length, 11);
+  assert.equal(new Set(assets.options.map((icon) => icon.id)).size, 11);
   for (const { id, image } of assets.options) {
     const png = Buffer.from(image, "base64");
     assert.equal(png.subarray(1, 4).toString(), "PNG");
@@ -99,7 +100,7 @@ test("each supplied icon has a matching launcher alias, compat splash and embedd
 
 test("a clean install has exactly one launcher and keeps MainActivity, auth and widgets available", () => {
   const aliases = [...manifest.matchAll(/<activity-alias\b[\s\S]*?<\/activity-alias>/g)].map((match) => match[0]);
-  assert.equal(aliases.length, 10);
+  assert.equal(aliases.length, 12);
   assert.equal(aliases.filter((alias) => alias.includes('android:enabled="true"')).length, 1);
   assert.ok(aliases.find((alias) => alias.includes('.AppIcon_original')).includes('@mipmap/ic_launcher'));
   const activity = manifest.match(/<activity\b[\s\S]*?<\/activity>/)?.[0];
@@ -134,4 +135,12 @@ test("icons use device component state, update atomically when available and ena
   assert.match(plugin, /Unknown app icon/);
   assert.match(plugin, /restore\(manager/);
   assert.doesNotMatch(plugin, /SharedPreferences|putState|localStorage|https:/);
+});
+
+test("the photo choices use the original three-column menu and real launcher aliases", () => {
+  const picker = read("app/app-icon-picker.tsx");
+  assert.match(picker, /Choose your app icon/);
+  assert.match(picker, /MAKE IT YOURS/);
+  assert.doesNotMatch(picker, /data-icon-picker|pinCustomIcon|pickCustomImage/);
+  for (const id of ["sleepy_bunny", "reading_bunny"]) assert.ok(assets.options.some(icon => icon.id === id));
 });
