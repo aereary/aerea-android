@@ -8,8 +8,6 @@ import assets from "./app-icon-assets.json";
 import { useBackLayer } from "./use-back-layer";
 
 const AppIcons = registerPlugin<{
-  pickCustomImage(): Promise<{ image?: string; cancelled?: boolean }>;
-  pinCustomIcon(options: { image: string }): Promise<{ status: string }>;
   getCurrent(): Promise<{ id: string }>;
   setIcon(options: { id: string }): Promise<{ id: string }>;
 }>("AereaAppIcons");
@@ -20,38 +18,6 @@ export default function AppIconPicker() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [customImage, setCustomImage] = useState<HTMLImageElement | null>(null);
-  const [crop, setCrop] = useState({ zoom: 1, x: 50, y: 50 });
-  const preview = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = preview.current;
-    if (!canvas || !customImage) return;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    const size = Math.min(customImage.naturalWidth, customImage.naturalHeight) / crop.zoom;
-    context.clearRect(0, 0, 512, 512);
-    context.drawImage(customImage, (customImage.naturalWidth - size) * crop.x / 100, (customImage.naturalHeight - size) * crop.y / 100, size, size, 0, 0, 512, 512);
-  }, [customImage, crop]);
-  async function pickCustom() {
-    setError(""); setMessage("");
-    try {
-      const result = await AppIcons.pickCustomImage();
-      if (!result.image) return;
-      const image = new Image();
-      image.onload = () => { setCrop({ zoom: 1, x: 50, y: 50 }); setCustomImage(image); };
-      image.onerror = () => setError("Couldn't open this image.");
-      image.src = result.image;
-    } catch { setError("Couldn't open the gallery. Custom shortcuts are available in the Android app."); }
-  }
-  async function pinCustom() {
-    if (changing.current || !preview.current) return;
-    changing.current = true; setBusy(true); setError(""); setMessage("");
-    try {
-      const result = await AppIcons.pinCustomIcon({ image: preview.current.toDataURL("image/png") });
-      setMessage(result.status === "updated" ? "Your custom home-screen shortcut was updated." : "Confirm Add in your launcher's prompt to place the icon on your home screen.");
-    } catch (error) { setError(error instanceof Error ? error.message : "Couldn't add your custom icon."); }
-    finally { changing.current = false; setBusy(false); }
-  }
   const dialog = useRef<HTMLElement>(null);
   const changing = useRef(false);
   const options = [{ id: "original", label: "Original", image: assets.original }, ...assets.options];
@@ -138,6 +104,7 @@ export default function AppIconPicker() {
         >
           <section
             className="app-icon-dialog"
+            data-icon-picker="compact"
             role="dialog"
             aria-modal="true"
             aria-labelledby="app-icon-title"
@@ -172,8 +139,7 @@ export default function AppIconPicker() {
           >
             <header>
               <div>
-                <p className="tiny-label">MAKE IT YOURS</p>
-                <h2 id="app-icon-title">Choose your app icon</h2>
+                <h2 id="app-icon-title">App icon</h2>
               </div>
               <button
                 type="button"
@@ -184,9 +150,9 @@ export default function AppIconPicker() {
               </button>
             </header>
             <p id="app-icon-description">
-              A tiny favorite for your home screen and the next time you open
-              aérea.
+              Tap an icon to use it on this device.
             </p>
+            <div className="app-icon-scroll">
             <div
               className="app-icon-grid"
               aria-label="Available app icons"
@@ -209,22 +175,12 @@ export default function AppIconPicker() {
                     </span>
                   )}
                   <span>{icon.label}</span>
-                  <small>{icon.id === selected ? "Selected" : "Choose"}</small>
+                  {icon.id === selected && <span className="app-icon-check" aria-label="Selected">✓</span>}
                 </button>
               ))}
             </div>
-            <section className="custom-icon-editor" aria-label="Custom home-screen icon">
-              <h3>Your own image</h3>
-              <p>Add a custom home-screen shortcut. Android keeps the selected built-in icon in the app drawer and on the opening screen.</p>
-              <button type="button" disabled={busy} onClick={() => void pickCustom()}>Choose from gallery</button>
-              {customImage && <>
-                <canvas ref={preview} width={512} height={512} aria-label="Custom icon crop preview" />
-                <label>Zoom<input type="range" min="1" max="3" step="0.05" value={crop.zoom} onChange={(event) => setCrop((current) => ({ ...current, zoom: Number(event.target.value) }))} /></label>
-                <label>Horizontal position<input type="range" min="0" max="100" value={crop.x} onChange={(event) => setCrop((current) => ({ ...current, x: Number(event.target.value) }))} /></label>
-                <label>Vertical position<input type="range" min="0" max="100" value={crop.y} onChange={(event) => setCrop((current) => ({ ...current, y: Number(event.target.value) }))} /></label>
-                <button type="button" disabled={busy} onClick={() => void pinCustom()}>Add to home screen</button>
-              </>}
-            </section>
+            </div>
+            <footer className="app-icon-footer">
             <p role="status" aria-live="polite">
               {busy ? "Changing app icon…" : message}
             </p>
@@ -233,6 +189,7 @@ export default function AppIconPicker() {
                 {error}
               </p>
             )}
+            </footer>
           </section>
         </div>
       )}</SheetPresence>

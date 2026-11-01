@@ -1,6 +1,6 @@
 "use client";
 
-import { paperOpacity, restoreUnique } from "./minor-updates";
+import { paperInk, paperOpacity, restoreUnique } from "./minor-updates";
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { CalendarMonthGrid } from "./components/calendar-month-grid";
 import { useClassRecording, acknowledgeClassRecordings, deleteClassAudio, classAudioSource } from "./use-class-recording";
@@ -1632,10 +1632,10 @@ postItColorPalettes.push([
   { value: "dusk-sage", label: "Evening sage", hex: "#41594d" },
 ]);
 const postItColors = postItColorPalettes.flat();
-function paperAppearance(note: { color: PostItColor; paperOpacity?: number }): CSSProperties {
+function paperAppearance(note: { color: PostItColor; paperOpacity?: number }, dark: boolean): CSSProperties {
   return {
     "--paper-opacity": `${Math.round(paperOpacity(note.paperOpacity) * 100)}%`,
-    "--paper-ink": note.color.startsWith("dusk-") ? "#f5eef5" : "#282337",
+    "--paper-ink": paperInk(postItColors.find((color) => color.value === note.color)?.hex ?? "#d8d0f0", note.paperOpacity, dark),
   } as CSSProperties;
 }
 
@@ -11866,7 +11866,7 @@ export default function Home() {
                 style={
                   {
                     ...postItVisualStyle(postIt.text),
-                    ...paperAppearance(postIt),
+                    ...paperAppearance(postIt, colorMode === "dark"),
                     "--native-post-it-paper": postItColors.find((color) => color.value === postIt.color)?.hex ?? "#d8d0f0",
                     "--post-it-x": `${postIt.x}%`,
                     "--post-it-y": `${postIt.y}%`,
@@ -15669,7 +15669,7 @@ export default function Home() {
             <div
               data-paper-opacity="true"
               className={`post-it-editor-preview ${postItDraft.color}`}
-              style={{ ...postItVisualStyle(postItDraft.text), "--native-post-it-paper": postItColors.find((color) => color.value === postItDraft.color)?.hex ?? "#d8d0f0", ...paperAppearance(postItDraft) } as CSSProperties}
+              style={{ ...postItVisualStyle(postItDraft.text), "--native-post-it-paper": postItColors.find((color) => color.value === postItDraft.color)?.hex ?? "#d8d0f0", ...paperAppearance(postItDraft, colorMode === "dark") } as CSSProperties}
             >
               <span className="post-it-tape" aria-hidden="true" />
               <textarea
