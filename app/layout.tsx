@@ -9,6 +9,7 @@ import "./timetable-agenda.css";
 import "./styles/native-themes.css";
 import "./styles/native-sheet-polish.css";
 import "./styles/native-calendar-polish.css";
+import "./styles/minor-updates.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
