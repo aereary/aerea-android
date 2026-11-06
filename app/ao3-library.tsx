@@ -1284,7 +1284,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         scrollMotionRef.current, layer.scrollTop, layer.scrollHeight - layer.clientHeight,
       );
       scrollMotionRef.current = next;
-      // State changes only after a deliberate distance in either direction.
+      // Once hidden, tools stay out of the way until the reader returns to the top.
       setSearchToolsHidden(current => current === next.hidden ? current : next.hidden);
     },
     [],
@@ -1296,7 +1296,6 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     setTypeFilter("all");
     setStatusFilter("all");
     setFandomFilter("all");
-    setSearchToolsHidden(false);
     window.requestAnimationFrame(() => {
       libraryLayerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -1338,6 +1337,12 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       onScroll={handleLibraryScroll}
     >
       <style>{AO3_LIBRARY_CSS}</style>
+      {searchToolsHidden && (
+        <button type="button" className="ao3-back-to-top" aria-label="Back to top" title="Back to top"
+          onClick={() => libraryLayerRef.current?.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 5h12M6 14l6-6 6 6M12 8v12" /></svg>
+        </button>
+      )}
       <header className="ao3-screen-header">
         <button type="button" onClick={onBack} >
           ← Library
@@ -1545,6 +1550,19 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 }
 
 const AO3_LIBRARY_CSS = String.raw`
+.ao3-library-layer .ao3-back-to-top,
+.app-shell[data-theme][data-color-mode][data-native-theme] .ao3-library-layer .ao3-back-to-top {
+  position: fixed; right: max(16px,calc((100vw - 1180px)/2 + 16px));
+  bottom: calc(24px + var(--aerea-safe-area-bottom,env(safe-area-inset-bottom,0px)));
+  z-index: 40; display: grid; place-items: center; width: 46px; height: 46px;
+  min-height: 46px; padding: 0 !important; border-radius: 50% !important;
+  background: var(--one-panel,var(--paper,#fffdfc)) !important;
+  color: var(--one-accent,var(--leaf-deep,#554260)) !important;
+  border: 1px solid var(--one-line,var(--line,#ded4e2)) !important;
+  box-shadow: 0 4px 16px #0002 !important; cursor: pointer;
+}
+.ao3-back-to-top:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
 .ao3-library-layer {
   position: fixed;
   inset: 0;
