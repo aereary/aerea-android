@@ -10282,6 +10282,7 @@ export default function Home() {
               <strong className="wordmark">aérea</strong>
             </span>
           </button>
+          {appTheme === "studio" && <span className="studio-wordmark">Studio</span>}
           <div className="header-actions">
             <button
               className="post-it-create-button"

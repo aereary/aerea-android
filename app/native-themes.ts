@@ -1,10 +1,18 @@
-/** Independent, opt-in layouts based on Rhea's Samsung Reminder recording. */
-export const NATIVE_THEME_IDS = ["samsungminimal", "samsungao3"] as const;
+/** Independent, opt-in interface layouts; existing theme identities stay stable. */
+export const NATIVE_THEME_IDS = ["samsungminimal", "samsungao3", "studio"] as const;
 export type NativeThemeId = typeof NATIVE_THEME_IDS[number];
 export function isNativeTheme(value: string): value is NativeThemeId {
   return (NATIVE_THEME_IDS as readonly string[]).includes(value);
 }
 export const NATIVE_THEMES = [
+  {
+    id: "studio", name: "aérea Studio",
+    description: "Graphite panels, fine borders and quiet underlined tabs, inspired by BUG Clicker.",
+    colors: ["#161616", "#212121", "#d0d0d0"] as [string, string, string],
+    icon: "▤", art: "/assets/native-themes/studio.svg",
+    accents: ["/assets/native-themes/studio.svg", "/assets/native-themes/studio.svg"] as [string, string],
+    charm: "", showCharm: false, featured: true, interfaceIdea: "Studio panels · graphite",
+  },
   {
     id: "samsungminimal", name: "Samsung Minimal",
     description: "Quiet black surfaces, compact grouped rows and simple line controls.",
