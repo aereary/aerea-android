@@ -22,7 +22,7 @@
           "storybook", "otter", "dreambear", "strawberry", "whalesong", "ribbonpromise",
           "gentlekitten", "softguidance", "velvetrest", "lovelyevening",
           "littlesheets", "noirrest", "ao3night",
-          "mintletter", "moonquilt", "samsungminimal", "samsungao3", "custom",
+          "mintletter", "moonquilt", "samsungminimal", "samsungao3", "studio", "custom",
         ];
         const pending = () => document.documentElement.classList.add("appearance-pending");
         try {
@@ -42,7 +42,7 @@
                   (field) => typeof appearance.customTheme[field] !== "string",
                 )))
           ) return pending();
-          if (["samsungminimal", "samsungao3"].includes(appearance.appTheme)) {
+          if (["samsungminimal", "samsungao3", "studio"].includes(appearance.appTheme)) {
             document.documentElement.dataset.nativeTheme = appearance.appTheme;
             document.documentElement.dataset.nativeThemeMode = appearance.colorMode;
           }
