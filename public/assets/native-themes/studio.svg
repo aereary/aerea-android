@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300">
+<rect width="480" height="300" rx="18" fill="#161616"/>
+<text x="26" y="36" fill="#e8e8e8" font-family="Arial,sans-serif" font-weight="600" font-size="19">aérea <tspan fill="#9a9a9a" font-weight="400" font-size="14">Studio</tspan></text>
+<path d="M0 57H480" stroke="#333"/>
+<g fill="#9a9a9a" font-family="Arial,sans-serif" font-size="12"><text x="26" y="83" fill="#e8e8e8">Today</text><text x="115" y="83">Habits</text><text x="208" y="83">Journal</text><text x="310" y="83">Spaces</text></g>
+<path d="M24 96H89" stroke="#d0d0d0" stroke-width="2"/>
+<rect x="25" y="119" width="430" height="64" rx="12" fill="#212121" stroke="#383838"/>
+<rect x="40" y="134" width="34" height="34" rx="9" fill="#292929" stroke="#414141"/>
+<path d="M51 150l5 5 8-10" fill="none" stroke="#d0d0d0" stroke-width="2"/>
+<path d="M89 140H259M89 156H210" stroke="#a5a5a5" stroke-width="4" stroke-linecap="round"/>
+<rect x="25" y="198" width="430" height="72" rx="12" fill="#212121" stroke="#383838"/>
+<path d="M41 219H169M41 237H260" stroke="#a5a5a5" stroke-width="4" stroke-linecap="round"/>
+<rect x="376" y="220" width="55" height="27" rx="13" fill="#d0d0d0"/><circle cx="417" cy="233" r="10" fill="#212121"/>
+</svg>
