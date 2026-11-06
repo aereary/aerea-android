@@ -1295,7 +1295,7 @@ export function EpubStudyReader({
     chapterId: string;
     query: string;
   } | null>(null);
-  const [outlineOpen, setOutlineOpen] = useState(true);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const [epubPanel, setEpubPanel] = useState<
     "contents" | "bookmarks" | "highlights" | "notes"
   >("contents");
@@ -1566,7 +1566,7 @@ export function EpubStudyReader({
         </div>
       )}
       <nav className="epub-tool-ribbon" aria-label="EPUB reading tools">
-        <button onClick={() => setOutlineOpen((value) => !value)}>☰ <span>Reader panel</span></button>
+        <button aria-expanded={outlineOpen} aria-controls="epub-reader-navigation" onClick={() => setOutlineOpen((value) => !value)}>☰ <span>Reader panel</span></button>
         <label>
           <span>Search book</span>
           <input
@@ -1602,7 +1602,7 @@ export function EpubStudyReader({
         </button>
       </nav>
       <div className={outlineOpen ? "epub-reading-layout outline-open" : "epub-reading-layout"}>
-        <aside className="epub-outline">
+        <aside id="epub-reader-navigation" className="epub-outline" hidden={!outlineOpen} inert={!outlineOpen || undefined}>
           <nav className="epub-panel-tabs" aria-label="EPUB navigation">
             {(["contents", "bookmarks", "highlights", "notes"] as const).map(
               (panel) => (

@@ -137,12 +137,14 @@ test("saves Drive EPUBs into Android study_files and refreshes Your Library imme
   assert.doesNotMatch(nativeStorageSource, /setRequestMethod\("(?:DELETE|PATCH|PUT)"\)/);
 });
 
-test("hides the AO3 search tools by scroll direction and restores them on the way up", () => {
+test("keeps search tools hidden while reading and supplies an explicit return-to-top button", () => {
   assert.match(ao3Source, /const handleLibraryScroll = useCallback/);
   assert.match(ao3Source, /advanceLibraryScroll\(/);
   assert.match(ao3Source, /setSearchToolsHidden\(current => current === next.hidden/);
   assert.match(ao3Source, /onScroll=\{handleLibraryScroll\}/);
   assert.match(ao3Source, /ao3-search-tools-hidden/);
+  assert.match(ao3Source, /aria-label="Back to top"/);
+  assert.match(ao3Source, /prefers-reduced-motion: reduce/);
   assert.match(
     ao3Source,
     /\.ao3-library-layer\.ao3-search-tools-hidden \.ao3-library-tools[\s\S]*translateY/,
