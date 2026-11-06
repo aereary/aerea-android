@@ -1,0 +1,102 @@
+/* aér​ea Studio: an independent appearance, based on the public BUG Clicker
+   settings reference studied 2026-11-05. No external assets or runtime requests. */
+html[data-native-theme="studio"] {
+  --one-font: "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  --one-heading: var(--one-font);
+  --one-heading-weight: 600;
+  --one-page: #161616;
+  --one-backdrop: #161616;
+  --one-panel: #212121;
+  --one-raised: #292929;
+  --one-soft: #191919;
+  --one-ink: #e8e8e8;
+  --one-muted: #9a9a9a;
+  --one-accent: #d0d0d0;
+  --one-on-accent: #161616;
+  --one-selected: #363636;
+  --one-line: #383838;
+  --one-radius: 14px;
+  --one-control-radius: 10px;
+  --one-pink: #292929;
+  --one-lilac: #292929;
+  --one-blue: #292929;
+  --one-peach: #292929;
+  --one-mint: #292929;
+  --one-shadow: none;
+  scrollbar-color: #515151 #191919;
+}
+html[data-native-theme="studio"][data-native-theme-mode="light"] {
+  --one-page: #f5f5f5;
+  --one-backdrop: #f5f5f5;
+  --one-panel: #ffffff;
+  --one-raised: #eeeeee;
+  --one-soft: #f7f7f7;
+  --one-ink: #262626;
+  --one-muted: #686868;
+  --one-accent: #333333;
+  --one-on-accent: #ffffff;
+  --one-selected: #e4e4e4;
+  --one-line: #d7d7d7;
+  --one-pink: #eeeeee;
+  --one-lilac: #eeeeee;
+  --one-blue: #eeeeee;
+  --one-peach: #eeeeee;
+  --one-mint: #eeeeee;
+  scrollbar-color: #ababab #f5f5f5;
+}
+/* Repeated appearance attributes deliberately outrank the older opt-in skins.
+   Every rule remains confined to Studio. Document/canvas content is excluded. */
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] {
+  font: 15px/1.5 var(--one-font) !important;
+}
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(h1,h2,h3,h4) { font-weight: 600 !important; letter-spacing: -.015em !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas { background: var(--one-page) !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .topbar { border-bottom: 1px solid var(--one-line) !important; min-height: 64px !important; padding: 10px 18px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .wordmark { font-size: 20px !important; font-weight: 650 !important; letter-spacing: .06em !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .studio-wordmark { color: var(--one-muted) !important; font-size: 13px; margin-left: 0; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.calendar-button,.avatar-button,.post-it-create-button,.native-menu-button) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: 10px !important; width: 36px !important; height: 36px !important; min-width: 36px; padding: 8px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.welcome-row,.screen-intro) { min-height: 0 !important; background: transparent !important; padding: 22px 0 16px !important; margin: 0 0 18px !important; border: 0 !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .welcome-row > div { max-width: 100%; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.welcome-row h2,.screen-intro h2) { font-size: clamp(23px,4.5vw,28px) !important; line-height: 1.25 !important; margin: 0 0 6px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.screen-sticker,.screen-intro .tiny-label) { display: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .week-strip { border: 1px solid var(--one-line) !important; border-radius: 12px !important; background: var(--one-panel) !important; padding: 5px !important; gap: 3px; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .week-strip .day.active { background: var(--one-selected) !important; color: var(--one-ink) !important; border: 1px solid var(--one-accent) !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.section-heading h3,.section-heading h2) { font-size: 16px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.habit-card,.reminder-card,.habit-progress-card,.journal-card,.journal-entry,.space-card,.library-space-card,.empty-schedule,.recording-card,.settings-modal,.quick-capture-modal,.timetable-card,.health-routine-note,.event-detail-note,.habit-editor-modal,.reminder-editor-note,.post-it-editor-modal,.aerea-hub-modal,.category-editor-modal,.study-editor-card,.task-link-modal,.app-icon-dialog) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: 14px !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .schedule-card:not(.match-day-schedule-card):not(.canonical-boca-match) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: 14px !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.profile-card,.sync-card,.mode-card,.app-update-settings,.health-routine-card,.task-editor-basics,.task-editor-notes,.inbox-item,.quick-inbox-item) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: 12px !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.timetable-tabs,.calendar-view-switch,.timer-modes,.metrics-period-tabs) { background: transparent !important; border-bottom: 1px solid var(--one-line) !important; border-radius: 0 !important; gap: 0; padding: 0 !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.timetable-tabs,.calendar-view-switch,.timer-modes,.metrics-period-tabs) button { background: transparent !important; border: 0 !important; border-radius: 0 !important; color: var(--one-muted) !important; min-height: 44px; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.timetable-tabs,.calendar-view-switch,.timer-modes,.metrics-period-tabs) button:is(.active,[aria-selected="true"],[aria-pressed="true"]) { border-bottom: 2px solid var(--one-accent) !important; color: var(--one-ink) !important; background: transparent !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .bottom-nav { background: var(--one-page) !important; border: 0 !important; border-top: 1px solid var(--one-line) !important; border-radius: 0 !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .nav-item { border-radius: 0 !important; background: transparent !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .nav-item.active { background: transparent !important; color: var(--one-ink) !important; border-bottom: 2px solid var(--one-accent) !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-nav { background: var(--one-accent) !important; color: var(--one-on-accent) !important; width: 44px !important; height: 44px !important; border: 1px solid var(--one-accent) !important; border-radius: 12px !important; transform: none !important; }
+/* Keep the journal editable, without the ruled white sheet used by cozy themes. */
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .note-detail-backdrop { align-items: flex-end !important; padding: 12px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .note-detail-card { --note-ink: var(--one-ink); --note-muted: var(--one-muted); --note-pink: var(--one-raised); --note-blue: var(--one-raised); background: var(--one-panel) !important; background-image: none !important; border: 1px solid var(--one-line) !important; border-radius: 18px !important; color: var(--one-ink) !important; padding: 24px !important; max-width: 620px !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .note-detail-text { font: 16px/1.7 var(--one-font) !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.note-detail-card header,.note-detail-card footer) { background: transparent !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .note-detail-card header > span { background: var(--one-raised) !important; color: var(--one-ink) !important; }
+/* Touch targets stay generous even though the visual treatment is compact. */
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.text-button,.post-it-group-action) { min-height: 44px; }
+@media(min-width: 900px) {
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas:not(.sketchbook-fullscreen-active) { display: flex; flex-direction: column; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas:not(.sketchbook-fullscreen-active) > .topbar { order: 0; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas:not(.sketchbook-fullscreen-active) > .bottom-nav { order: 1; position: sticky !important; inset: auto !important; top: 0 !important; width: 100% !important; max-width: none !important; transform: none !important; margin: 0 0 24px !important; border-top: 0 !important; border-bottom: 1px solid var(--one-line) !important; z-index: 20; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas:not(.sketchbook-fullscreen-active) > .main-content { order: 2; padding-bottom: 30px; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .nav-item { display: flex; align-items: center; justify-content: center; gap: 8px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"] * { scroll-behavior: auto !important; }
+}
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] :is(.habit-row,.habit-summary,.journal-compose,.journal-history article,.timer-card) { background: var(--one-panel) !important; border: 1px solid var(--one-line) !important; border-radius: 14px !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-nav { display: grid; place-items: center; padding: 0 !important; min-height: 44px !important; box-shadow: none !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .quick-capture-nav > span { width: 24px !important; height: 24px !important; margin: 0 !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; color: inherit !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .brand-wrap { flex: 0 0 auto !important; margin-right: 0 !important; }
+html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .studio-wordmark { margin-right: auto; }
+@media(min-width: 900px) {
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .phone-canvas:not(.sketchbook-fullscreen-active) > .bottom-nav { min-height: 58px !important; padding: 6px 0 !important; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .nav-item:not(.quick-capture-nav) > span { display: none !important; }
+  html[data-native-theme="studio"] .app-shell[data-theme="studio"][data-native-theme][data-color-mode][data-simplified-calendar][data-theme][data-color-mode] .nav-item > small { font-size: 14px !important; font-weight: 600 !important; }
+}
