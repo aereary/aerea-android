@@ -3,7 +3,8 @@ self.onmessage = (event: MessageEvent<{ mode?: "passage"; query: string; documen
   try {
     const { mode, query, documents, context, now } = event.data;
     if (mode === "passage") {
-      self.postMessage({ hits: searchRememberedPassages(documents, query, parseFilter(query, context.filter, new Date(now))) });
+      const resolved = answerQuery(query, documents, context, new Date(now));
+      self.postMessage({ hits: searchRememberedPassages(documents, context.pendingQuery ?? query, resolved.context.filter ?? parseFilter(query, context.filter, new Date(now))) });
       return;
     }
     self.postMessage({ answer: answerQuery(query, documents, context, new Date(now)) });

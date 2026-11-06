@@ -8,9 +8,9 @@ export type AskDocument = {
   workId?: number; driveId?: string; fileId?: string; chapter?: string;
   versionCount?: number; archived?: boolean; fileNames?: string[];
 };
-export type AskFilter = { terms: string[]; complete?: boolean; minWords?: number; maxWords?: number; source?: AskSource; day?: string; upcoming?: boolean; ship?: "landoscar"; pureFluff?: boolean; excludedTerms?: string[] };
+export type AskFilter = { terms: string[]; complete?: boolean; minWords?: number; maxWords?: number; source?: AskSource; day?: string; upcoming?: boolean; ship?: "landoscar"; pureFluff?: boolean; excludedTerms?: string[]; workId?: number; fileId?: string; bookTitle?: string };
 export type AskHit = { document: AskDocument; match: "exact" | "related" | "approximate" | "semantic"; reasons: string[]; excerpt: string };
-export type AskContext = { filter?: AskFilter; hits: AskHit[]; offset?: number; meaningQuery?: string; topic?: string };
+export type AskContext = { filter?: AskFilter; hits: AskHit[]; offset?: number; meaningQuery?: string; topic?: string; selected?: AskDocument; pendingQuery?: string; contentSearch?: boolean };
 export type AskEventDraft = { title: string; date: string; time: string; allDay: boolean };
 export type AskAnswer = { text: string; hits: AskHit[]; total: number; context: AskContext; open?: AskDocument; draft?: AskEventDraft; operation?: "search"; offset?: number };
 
@@ -49,7 +49,7 @@ for (const word of "todo algo information informacion material materiales tema t
 for (const word of "recuerdo recordaba remember remembered escena scene escenas scenes donde where alguien someone pero but no not se the titulo title nombre name protagonista protagonistas protagonist protagonists durante during luego later despues after mas more porque because habia había habia uno alguna algun algunos parece parecido similar".split(/\s+/)) STOP.add(word);
 
 // Common English request grammar must not become mandatory catalog terms.
-for (const word of "some look looking can could would you from that are is get give these those ones results".split(" ")) STOP.add(word);
+for (const word of "ese esa esos esas este estos estas tambien dentro inside anyway some look looking can could would you from that are is get give these those ones results".split(" ")) STOP.add(word);
 
 export function dateKey(now = new Date(), zone = "America/Panama") {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
@@ -109,6 +109,9 @@ export function isMoreRequest(query: string) {
 
 function matchesLibraryConstraints(document: AskDocument, filter: AskFilter) {
   const tags = normalize((document.tags ?? []).join(" "));
+  if (filter.workId !== undefined && document.workId !== filter.workId) return false;
+  if (filter.fileId && document.fileId !== filter.fileId) return false;
+  if (filter.bookTitle && normalize(document.title) !== normalize(filter.bookTitle)) return false;
   if (filter.ship === "landoscar" && !(document.relationships ?? []).some(relationship => {
     const names = normalize(relationship).split("/");
     return names.some(name => /\blando(?: norris)?\b/.test(name)) && names.some(name => /\boscar(?: piastri)?\b/.test(name));
@@ -118,9 +121,14 @@ function matchesLibraryConstraints(document: AskDocument, filter: AskFilter) {
   return true;
 }
 
+export function isFilterFollowup(query: string) {
+  const q = normalize(query).trim();
+  return /\b(solo|solamente|only|filtra|filter|de esos|de esas|of those|among those)\b/.test(q) || /^(?:(?:y|and|also|tambien|que sean|los|las)\s+)?(?:terminad[oa]s?|complet[oa]s?|incomplet[oa]s?|ongoing|finished|completed|larg[oa]s?|long|cort[oa]s?|short|sin\s|without\s)/.test(q);
+}
+
 export function parseFilter(query: string, previous?: AskFilter, now = new Date()): AskFilter {
   const q = normalize(query);
-  const follow = /\b(solo|solamente|only|filtra|filter)\b/.test(q) && previous;
+  const follow = isFilterFollowup(query) && previous;
   const filter: AskFilter = follow ? { ...previous, terms: [...previous.terms] } : { terms: [] };
   const date = queryDate(query, now);
   if (date) filter.day = date;
@@ -191,7 +199,7 @@ export function searchDocuments(documents: AskDocument[], filter: AskFilter, now
 /** Explicit memory searches can show plausible passages even when one descriptive word is missing.
  * This is local lexical retrieval, not an embedding model or proof of the remembered scene. */
 export function sceneRecall(query: string) {
-  return /\b(recuerdo|recordaba|remember|remembered|escena|scene)\b/.test(normalize(query));
+  return /\b(recuerdo|recordaba|remember|remembered|escena|scene|frase|phrase|dialogo|dialogue|capitulo|chapter)\b/.test(normalize(query));
 }
 export function searchRememberedPassages(documents: AskDocument[], query: string, filter: AskFilter): AskHit[] {
   if (!sceneRecall(query) || filter.source && filter.source !== "library" || filter.terms.length < 2) return [];
@@ -231,7 +239,7 @@ export function searchRememberedPassages(documents: AskDocument[], query: string
 
 export function parseEventRequest(query: string, now = new Date()): { draft?: AskEventDraft; clarification?: string } | undefined {
   const q = normalize(query);
-  if (!/\b(crea|crear|agrega|agregar|ponme|create|add|schedule)\b/.test(q) || !/\b(evento|event|examen|exam|recordatorio|reminder|cita|appointment)\b/.test(q)) return;
+  if (!/^(?:(?:por favor|please|puedes|podrias|can you)\s+)?(?:crea(?:me)?|crear|agrega(?:me)?|agregar|ponme|create|add|schedule)\b/.test(q.trim().replace(/^[¿¡]/, "")) || !/\b(evento|event|examen|exam|recordatorio|reminder|cita|appointment)\b/.test(q)) return;
   const date = queryDate(query, now);
   if (!date) return { clarification: "Which date? Use tomorrow, a weekday, or YYYY-MM-DD." };
   const allDay = /todo el dia|all day/.test(q);
@@ -250,26 +258,81 @@ export function parseEventRequest(query: string, now = new Date()): { draft?: As
   return { draft: { title, date, time, allDay } };
 }
 
+function resultNumber(query: string): number | undefined {
+  const q = normalize(query).trim().replace(/^[¿¡]+|[.!?]+$/g, "");
+  const digit = q.match(/^(?:(?:el|la|the|numero|number|resultado|result)\s+)?(\d+)[.!?]*$/)?.[1];
+  if (digit) return Number(digit) - 1;
+  const ordinals = ["primero|primera|first", "segundo|segunda|second", "tercero|tercera|third", "cuarto|cuarta|fourth", "quinto|quinta|fifth"];
+  const index = ordinals.findIndex(words => new RegExp(`\\b(${words})\\b`).test(q));
+  return index >= 0 ? index : undefined;
+}
+function selectedHit(context: AskContext, document: AskDocument): AskHit {
+  return context.hits.find(hit => hit.document.id === document.id) ?? { document, match: "exact", reasons: ["Selected from your previous results"], excerpt: document.text.slice(0, 260) };
+}
+export function refersToPrevious(query: string) {
+  return /\b(?:ese|esa|este|esta)\s+(?:libro|fanfic|archivo|documento|examen|materia|apunte|evento|nota|grabacion)|\b(?:that|this)\s+(?:book|fic|file|document|exam|class|event|note|recording)|\b(?:su autor|sus etiquetas|que etiquetas|quien lo escribio|who wrote it|what tags|de que trata)\b/.test(normalize(query));
+}
+export function withoutReference(query: string) {
+  return normalize(query).replace(/\b(?:(?:en|de|del|para|sobre|in|from|for|about)\s+)?(?:ese|esa|este|esta|that|this)\s+(?:libro|fanfic|archivo|documento|examen|materia|apunte|book|fic|file|document|exam|class|event|note|recording)\b/g, " ");
+}
+
 export function answerQuery(query: string, documents: AskDocument[], context: AskContext = { hits: [] }, now = new Date()): AskAnswer {
   const q = normalize(query);
+  const requestedNumber = resultNumber(query);
+  const number = requestedNumber !== undefined && /\d/.test(query) ? requestedNumber - (context.offset ?? 0) : requestedNumber;
+  const ordinalOnly = /^(?:(?:el|la|the|resultado|result)\s+)?(?:primero|primera|segundo|segunda|tercero|tercera|cuarto|cuarta|quinto|quinta|first|second|third|fourth|fifth|\d+)[.!?]*$/.test(q.trim().replace(/^[¿¡]+/, ""));
+  if (context.pendingQuery && ordinalOnly) {
+    const chosen = number === undefined ? undefined : context.hits[number];
+    if (!chosen) return { text: "That result number is not on the current page. Choose one of the displayed results.", hits: [], total: 0, context };
+    return answerQuery(context.pendingQuery, documents, { ...context, selected: chosen.document, topic: chosen.document.title, pendingQuery: undefined }, now);
+  }
+  if (ordinalOnly && number !== undefined) {
+    const chosen = context.hits[number];
+    if (!chosen) return { text: "Which result? Search first, then choose a displayed number.", hits: [], total: 0, context };
+    return { text: "Selected from your last results.", hits: [chosen], total: 1, context: { ...context, selected: chosen.document, topic: chosen.document.title, pendingQuery: undefined } };
+  }
+  const reference = refersToPrevious(query);
+  const selected = reference ? context.selected ?? (context.hits.length === 1 ? context.hits[0].document : undefined) : undefined;
+  if (reference && !selected) return { text: context.hits.length ? "Which result do you mean? Reply with its number; I will continue this request." : "Which book, document or exam? Search for it first so I can use a verified reference.", hits: [], total: 0, context: { ...context, pendingQuery: context.hits.length ? query : undefined } };
+  if (selected && /\b(su autor|quien lo escribio|who wrote it)\b/.test(q)) {
+    const hit = selectedHit(context, selected);
+    return { text: selected.author ? `Recorded author: ${selected.author}.` : "No author is recorded for this result.", hits: [hit], total: 1, context: { ...context, selected, topic: selected.title } };
+  }
+  if (selected && /\b(sus etiquetas|que etiquetas|what tags)\b/.test(q)) {
+    return { text: selected.tags?.length ? `Recorded tags: ${selected.tags.join(", ")}.` : "No tags are recorded for this result.", hits: [selectedHit(context, selected)], total: 1, context: { ...context, selected, topic: selected.title } };
+  }
+  if (selected && /\b(de que trata|what is it about)\b/.test(q)) {
+    const hit = selectedHit(context, selected);
+    return { text: hit.excerpt ? `Recorded excerpt: ${hit.excerpt}` : "No summary is available in the current results. Open the original to check it.", hits: [hit], total: 1, context: { ...context, selected, topic: selected.title } };
+  }
   const action = parseEventRequest(query, now);
   if (action) return { text: action.clarification ?? "Event draft ready. Review its details and choose an end time in Calendar, then save. Nothing has been created yet.", draft: action.draft, hits: [], total: 0, context };
-  if (/\b(el primero|the first|cual es el primero)\b/.test(q) && context.hits.length) {
+  if (/\b(cual es el primero|which (?:one )?is (?:the )?first)\b/.test(q) && context.hits.length) {
     const hit = context.hits[0];
-    return { text: "First result from your last search.", hits: [hit], total: 1, context: { ...context, topic: hit.document.title } };
+    return { text: "First result from your last search.", hits: [hit], total: 1, context: { ...context, selected: hit.document, topic: hit.document.title } };
   }
-  if (/\b(abre|abrir|open)\b/.test(q)) {
+  if (/^(?:(?:por favor|please|puedes|podrias|can you)\s+)?(?:abre|abrir|open)\b/.test(q.trim().replace(/^[¿¡]/, ""))) {
     const number = q.match(/\b(\d+)\b/)?.[1];
     const ordinal = /segundo|second/.test(q) ? 2 : /tercero|third/.test(q) ? 3 : /primero|first/.test(q) ? 1 : undefined;
     const selectedIndex = number ? Number(number) - (context.offset ?? 0) - 1 : (ordinal ?? 0) - 1;
-    const selected = context.hits[selectedIndex];
-    return { text: selected ? "Opening the selected result." : "Which result? Say open 1, or use an Open button.", hits: [], total: 0, context, open: selected?.document };
+    const selectedResult = selected ? selectedHit(context, selected) : context.hits[selectedIndex];
+    return { text: selectedResult ? "Opening the selected result." : "Which result? Say open 1, or use an Open button.", hits: [], total: 0, context: selectedResult ? { ...context, selected: selectedResult.document, topic: selectedResult.document.title } : context, open: selectedResult?.document };
   }
   // No silent modifications; this stage hands off edits/deletions to existing editors.
   if (/^(cambia|modifica|elimina|borra|delete|remove|edit|change)\b/.test(q)) return { text: "Open the matching result to edit it using the existing controls. Ask does not change or delete records in this stage.", hits: [], total: 0, context };
   const more = isMoreRequest(query);
   if (more && !context.filter) return { text: "Search first, then ask for more results.", hits: [], total: 0, context };
-  const filter = more ? context.filter! : parseFilter(query, context.filter, now);
+  const filter = more ? context.filter! : parseFilter(selected ? withoutReference(query) : query, context.filter, now);
+  if (selected?.source === "library") {
+    filter.source = "library";
+    if (selected.workId !== undefined) filter.workId = selected.workId;
+    else if (selected.fileId) filter.fileId = selected.fileId;
+    else filter.bookTitle = selected.title;
+  } else if (selected) {
+    // An exam points to a subject across notes/files, rather than filtering to its own ID/date.
+    delete filter.day; delete filter.upcoming;
+    filter.terms = [...new Set([...filter.terms, ...termsOf(selected.title).filter(term => !aliases("examen").includes(term))])];
+  }
   const offset = more ? (context.offset ?? 0) + context.hits.length : 0;
   if (/\b(para estudiar|to study|relacionado con ese|related to that)\b/.test(q) && context.topic && !filter.terms.length) filter.terms = termsOf(context.topic).filter(t => !aliases("examen").includes(t));
   const found = searchDocuments(documents, filter, now);
@@ -283,6 +346,6 @@ export function answerQuery(query: string, documents: AskDocument[], context: As
   return {
     operation: "search", offset,
     text: more && !hits.length ? "You have reached the end of the matching results." : found.length ? `${found.length} matching ${found.length === 1 ? "result" : "results"} in the selected sources.${constraints}` : "No matching results in the selected sources. Try a name, tag, shorter phrase, or enable another source. This is a local search, not a semantic AI answer.",
-    hits, total: found.length, context: { filter, hits, offset, topic: hits.length === 1 ? hits[0].document.title : context.topic },
+    hits, total: found.length, context: { filter, hits, offset, selected: selected ?? (hits.length === 1 ? hits[0].document : undefined), topic: selected?.title ?? (hits.length === 1 ? hits[0].document.title : undefined), meaningQuery: isFilterFollowup(query) || selected ? context.meaningQuery : undefined, contentSearch: Boolean(context.contentSearch && isFilterFollowup(query)) },
   };
 }

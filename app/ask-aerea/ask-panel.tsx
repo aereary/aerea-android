@@ -4,6 +4,7 @@ import { SheetPresence } from "../components/sheet-presence";
 import { useBackLayer } from "../use-back-layer";
 import { readLibraryCatalog } from "./library-connector";
 import { answerQuery, dateKey, shiftDay, mergeEpubHit, sceneRecall, isMoreRequest, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskHit, type AskSource } from "./core";
+import { chapterDocuments, eligibleEpubFile, epubPassageBatches } from "./epub-passages";
 import { meaningQuery } from "./semantic-core";
 import type { LocalMeaningSearch } from "./semantic-client";
 import type { TextChapter } from "./epub-text";
@@ -155,7 +156,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
   };
   const run = async (request = query, refresh = false) => {
     if (busy || !ready || !request.trim() || !enabled.length) return;
-    if (fullText && isMoreRequest(request)) {
+    if ((fullText || context.current.contentSearch) && isMoreRequest(request)) {
       setError("For EPUB text searches, add a name or tag to narrow the results. More pages are available for catalog searches.");
       return;
     }
@@ -191,6 +192,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
       }
       const search = (data: AskDocument[]) => workerRequest<{ answer: AskAnswer }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { query: request, documents: data, context: searchContext, now: new Date().toISOString() }, signal);
       const result = await search(documents);
+      let semanticAvailable = meaningEnabled;
       if (meaningEnabled) {
         if (result.answer.context.filter) result.answer.context.meaningQuery = meaningQuery(request, result.answer.context.filter, searchContext);
         try {
@@ -200,15 +202,20 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
           statuses.push("Meaning search ran on this device. Suggested matches are not proof of a scene. The first 1,200 characters of each entry and a short metadata passage were considered; remote EPUB content was not read by the model.");
         } catch (reason) {
           signal.throwIfAborted();
+          semanticAvailable = false;
           statuses.push(`${reason instanceof Error ? reason.message : "Local AI is unavailable."} Showing exact and dictionary matches instead.`);
         }
       }
-      if (fullText && enabled.includes("library")) {
-        let failed = 0, searched = 0;
+      const contentQuery = searchContext.pendingQuery ?? request;
+      const useFullText = fullText || result.answer.context.contentSearch || sceneRecall(contentQuery) || /\b(?:en|in|dentro de|inside) (?:ese|este|that|this) (?:libro|fanfic|book|fic)\b/i.test(contentQuery);
+      if (useFullText && enabled.includes("library")) {
+        let failed = 0, searched = 0, comparedPassages = 0;
         const contentWorks = new Set<number>();
-        for (const file of epubFiles) {
+        const readableFiles = epubFiles.filter(file => eligibleEpubFile(file, result.answer.context.filter, catalog.current ?? []));
+        if (!readableFiles.length) statuses.push("No linked EPUB is available on this device for this search. Download or import the book, then repeat; remote files were not read.");
+        for (const file of readableFiles) {
           signal.throwIfAborted();
-          setProgress(`Reading EPUB ${searched + failed + 1} of ${epubFiles.length} · ${file.name}`);
+          setProgress(`Reading EPUB ${searched + failed + 1} of ${readableFiles.length} · ${file.name}`);
           try {
             const key = `${file.id}:${file.updatedAt}:${file.size}`;
             let cached = textCache.current.get(key);
@@ -227,17 +234,33 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
             }
             const metadata = (catalog.current ?? []).filter(document => document.fileNames?.includes(file.name));
             const book = metadata.length === 1 ? metadata[0] : undefined;
-            const chapters: AskDocument[] = cached.chapters.map(chapter => ({ ...book, id: `epub:${file.id}:${chapter.id}`, source: "library", kind: "EPUB chapter", title: book?.title ?? file.name, text: chapter.text, reference: `${file.name} · ${chapter.title}`, fileId: file.id, chapter: chapter.title }));
+            const chapters = chapterDocuments(file, cached.chapters, book);
             const content = await search(chapters);
             let best = content.answer.hits[0];
-            if (!best && sceneRecall(request)) {
-              const passages = await workerRequest<{ hits: AskHit[] }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { mode: "passage", query: request, documents: chapters, context: context.current, now: new Date().toISOString() }, signal);
+            if (!best && sceneRecall(contentQuery)) {
+              const passages = await workerRequest<{ hits: AskHit[] }>(new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" }), { mode: "passage", query: request, documents: chapters, context: searchContext, now: new Date().toISOString() }, signal);
               best = passages.hits[0];
+            }
+            if (!best && meaningEnabled && semanticAvailable) {
+              try {
+                let bestScore = -1, batchNumber = 0;
+                for (const passages of epubPassageBatches(chapters)) {
+                  batchNumber++;
+                  signal.throwIfAborted();
+                  const semantic = await (await getMeaningEngine()).request({ mode: "passages", query: request, documents: passages, context: searchContext, now: new Date().toISOString() }, signal,
+                    message => setProgress(`${file.name} · batch ${batchNumber}: ${message}`));
+                  comparedPassages += passages.length;
+                  if (semantic.passage && (semantic.score ?? -1) > bestScore) { best = semantic.passage; bestScore = semantic.score ?? -1; }
+                }
+              } catch (reason) {
+                signal.throwIfAborted(); semanticAvailable = false;
+                statuses.push(`${reason instanceof Error ? reason.message : "Local AI is unavailable."} EPUB text matching continues without the model.`);
+              }
             }
             // One best chapter per physical file. Keep only references/excerpts across files.
             if (best) {
               const workId = book?.workId;
-              const alreadyCounted = workId !== undefined && (contentWorks.has(workId) || answerQuery(request, [book!], context.current).total > 0);
+              const alreadyCounted = workId !== undefined && (contentWorks.has(workId) || answerQuery(request, [book!], searchContext).total > 0);
               result.answer.total += mergeEpubHit(result.answer.hits, best, alreadyCounted);
               if (workId !== undefined) contentWorks.add(workId);
             }
@@ -246,7 +269,10 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
         }
         statuses.push(`EPUB content coverage: ${searched} readable files; ${failed} unavailable. Remote AO3 EPUBs not downloaded on this device were not searched. Opening preserves your current reader position.`);
         result.answer.text = result.answer.total ? `${result.answer.total} catalog, local or EPUB results. A possible passage matches some remembered details but must be checked in the book. Search runs locally without a paid AI service.` : "No matches in the selected metadata, local data or readable EPUB files. Remote EPUBs and unreadable files are outside this search's coverage.";
+        if (comparedPassages) statuses.push(`${comparedPassages} overlapping EPUB passages were compared by the local model. Passage vectors were not saved. A suggested passage is not proof of a scene.`);
         result.answer.context.hits = result.answer.hits;
+        result.answer.context.contentSearch = true;
+        if (result.answer.hits.length === 1) result.answer.context.selected = result.answer.hits[0].document;
       }
       signal.throwIfAborted();
       if (generation.current !== runId) return;
@@ -272,7 +298,7 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
         </div>
         <fieldset disabled={busy}><legend>Allow Ask to read</legend>{SOURCES.map(source => <label key={source.id}><input type="checkbox" checked={enabled.includes(source.id)} onChange={() => { clear(); setEnabled(current => current.includes(source.id) ? current.filter(id => id !== source.id) : [...current, source.id]); }} />{source.label}</label>)}
           <label><input type="checkbox" checked={fullText} disabled={!enabled.includes("library")} onChange={event => { clear(); setFullText(event.target.checked); }} />Search EPUB text available on this device</label></fieldset>
-        <p>Drive: synced catalog names only. Repeating events: yesterday through the next 90 days. Recording audio is not transcribed. Generative chat, remote EPUB text, full Drive search, and automatic writes are pending. Meaning search uses recorded metadata and short text passages; it does not read every page of a book.</p>
+        <p>Drive: synced catalog names only. Repeating events: yesterday through the next 90 days. Recording audio is not transcribed. Generative chat, remote EPUB text, full Drive search, and automatic writes are pending. Meaning search uses metadata for catalog queries. Scene searches also examine readable local EPUBs and can compare passages throughout their chapters. Remote EPUB text is still unavailable.</p>
       </details>
       <div className="ask-transcript" ref={transcript} tabIndex={0} aria-label="Conversation">
         {!messages.length && <div className="ask-empty"><h3>Find something in your little day.</h3><p>Search your real books, events and notes. Try a name, a tag, or a date.</p><div className="ask-suggestions">{["Find my Oscar Piastri and Lando Norris fanfics", "Show my events tomorrow", "Find all related to Thermodynamics"].map(example => <button key={example} disabled={busy || !ready} type="button" onClick={() => { setQuery(example); input.current?.focus(); }}>{example}</button>)}</div></div>}
