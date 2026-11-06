@@ -6,9 +6,10 @@ import { SEMANTIC_MODEL, SEMANTIC_REVISION, MODEL_CACHE, VECTOR_DB, MIN_MEANING_
 
 type VectorRecord = { id: string; signature: string; vectors: number[][] };
 type Extractor = (texts: string[], options: { pooling: "mean"; normalize: boolean }) => Promise<{ tolist(): number[][] }>;
-type Request = { id: number; mode: "prepare" | "search"; query?: string; documents?: AskDocument[]; context?: AskContext; now?: string; pruneLibrary?: boolean };
+type Request = { id: number; mode: "prepare" | "search" | "passages"; query?: string; documents?: AskDocument[]; context?: AskContext; now?: string; pruneLibrary?: boolean };
 let extractor: Extractor | undefined;
 let database: IDBDatabase | undefined;
+let lastPassageQuery: { text: string; vector: number[] } | undefined;
 
 async function model(report: (text: string) => void) {
   if (extractor) return extractor;
@@ -81,8 +82,31 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     if (base.operation !== "search" || !base.context.filter) { self.postMessage({ id, answer: base }); return; }
     const filter = base.context.filter;
     const description = meaningQuery(query, filter, context);
-    const [queryVector] = (await embed([description], { pooling: "mean", normalize: true })).tolist();
+    const queryVector = mode === "passages" && lastPassageQuery?.text === description
+      ? lastPassageQuery.vector : (await embed([description], { pooling: "mean", normalize: true })).tolist()[0];
     const candidates = meaningCandidates(documents, filter, query, now);
+    if (mode === "passages") {
+      // Full EPUB passages are ephemeral: do not read/write/prune the library index.
+      // Query vectors and document vectors live only in this cancellable worker.
+      const queryText = meaningQuery(query, filter, context);
+      if (lastPassageQuery?.text !== queryText) lastPassageQuery = { text: queryText, vector: queryVector };
+      let best: { hit: AskHit; score: number } | undefined;
+      for (let start = 0; start < candidates.length; start += 6) {
+        report(`Understanding EPUB passages · ${Math.min(start + 6, candidates.length)} of ${candidates.length}`);
+        const batch = candidates.slice(start, start + 6);
+        const vectors = (await embed(batch.map(document => document.text.slice(0, 600)), { pooling: "mean", normalize: true })).tolist();
+        vectors.forEach((vector, index) => {
+          const score = cosine(lastPassageQuery!.vector, vector);
+          if (score >= MIN_MEANING_SCORE && (!best || score > best.score)) best = { score, hit: {
+            document: { ...batch[index], text: "" }, match: "semantic",
+            reasons: ["Similar meaning in this original EPUB passage. Verify the scene in the cited chapter; this is not a generated account of the story."],
+            excerpt: batch[index].text,
+          } };
+        });
+      }
+      self.postMessage({ id, passage: best?.hit, score: best?.score });
+      return;
+    }
     const index = await readIndex();
     // Only derived library vectors persist. Notes, journal and calendar stay in
     // worker memory, and are never written to this auxiliary index.

@@ -1,4 +1,4 @@
-import { normalize, searchDocuments, isMoreRequest, type AskAnswer, type AskContext, type AskDocument, type AskFilter, type AskHit } from "./core";
+import { normalize, isFilterFollowup, refersToPrevious, withoutReference, searchDocuments, isMoreRequest, type AskAnswer, type AskContext, type AskDocument, type AskFilter, type AskHit } from "./core";
 
 export const SEMANTIC_MODEL = "Xenova/paraphrase-multilingual-MiniLM-L12-v2";
 export const SEMANTIC_REVISION = "2c4055b12046f11709e9df2c122e59ffbdc2f900";
@@ -7,6 +7,7 @@ export const VECTOR_DB = "aerea-ask-meaning-v1";
 export const MIN_MEANING_SCORE = 0.25;
 
 export function semanticChunks(document: AskDocument): string[] {
+  if (document.kind === "EPUB passage") return [document.text.slice(0, 600)];
   // Short passages fit MiniLM's input window. Do not silently index only a title.
   const identity = [document.title, document.author, ...(document.relationships ?? []), ...(document.fandoms ?? [])].filter(Boolean).join(" · ");
   const tags = (document.tags ?? []).join(", ");
@@ -18,7 +19,9 @@ export function semanticChunks(document: AskDocument): string[] {
 }
 
 export function meaningQuery(request: string, filter: AskFilter, context: AskContext) {
-  const follow = isMoreRequest(request) || /\b(only|solo|solamente|filter|filtra)\b/.test(normalize(request));
+  request = context.pendingQuery ?? request;
+  if (refersToPrevious(request)) request = withoutReference(request);
+  const follow = isMoreRequest(request) || isFilterFollowup(request);
   if (isMoreRequest(request) && context.meaningQuery) return context.meaningQuery;
   if (follow && context.meaningQuery) {
     const additions = filter.terms.filter(term => !context.filter?.terms.includes(term));
@@ -58,6 +61,6 @@ export function combineMeaningResults(base: AskAnswer, exact: AskHit[], related:
   const hits = all.slice(offset, offset + 40);
   return { ...base, total: all.length, hits,
     text: all.length ? `${all.length} results. Exact matches come first; meaning matches are suggestions to check in the original source.` : "No reliable matches in the selected sources. Try describing another detail.",
-    context: { ...base.context, hits, meaningQuery: query },
+    context: { ...base.context, hits, selected: base.context.filter?.workId !== undefined || base.context.filter?.fileId || base.context.filter?.bookTitle ? base.context.selected : all.length === 1 ? all[0].document : undefined, meaningQuery: query },
   };
 }

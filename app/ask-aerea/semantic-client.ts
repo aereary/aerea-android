@@ -1,4 +1,4 @@
-import type { AskAnswer, AskContext, AskDocument } from "./core";
+import type { AskAnswer, AskContext, AskDocument, AskHit } from "./core";
 import { MODEL_CACHE, VECTOR_DB } from "./semantic-core";
 
 export class LocalMeaningSearch {
@@ -7,7 +7,7 @@ export class LocalMeaningSearch {
 
   dispose() { this.worker?.terminate(); this.worker = undefined; }
 
-  request(payload: { mode: "prepare" | "search"; query?: string; documents?: AskDocument[]; context?: AskContext; now?: string; pruneLibrary?: boolean }, signal: AbortSignal, progress: (text: string) => void): Promise<{ answer?: AskAnswer; ready?: boolean }> {
+  request(payload: { mode: "prepare" | "search" | "passages"; query?: string; documents?: AskDocument[]; context?: AskContext; now?: string; pruneLibrary?: boolean }, signal: AbortSignal, progress: (text: string) => void): Promise<{ answer?: AskAnswer; ready?: boolean; passage?: AskHit; score?: number }> {
     if (!this.worker) this.worker = new Worker(new URL("./semantic.worker.ts", import.meta.url), { type: "module" });
     const worker = this.worker, id = ++this.serial;
     return new Promise((resolve, reject) => {
