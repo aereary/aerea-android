@@ -24805,7 +24805,8 @@ body {
 .epub-panel-row strong,
 .epub-outline > button strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .epub-highlight-swatch { align-self:stretch; border-radius:7px; grid-row:1 / span 2; min-height:32px; }
-.epub-paper { overflow:auto; padding:40px max(24px,calc((100% - 760px)/2)); }
+/* Keep reading content in column 2 even when the contents sidebar is hidden. */
+.epub-paper { grid-column:2; min-width:0; overflow:auto; padding:40px max(24px,calc((100% - 760px)/2)); }
 .epub-paper > article { background:#fffefb; box-shadow:0 10px 38px rgba(42,47,41,.11); color:#323632; min-height:100%; padding:clamp(38px,7vw,86px); }
 .epub-paper article h1 { font-family:Georgia,"Times New Roman",serif; font-size:2em; font-weight:500; line-height:1.1; margin-bottom:1.5em; }
 .epub-paper article p { font-family:Georgia,"Times New Roman",serif; margin-bottom:1.15em; }
