@@ -10622,7 +10622,7 @@ export default function Home() {
                   notes={studyNotes}
                   files={[
                     ...studyFiles.filter(file => !file.sourceWorkId),
-                    ...libraryItems.map(libraryItemAsStudyFile),
+                    ...libraryItems.filter(item => !studyFiles.some(file => file.id === item.id && !!file.sourceWorkId)).map(libraryItemAsStudyFile),
                   ]}
                   recordings={recordings}
                   onNotesChange={(notes) => {

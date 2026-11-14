@@ -27,3 +27,5 @@ test('existing cards and CSS remain unchanged from approved baseline', () => {
 });
 
 test('Ask cannot bypass the private shelf with a cached catalog or conversation',()=>{const panel=readFileSync(new URL('../app/ask-aerea/ask-panel.tsx',import.meta.url),'utf8');assert.match(panel,/privateCatalogLocked\(\)/);assert.match(panel,/catalog.current = null; context.current = \{ hits: \[\] \}/);assert.match(panel,/enabled.includes\("library"\) && !privateLocked/);});
+
+test('four-digit PINs are accepted and shorter PINs are rejected',async()=>{const memory=new Map();globalThis.localStorage={getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};const {changePin,checkPin}=await load('private-shelf-pin.ts');await assert.rejects(changePin('','123'));await changePin('','0123');assert.equal(await checkPin('0123'),true);});
