@@ -1335,7 +1335,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     <>
     <section
       ref={libraryLayerRef}
-      className={`ao3-library-layer ${searchToolsHidden ? "ao3-search-tools-hidden" : ""}`}
+      className={`ao3-library-layer ao3-shelf-chrome ${searchToolsHidden ? "ao3-search-tools-hidden" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label="My AO3 Library"
@@ -1343,8 +1343,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     >
       <style>{AO3_LIBRARY_CSS}</style>
       <header className="ao3-screen-header">
-        <button type="button" onClick={onBack} aria-label="Back to Library">←</button>
-        <strong>Fiction shelf</strong>
+        <button className="shelf-heading-back" type="button" onClick={onBack} aria-label="Fiction shelf — back to Library"><strong>Fiction shelf</strong></button>
+        <button type="button" onClick={shelf.cycleTheme} aria-label="Change library theme">◐</button>
         <button type="button" onClick={shelf.settings} aria-label="Library settings">⚙</button>
       </header>
 
@@ -1364,25 +1364,13 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         <div className="ao3-library-intro">
           <div>
             
-            <p>
-              {works.length} fics · {entries.length} cards ·{" "}
-              {entries.filter((entry) => entry.kind === "series").length} series
-              grouped · {archivedCount} archived · {epubs.length} EPUBs
-              {alternativeCount ? ` · ${alternativeCount} alternates` : ""}
+            <p title={`${entries.length} cards · ${archivedCount} archived · ${epubs.length} EPUBs${alternativeCount ? ` · ${alternativeCount} alternates` : ""}`}>
+              {works.length} fics · {entries.filter((entry) => entry.kind === "series").length} series
             </p>
           </div>
-          <button
-            className="ao3-refresh"
-            type="button"
-            disabled={refreshing}
-            onClick={() => void refresh(true)}
-            aria-label="Refresh AO3 Library"
-          >
-            {refreshing ? "…" : "↻"}
-          </button>
         </div>
 
-        <nav className="ao3-extra-tools" aria-label="Library view"><button type="button" aria-pressed={!downloadedOnly} onClick={() => setDownloadedOnly(false)}>All fics</button><button type="button" aria-pressed={downloadedOnly} onClick={() => setDownloadedOnly(true)}>Downloaded · {shelf.files.length}</button></nav>
+        <nav className="ao3-extra-tools" aria-label="Library view"><button type="button" aria-pressed={!downloadedOnly} onClick={() => setDownloadedOnly(false)}>All fics</button><button type="button" aria-pressed={downloadedOnly} onClick={() => setDownloadedOnly(true)}>Downloaded</button></nav>
         <Ao3SearchInput
           value={query}
           onValueChange={(nextQuery) => {
@@ -1447,6 +1435,15 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
               ? `${entries.length} cards`
               : `${filtered.length} of ${entries.length} cards`}
           </span>
+          <button
+            className="ao3-refresh"
+            type="button"
+            disabled={refreshing}
+            onClick={() => void refresh(true)}
+            aria-label="Refresh AO3 Library"
+          >
+            {refreshing ? "…" : "↻"}
+          </button>
         </p>
 
         {error && (
@@ -1568,6 +1565,30 @@ const AO3_LIBRARY_CSS = String.raw`
 .ao3-extra-tools button[aria-pressed="true"]{border-color:var(--ao3-plum);font-weight:700}
 .ao3-download-list{display:grid;gap:8px;margin:12px 0}
 .ao3-screen-header{display:flex;justify-content:space-between}
+
+/* The approved shelf toolbar owns its geometry, including in Android themes. */
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome { --shelf-page:var(--one-page,#f7f4f8); --shelf-control:var(--one-soft,#fffdfc); --shelf-ink:var(--one-ink,#42364d); --shelf-muted:var(--one-muted,#746a79); --shelf-accent:var(--one-accent,#6c597a); --shelf-line:var(--one-line,#ded4e2); background:var(--shelf-page)!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-screen-header { padding:28px 18px 10px!important; gap:8px; background:var(--shelf-page)!important; color:var(--shelf-ink)!important; backdrop-filter:none; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-screen-header button { flex:0 0 44px; width:44px!important; height:44px!important; min-height:44px!important; padding:0!important; border:1px solid var(--shelf-line)!important; border-radius:50%!important; background:var(--one-panel,var(--shelf-control))!important; color:var(--shelf-ink)!important; box-shadow:none!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-screen-header .shelf-heading-back { flex:1 1 auto; width:auto!important; text-align:left; border:0!important; border-radius:0!important; background:transparent!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .shelf-heading-back strong { font-size:23px; font-weight:700; line-height:1.2; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-library { padding-left:18px; padding-right:18px; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-library-tools { padding:0 0 18px!important; margin-bottom:0; background:var(--shelf-page)!important; backdrop-filter:none!important; box-shadow:none!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-library-intro { padding:0!important; margin:0 0 16px; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-library-intro p { margin:4px 0 0; font-size:14px; line-height:1.5; color:var(--shelf-muted)!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-extra-tools[aria-label="Library view"] { gap:12px; margin:0 0 14px; flex-wrap:nowrap; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-extra-tools[aria-label="Library view"] button { min-height:42px!important; padding:8px 8px 12px!important; border:0!important; border-bottom:2px solid transparent!important; border-radius:0!important; background:transparent!important; color:var(--shelf-ink)!important; box-shadow:none!important; font-size:16px; font-weight:400; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-extra-tools[aria-label="Library view"] button[aria-pressed="true"] { border-bottom-color:var(--shelf-accent)!important; color:var(--shelf-accent)!important; font-weight:700; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-search, html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-filter-row select { border:1px solid transparent!important; border-radius:11px!important; background:var(--shelf-control)!important; color:var(--shelf-ink)!important; font-size:16px; box-shadow:none!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-search { min-height:56px!important; padding:0 15px!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-filter-row { background:transparent!important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-filter-row select { min-height:52px!important; padding:0 18px!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-filter-row select:last-child { grid-column:1 / -1; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-result-count { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:28px; margin:18px 0 0; color:var(--shelf-muted)!important; font-size:16px; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome .ao3-result-count .ao3-refresh { width:28px!important; height:28px!important; min-height:28px!important; padding:0!important; border:0!important; border-radius:50%!important; background:transparent!important; color:var(--shelf-muted)!important; box-shadow:none!important; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme] .ao3-library-layer.ao3-shelf-chrome :is(.ao3-search,.ao3-filter-row select,button):focus-visible { outline:2px solid var(--shelf-accent)!important; outline-offset:3px; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme="Midnight Rose"] .ao3-library-layer.ao3-shelf-chrome { --shelf-page:#1a171e; --shelf-control:#29242d; --shelf-ink:#e7e1e8; --shelf-muted:#bab1bf; --shelf-accent:#e1a7bf; --shelf-line:#504752; }
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-shelf-theme="Sea Glass"] .ao3-library-layer.ao3-shelf-chrome { --shelf-page:#162322; --shelf-control:#22312e; --shelf-ink:#e7e1e8; --shelf-muted:#abc0bc; --shelf-accent:#9dcac0; --shelf-line:#405651; }
 
 .ao3-back-to-top,
 .app-shell[data-theme][data-color-mode][data-native-theme] .ao3-back-to-top {
