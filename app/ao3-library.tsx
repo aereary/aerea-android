@@ -527,6 +527,8 @@ function WorkActions({
   versions: EpubVersion[];
   onDownload: (target: Ao3EpubDownloadTarget) => void;
 }) {
+  const shelf = usePrivateShelf();
+  const stored = shelf.files.find(file => file.sourceWorkId === work.work_id);
   const ordered = [...versions].sort(
     (a, b) => Number(b.is_primary) - Number(a.is_primary),
   );
@@ -549,7 +551,7 @@ function WorkActions({
         {primary && (
           <button
             type="button"
-            onClick={() =>
+            onClick={() => stored ? shelf.openFile(stored) :
               onDownload({
                 title: work.title,
                 driveFileId: primary.drive_file_id,
@@ -558,7 +560,7 @@ function WorkActions({
               })
             }
           >
-            ↓ Download EPUB
+            {stored ? "Read EPUB" : "↓ Download EPUB"}
           </button>
         )}
       </div>
@@ -1199,7 +1201,9 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     return map;
   }, [epubs]);
 
-  const entries = useMemo(() => buildEntries(works), [works]);
+  const entries = useMemo<LibraryEntry[]>(() => downloadedOnly
+    ? works.filter(work => downloadedIds.has(work.work_id)).map(work => ({kind: "fic", work, updatedOn: work.updated_on}))
+    : buildEntries(works), [works,downloadedOnly,downloadedIds]);
 
   const entrySearchIndex = useMemo(() => {
     const index = new Map<LibraryEntry, string>();
@@ -1339,9 +1343,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     >
       <style>{AO3_LIBRARY_CSS}</style>
       <header className="ao3-screen-header">
-        <button type="button" onClick={onBack} >
-          ← Library
-        </button>
+        <button type="button" onClick={onBack} aria-label="Back to Library">←</button>
+        <strong>Fiction shelf</strong>
         <button type="button" onClick={shelf.settings} aria-label="Library settings">⚙</button>
       </header>
 
@@ -1360,7 +1363,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       }}>
         <div className="ao3-library-intro">
           <div>
-            <h2>My AO3 Library</h2>
+            
             <p>
               {works.length} fics · {entries.length} cards ·{" "}
               {entries.filter((entry) => entry.kind === "series").length} series
@@ -1455,7 +1458,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         )}
       </div>
 
-      {downloadedOnly && <div className="ao3-download-list">{shelf.files.filter(file => works.some(work => work.work_id === file.sourceWorkId && matchesAllTags(work.tags || [],selectedTags) && workSearchText(work).includes(normalized(query.trim())) && filtered.some(entry => entry.kind === "fic" ? entry.work.work_id === work.work_id : entry.works.some(part => part.work_id === work.work_id)))).map(file => <button type="button" key={file.id} onClick={() => shelf.openFile(file)}>Read · {file.name}</button>)}</div>}
+
       <div className="ao3-grid">
         {filtered.map((entry) =>
           entry.kind === "fic" ? (
@@ -1557,6 +1560,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 }
 
 const AO3_LIBRARY_CSS = String.raw`
+.ao3-screen-header{gap:8px;align-items:center}.ao3-screen-header strong{flex:1;font-size:22px}.ao3-library-layer .ao3-screen-header button{width:42px;height:42px;border-radius:50%;padding:0}.ao3-extra-tools[aria-label="Library view"] button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent}.ao3-extra-tools[aria-label="Library view"] button[aria-pressed="true"]{border-bottom-color:var(--ao3-plum)}
+
 .ao3-extra-tools {display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ao3-extra-tools:empty{display:none}
 .ao3-extra-tools button,.ao3-download-list button{font:inherit;padding:8px 12px;border:1px solid var(--ao3-border,#8885);border-radius:12px;color:var(--ao3-ink);background:var(--ao3-cream)}
