@@ -48,9 +48,10 @@ public class AereaStoragePlugin extends Plugin {
         database = new AereaDatabase(getContext());
     }
 
-    private JSObject studyFileJson(String id, String name, long size, long createdAt, long updatedAt) {
+    private JSObject studyFileJson(String id, String name, long size, long createdAt, long updatedAt, int sourceWorkId) {
         JSObject file = new JSObject();
         file.put("id", id);
+        file.put("sourceWorkId", sourceWorkId);
         file.put("name", name);
         file.put("mediaType", "application/epub+zip");
         file.put("kind", "epub");
@@ -385,7 +386,7 @@ public class AereaStoragePlugin extends Plugin {
         JSArray files = new JSArray();
         try (Cursor cursor = database.getReadableDatabase().query(
                 "study_files",
-                new String[]{"id", "name", "media_type", "kind", "path", "size", "created_at", "updated_at"},
+                new String[]{"id", "name", "media_type", "kind", "path", "size", "created_at", "updated_at", "source_work_id"},
                 null, null, null, null, "updated_at DESC")) {
             while (cursor.moveToNext()) {
                 File stored = new File(cursor.getString(4));
@@ -398,6 +399,7 @@ public class AereaStoragePlugin extends Plugin {
                 file.put("size", cursor.getLong(5));
                 file.put("createdAt", Instant.ofEpochMilli(cursor.getLong(6)).toString());
                 file.put("updatedAt", Instant.ofEpochMilli(cursor.getLong(7)).toString());
+                if (!cursor.isNull(8)) file.put("sourceWorkId", cursor.getInt(8));
                 files.put(file);
             }
             JSObject result = new JSObject();
@@ -525,7 +527,7 @@ public class AereaStoragePlugin extends Plugin {
             if (driveFileId.equals(existingDriveFileId) && existingFile != null && existingFile.isFile()) {
                 JSObject result = new JSObject();
                 result.put("file", studyFileJson(
-                        existingId, existingName, existingSize, existingCreatedAt, existingUpdatedAt));
+                        existingId, existingName, existingSize, existingCreatedAt, existingUpdatedAt, workId));
                 result.put("alreadyStored", true);
                 result.put("replaced", false);
                 call.resolve(result);
@@ -621,7 +623,7 @@ public class AereaStoragePlugin extends Plugin {
                 previous.delete();
 
                 JSObject result = new JSObject();
-                result.put("file", studyFileJson(id, fileName, size, createdAt, now));
+                result.put("file", studyFileJson(id, fileName, size, createdAt, now, workId));
                 result.put("alreadyStored", false);
                 result.put("replaced", existingId != null);
                 call.resolve(result);

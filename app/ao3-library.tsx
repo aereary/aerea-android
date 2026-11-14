@@ -1,6 +1,8 @@
 "use client";
 
 
+import { matchesAllTags, suggestTags, normalizeTag } from "./ao3-search";
+import { usePrivateShelf } from "./private-shelf";
 import { SheetPresence } from "./components/sheet-presence";
 import {
   useCallback,
@@ -1047,7 +1049,14 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const activeTag = selectedTags.at(-1) || null;
+  const shelf = usePrivateShelf();
+  const {setFiltered} = shelf;
+  const [downloadedOnly,setDownloadedOnly] = useState(false);
+  const downloadedIds = useMemo(() => new Set(shelf.files.map(file => file.sourceWorkId)), [shelf.files]);
+  const suggestions = useMemo(() => suggestTags(works.filter(work => !downloadedOnly || downloadedIds.has(work.work_id)), query, selectedTags), [works,query,selectedTags,downloadedOnly,downloadedIds]);
+  useEffect(() => {setFiltered(downloadedOnly || selectedTags.length > 0)}, [downloadedOnly,selectedTags,setFiltered]);
   const [searchToolsHidden, setSearchToolsHidden] = useState(false);
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "complete" | "wip">(
@@ -1242,19 +1251,14 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         return false;
       }
 
-      if (activeTag) {
-        const tagNeedle = normalized(activeTag);
-        const entryWorks = entry.kind === "series" ? entry.works : [entry.work];
-        return entryWorks.some((work) =>
-          (work.tags || []).some((tag) => normalized(tag) === tagNeedle),
-        );
-      }
+      const entryWorks = entry.kind === "series" ? entry.works : [entry.work];
+      if (!entryWorks.some(work => (!downloadedOnly || downloadedIds.has(work.work_id)) && matchesAllTags(work.tags || [], selectedTags))) return false;
 
       if (!needle) return true;
       return (entrySearchIndex.get(entry) || "").includes(needle);
     });
   }, [
-    activeTag,
+    selectedTags, downloadedOnly, downloadedIds,
     entries,
     entrySearchIndex,
     fandomFilter,
@@ -1291,11 +1295,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   );
 
   const searchByTag = useCallback((tag: string) => {
-    setQuery(tag);
-    setActiveTag(tag);
-    setTypeFilter("all");
-    setStatusFilter("all");
-    setFandomFilter("all");
+    setQuery("");
+    setSelectedTags(current => current.some(value => normalizeTag(value) === normalizeTag(tag)) ? current : [...current,tag]);
     window.requestAnimationFrame(() => {
       libraryLayerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     });
@@ -1310,10 +1311,10 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       setDownloadTarget(null);
       setToast(
         result.alreadyStored
-          ? "This EPUB is already in Your Library ♡"
+          ? "This EPUB is already in Downloaded ♡"
           : result.replaced
-            ? "EPUB updated in Your Library ♡"
-            : "EPUB saved to Your Library ♡",
+            ? "EPUB updated in Downloaded ♡"
+            : "EPUB saved to Downloaded ♡",
       );
     } catch (reason) {
       setDownloadError(
@@ -1341,6 +1342,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         <button type="button" onClick={onBack} >
           ← Library
         </button>
+        <button type="button" onClick={shelf.settings} aria-label="Library settings">⚙</button>
       </header>
 
       {loading && works.length === 0 ? (
@@ -1377,22 +1379,25 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           </button>
         </div>
 
+        <nav className="ao3-extra-tools" aria-label="Library view"><button type="button" aria-pressed={!downloadedOnly} onClick={() => setDownloadedOnly(false)}>All fics</button><button type="button" aria-pressed={downloadedOnly} onClick={() => setDownloadedOnly(true)}>Downloaded · {shelf.files.length}</button></nav>
         <Ao3SearchInput
           value={query}
           onValueChange={(nextQuery) => {
-            setActiveTag(null);
+
             setQuery(nextQuery);
           }}
           onFocus={() => setSearchToolsHidden(false)}
         />
 
+        <div className="ao3-extra-tools" aria-label="Selected tags">{selectedTags.map(tag => <button type="button" key={tag} onClick={() => setSelectedTags(tags => tags.filter(value => value !== tag))} aria-label={`Remove tag ${tag}`}>{tag} ×</button>)}</div>
+        {suggestions.length > 0 && <div className="ao3-extra-tools" aria-label="Suggested tags">{suggestions.map(({tag,count}) => <button type="button" key={tag} onClick={() => searchByTag(tag)}>{tag} · {count}</button>)}</div>}
         <div className="ao3-filter-row">
           <select
             value={typeFilter}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => {
               const nextFilter = event.target.value as LibraryTypeFilter;
               setTypeFilter(nextFilter);
-              setActiveTag(null);
+
               if (nextFilter === "book") {
                 setStatusFilter("all");
                 setFandomFilter("all");
@@ -1450,6 +1455,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
         )}
       </div>
 
+      {downloadedOnly && <div className="ao3-download-list">{shelf.files.filter(file => works.some(work => work.work_id === file.sourceWorkId && matchesAllTags(work.tags || [],selectedTags) && workSearchText(work).includes(normalized(query.trim())) && filtered.some(entry => entry.kind === "fic" ? entry.work.work_id === work.work_id : entry.works.some(part => part.work_id === work.work_id)))).map(file => <button type="button" key={file.id} onClick={() => shelf.openFile(file)}>Read · {file.name}</button>)}</div>}
       <div className="ao3-grid">
         {filtered.map((entry) =>
           entry.kind === "fic" ? (
@@ -1551,6 +1557,13 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 }
 
 const AO3_LIBRARY_CSS = String.raw`
+.ao3-extra-tools {display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.ao3-extra-tools:empty{display:none}
+.ao3-extra-tools button,.ao3-download-list button{font:inherit;padding:8px 12px;border:1px solid var(--ao3-border,#8885);border-radius:12px;color:var(--ao3-ink);background:var(--ao3-cream)}
+.ao3-extra-tools button[aria-pressed="true"]{border-color:var(--ao3-plum);font-weight:700}
+.ao3-download-list{display:grid;gap:8px;margin:12px 0}
+.ao3-screen-header{display:flex;justify-content:space-between}
+
 .ao3-back-to-top,
 .app-shell[data-theme][data-color-mode][data-native-theme] .ao3-back-to-top {
   position: fixed; right: max(16px,calc((100vw - 1180px)/2 + 16px));
