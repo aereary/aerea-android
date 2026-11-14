@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState, useRef, type ReactNode 
 import type { StudyFileItem } from './study-library';
 import { useBackLayer } from './use-back-layer';
 import { readPin, checkPin, changePin } from './private-shelf-pin';
-const ShelfContext = createContext({ files: [] as StudyFileItem[], openFile: (_file: StudyFileItem) => { }, settings: () => { }, setFiltered: (_value: boolean) => { }, filtered: false });
+const ShelfContext = createContext({ files: [] as StudyFileItem[], openFile: (_file: StudyFileItem) => { }, settings: () => { }, cycleTheme: () => { }, setFiltered: (_value: boolean) => { }, filtered: false });
 export const usePrivateShelf = () => useContext(ShelfContext);
 export function PrivateShelf({ children, files, openFile, onBack, onLock, onUnlock, onPinChange }: {
     children: ReactNode;
@@ -88,7 +88,12 @@ export function PrivateShelf({ children, files, openFile, onBack, onLock, onUnlo
 .private-shelf[data-shelf-theme] .ao3-card,.private-shelf[data-shelf-theme] .ao3-card-header,.private-shelf[data-shelf-theme] .ao3-card-meta,.private-shelf[data-shelf-theme] .ao3-series-parts,.private-shelf[data-shelf-theme] .ao3-part{background:${theme === 'Sea Glass' ? '#22312e' : '#28222c'}!important;color:#e7e1e8!important}
 .private-shelf[data-shelf-theme] .ao3-copy-title{color:${theme === 'Sea Glass' ? '#9dcac0' : '#e1a7bf'}!important}
 `}</style>}
-    {ready && !locked && <ShelfContext.Provider value={{ files, openFile, settings: () => { setMessage(''); setSettings(true); }, filtered, setFiltered }}><div inert={settings || undefined}>{children}</div></ShelfContext.Provider>}
+    {ready && !locked && <ShelfContext.Provider value={{ files, openFile, settings: () => { setMessage(''); setSettings(true); }, cycleTheme: () => {
+        const themes = ['App theme', 'Midnight Rose', 'Sea Glass'];
+        const nextTheme = themes[(themes.indexOf(theme) + 1) % themes.length];
+        try { localStorage.setItem('aerea-private-shelf-theme', nextTheme); setTheme(nextTheme); }
+        catch { setMessage('Could not save theme.'); setSettings(true); }
+    }, filtered, setFiltered }}><div inert={settings || undefined}>{children}</div></ShelfContext.Provider>}
     {(!ready || locked) && <div className="shelf-gate" role="dialog" aria-modal="true" aria-label="Unlock private library"><form className="shelf-panel" onSubmit={e => { e.preventDefault(); void unlock(); }}><button type="button" onClick={onBack}>← Library</button><h2>Private library</h2><label>PIN<input type="password" inputMode="numeric" autoComplete="off" value={pin} onChange={e => setPin(e.target.value)}/></label><p role="status">{message}</p><button disabled={!ready || busy}>{busy ? 'Unlocking…' : 'Unlock'}</button></form></div>}
     {settings && !locked && <div className="shelf-gate" role="dialog" aria-modal="true" aria-label="Library settings"><form className="shelf-panel" onSubmit={e => { e.preventDefault(); void update(); }}><h2>Library settings</h2><label>Theme<select value={theme} onChange={e => { try {
         localStorage.setItem('aerea-private-shelf-theme', e.target.value);
