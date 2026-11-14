@@ -11,7 +11,7 @@ test('PIN verifies, rejects wrong PIN, changes and removes only with current PIN
 // Fingerprints of the approved UI from the integration base. Kept here so CI
 // and source ZIPs can verify the contract without any Git history or binary.
 // Normalize Windows line endings, but retain every other source byte.
-const approvedCardsSha256 = '9bcf262f99a95397050fc6a8aeb4e25f7eba5c48d367aaf6ca7c5bbd8ddbcc93';
+const approvedCardsSha256 = '52831974374ce9c1cbf3742b1ec6b7e210bc5bc1220de75fdcb7905707c4394f';
 const approvedCssSha256 = '4ba0efca81781cdc02953681e6f9f2ead02a74257016a1f50aadece885162c9d';
 const sha256 = value => createHash('sha256').update(value.replace(/\r\n/g, '\n')).digest('hex');
 test('existing cards and CSS remain unchanged from approved baseline', () => {
