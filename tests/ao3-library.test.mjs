@@ -155,9 +155,9 @@ test("highlights AO3 searches and turns every tag into an exact search", () => {
   assert.match(ao3Source, /function HighlightText/);
   assert.match(ao3Source, /<mark className="ao3-highlight"/);
   assert.match(ao3Source, /const searchByTag = useCallback/);
-  assert.match(ao3Source, /setQuery\(tag\)/);
-  assert.match(ao3Source, /setActiveTag\(tag\)/);
-  assert.match(ao3Source, /normalized\(tag\) === tagNeedle/);
+  assert.match(ao3Source, /setSelectedTags\(current/);
+  assert.match(ao3Source, /matchesAllTags\(work.tags \|\| \[\], selectedTags\)/);
+  assert.match(ao3Source, /normalizeTag\(value\) === normalizeTag\(tag\)/);
   assert.match(ao3Source, /onClick=\{\(\) => onTagSearch\(tag\)\}/);
   assert.match(ao3Source, /className={`ao3-tag \$\{selected \? "is-searching" : ""\}`}/);
   assert.match(ao3Source, /\.ao3-highlight[\s\S]*background: #fff0a8/);

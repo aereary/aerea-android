@@ -1,5 +1,6 @@
 "use client";
 
+import { PrivateShelf, ShelfCatalogExtras } from "./private-shelf";
 import { paperInk, paperOpacity, restoreUnique } from "./minor-updates";
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
 import { CalendarMonthGrid } from "./components/calendar-month-grid";
@@ -2506,6 +2507,7 @@ export default function Home() {
   const [space, setSpace] = useState<Space>("menu");
   const [aereaHubOpen, setAereaHubOpen] = useState(false);
   const [ao3LibraryOpen, setAo3LibraryOpen] = useState(false);
+  const [privateShelfUnlocked,setPrivateShelfUnlocked] = useState(false);
   const [ao3LibraryLaunching, setAo3LibraryLaunching] = useState(false);
   const ao3LaunchFrameRef = useRef<number | null>(null);
   const [reminderHistory, setReminderHistory] = useState<
@@ -2911,6 +2913,7 @@ export default function Home() {
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [calendarMemos, setCalendarMemos] = useState<CalendarMemo[]>([]);
   const [studyFiles, setStudyFiles] = useState<StudyFileItem[]>([]);
+  const [localAo3Ids,setLocalAo3Ids] = useState<Set<string>>(() => new Set());
   const cloudFileUploadsRef = useRef(new Set<string>());
   const [cloudFileRetry, setCloudFileRetry] = useState(0);
   const [pdfAnnotations, setPdfAnnotations] = useState<Record<string, PdfInkStroke[]>>({});
@@ -3990,6 +3993,7 @@ export default function Home() {
           const availableFiles = payload.files.filter(
             (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
           );
+          setLocalAo3Ids(new Set(availableFiles.filter(file => !!file.sourceWorkId).map(file => file.id)));
           setStudyFiles((current) =>
             mergeStudyFileInventory(
               current,
@@ -6068,6 +6072,7 @@ export default function Home() {
       cancelAo3LibraryLaunch();
       setAo3LibraryLaunching(false);
       setAo3LibraryOpen(false);
+      setPrivateShelfUnlocked(false);
     };
     window.addEventListener("popstate", closeAo3FromHistory);
     return () => {
@@ -6084,6 +6089,7 @@ export default function Home() {
     cancelAo3LibraryLaunch();
     setAo3LibraryLaunching(false);
     setAo3LibraryOpen(false);
+    setPrivateShelfUnlocked(false);
   }, [cancelAo3LibraryLaunch]);
 
   const saveAo3Epub = async (target: Ao3EpubDownloadTarget) => {
@@ -6095,6 +6101,7 @@ export default function Home() {
       workId: target.workId,
       fileName: target.fileName || `${target.title}.epub`,
     });
+    setLocalAo3Ids(current => new Set([...current,result.file.id]));
     setStudyFiles((current) => {
       const existing = current.find((file) => file.id === result.file.id);
       const saved = {
@@ -9438,7 +9445,7 @@ export default function Home() {
     }
     if (sources.includes("journal")) result.push(...entries.map(entry => ({ id: `journal:${entry.id}`, source: "journal" as const, kind: "Journal entry", title: `Journal · ${entry.date}`, text: entry.text, reference: `Quick journal · ${entry.date}` })));
     if (sources.includes("recordings")) result.push(...recordings.map(recording => ({ id: `recording:${recording.id}`, source: "recordings" as const, kind: "Recording", title: recording.name, text: `${recording.className} · ${recording.notes}`, reference: `${recording.className} · ${recording.duration}` })));
-    if (sources.includes("library")) result.push(...studyFiles.map(file => ({ id: `file:${file.id}`, source: "library" as const, kind: file.kind === "epub" ? "Downloaded EPUB" : "Private file", title: file.name, text: file.name, reference: "Your Library · filename only", fileId: file.id })));
+    if (sources.includes("library")) result.push(...studyFiles.filter(file => !file.sourceWorkId).map(file => ({ id: `file:${file.id}`, source: "library" as const, kind: file.kind === "epub" ? "Downloaded EPUB" : "Private file", title: file.name, text: file.name, reference: "Your Library · filename only", fileId: file.id })));
     return result;
   };
   const askReadEpubFile = async (id: string, signal: AbortSignal) => {
@@ -10614,7 +10621,7 @@ export default function Home() {
                 <StudyLibrary
                   notes={studyNotes}
                   files={[
-                    ...studyFiles,
+                    ...studyFiles.filter(file => !file.sourceWorkId),
                     ...libraryItems.map(libraryItemAsStudyFile),
                   ]}
                   recordings={recordings}
@@ -11946,7 +11953,7 @@ export default function Home() {
       {askMounted && <Suspense fallback={askOpen ? <div className="ask-loading" role="status">Opening Ask aérea… <button onClick={() => setAskOpen(false)}>Close</button></div> : null}>
         <AskPanel open={askOpen} ready={stateReady} onClose={() => setAskOpen(false)}
           onCapture={() => setQuickCaptureOpen(true)} snapshot={askSnapshot}
-          epubFiles={studyFiles.filter(file => file.kind === "epub")}
+          epubFiles={studyFiles.filter(file => file.kind === "epub" && !file.sourceWorkId)}
           readEpubFile={askReadEpubFile} onOpen={askOpenResult} onEventDraft={askReviewEvent} />
       </Suspense>}
 
@@ -11957,14 +11964,14 @@ export default function Home() {
       )}
 
       {ao3LibraryOpen && (
-        <>
+        <PrivateShelf files={studyFiles.filter(file => !!file.sourceWorkId && localAo3Ids.has(file.id))} openFile={file => void openStudyFile(file)} onBack={closeAo3Library} onPinChange={() => {setAskOpen(false);setAskMounted(false)}} onUnlock={() => setPrivateShelfUnlocked(true)} onLock={() => {setPrivateShelfUnlocked(false);setActiveStudyFile(null);setActiveEpubBook(null)}}>
           <Suspense fallback={null}>
             <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
           </Suspense>
-          <Suspense fallback={null}>
+          <ShelfCatalogExtras><Suspense fallback={null}>
             <GenericLibraryBridge />
-          </Suspense>
-        </>
+          </Suspense></ShelfCatalogExtras>
+        </PrivateShelf>
       )}
 
       <SheetPresence>{aereaHubOpen && (
@@ -12509,7 +12516,7 @@ export default function Home() {
         </Suspense>
       )}
 
-      {activeStudyFile?.kind === "epub" && activeEpubBook && (
+      {activeStudyFile?.kind === "epub" && activeEpubBook && (!activeStudyFile.sourceWorkId || privateShelfUnlocked) && (
         <Suspense fallback={null}>
         <EpubStudyReader
           fileName={activeStudyFile.name}

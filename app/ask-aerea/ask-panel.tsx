@@ -2,6 +2,7 @@
 import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { SheetPresence } from "../components/sheet-presence";
 import { useBackLayer } from "../use-back-layer";
+import { privateCatalogLocked } from "../private-shelf-pin";
 import { readLibraryCatalog } from "./library-connector";
 import { answerQuery, dateKey, shiftDay, mergeEpubHit, sceneRecall, isMoreRequest, type AskAnswer, type AskContext, type AskDocument, type AskEventDraft, type AskHit, type AskSource } from "./core";
 import { chapterDocuments, eligibleEpubFile, epubPassageBatches } from "./epub-passages";
@@ -166,6 +167,8 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
     setBusy(true); setError(""); setQuery(""); setProgress("Searching your selected sources…");
     const statuses: string[] = [], signal = operation.signal;
     try {
+      const privateLocked = privateCatalogLocked();
+      if (privateLocked) { catalog.current = null; context.current = { hits: [] }; statuses.push("Private library search is disabled while a library PIN is configured. Other sources remain available."); }
       const searchContext = refresh && isMoreRequest(request)
         ? { ...context.current, offset: Math.max(0, (context.current.offset ?? 0) - context.current.hits.length) }
         : context.current;
@@ -177,8 +180,8 @@ function AskConversation({ open, ready, onClose, onCapture, snapshot, epubFiles,
         return;
       }
       const today = dateKey();
-      const documents = snapshot(shiftDay(today, -1), shiftDay(today, 90), enabled);
-      if (enabled.includes("library")) {
+      const documents = snapshot(shiftDay(today, -1), shiftDay(today, 90), privateLocked ? enabled.filter(source => source !== "library") : enabled);
+      if (enabled.includes("library") && !privateLocked) {
         try {
           if (!catalog.current || refresh) {
             const result = await readLibraryCatalog(signal, refresh);

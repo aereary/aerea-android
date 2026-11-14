@@ -76,6 +76,7 @@ export type CalendarMemo = {
 };
 
 export type StudyFileItem = {
+  sourceWorkId?: number;
   id: string;
   name: string;
   mediaType: string;
