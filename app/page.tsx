@@ -134,11 +134,6 @@ const loadAo3LibraryModule = () => import("./ao3-library");
 const Ao3Library = lazy(() =>
   loadAo3LibraryModule().then((module) => ({ default: module.Ao3Library })),
 );
-const Ao3LibraryOpening = lazy(() =>
-  loadAo3LibraryModule().then((module) => ({
-    default: module.Ao3LibraryOpening,
-  })),
-);
 const GenericLibraryBridge = lazy(() => import("./generic-library-bridge"));
 const AppIconPicker = lazy(() => import("./app-icon-picker"));
 function AskLoadFailure({ open, onClose, onCapture }: { open: boolean; onClose: () => void; onCapture: () => void }) {
@@ -6130,18 +6125,7 @@ export default function Home() {
         { ...window.history.state, [AO3_HISTORY_MARKER]: true },
         "",
       );
-      setAo3LibraryLaunching(true);
-
-      // Let the lightweight AO3 screen paint before cached books are parsed,
-      // grouped and rendered. Two frames guarantee one complete paint between
-      // the tap and the expensive Library mount on Android WebView.
-      ao3LaunchFrameRef.current = window.requestAnimationFrame(() => {
-        ao3LaunchFrameRef.current = window.requestAnimationFrame(() => {
-          ao3LaunchFrameRef.current = null;
-          setAo3LibraryOpen(true);
-          setAo3LibraryLaunching(false);
-        });
-      });
+      setAo3LibraryOpen(true);
     }
   }, [ao3LibraryLaunching, ao3LibraryOpen, brandOpensAo3]);
 
@@ -11956,12 +11940,6 @@ export default function Home() {
           epubFiles={studyFiles.filter(file => file.kind === "epub" && !file.sourceWorkId)}
           readEpubFile={askReadEpubFile} onOpen={askOpenResult} onEventDraft={askReviewEvent} />
       </Suspense>}
-
-      {ao3LibraryLaunching && !ao3LibraryOpen && (
-        <Suspense fallback={null}>
-          <Ao3LibraryOpening onBack={closeAo3Library} />
-        </Suspense>
-      )}
 
       {ao3LibraryOpen && (
         <PrivateShelf files={studyFiles.filter(file => !!file.sourceWorkId && localAo3Ids.has(file.id))} openFile={file => void openStudyFile(file)} onBack={closeAo3Library} onPinChange={() => {setAskOpen(false);setAskMounted(false)}} onUnlock={() => setPrivateShelfUnlocked(true)} onLock={() => {setPrivateShelfUnlocked(false);setActiveStudyFile(null);setActiveEpubBook(null)}}>

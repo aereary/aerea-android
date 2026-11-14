@@ -38,19 +38,11 @@ test("opens AO3 only from the brand while the current screen is Spaces Library",
   assert.match(ao3Source, />\s*← Library\s*<\/button>/);
 });
 
-test("paints a lightweight AO3 screen before mounting the cached book grid", () => {
-  assert.match(pageSource, /setAo3LibraryLaunching\(true\)/);
-  assert.match(
-    pageSource,
-    /requestAnimationFrame\(\(\) => \{[\s\S]{0,180}requestAnimationFrame\(\(\) => \{[\s\S]{0,220}setAo3LibraryOpen\(true\)/,
-  );
-  assert.match(
-    pageSource,
-    /ao3LibraryLaunching && !ao3LibraryOpen && \([\s\S]{0,100}<Ao3LibraryOpening/,
-  );
-  assert.match(ao3Source, /export function Ao3LibraryOpening/);
-  assert.match(ao3Source, /aria-busy="true"/);
-  assert.match(ao3Source, /Your saved shelf is opening\./);
+test("opens the saved shelf without an intermediate loading screen", () => {
+  const opening = pageSource.slice(pageSource.indexOf("const openAereaFromBrand"), pageSource.indexOf("}, [ao3LibraryLaunching", pageSource.indexOf("const openAereaFromBrand")));
+  assert.match(opening, /setAo3LibraryOpen\(true\)/);
+  assert.doesNotMatch(opening, /requestAnimationFrame|setAo3LibraryLaunching\(true\)/);
+  assert.doesNotMatch(pageSource, /<Ao3LibraryOpening/);
 });
 
 test("keeps the normal Library mounted and does not add AO3 as a Spaces card", () => {
