@@ -37,8 +37,8 @@ export async function changePin(current: string, next: string) {
         localStorage.removeItem(KEY);
         return;
     }
-    if (!/^\d{8,}$/.test(next))
-        throw new Error('Use at least 8 digits.');
+    if (!/^\d{4,}$/.test(next))
+        throw new Error('Use at least 4 digits.');
     const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)));
     const hash = await digest(next, salt);
     localStorage.setItem(KEY, JSON.stringify({ salt, hash, failures: 0, retryAt: 0 }));
