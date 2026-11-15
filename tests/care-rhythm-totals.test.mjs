@@ -1,0 +1,3 @@
+import test from'node:test';import assert from'node:assert/strict';import{careTotals}from'../app/care-rhythm-totals.ts';
+test('only scheduled occurrences count and rest days do not reduce progress',()=>{const r={id:'one',name:'Care',record:day=>({a:true,b:null,c:false}[day]??null)};assert.deepEqual(careTotals([r],['a','b','c']),{done:1,total:2,percent:50});assert.deepEqual(careTotals([r],['b']),{done:0,total:0,percent:0})});
+test('multiple routines aggregate completions without fabricating empty history',()=>{assert.deepEqual(careTotals([],['a']),{done:0,total:0,percent:0});assert.equal(careTotals([{record:()=>true},{record:()=>false},{record:()=>null}],['a','b']).percent,50)});
