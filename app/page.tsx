@@ -10211,6 +10211,7 @@ export default function Home() {
       <div className="paper-grain" aria-hidden="true" />
       <section
         ref={phoneCanvasRef}
+        data-spaces-menu={activeTab === "spaces" && space === "menu" ? "true" : undefined}
         aria-hidden={ao3LibraryLaunching || ao3LibraryOpen ? true : undefined}
         inert={ao3LibraryLaunching || ao3LibraryOpen ? true : undefined}
         className={
@@ -17921,7 +17922,6 @@ function NoteDetailDialog({
         <footer>
           <small>Your words, fully here.</small>
           {editing ? <div className="note-edit-actions">
-            <button onClick={() => { setDraft(text); setEditing(false); }}>Cancel</button>
             <button disabled={!draft.trim()} onClick={() => { if (draft.trim()) { onSave?.(draft.trim()); setDraft(draft.trim()); setEditing(false); } }}>Save changes</button>
           </div> : <button onClick={onDelete}>Delete note</button>}
         </footer>
