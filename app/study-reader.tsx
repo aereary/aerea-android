@@ -8,6 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
+import { useReaderExperience, ReadingSettings } from "./reader-experience";
+import { pdfReadingText } from "./pdf-reading-text";
+import { readerFraction } from "./reader-preferences";
 import type { EpubBook } from "./epub-reader";
 
 export type PdfInkTool = "pen" | "highlighter" | "eraser" | "hand";
@@ -57,48 +60,6 @@ const pastelHighlightColors = [
   { name: "Sky", value: "#bfddef" },
   { name: "Sage", value: "#c7e2cb" },
 ];
-
-const readerDarkModeStorageKey = "aerea-reader-dark-mode";
-
-function useReaderDarkMode() {
-  const [readerDark, setReaderDark] = useState(false);
-
-  useEffect(() => {
-    const restorePreference = window.setTimeout(() => {
-      try {
-        setReaderDark(window.localStorage.getItem(readerDarkModeStorageKey) === "dark");
-      } catch {
-        // Reading preferences still work for this session when storage is unavailable.
-      }
-    }, 0);
-    return () => window.clearTimeout(restorePreference);
-  }, []);
-
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("aereaReaderColorMode", { detail: { dark: readerDark } }),
-    );
-    return () => {
-      window.dispatchEvent(
-        new CustomEvent("aereaReaderColorMode", { detail: { dark: null } }),
-      );
-    };
-  }, [readerDark]);
-
-  const toggleReaderDark = () => {
-    setReaderDark((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(readerDarkModeStorageKey, next ? "dark" : "light");
-      } catch {
-        // Keep the in-memory preference even when storage is unavailable.
-      }
-      return next;
-    });
-  };
-
-  return { readerDark, toggleReaderDark };
-}
 
 function normalizeReaderSearch(value: string) {
   return value
@@ -280,7 +241,7 @@ function PdfPageThumbnail({
         if (cancelled) return;
         const baseViewport = pdfPage.getViewport({ scale: 1 });
         const viewport = pdfPage.getViewport({ scale: 58 / baseViewport.width });
-        const density = Math.min(2, window.devicePixelRatio || 1);
+        const density = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(4_000_000 / (viewport.width * viewport.height)));
         canvas.width = Math.max(1, Math.floor(viewport.width * density));
         canvas.height = Math.max(1, Math.floor(viewport.height * density));
         canvas.style.width = `${viewport.width}px`;
@@ -413,7 +374,18 @@ export function PdfStudyReader({
   const [indexedPages, setIndexedPages] = useState(0);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuPosition | null>(null);
   const [highlightColorFilter, setHighlightColorFilter] = useState("all");
-  const { readerDark, toggleReaderDark } = useReaderDarkMode();
+  const [textView,setTextView]=useState(false);
+  const reader=useReaderExperience(pageWrapRef,()=>setPage(p=>Math.min(pages,p+1)),()=>setPage(p=>Math.max(1,p-1)),textView);
+  const readerDark=reader.prefs.theme==='night';
+  const toggleReaderDark=()=>reader.patch({theme:readerDark?'paper':'night'});
+
+  useEffect(()=>{
+    if(!textView)return;
+    const frame=requestAnimationFrame(()=>{const el=pageWrapRef.current;if(!el)return;
+      if(reader.prefs.mode==='pages')el.scrollLeft=pendingPageOffsetRef.current*Math.max(0,el.scrollWidth-el.clientWidth);
+      else el.scrollTop=pendingPageOffsetRef.current*Math.max(0,el.scrollHeight-el.clientHeight);
+    });return()=>cancelAnimationFrame(frame);
+  },[textView,page,pdfPageTexts[page-1],reader.prefs.mode]);
 
   const pageStrokes = useMemo(
     () => annotations.filter((stroke) => stroke.page === page),
@@ -522,15 +494,12 @@ export function PdfStudyReader({
           if (cancelled) return;
           const searchablePage = await document.getPage(pageNumber);
           const textContent = await searchablePage.getTextContent();
-          searchablePages.push(
-            textContent.items
-              .map((item) => ("str" in item ? item.str : ""))
-              .join(" ")
-              .replace(/\s+/g, " ")
-              .trim(),
-          );
-          setPdfPageTexts([...searchablePages]);
-          setIndexedPages(pageNumber);
+          searchablePages.push(pdfReadingText(textContent.items.filter(item=>"str" in item)));
+          if(pageNumber===1 || pageNumber%8===0 || pageNumber===document.numPages) {
+            if(cancelled)return;
+            setPdfPageTexts([...searchablePages]);setIndexedPages(pageNumber);
+            await new Promise(resolve=>setTimeout(resolve,0));
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -559,6 +528,7 @@ export function PdfStudyReader({
 
   useEffect(() => {
     let cancelled = false;
+    let rendering: import("pdfjs-dist").RenderTask | null = null;
     async function renderPage() {
       const document = pdfRef.current;
       const pdfCanvas = pdfCanvasRef.current;
@@ -567,11 +537,12 @@ export function PdfStudyReader({
       const wrap = pageWrapRef.current;
       if (!document || !pdfCanvas || !inkCanvas || !textLayerContainer || !wrap) return;
       const pdfPage = await document.getPage(page);
+      if(cancelled || textView)return;
       const baseViewport = pdfPage.getViewport({ scale: 1 });
-      const available = Math.max(320, wrap.clientWidth - 28);
+      const available = Math.max(120, wrap.clientWidth - 40);
       const fitScale = available / baseViewport.width;
       const viewport = pdfPage.getViewport({ scale: fitScale * zoom });
-      const density = Math.min(2, window.devicePixelRatio || 1);
+      const density = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(4_000_000 / (viewport.width * viewport.height)));
       pdfCanvas.width = Math.floor(viewport.width * density);
       pdfCanvas.height = Math.floor(viewport.height * density);
       pdfCanvas.style.width = `${viewport.width}px`;
@@ -585,12 +556,13 @@ export function PdfStudyReader({
       textLayerContainer.style.height = `${viewport.height}px`;
       const context = pdfCanvas.getContext("2d");
       if (!context || cancelled) return;
-      await pdfPage.render({
+      rendering = pdfPage.render({
         canvas: pdfCanvas,
         canvasContext: context,
         viewport,
         transform: density === 1 ? undefined : [density, 0, 0, density, 0, 0],
-      }).promise;
+      });
+      await rendering.promise;
       if (cancelled) return;
       const pdfjs = await import("pdfjs-dist");
       activeTextLayerRef.current?.cancel();
@@ -614,12 +586,13 @@ export function PdfStudyReader({
         });
       }
     }
-    void renderPage();
+    void renderPage().catch(error=>{if(!cancelled)setLoading(error instanceof Error?error.message:'Could not render this page.');});
     return () => {
       cancelled = true;
+      rendering?.cancel();
       activeTextLayerRef.current?.cancel();
     };
-  }, [page, pageStrokes, renderVersion, zoom]);
+  }, [page, pageStrokes, renderVersion, zoom, textView]);
 
   const pdfSearchResults = useMemo(() => {
     const query = normalizeReaderSearch(pdfSearch);
@@ -855,13 +828,18 @@ export function PdfStudyReader({
 
   return (
     <section
-      className={`study-reader pdf-study-reader${readerDark ? " reader-dark" : ""}`}
+      className={`study-reader pdf-study-reader reading-experience${readerDark ? " reader-dark" : ""}`}
+      style={reader.style} data-reading-theme={reader.prefs.theme} data-text-tone={reader.prefs.textTone}
+      data-reading-mode={reader.prefs.mode} data-chrome={reader.hidden?'hidden':'visible'} data-tools={reader.tools}
+      data-original-colors={reader.prefs.preservePdfColors} data-plain={reader.prefs.plain} data-remove-blank={reader.prefs.removeBlank}
       aria-label={`Annotating ${fileName}`}
     >
       <header className="study-reader-titlebar">
         <button type="button" onClick={onClose} aria-label="Close PDF">←</button>
         <div><small>PDF STUDY DESK</small><strong>{fileName}</strong></div>
-        <span>{page} / {pages}</span>
+        <button onClick={()=>{setTextView(v=>!v);setTool('hand');setPageOffset(0);pendingPageOffsetRef.current=0;}}>{textView?'Page view':'Text view'}</button>
+        <button aria-label="Reader tools" onClick={()=>reader.setTools(v=>!v)}>☰</button>
+        <button aria-label="Reading settings" onClick={()=>reader.setSettings(true)}>Aa</button>
       </header>
       {usedIn.length > 0 && (
         <div className="reader-used-in" aria-label="Places using this PDF">
@@ -1185,11 +1163,12 @@ export function PdfStudyReader({
       <div
         className="pdf-page-wrap"
         ref={pageWrapRef}
+        tabIndex={0} data-text-view={textView}
         data-tool={tool}
         onScroll={(event) => {
           const target = event.currentTarget;
           const maxScroll = Math.max(1, target.scrollHeight - target.clientHeight);
-          const offset = Math.max(0, Math.min(1, target.scrollTop / maxScroll));
+          const offset = textView&&reader.prefs.mode==='pages'?readerFraction(target.scrollLeft,target.scrollWidth,target.clientWidth):Math.max(0, Math.min(1, target.scrollTop / maxScroll));
           pendingPageOffsetRef.current = offset;
           setPageOffset(offset);
         }}
@@ -1235,7 +1214,9 @@ export function PdfStudyReader({
             ))}
           </aside>
         )}
+        {textView && <article className="pdf-reflow"><h1>Page {page} of {pages}</h1>{pdfPageTexts[page-1]?.split(/\n+/).map((text,index)=><p key={index}>{text}</p>)}{!pdfPageTexts[page-1]&&<p>{indexedPages<page?'Preparing text for this page…':'No selectable text on this page. Use Page view for scanned pages and images.'}</p>}</article>}
         <div
+          hidden={textView}
           className="pdf-page-stack"
           ref={pageStackRef}
           onPointerDownCapture={dismissPdfSearchHighlight}
@@ -1258,14 +1239,17 @@ export function PdfStudyReader({
           onChoose={highlightPdfSelection}
         />
       )}
+      <ReadingSettings reader={reader} pdf text={textView}/>
+      {reader.running&&<button className="reading-stop" onClick={()=>reader.setRunning(false)}>Pause scrolling</button>}
+      {reader.hidden&&<span className="reading-progress">{Math.round(((page-1+pageOffset)/pages)*100)}%</span>}
       <footer className="study-reader-footer">
-        <button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>← Previous</button>
+        <button disabled={!(textView&&reader.prefs.mode==='pages')&&page<=1} onClick={() => textView&&reader.prefs.mode==='pages'?reader.advance(-1):setPage((value) => Math.max(1, value - 1))}>← Previous</button>
         <div className="pdf-zoom-controls">
           <button onClick={() => setZoom((value) => Math.max(.7, value - .15))}>−</button>
           <strong>{Math.round(zoom * 100)}%</strong>
           <button onClick={() => setZoom((value) => Math.min(2.4, value + .15))}>＋</button>
         </div>
-        <button disabled={page >= pages} onClick={() => setPage((value) => Math.min(pages, value + 1))}>Next →</button>
+        <button disabled={!(textView&&reader.prefs.mode==='pages')&&page>=pages} onClick={() => textView&&reader.prefs.mode==='pages'?reader.advance(1):setPage((value) => Math.min(pages, value + 1))}>Next →</button>
       </footer>
     </section>
   );
@@ -1306,7 +1290,9 @@ export function EpubStudyReader({
   const epubScrollFrameRef = useRef<number | null>(null);
   const readingStateRef = useRef(readingState);
   const activeEpubSearchRef = useRef(activeEpubSearch);
-  const { readerDark, toggleReaderDark } = useReaderDarkMode();
+  const reader=useReaderExperience(epubPaperRef,()=>{if(readingState.chapter<book.chapters.length-1)onReadingStateChange({...readingState,chapter:readingState.chapter+1,scrollOffset:0},'location')},()=>{if(readingState.chapter>0)onReadingStateChange({...readingState,chapter:readingState.chapter-1,scrollOffset:1},'location')});
+  const readerDark=reader.prefs.theme==='night';
+  const toggleReaderDark=()=>reader.patch({theme:readerDark?'paper':'night'});
   const chapterIndex = Math.min(book.chapters.length - 1, Math.max(0, readingState.chapter));
   const chapter = book.chapters[chapterIndex];
   const paragraphs = useMemo(() => chapter.text.split(/\n{2,}/).filter(Boolean), [chapter.text]);
@@ -1367,10 +1353,11 @@ export function EpubStudyReader({
       const paper = epubPaperRef.current;
       if (!paper) return;
       const maxScroll = Math.max(0, paper.scrollHeight - paper.clientHeight);
-      paper.scrollTop = (readingStateRef.current.scrollOffset ?? 0) * maxScroll;
+      if(reader.prefs.mode==='pages') paper.scrollLeft=(readingStateRef.current.scrollOffset??0)*Math.max(0,paper.scrollWidth-paper.clientWidth);
+      else paper.scrollTop = (readingStateRef.current.scrollOffset ?? 0) * maxScroll;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [chapter.id]);
+  }, [chapter.id, reader.prefs.mode]);
 
   const openEpubSearchResults = () => {
     if (!normalizeReaderSearch(search)) return;
@@ -1535,12 +1522,17 @@ export function EpubStudyReader({
 
   return (
     <section
-      className={`study-reader epub-study-reader${readerDark ? " reader-dark" : ""}`}
+      className={`study-reader epub-study-reader reading-experience${readerDark ? " reader-dark" : ""}`}
+      style={reader.style} data-reading-theme={reader.prefs.theme} data-text-tone={reader.prefs.textTone}
+      data-reading-mode={reader.prefs.mode} data-chrome={reader.hidden?'hidden':'visible'} data-tools={reader.tools}
+      data-original-colors={reader.prefs.preservePdfColors} data-plain={reader.prefs.plain} data-remove-blank={reader.prefs.removeBlank}
       aria-label={`Reading ${fileName}`}
     >
       <header className="study-reader-titlebar">
         <button type="button" onClick={onClose} aria-label="Close EPUB">←</button>
         <div><small>EPUB READING NOOK</small><strong>{book.title}</strong><em>{book.author}</em></div>
+        <button aria-label="Reader tools" onClick={()=>reader.setTools(v=>!v)}>☰</button>
+        <button aria-label="Reading settings" onClick={()=>reader.setSettings(true)}>Aa</button>
         <button
           type="button"
           className={bookmarked ? "epub-bookmark active" : "epub-bookmark"}
@@ -1588,9 +1580,9 @@ export function EpubStudyReader({
             aria-label="Search this book"
           />
         </label>
-        <button onClick={() => update({ fontSize: Math.max(14, readingState.fontSize - 1) }, "location")}>A−</button>
-        <button onClick={() => update({ fontSize: Math.min(30, readingState.fontSize + 1) }, "location")}>A＋</button>
-        <button onClick={() => update({ lineHeight: readingState.lineHeight === 1.7 ? 2 : 1.7 }, "location")}>↕ <span>Spacing</span></button>
+        <button onClick={() => reader.patch({fontSize:Math.max(12,reader.prefs.fontSize-1)})}>A−</button>
+        <button onClick={() => reader.patch({fontSize:Math.min(40,reader.prefs.fontSize+1)})}>A＋</button>
+        <button onClick={() => reader.patch({lineHeight:reader.prefs.lineHeight===1.7?2:1.7})}>↕ <span>Spacing</span></button>
         <button
           type="button"
           className={`reader-dark-toggle${readerDark ? " active" : ""}`}
@@ -1791,6 +1783,7 @@ export function EpubStudyReader({
         <main
           className="epub-paper"
           ref={epubPaperRef}
+          tabIndex={0}
           onScroll={(event) => {
             if (epubScrollFrameRef.current !== null) {
               window.cancelAnimationFrame(epubScrollFrameRef.current);
@@ -1798,10 +1791,9 @@ export function EpubStudyReader({
             const target = event.currentTarget;
             epubScrollFrameRef.current = window.requestAnimationFrame(() => {
               const maxScroll = Math.max(1, target.scrollHeight - target.clientHeight);
-              const scrollOffset = Math.max(
-                0,
-                Math.min(1, target.scrollTop / maxScroll),
-              );
+              const scrollOffset = reader.prefs.mode==='pages'
+                ? readerFraction(target.scrollLeft,target.scrollWidth,target.clientWidth)
+                : Math.max(0,Math.min(1,target.scrollTop/maxScroll));
               if (
                 Math.abs(scrollOffset - (readingState.scrollOffset ?? 0)) > 0.002
               ) {
@@ -1851,11 +1843,12 @@ export function EpubStudyReader({
             onPointerDownCapture={dismissEpubSearchHighlight}
           >
             <p className="epub-chapter-number">CHAPTER {chapterIndex + 1}</p>
-            <h1>{chapter.title}</h1>
+            {paragraphs[0]!==chapter.title&&<h1>{chapter.title}</h1>}
+            {chapter.illustrations?.map((markup,index)=><div className="epub-rich" key={`image-${index}`} dangerouslySetInnerHTML={{__html:markup}}/>)}
             {paragraphs.map((paragraph, index) => (
-              <p data-epub-paragraph={index} key={`${chapter.id}-${index}`}>
-                {renderParagraph(paragraph, index)}
-              </p>
+              chapter.blocks?.[index] && !reader.prefs.plain && !activeEpubSearch && !(readingState.highlights??[]).some(h=>h.chapterId===chapter.id&&h.paragraphIndex===index)
+                ? <div className="epub-rich" data-epub-paragraph={index} key={`${chapter.id}-${index}`} dangerouslySetInnerHTML={{__html:chapter.blocks[index]}}/>
+                : <p data-epub-paragraph={index} key={`${chapter.id}-${index}`}>{renderParagraph(paragraph, index)}</p>
             ))}
           </article>
           <label className="epub-margin-note">
@@ -1876,10 +1869,13 @@ export function EpubStudyReader({
           onChoose={highlightEpubSelection}
         />
       )}
+      <ReadingSettings reader={reader}/>
+      {reader.running&&<button className="reading-stop" onClick={()=>reader.setRunning(false)}>Pause scrolling</button>}
+      {reader.hidden&&<span className="reading-progress">{Math.round(((chapterIndex+(readingState.scrollOffset||0))/book.chapters.length)*100)}%</span>}
       <footer className="study-reader-footer">
-        <button disabled={chapterIndex <= 0} onClick={() => update({ chapter: chapterIndex - 1, scrollOffset: 0 }, "location")}>← Previous chapter</button>
+        <button disabled={reader.prefs.mode!=="pages"&&chapterIndex<=0} onClick={()=>reader.prefs.mode==='pages'?reader.advance(-1):update({chapter:chapterIndex-1,scrollOffset:0},"location")}>← Previous</button>
         <span>{chapterIndex + 1} of {book.chapters.length}</span>
-        <button disabled={chapterIndex >= book.chapters.length - 1} onClick={() => update({ chapter: chapterIndex + 1, scrollOffset: 0 }, "location")}>Next chapter →</button>
+        <button disabled={reader.prefs.mode!=="pages"&&chapterIndex>=book.chapters.length-1} onClick={()=>reader.prefs.mode==='pages'?reader.advance(1):update({chapter:chapterIndex+1,scrollOffset:0},"location")}>Next →</button>
       </footer>
     </section>
   );

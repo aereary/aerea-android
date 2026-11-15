@@ -2,6 +2,8 @@ export type EpubChapter = {
   id: string;
   title: string;
   text: string;
+  blocks?: string[];
+  illustrations?: string[];
 };
 
 export type EpubBook = {
@@ -157,15 +159,31 @@ function xmlElements(document: Document | Element, localName: string) {
   return Array.from(document.getElementsByTagNameNS("*", localName));
 }
 
-function chapterText(markup: string) {
+// Build safe semantic markup rather than importing book scripts or global styles.
+function safeChapterNode(node: Node, images:Map<string,string>): string {
+  const escape=(text:string)=>text.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+  if(node.nodeType===3)return escape(node.textContent||'');
+  if(node.nodeType!==1)return '';
+  const el=node as Element,tag=el.localName.toLowerCase();
+  if(['script','style','iframe','object','embed','form','input','button','svg','math'].includes(tag))return '';
+  const inner=Array.from(el.childNodes).map(child=>safeChapterNode(child,images)).join('');
+  if(tag==='img'){const data=images.get(el.getAttribute('src')||'');return data?`<img src="${data}" alt="${escape(el.getAttribute('alt')||'')}" loading="lazy">`:'';}
+  if(tag==='br')return '<br>';
+  if(tag==='hr')return '<hr>';
+  if(!['p','h1','h2','h3','h4','b','strong','em','i','u','s','sub','sup','blockquote','ul','ol','li','pre','code','span','div','figcaption','td','th','a'].includes(tag))return inner;
+  if(tag==='a'){const href=el.getAttribute('href')||'';return /^https?:\/\//i.test(href)?`<a href="${escape(href)}" target="_blank" rel="noopener noreferrer">${inner}</a>`:inner;}
+  return `<${tag}>${inner}</${tag}>`;
+}
+
+function chapterText(markup: string, images:Map<string,string>) {
   let document = new DOMParser().parseFromString(markup, "application/xhtml+xml");
   if (document.querySelector("parsererror")) {
     document = new DOMParser().parseFromString(markup, "text/html");
   }
   document.querySelectorAll("script,style,noscript,svg,nav").forEach((node) => node.remove());
-  const blocks = Array.from(
-    document.querySelectorAll("h1,h2,h3,h4,p,li,blockquote,figcaption,td,th"),
-  )
+  const nodes = Array.from(document.querySelectorAll("h1,h2,h3,h4,p,li,blockquote,figcaption,td,th"))
+    .filter(node=>node.textContent?.replace(/\s+/g," ").trim());
+  const blocks = nodes
     .map((node) => node.textContent?.replace(/\s+/g, " ").trim() || "")
     .filter(Boolean);
   const fallback = document.body?.textContent?.replace(/\s+/g, " ").trim() || "";
@@ -174,6 +192,8 @@ function chapterText(markup: string) {
       document.querySelector("h1,h2,h3,title")?.textContent?.replace(/\s+/g, " ").trim() ||
       "Untitled chapter",
     text: blocks.length ? blocks.join("\n\n") : fallback,
+    blocks: nodes.map(node=>safeChapterNode(node,images)),
+    illustrations: Array.from(document.querySelectorAll("img")).filter(img=>!nodes.some(node=>node.contains(img))).map(img=>safeChapterNode(img,images)).filter(Boolean),
   };
 }
 
@@ -205,9 +225,25 @@ export async function readEpub(file: Blob): Promise<EpubBook> {
     const path = manifest.get(id);
     if (!path) continue;
     try {
-      const content = chapterText(await entryText(archive, path));
-      if (!content.text) continue;
-      chapters.push({ id, title: content.title, text: content.text });
+      const markup=await entryText(archive,path);
+      const imageDocument=new DOMParser().parseFromString(markup,'text/html');
+      const images=new Map<string,string>();
+      let imageBytes=0;
+      for(const image of Array.from(imageDocument.querySelectorAll('img'))) {
+        const src=image.getAttribute('src')||'';
+        if(!src || images.has(src) || /^[a-z]+:|^\/\//i.test(src))continue;
+        const imagePath=joinZipPath(path,src.split('#')[0]);
+        const ext=imagePath.split('.').pop()?.toLowerCase();
+        const mime=({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp'} as Record<string,string>)[ext||''];
+        const entry=archive.entries.get(imagePath);
+        if(!mime||!entry||entry.uncompressedSize>4*1024*1024||imageBytes+entry.uncompressedSize>12*1024*1024)continue;
+        try {const bytes=await inflateEntry(archive,entry);imageBytes+=bytes.length;let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));images.set(src,`data:${mime};base64,${btoa(binary)}`);}catch{/* Text remains readable if an image is damaged. */}
+      }
+      const content = chapterText(markup,images);
+      if (!content.text && !content.illustrations.length) continue;
+      chapters.push({ id, title: content.title, text: content.text, blocks:content.blocks, illustrations:content.illustrations });
+      // Yield between chapters so closing/navigation remains responsive.
+      if(chapters.length%4===0) await new Promise(resolve=>setTimeout(resolve,0));
     } catch {
       // A malformed non-essential chapter should not make the whole book unreadable.
     }
