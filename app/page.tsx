@@ -1,5 +1,6 @@
 "use client";
 
+import { applyNormalLibraryFiles } from "./library-file-updates";
 import { PrivateShelf, ShelfCatalogExtras } from "./private-shelf";
 import { paperInk, paperOpacity, restoreUnique } from "./minor-updates";
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
@@ -10655,8 +10656,8 @@ export default function Home() {
                     const capturedIds = new Set(
                       libraryItems.map((item) => item.id),
                     );
-                    setStudyFiles(
-                      files.filter((file) => !capturedIds.has(file.id)),
+                    setStudyFiles((current) =>
+                      applyNormalLibraryFiles(current, files, capturedIds),
                     );
                     const byId = new Map(files.map((file) => [file.id, file]));
                     setLibraryItems((current) =>
