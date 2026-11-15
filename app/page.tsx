@@ -333,6 +333,7 @@ function mergeStudyFileInventory(
     const metadata = current.find((item) => item.id === file.id);
     return {
       ...file,
+      sourceWorkId: file.sourceWorkId ?? metadata?.sourceWorkId,
       cloudPath: metadata?.cloudPath ?? file.cloudPath,
       favorite: metadata?.favorite,
       collectionIds: metadata?.collectionIds,
@@ -3988,7 +3989,7 @@ export default function Home() {
           const availableFiles = payload.files.filter(
             (file) => !isStudyFileTrashed(file.id, trashItemsRef.current),
           );
-          setLocalAo3Ids(new Set(availableFiles.filter(file => !!file.sourceWorkId).map(file => file.id)));
+          setLocalAo3Ids(new Set(availableFiles.map(file => file.id)));
           setStudyFiles((current) =>
             mergeStudyFileInventory(
               current,
@@ -11942,7 +11943,7 @@ export default function Home() {
       </Suspense>}
 
       {ao3LibraryOpen && (
-        <PrivateShelf files={studyFiles.filter(file => !!file.sourceWorkId && localAo3Ids.has(file.id))} openFile={file => void openStudyFile(file)} onBack={closeAo3Library} onPinChange={() => {setAskOpen(false);setAskMounted(false)}} onUnlock={() => setPrivateShelfUnlocked(true)} onLock={() => {setPrivateShelfUnlocked(false);setActiveStudyFile(null);setActiveEpubBook(null)}}>
+        <PrivateShelf files={studyFiles.filter(file => !!file.sourceWorkId && localAo3Ids.has(file.id))} openFile={file => void openStudyFile(file)} onBack={closeAo3Library} onPinChange={() => {setAskOpen(false);setAskMounted(false)}} onUnlock={() => setPrivateShelfUnlocked(true)} onLock={() => {setPrivateShelfUnlocked(false);setActiveStudyFile(current => current?.sourceWorkId ? null : current)}}>
           <Suspense fallback={null}>
             <Ao3Library onBack={closeAo3Library} onSaveEpub={saveAo3Epub} />
           </Suspense>
