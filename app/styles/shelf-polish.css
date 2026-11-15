@@ -1,0 +1,20 @@
+html .app-shell[data-theme][data-color-mode] .ao3-result-count {justify-content:flex-start!important;text-align:left!important}
+html .app-shell[data-theme][data-color-mode] .ao3-native-result-count {margin-left:0!important;margin-right:auto!important;text-align:left!important}
+html .app-shell[data-theme][data-color-mode] .ao3-extra-tools .ao3-refresh {margin:0 0 0 8px!important;min-width:36px!important;min-height:36px!important;padding:5px!important;border:0!important;border-radius:50%!important}
+html .app-shell[data-theme][data-color-mode] .shelf-sort-control {display:flex;align-items:center;gap:12px;margin:10px 0 14px;color:var(--ao3-muted,var(--one-ink));font-size:12px}
+html .app-shell[data-theme][data-color-mode] .shelf-sort-control select {flex:1;max-width:250px;padding:9px 12px;border:1px solid var(--ao3-border,#8884);border-radius:11px;background:var(--ao3-paper,var(--one-panel));color:var(--ao3-ink,var(--one-ink));font:inherit}
+html .app-shell[data-theme][data-color-mode] .shelf-panel {width:min(560px,100%)}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker {border:0;padding:0;margin:18px 0}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker>div {display:flex;gap:12px;overflow-x:auto;padding:5px 4px 12px}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker button {flex:0 0 135px;border:0;padding:0!important;margin:0!important;background:transparent;text-align:left}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview {display:flex;flex-direction:column;gap:8px;min-height:170px;padding:12px;border-radius:14px;background:var(--one-bg,#151515);color:var(--one-ink,#eee);border:1px solid #8884}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview-1 {background:#28222c;color:#e7e1e8}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview-2 {background:#22312e;color:#e7e1e8}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview strong {font:700 16px Georgia!important}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview small {font:11px system-ui!important;margin:0!important}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview span {font-size:11px}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-preview em {font:italic 13px Georgia}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker button[aria-pressed=true] .shelf-theme-preview {outline:2px solid var(--ao3-plum,var(--one-accent,#9dcac0));outline-offset:2px}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker b {display:block;margin-top:12px;font-size:12px}
+html .app-shell[data-theme][data-color-mode] .private-shelf[data-easy-read=true] .ao3-library-layer :is(p,span,strong,small,h1,h2,h3,button,select) {font-family:Verdana,sans-serif!important}
+html .app-shell[data-theme][data-color-mode] .shelf-theme-picker input[type=checkbox] {width:18px!important;height:18px}

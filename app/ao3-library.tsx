@@ -17,6 +17,7 @@ import { AEREA_ACCOUNT, supabase } from "./supabase-sync";
 import { advanceLibraryScroll, initialLibraryScroll } from "./library-scroll";
 import { libraryAddedAt, libraryCardOrder } from "./library-recency";
 import { newAo3WorkIds, nextAo3BadgeExpiry } from "./ao3-recency";
+import "./styles/shelf-polish.css";
 import type { StudyFileItem } from "./study-library";
 
 type SeriesMembership = {
@@ -1056,6 +1057,8 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
   const shelf = usePrivateShelf();
   const {setFiltered} = shelf;
   const [downloadedOnly,setDownloadedOnly] = useState(false);
+  const [sort,setSort]=useState(()=>{try{return localStorage.getItem('aerea-shelf-sort')||'original'}catch{return 'original'}});
+  const [shuffleSeed,setShuffleSeed]=useState(1);
   const downloadedIds = useMemo(() => new Set(shelf.files.map(file => file.sourceWorkId)), [shelf.files]);
   const suggestions = useMemo(() => suggestTags(works.filter(work => !downloadedOnly || downloadedIds.has(work.work_id)), query, selectedTags), [works,query,selectedTags,downloadedOnly,downloadedIds]);
   useEffect(() => {setFiltered(downloadedOnly || selectedTags.length > 0)}, [downloadedOnly,selectedTags,setFiltered]);
@@ -1271,6 +1274,13 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
     typeFilter,
   ]);
 
+  const sortedEntries=useMemo(()=>{
+    const members=(entry:LibraryEntry)=>entry.kind==='series'?entry.works:[entry.work];
+    const metric=(entry:LibraryEntry)=>{const values=members(entry);if(sort==='title')return entry.kind==='series'?entry.name:entry.work.title;if(sort==='author')return values[0]?.author||'';if(sort==='long'||sort==='short')return values.reduce((sum,w)=>sum+(w.words||0),0);if(sort==='opened')return Math.max(0,...values.map(w=>Date.parse(shelf.files.find(f=>f.sourceWorkId===w.work_id)?.lastOpenedAt||'')||0));if(sort==='added')return Math.max(0,...values.map(w=>Date.parse(w.created_at||w.bookmarked_on||'')||0));if(sort==='updated')return Date.parse(entry.updatedOn||'')||0;return ((values[0]?.work_id||0)*2654435761+shuffleSeed*1013904223)>>>0};
+    if(sort==='original')return filtered;
+    return [...filtered].sort((a,b)=>{const x=metric(a),y=metric(b);return typeof x==='string'&&typeof y==='string'?x.localeCompare(y):((Number(x)-Number(y))*(sort==='short'||sort==='random'?1:-1))});
+  },[filtered,sort,shuffleSeed,shelf.files]);
+
   const archivedCount = useMemo(
     () => works.filter((work) => work.archived).length,
     [works],
@@ -1344,7 +1354,6 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
       <style>{AO3_LIBRARY_CSS}</style>
       <header className="ao3-screen-header">
         <button className="shelf-heading-back" type="button" onClick={onBack} aria-label="Fiction shelf — back to Library"><strong>Fiction shelf</strong></button>
-        <button type="button" onClick={shelf.cycleTheme} aria-label="Change library theme">◐</button>
         <button type="button" onClick={shelf.settings} aria-label="Library settings">⚙</button>
       </header>
 
@@ -1365,12 +1374,22 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
           <div>
             
             <p title={`${entries.length} cards · ${archivedCount} archived · ${epubs.length} EPUBs${alternativeCount ? ` · ${alternativeCount} alternates` : ""}`}>
-              {works.length} fics · {entries.filter((entry) => entry.kind === "series").length} series
+              {works.length} fics · {buildEntries(works).length} cards · {buildEntries(works).filter((entry) => entry.kind === "series").length} series grouped · {archivedCount} archived · {epubs.length} EPUBs · {alternativeCount} alternates
             </p>
           </div>
         </div>
 
-        <nav className="ao3-extra-tools" aria-label="Library view"><button type="button" aria-pressed={!downloadedOnly} onClick={() => setDownloadedOnly(false)}>All fics</button><button type="button" aria-pressed={downloadedOnly} onClick={() => setDownloadedOnly(true)}>Downloaded</button></nav>
+        <nav className="ao3-extra-tools" aria-label="Library view"><button type="button" aria-pressed={!downloadedOnly} onClick={() => setDownloadedOnly(false)}>All fics</button><button type="button" aria-pressed={downloadedOnly} onClick={() => setDownloadedOnly(true)}>Downloaded</button>          <button
+            className="ao3-refresh"
+            type="button"
+            disabled={refreshing}
+            onClick={() => void refresh(true)}
+            aria-label="Refresh AO3 Library"
+          >
+            {refreshing ? "…" : "↻"}
+          </button></nav>
+        <label className="shelf-sort-control"><span>Sort cards</span><select aria-label="Sort cards" value={sort} onChange={e=>{setSort(e.target.value);if(e.target.value==='random')setShuffleSeed(Date.now());try{localStorage.setItem('aerea-shelf-sort',e.target.value)}catch{}}}>
+        <option value="original">Original order</option><option value="added">Recently added</option><option value="opened">Recently opened</option><option value="updated">Recently updated</option><option value="title">Title A–Z</option><option value="author">Author A–Z</option><option value="long">Longest first</option><option value="short">Shortest first</option><option disabled>My rating — unavailable</option><option value="random">Random</option></select></label>
         <Ao3SearchInput
           value={query}
           onValueChange={(nextQuery) => {
@@ -1435,15 +1454,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
               ? `${entries.length} cards`
               : `${filtered.length} of ${entries.length} cards`}
           </span>
-          <button
-            className="ao3-refresh"
-            type="button"
-            disabled={refreshing}
-            onClick={() => void refresh(true)}
-            aria-label="Refresh AO3 Library"
-          >
-            {refreshing ? "…" : "↻"}
-          </button>
+
         </p>
 
         {error && (
@@ -1457,7 +1468,7 @@ export function Ao3Library({ onBack, onSaveEpub }: Ao3LibraryProps) {
 
 
       <div className="ao3-grid">
-        {filtered.map((entry) =>
+        {sortedEntries.map((entry) =>
           entry.kind === "fic" ? (
             <FicCard
               key={`fic-${entry.work.work_id}`}
