@@ -293,7 +293,7 @@ function PdfPageThumbnail({
   );
 }
 
-export function PdfStudyReader({
+export function LegacyPdfStudyReader({
   fileId,
   fileName,
   source,
@@ -1264,7 +1264,7 @@ export function PdfStudyReader({
   );
 }
 
-export function EpubStudyReader({
+export function LegacyEpubStudyReader({
   fileName,
   book,
   readingState,
@@ -1889,3 +1889,7 @@ export function EpubStudyReader({
     </section>
   );
 }
+
+export { ApprovedEpubReader as EpubStudyReader } from "./approved-epub-reader";
+
+export { ApprovedPdfReader as PdfStudyReader } from "./approved-pdf-reader";
