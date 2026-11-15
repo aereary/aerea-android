@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import { useReaderExperience, ReadingSettings } from "./reader-experience";
+import { pdfChapterHeadings } from "./pdf-chapters";
+import { PdfContinuous } from "./pdf-continuous";
 import { pdfReadingText } from "./pdf-reading-text";
 import { readerFraction } from "./reader-preferences";
 import type { EpubBook } from "./epub-reader";
@@ -372,20 +374,22 @@ export function PdfStudyReader({
   } | null>(null);
   const [pdfPageTexts, setPdfPageTexts] = useState<string[]>([]);
   const [indexedPages, setIndexedPages] = useState(0);
+  const chapterLinks=useMemo(()=>pdfOutline.length?pdfOutline:pdfChapterHeadings(pdfPageTexts),[pdfOutline,pdfPageTexts]);
   const [selectionMenu, setSelectionMenu] = useState<SelectionMenuPosition | null>(null);
   const [highlightColorFilter, setHighlightColorFilter] = useState("all");
-  const [textView,setTextView]=useState(false);
-  const reader=useReaderExperience(pageWrapRef,()=>setPage(p=>Math.min(pages,p+1)),()=>setPage(p=>Math.max(1,p-1)),textView);
+  const [textView,setTextView]=useState(true);
+  const [continuous,setContinuous]=useState(true);
+  const reader=useReaderExperience(pageWrapRef,()=>setPage(p=>Math.min(pages,p+1)),()=>setPage(p=>Math.max(1,p-1)),textView&&!continuous);
   const readerDark=reader.prefs.theme==='night';
   const toggleReaderDark=()=>reader.patch({theme:readerDark?'paper':'night'});
 
   useEffect(()=>{
-    if(!textView)return;
+    if(!textView||continuous)return;
     const frame=requestAnimationFrame(()=>{const el=pageWrapRef.current;if(!el)return;
       if(reader.prefs.mode==='pages')el.scrollLeft=pendingPageOffsetRef.current*Math.max(0,el.scrollWidth-el.clientWidth);
       else el.scrollTop=pendingPageOffsetRef.current*Math.max(0,el.scrollHeight-el.clientHeight);
     });return()=>cancelAnimationFrame(frame);
-  },[textView,page,pdfPageTexts[page-1],reader.prefs.mode]);
+  },[textView,continuous,page,pdfPageTexts[page-1],reader.prefs.mode]);
 
   const pageStrokes = useMemo(
     () => annotations.filter((stroke) => stroke.page === page),
@@ -409,9 +413,8 @@ export function PdfStudyReader({
   useEffect(() => {
     if (currentPageRef.current === page) return;
     currentPageRef.current = page;
-    pendingPageOffsetRef.current = 0;
-    setPageOffset(0);
-  }, [page]);
+    if(!continuous){pendingPageOffsetRef.current = 0;setPageOffset(0);}
+  }, [page,continuous]);
 
   useEffect(() => {
     let cancelled = false;
@@ -537,7 +540,7 @@ export function PdfStudyReader({
       const wrap = pageWrapRef.current;
       if (!document || !pdfCanvas || !inkCanvas || !textLayerContainer || !wrap) return;
       const pdfPage = await document.getPage(page);
-      if(cancelled || textView)return;
+      if(cancelled || textView || continuous)return;
       const baseViewport = pdfPage.getViewport({ scale: 1 });
       const available = Math.max(120, wrap.clientWidth - 40);
       const fitScale = available / baseViewport.width;
@@ -592,7 +595,7 @@ export function PdfStudyReader({
       rendering?.cancel();
       activeTextLayerRef.current?.cancel();
     };
-  }, [page, pageStrokes, renderVersion, zoom, textView]);
+  }, [page, pageStrokes, renderVersion, zoom, textView, continuous]);
 
   const pdfSearchResults = useMemo(() => {
     const query = normalizeReaderSearch(pdfSearch);
@@ -830,7 +833,7 @@ export function PdfStudyReader({
     <section
       className={`study-reader pdf-study-reader reading-experience${readerDark ? " reader-dark" : ""}`}
       style={reader.style} data-reading-theme={reader.prefs.theme} data-text-tone={reader.prefs.textTone}
-      data-reading-mode={reader.prefs.mode} data-chrome={reader.hidden?'hidden':'visible'} data-tools={reader.tools}
+      data-reading-mode={continuous?'scroll':reader.prefs.mode} data-chrome={reader.hidden?'hidden':'visible'} data-tools={reader.tools}
       data-original-colors={reader.prefs.preservePdfColors} data-plain={reader.prefs.plain} data-remove-blank={reader.prefs.removeBlank}
       aria-label={`Annotating ${fileName}`}
     >
@@ -838,6 +841,7 @@ export function PdfStudyReader({
         <button type="button" onClick={onClose} aria-label="Close PDF">←</button>
         <div><small>PDF STUDY DESK</small><strong>{fileName}</strong></div>
         <button onClick={()=>{setTextView(v=>!v);setTool('hand');setPageOffset(0);pendingPageOffsetRef.current=0;}}>{textView?'Page view':'Text view'}</button>
+        <button onClick={()=>{setContinuous(v=>!v);setTool("hand")}}>{continuous?"Annotate page":"Continuous"}</button>
         <button aria-label="Reader tools" onClick={()=>reader.setTools(v=>!v)}>☰</button>
         <button aria-label="Reading settings" onClick={()=>reader.setSettings(true)}>Aa</button>
       </header>
@@ -854,7 +858,7 @@ export function PdfStudyReader({
           ["highlighter", "▰", "Marker"],
           ["eraser", "◇", "Eraser"],
         ] as [PdfInkTool, string, string][]).map(([id, icon, label]) => (
-          <button key={id} className={tool === id ? "active" : ""} onClick={() => setTool(id)}>
+          <button key={id} className={tool === id ? "active" : ""} onClick={() => {setTool(id);if(id!=="hand")setContinuous(false)}}>
             <span>{icon}</span><small>{label}</small>
           </button>
         ))}
@@ -976,7 +980,7 @@ export function PdfStudyReader({
           </header>
           <div>
             {navigationPanel === "contents" &&
-              pdfOutline.map((item, index) => (
+              chapterLinks.map((item, index) => (
                 <button
                   type="button"
                   key={`${item.title}-${index}`}
@@ -986,6 +990,9 @@ export function PdfStudyReader({
                   onClick={() => {
                     if (!item.page) return;
                     setPage(item.page);
+                    const target=pageWrapRef.current?.querySelector<HTMLElement>(`[data-continuous-page="${item.page}"]`);
+                    const heading=textView?Array.from(target?.querySelectorAll<HTMLElement>("p")||[]).find(p=>p.textContent?.trim().toLowerCase()===item.title.trim().toLowerCase()):null;
+                    (heading||target)?.scrollIntoView({block:"start"});
                     setNavigationPanel(null);
                   }}
                 >
@@ -994,7 +1001,7 @@ export function PdfStudyReader({
                   {item.page && <small>Page {item.page}</small>}
                 </button>
               ))}
-            {navigationPanel === "contents" && pdfOutline.length === 0 && (
+            {navigationPanel === "contents" && chapterLinks.length === 0 && (
               <p>This PDF does not include a table of contents.</p>
             )}
             {navigationPanel === "pages" &&
@@ -1166,6 +1173,7 @@ export function PdfStudyReader({
         tabIndex={0} data-text-view={textView}
         data-tool={tool}
         onScroll={(event) => {
+          if(continuous)return;
           const target = event.currentTarget;
           const maxScroll = Math.max(1, target.scrollHeight - target.clientHeight);
           const offset = textView&&reader.prefs.mode==='pages'?readerFraction(target.scrollLeft,target.scrollWidth,target.clientWidth):Math.max(0, Math.min(1, target.scrollTop / maxScroll));
@@ -1214,9 +1222,10 @@ export function PdfStudyReader({
             ))}
           </aside>
         )}
-        {textView && <article className="pdf-reflow"><h1>Page {page} of {pages}</h1>{pdfPageTexts[page-1]?.split(/\n+/).map((text,index)=><p key={index}>{text}</p>)}{!pdfPageTexts[page-1]&&<p>{indexedPages<page?'Preparing text for this page…':'No selectable text on this page. Use Page view for scanned pages and images.'}</p>}</article>}
+        {continuous && pdfDocument && <PdfContinuous document={pdfDocument} scrollRef={pageWrapRef} page={page} text={textView} texts={pdfPageTexts} initialOffset={initialLocation?.offset} onLocation={(number,offset)=>{setPage(number);setPageOffset(offset);pendingPageOffsetRef.current=offset}}/>}
+        {!continuous && textView && <article className="pdf-reflow"><h1>Page {page} of {pages}</h1>{pdfPageTexts[page-1]?.split(/\n+/).map((text,index)=><p key={index}>{text}</p>)}{!pdfPageTexts[page-1]&&<p>{indexedPages<page?'Preparing text for this page…':'No selectable text on this page. Use Page view for scanned pages and images.'}</p>}</article>}
         <div
-          hidden={textView}
+          hidden={textView||continuous}
           className="pdf-page-stack"
           ref={pageStackRef}
           onPointerDownCapture={dismissPdfSearchHighlight}
