@@ -34424,3 +34424,7 @@ html[data-native="true"] :where(
     padding:33px 17px calc(22px + var(--aerea-safe-area-bottom))!important;
   }
 }
+
+/* Spaces menu grows only when its cards need room; no empty minimum-height scroll. */
+html .app-shell[data-theme][data-color-mode] .phone-canvas[data-spaces-menu="true"][data-spaces-menu] .main-content {min-height:0!important;padding-bottom:16px!important}
+html .app-shell[data-theme][data-color-mode] .phone-canvas[data-spaces-menu="true"] .screen-section {min-height:0!important}
