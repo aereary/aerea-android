@@ -1,6 +1,7 @@
 "use client";
 
 import { applyNormalLibraryFiles } from "./library-file-updates";
+import { DailyCareRhythm } from "./daily-care-rhythm";
 import { PrivateShelf, ShelfCatalogExtras } from "./private-shelf";
 import { paperInk, paperOpacity, restoreUnique } from "./minor-updates";
 import { isNativeTheme, NATIVE_THEMES, type NativeThemeId } from "./native-themes";
@@ -2590,6 +2591,7 @@ export default function Home() {
   );
 
   const [healthRoutineOpen, setHealthRoutineOpen] = useState(false);
+  const [careView,setCareView]=useState("today");
   const [healthRoutineEditorOpen, setHealthRoutineEditorOpen] = useState(false);
   const [healthRoutineEditingGroupId, setHealthRoutineEditingGroupId] =
     useState<string | null>(null);
@@ -9574,7 +9576,8 @@ export default function Home() {
                       </button>
                     </header>
 
-                    {!healthRoutineEditorOpen ? (
+                    {!healthRoutineEditorOpen && <nav className="daily-care-view-tabs" aria-label="Daily care views"><button aria-pressed={careView==='today'} onClick={()=>setCareView('today')}>Today</button><button aria-pressed={careView==='rhythm'} onClick={()=>setCareView('rhythm')}>My rhythm ↗</button></nav>}
+                    {!healthRoutineEditorOpen && careView==='rhythm' ? <DailyCareRhythm today={todayKey} routines={healthRoutineGroups.map(group=>({id:group.id,name:group.events[0].title,record:(day:string)=>{const event=group.events.find(event=>eventOccursOn(event,day));return event?isHealthCompletedOn(event,day):null}}))}/> : !healthRoutineEditorOpen ? (
                       <>
                         {isNativeTheme(appTheme) && healthRoutineGroups.length > 0 && (
                           <div className="health-care-summary" role="status">
