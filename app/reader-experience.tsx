@@ -3,9 +3,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { useBackLayer } from './use-back-layer';
 import { readerDefaults, normalizeReaderPreferences, readerTapDirection, type ReaderPreferences } from './reader-preferences';
 import './styles/reader-experience.css';
-const key='aerea-reading-preferences-v1';
+const key='aerea-reading-preferences-v2';
 export function useReaderExperience(scrollRef:RefObject<HTMLElement|null>, next:()=>void, previous:()=>void, paginatable=true) {
-  const [prefs,setPrefs]=useState<ReaderPreferences>(()=>{try { const saved=localStorage.getItem(key);return saved?normalizeReaderPreferences(JSON.parse(saved)):{...readerDefaults,theme:localStorage.getItem('aerea-reader-dark-mode')==='dark'?'night':'paper'}; }catch{return {...readerDefaults}}});
+  const [prefs,setPrefs]=useState<ReaderPreferences>(()=>{try { const saved=localStorage.getItem(key);return saved?normalizeReaderPreferences(JSON.parse(saved)):{...readerDefaults,theme:'theme'}; }catch{return {...readerDefaults}}});
   const [settings,setSettings]=useState(false),[tools,setTools]=useState(false),[hidden,setHidden]=useState(false),[running,setRunning]=useState(false);
   const live=useRef({prefs,next,previous,paginatable});useLayoutEffect(()=>{live.current={prefs,next,previous,paginatable}});
   const anchor=useRef<{element:Element;offset:number}|null>(null);
@@ -58,7 +58,9 @@ export function useReaderExperience(scrollRef:RefObject<HTMLElement|null>, next:
     return()=>{stopped=true;cancelAnimationFrame(frame);void wake?.release();document.removeEventListener('visibilitychange',pause);el.removeEventListener('wheel',pause)};
   },[running,scrollRef]);
   const fonts={serif:'Georgia, serif',classic:'"Times New Roman", serif',sans:'Arial, sans-serif',easy:'Verdana, sans-serif'};
-  const style={'--reading-font':fonts[prefs.font],'--reading-size':`${prefs.fontSize}px`,'--reading-line':prefs.lineHeight,'--reading-paragraph':`${prefs.paragraphSpace}em`,'--reading-width':`${prefs.width}px`,'--reading-align':prefs.align} as CSSProperties;
+  const shelfTheme=typeof document!=='undefined'?document.querySelector('.private-shelf')?.getAttribute('data-shelf-theme'):null;
+  const shelfColors=prefs.theme==='theme'&&shelfTheme&&shelfTheme!=='App theme'?{'--reading-bg':shelfTheme==='Sea Glass'?'#162322':'#1a171e','--reading-ink':'#e7e1e8','--reading-ui':shelfTheme==='Sea Glass'?'#22312e':'#28222c','--reading-muted':'#bab1bf','--reading-border':'#504752'}:{};
+  const style={...shelfColors,'--reading-font':fonts[prefs.font],'--reading-size':`${prefs.fontSize}px`,'--reading-line':prefs.lineHeight,'--reading-paragraph':`${prefs.paragraphSpace}em`,'--reading-width':`${prefs.width}px`,'--reading-align':prefs.align} as unknown as CSSProperties;
   return {prefs,patch,settings,setSettings,tools,setTools,hidden,setHidden,running,setRunning,advance,style};
 }
 export type ReaderExperience=ReturnType<typeof useReaderExperience>;
