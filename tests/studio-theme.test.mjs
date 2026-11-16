@@ -5,14 +5,14 @@ import { isNativeTheme, NATIVE_THEMES, NATIVE_THEME_IDS } from '../app/native-th
 const read = path => readFileSync(path,'utf8');
 
 test('Studio is opt-in and keeps both existing interface identities', () => {
-  assert.deepEqual(NATIVE_THEME_IDS, ['samsungminimal','samsungao3','studio']);
+  assert.deepEqual(NATIVE_THEME_IDS, ['samsungminimal','samsungao3','studio','together']);
   assert.equal(isNativeTheme('studio'),true);
   assert.equal(isNativeTheme('storybook'),false);
   const theme=NATIVE_THEMES.find(theme=>theme.id==='studio');
   assert.ok(theme);
   assert.match(theme.name,/aérea Studio/);
   assert.match(read(`public${theme.art}`),/<svg/);
-  assert.match(read('native.html'),/\["samsungminimal", "samsungao3", "studio"\]\.includes/);
+  assert.match(read('native.html'),/\["samsungminimal", "samsungao3", "studio", "together"\]\.includes/);
 });
 test('Studio styles reach the compiled Android artifact and the web entry', () => {
   for(const entry of ['app/native-entry.tsx','app/layout.tsx']) assert.match(read(entry),/import "\.\/styles\/studio\.css"/);

@@ -1,0 +1,17 @@
+/* Opt-in only: no rule in this file matches any existing theme. */
+html[data-native-theme="together"] {
+ --one-font:system-ui,-apple-system,sans-serif;--one-heading:Georgia,serif;--one-heading-weight:400;--one-radius:22px;--one-control-radius:13px;
+ --one-page:#181719;--one-backdrop:#181719;--one-panel:#211f23;--one-raised:#2b272d;--one-soft:#2b272d;--one-ink:#e8e0df;--one-muted:#a89ba5;--one-accent:#e5b8c9;--one-on-accent:#402b37;--one-line:#e3cfe30b;--one-selected:#372a34;--one-shadow:0 12px 50px #00000009;
+ --one-pink:#372a34;--one-mint:#29322d;--one-lilac:#302a38;--one-blue:#293039;--one-peach:#363127;--one-success:#b0c8b8;
+ --one-category-pink:#e5b8c9;--one-category-mint:#b0c8b8;--one-category-lilac:#c3b5d7;--one-category-peach:#d8c298;--one-category-blue:#b3c4d7;
+ color-scheme:dark;
+}
+html[data-native-theme="together"][data-native-theme-mode="light"] {
+ --one-page:#f8f6f1;--one-backdrop:#f8f6f1;--one-panel:#fffdf9;--one-raised:#efeae4;--one-soft:#efeae4;--one-ink:#433b40;--one-muted:#83747f;--one-accent:#93667c;--one-on-accent:#fff7fb;--one-line:#7656660c;--one-selected:#eee0e7;--one-shadow:0 12px 50px #63435305;
+ --one-pink:#eee0e7;--one-mint:#e4eee5;--one-lilac:#ede6f2;--one-blue:#e6ebf2;--one-peach:#f3ebda;--one-success:#698573;color-scheme:light;
+}
+
+/* All represented screens use the reference document in its own viewport. */
+html[data-native-theme="together"] .app-shell[data-theme="together"] .ao3-library-layer {visibility:hidden!important;pointer-events:none!important}
+html[data-native-theme="together"] .app-shell[data-theme="together"] .shelf-gate {background:var(--one-page)!important;color:var(--one-ink)!important}
+html[data-native-theme="together"] .app-shell[data-theme="together"] .shelf-panel {background:var(--one-panel)!important;color:var(--one-ink)!important;border:1px solid var(--one-line)!important;border-radius:24px!important;box-shadow:var(--one-shadow)!important}

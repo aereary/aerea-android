@@ -1,5 +1,8 @@
 "use client";
 
+import { TogetherExperience } from "./together-experience";
+import { CAREER_COURSES } from "./career-plan-data";
+import type { TogetherRow, TogetherIds } from "./together-model";
 import { applyNormalLibraryFiles } from "./library-file-updates";
 import { DailyCareRhythm } from "./daily-care-rhythm";
 import { PrivateShelf, ShelfCatalogExtras } from "./private-shelf";
@@ -1213,6 +1216,7 @@ type PersistedState = {
   focusSessions?: number;
   appTheme?: AppTheme;
   colorMode?: ColorMode;
+  togetherUi?: {accent?:string;tags?:Record<string,string[]>;routineSymbols?:Record<string,string>};
   simplifiedCalendarMode?: boolean;
   customTheme?: CustomTheme;
   profilePhoto?: string | null;
@@ -2523,6 +2527,7 @@ export default function Home() {
   const [completedDays, setCompletedDays] = useState<Record<string, boolean>>(
     cachedNativeState?.completedDays ?? {},
   );
+  const [togetherUi,setTogetherUi]=useState<{accent?:string;tags?:Record<string,string[]>;routineSymbols?:Record<string,string>}>(cachedNativeState?.togetherUi||{});
   const [journalText, setJournalText] = useState("");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedJournalEntry, setSelectedJournalEntry] =
@@ -3223,6 +3228,7 @@ export default function Home() {
   const calendarLongPressedRef = useRef(false);
   const calendarPressStartRef = useRef<{ x: number; y: number } | null>(null);
   const phoneCanvasRef = useRef<HTMLElement | null>(null);
+  useEffect(()=>{const canvas=phoneCanvasRef.current;if(!canvas)return;canvas.inert=appTheme==='together'||ao3LibraryLaunching||ao3LibraryOpen;if(canvas.inert)canvas.setAttribute('aria-hidden','true');else canvas.removeAttribute('aria-hidden')},[appTheme,ao3LibraryLaunching,ao3LibraryOpen]);
   const postItLayerRef = useRef<HTMLDivElement | null>(null);
   const postItDragRef = useRef<{
     id: string;
@@ -3353,6 +3359,7 @@ export default function Home() {
       setAppTheme("storybook");
     }
     if (state.colorMode) setColorMode(state.colorMode);
+    if (state.togetherUi) setTogetherUi(state.togetherUi);
     if (state.customTheme) {
       setCustomTheme((current) => ({
         ...current,
@@ -4183,6 +4190,7 @@ export default function Home() {
               focusSessions,
               appTheme,
               colorMode,
+              togetherUi,
               simplifiedCalendarMode,
               customTheme,
               profilePhoto,
@@ -4228,6 +4236,7 @@ export default function Home() {
     classTimetable,
     appTheme,
     colorMode,
+    togetherUi,
     simplifiedCalendarMode,
     completedDays,
     customTheme,
@@ -4377,12 +4386,15 @@ export default function Home() {
         recordingBelongsToClass(recording, selectedClassItem),
       )
     : [];
+  const togetherRecordingFinal=useRef<{className:string;title:string;notes:string}|null>(null);
   const { isRecording, recordingSeconds, recordingError, recordingBusy, startRecording, stopRecording } = useClassRecording({
     ready: stateReady, className: selectedClass, classItemId: selectedClassItem?.id,
     name: recordingName.trim() || `Class #${classRecordings.length + 1}`, notes: recordingNotes.trim(),
-    onSaved: (recording) => setRecordings(current => current.some(item => recording.nativeSessionId ? item.nativeSessionId === recording.nativeSessionId : item.id === recording.id) ? current : [recording, ...current]),
+    onSaved: (recording) => {const draft=togetherRecordingFinal.current;if(draft&&draft.className===recording.className){recording={...recording,name:draft.title||recording.name,notes:draft.notes};togetherRecordingFinal.current=null}setRecordings(current => current.some(item => recording.nativeSessionId ? item.nativeSessionId === recording.nativeSessionId : item.id === recording.id) ? current : [recording, ...current])},
     onFinished: () => { recordAction("Created class recording"); setRecordingName(""); setRecordingNotes(""); },
   });
+  const [togetherRecordPending,setTogetherRecordPending]=useState(false);
+  useEffect(()=>{if(!togetherRecordPending)return;setTogetherRecordPending(false);void startRecording()},[togetherRecordPending,startRecording]);
   const sportsCalendarEvents = useMemo<CalendarEvent[]>(() => {
     if (!sportsSettings.addAutomatically) return [];
     return sportsEvents
@@ -9501,6 +9513,65 @@ export default function Home() {
     setEventDraft(current => ({ ...current, title: draft.title, date: draft.date, endDate: draft.date, time: draft.time || "09:00", endTime: draft.allDay ? "10:00" : "", allDay: draft.allDay }));
   };
 
+  const togetherRaw = appTheme === "together" ? {
+    today: todayKey,colorMode,tasks,calendarEvents,classItems,localAo3Ids:Array.from(localAo3Ids),privateGate:ao3LibraryOpen&&!privateShelfUnlocked,studyNotes,studyFiles,libraryItems,libraryCollections,entries,moodHistory,completedDays,classTimetable,recordings:recordings.map(r=>({...r,url:classAudioSource(r)})),inboxItems,trashItems,postIts,simplifiedCalendarMode,themeOptions:themeOptions.map(t=>({id:t.id,name:t.name})),isRecording,recordingSeconds,recordingTitle:recordingName,recordingNotes,notice:studyReaderMessage||recordingError,privateUnlocked:privateShelfUnlocked,image:selectedLibraryItem?{id:selectedLibraryItem.id,name:selectedLibraryItem.name,url:selectedLibraryItem.nativeContentUri?Capacitor.convertFileSrc(selectedLibraryItem.nativeContentUri):selectedLibraryItem.dataUrl,kind:selectedLibraryItem.kind}:null,reader:activeStudyFile?{file:{id:activeStudyFile.id,name:activeStudyFile.name},kind:activeStudyFile.kind,source:activeStudyFile.kind==='pdf'?studyFileSource(activeStudyFile):undefined,book:activeEpubBook,state:epubReadingStates[activeStudyFile.id],location:activeStudyFile.readerLocation}:null,
+    courses:CAREER_COURSES.map((c,i)=>({...c,id:i+1})),courseDone:(()=>{try{const p=JSON.parse(localStorage.getItem('aerea-academic-profile-v1')||'{}');return CAREER_COURSES.flatMap((c,i)=>(p.courseStates?.[c.code]|| (c.status==='APROBADO'?'completed':'pending'))==='completed'?[i+1]:[])}catch{return []}})(),
+    routines:healthRoutineGroups.map(group=>{const dates:Record<string,boolean|null>={};const start=dateFromKey(todayKey);start.setDate(1);start.setDate(start.getDate()-14);for(let d=new Date(start);localDateKey(d)<=todayKey;d.setDate(d.getDate()+1)){const day=localDateKey(d),event=group.events.find(e=>eventOccursOn(e,day));dates[day]=event?isHealthCompletedOn(event,day):null}const first=group.events[0];return{groupId:group.id,title:first.title,symbol:togetherUi.routineSymbols?.[group.id]||healthRoutineIcon(first.title),cadenceLabel:first.healthRoutineCadence==='alternate'?'Every other day':'',days:first.healthRoutineCadence==='weekdays'?group.events.map(e=>e.healthRoutineWeekday):[0,1,2,3,4,5,6],time:first.allDay?'':formatTimeBlock(first.time).primary+' '+formatTimeBlock(first.time).secondary,rawTime:first.allDay?'':first.time,scheduled:dates,events:group.events}}),
+    stories:[],togetherUi,accent:togetherUi.accent,tags:togetherUi.tags,
+  } : null;
+  const togetherPatch = (patch:TogetherRow) => {
+    recordAction("Changed a little thing in Together");
+    if(patch.togetherUi)setTogetherUi(patch.togetherUi);if(patch.tasks)setTasks(patch.tasks);if(patch.studyNotes)setStudyNotes(patch.studyNotes);if(patch.inboxItems)setInboxItems(patch.inboxItems);if(patch.calendarEvents)setCalendarEvents(patch.calendarEvents);if(patch.libraryCollections)setLibraryCollections(patch.libraryCollections);if(patch.entries)setEntries(patch.entries);if(patch.moodHistory)setMoodHistory(patch.moodHistory);if(patch.completedDays)setCompletedDays(patch.completedDays);if(patch.classTimetable)setClassTimetable(normalizeClassTimetable(patch.classTimetable));if(patch.recordings)setRecordings(patch.recordings);if(patch.colorMode)setColorMode(patch.colorMode);if(typeof patch.simplifiedCalendarMode==='boolean')setSimplifiedCalendarMode(patch.simplifiedCalendarMode);
+  };
+  const togetherCommand = async(action:string,value:TogetherRow,ids:TogetherIds) => {
+    if(action==='accent'){setTogetherUi(current=>({...current,accent:value.state.accent}));return}if(action==='dayTag'){setTogetherUi(current=>({...current,tags:value.state.tags}));return}
+    if(action==='app-theme'){if(themeOptions.some(t=>t.id===value.id))setAppTheme(value.id as AppTheme);return}
+    if(action==='unlock-shelf'){setAo3LibraryOpen(true);return}
+    if(action==='leave-shelf'){setAo3LibraryOpen(false);setPrivateShelfUnlocked(false);return}
+    if(action==='import-file'){if(isNative())await pickNativeLibraryDocuments();else{const input=document.createElement('input');input.type='file';input.multiple=true;input.onchange=()=>void importStudyFiles(Array.from(input.files||[]));input.click()}return}
+    if(action==='open-file'||action==='read'){const story=value.id?ids.original('story',value.id):null;if(story){if(!privateShelfUnlocked)throw new Error('Unlock your private library first.');const local=studyFiles.find(f=>f.sourceWorkId===story.work_id&&localAo3Ids.has(f.id));if(local){await openStudyFile(local);return}if(!story.version)throw new Error('No EPUB version is available for this work.');const saved=await saveAo3Epub({workId:story.work_id,driveFileId:story.version.drive_file_id,title:story.title,fileName:story.version.filename});await openStudyFile(saved.file);return}const file=value.id?ids.original('file',value.id):null;if(file){if(file._source==='library'){
+      if(['pdf','epub'].includes(file.kind)){
+        let dataUrl=file.dataUrl,nativeFileId=file.nativeFileId,nativeContentUri=file.nativeContentUri;
+        if(!dataUrl&&nativeFileId&&isNative()){try{nativeContentUri=(await AereaStorage.readFile({id:nativeFileId})).contentUri}catch{nativeContentUri=undefined;nativeFileId=undefined}}
+        if(!dataUrl&&nativeContentUri){try{const response=await fetch(Capacitor.convertFileSrc(nativeContentUri));if(!response.ok)throw new Error('File unavailable');dataUrl=await blobAsDataUrl(await response.blob())}catch{nativeContentUri=undefined;nativeFileId=undefined}}
+        if(!dataUrl&&file.cloudPath){const blob=await downloadAereaLibraryFile(file.cloudPath);dataUrl=await blobAsDataUrl(blob);if(isNative()){nativeFileId=(await AereaStorage.saveFile({name:file.name,mimeType:file.mimeType||blob.type,dataUrl})).id;nativeContentUri=(await AereaStorage.readFile({id:nativeFileId})).contentUri}}
+        if(!dataUrl)throw new Error('This file is not available on this device.');
+        const opened={...file,nativeFileId,nativeContentUri,lastOpenedAt:new Date().toISOString(),...(isNative()?{}:{dataUrl})};
+        setLibraryItems(current=>current.map(f=>f.id===file.id?opened as LibraryItem:f));
+        await openStudyFile({...libraryItemAsStudyFile(opened as LibraryItem),dataUrl});
+      }else await openLibraryItem(file as LibraryItem);
+    }else await openStudyFile(file as StudyFileItem);return}const recent=[...studyFiles].filter(f=>f.lastOpenedAt&&(!f.sourceWorkId||privateShelfUnlocked)).sort((a,b)=>(b.lastOpenedAt||'').localeCompare(a.lastOpenedAt||''))[0];if(recent)await openStudyFile(recent);return}
+    if(action==='reader-close'){setActiveStudyFile(null);setActiveEpubBook(null);return}
+    if(action==='reader-location'){
+      if(!activeStudyFile||value.fileId!==activeStudyFile.id||!value.location)return;
+      const loc=value.location,offset=Math.max(0,Math.min(1,Number(loc.offset)||0)),fontSize=Math.max(15,Math.min(30,Number(loc.fontSize)||20));
+      const bookmarks=Array.isArray(loc.bookmarks)?loc.bookmarks.filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0):[];
+      let location:StudyFileItem['readerLocation'];
+      if(activeStudyFile.kind==='epub'&&activeEpubBook&&Number.isInteger(loc.chapter)&&loc.chapter>=0&&loc.chapter<activeEpubBook.chapters.length){
+        setEpubReadingStates(current=>({...current,[activeStudyFile.id]:{...(current[activeStudyFile.id]||{lineHeight:1.85,chapterNotes:{}}),chapter:loc.chapter,scrollOffset:offset,bookmarks:bookmarks.filter((n:number)=>n<activeEpubBook.chapters.length),fontSize}}));
+        location={...activeStudyFile.readerLocation,chapter:loc.chapter,offset,percentage:(loc.chapter+offset)/activeEpubBook.chapters.length};
+      }else if(activeStudyFile.kind==='pdf'&&Number.isInteger(loc.page)&&loc.page>=1)location={...activeStudyFile.readerLocation,page:loc.page,offset,bookmarks,percentage:Math.max(0,Math.min(1,Number(loc.percentage)||0))};
+      if(location){setStudyFiles(current=>current.map(f=>f.id===activeStudyFile.id?{...f,readerLocation:location}:f));setLibraryItems(current=>current.map(f=>f.id===activeStudyFile.id?{...f,readerLocation:{...f.readerLocation,...location,chapter:location?.chapter===undefined?f.readerLocation?.chapter:String(location.chapter)}}:f))}return;
+    }
+    if(action==='import-audio'){
+      const item=ids.original('class',value.classId);if(!item)throw new Error('Choose a class before importing audio.');
+      const input=document.createElement('input');input.type='file';input.accept='audio/*';input.multiple=true;
+      input.onchange=()=>{void(async()=>{for(const file of Array.from(input.files||[])){let url=await blobAsDataUrl(file);if(isNative()){const stored=await AereaStorage.saveFile({name:file.name,mimeType:file.type||'audio/mpeg',dataUrl:url});url=Capacitor.convertFileSrc((await AereaStorage.readFile({id:stored.id})).contentUri)}const id=Date.now();setRecordings(current=>[{id,className:item.name,name:file.name,notes:'',duration:0,url},...current])}})().catch(error=>setStudyReaderMessage(error instanceof Error?error.message:'Audio could not be imported.'))};input.click();return;
+    }
+    if(action==='record-class'){const item=ids.original('class',value.id);if(item)setSelectedClass(item.name);return}
+    if(action==='record'){if(isRecording){togetherRecordingFinal.current={className:selectedClass,title:value.title||'',notes:value.notes||''};await stopRecording();return}const item=ids.original('class',value.classId);if(item)setSelectedClass(item.name);setRecordingName(value.title||'');setRecordingNotes(value.notes||'');setTogetherRecordPending(true);return}
+    if(action==='delete-note'){const n=ids.original('note',value.id);if(n)moveToTrash('note',n.title,n);return}
+    if(action==='delete-task'){const t=ids.original('task',value.id);if(t)moveToTrash('task',t.title,t);return}
+    if(action==='delete-event'){const e=ids.original('event',value.id);if(e)moveToTrash('event',e.title,e);return}
+    if(action==='restore'){const t=ids.original('trash',value.id);if(t)restoreTrashItem(t as TrashItem);return}
+    if(action==='archive-inbox'){const n=ids.original('inbox',value.id);if(n)setInboxItems(current=>current.map(x=>x.id===n.id?{...x,dismissedAt:new Date().toISOString()}:x));return}
+    if(action==='archive-note'){const n=ids.original('note',value.id);if(n){setInboxItems(current=>[...current,{id:crypto.randomUUID(),kind:'note',text:n.body,createdAt:new Date().toISOString(),dismissedAt:new Date().toISOString(),processedAs:['together-archived-note'],originalName:n.title,togetherNote:n}]);setStudyNotes(current=>current.filter(x=>x.id!==n.id))}return}
+    if(action==='inbox-to-note'){const n=ids.original('inbox',value.id);if(n&&['file','pdf','photo'].includes(n.kind)){convertInboxItem(n as InboxItem,'library');return}if(n){setStudyNotes(current=>[...current,{...(n.togetherNote||{}),id:n.togetherNote?.id||crypto.randomUUID(),title:n.originalName||n.text.slice(0,60),body:n.text,pinned:n.togetherNote?.pinned||false,createdAt:n.togetherNote?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()}]);setInboxItems(current=>current.filter(x=>x.id!==n.id))}return}
+    if(action==='form:postit'){const text=value.state.postit;setPostIts(current=>{const active=current.find(n=>!n.archived);return active?current.map(n=>n.id===active.id?{...n,text,updatedAt:new Date().toISOString()}:n):[...current,{id:crypto.randomUUID(),text,page:'today',x:20,y:20,width:240,height:180,rotation:0,zIndex:1,color:'butter',style:'plain',pinned:false,locked:false,archived:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}]});return}
+    if(action==='course'){const course=CAREER_COURSES[Number(value.id)-1];if(course){const p=JSON.parse(localStorage.getItem('aerea-academic-profile-v1')||'{}');const previous=p.courseStates?.[course.code]||(course.status==='APROBADO'?'completed':'pending');p.courseStates={...p.courseStates,[course.code]:previous==='completed'?'pending':'completed'};p.updatedAt=Date.now();localStorage.setItem('aerea-academic-profile-v1',JSON.stringify(p));void import('./career-plan-bridge').then(m=>m.pushAcademicProfile({...p,customProfessors:p.customProfessors||[]})).catch(()=>undefined);setScheduleNow(new Date())}return}
+    if(action==='exit'){const now=Date.now();if(now-lastExitBackRef.current<=2000){void AereaNavigation.exitApp();return}lastExitBackRef.current=now;void AereaNavigation.showExitHint({message:'Press Back again to exit aérea'});return}
+  };
+
   return (
     <main
       className="app-shell"
@@ -10211,6 +10282,7 @@ export default function Home() {
           </nav>
         </section>
       )}
+      {appTheme === "together" && togetherRaw && <TogetherExperience data={togetherRaw} onPatch={togetherPatch} onCommand={togetherCommand}/>}
       <div className="paper-grain" aria-hidden="true" />
       <section
         ref={phoneCanvasRef}
@@ -12414,7 +12486,7 @@ export default function Home() {
         </div>
       )}
 
-      {activeStudyFile?.kind === "pdf" && (
+      {appTheme !== "together" && activeStudyFile?.kind === "pdf" && (
         <Suspense fallback={null}>
         <PdfStudyReader
           fileId={activeStudyFile.id}
@@ -12500,7 +12572,7 @@ export default function Home() {
         </Suspense>
       )}
 
-      {activeStudyFile?.kind === "epub" && activeEpubBook && (!activeStudyFile.sourceWorkId || privateShelfUnlocked) && (
+      {appTheme !== "together" && activeStudyFile?.kind === "epub" && activeEpubBook && (!activeStudyFile.sourceWorkId || privateShelfUnlocked) && (
         <Suspense fallback={null}>
         <EpubStudyReader
           fileName={activeStudyFile.name}

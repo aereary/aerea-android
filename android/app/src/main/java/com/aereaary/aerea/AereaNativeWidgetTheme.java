@@ -6,16 +6,19 @@ import android.widget.RemoteViews;
 /** Opt-in palettes; returns without touching any legacy widget. */
 final class AereaNativeWidgetTheme {
     static boolean isNativeTheme(String theme) {
-        return "samsungminimal".equals(theme) || "samsungao3".equals(theme);
+        return "samsungminimal".equals(theme) || "samsungao3".equals(theme) || "together".equals(theme);
     }
     static int ink(String theme, boolean dark) {
+        if ("together".equals(theme)) return dark ? 0xFFE8E0DF : 0xFF433B40;
         return !dark ? 0xFF161616 : "samsungao3".equals(theme) ? 0xFFDFDBEC : 0xFFF3F3F3;
     }
     static int background(String theme, boolean dark) {
+        if ("together".equals(theme)) return dark ? R.drawable.widget_together_dark : R.drawable.widget_together_light;
         if (!dark) return R.drawable.widget_native_light;
         return "samsungao3".equals(theme) ? R.drawable.widget_native_ao3 : R.drawable.widget_native_dark;
     }
     static int accent(String theme, boolean dark) {
+        if ("together".equals(theme)) return dark ? 0xFFE5B8C9 : 0xFF93667C;
         if ("samsungao3".equals(theme)) return dark ? 0xFFF4BFD7 : 0xFF913D66;
         return dark ? 0xFFA294F9 : 0xFF6552A9;
     }
