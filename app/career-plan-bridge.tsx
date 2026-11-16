@@ -103,7 +103,7 @@ function writeLocalProfile(profile: StoredAcademicProfile) {
   }
 }
 
-async function pushAcademicProfile(profile: StoredAcademicProfile) {
+export async function pushAcademicProfile(profile: StoredAcademicProfile) {
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
   if (!userId) return;

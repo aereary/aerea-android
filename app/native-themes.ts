@@ -1,10 +1,18 @@
 /** Independent, opt-in interface layouts; existing theme identities stay stable. */
-export const NATIVE_THEME_IDS = ["samsungminimal", "samsungao3", "studio"] as const;
+export const NATIVE_THEME_IDS = ["samsungminimal", "samsungao3", "studio", "together"] as const;
 export type NativeThemeId = typeof NATIVE_THEME_IDS[number];
 export function isNativeTheme(value: string): value is NativeThemeId {
   return (NATIVE_THEME_IDS as readonly string[]).includes(value);
 }
 export const NATIVE_THEMES = [
+  {
+    id: "together", name: "aérea Together",
+    description: "One little world: warm plum surfaces, literary headings and a shared rhythm across your day.",
+    colors: ["#181719", "#e5b8c9", "#b0c8b8"] as [string, string, string],
+    icon: "✧", art: "/assets/native-themes/together.svg",
+    accents: ["/assets/native-themes/together.svg", "/assets/native-themes/together.svg"] as [string, string],
+    charm: "", showCharm: false, featured: true, interfaceIdea: "One ecosystem · warm editorial",
+  },
   {
     id: "studio", name: "aérea Studio",
     description: "Graphite panels, fine borders and quiet underlined tabs, inspired by BUG Clicker.",
